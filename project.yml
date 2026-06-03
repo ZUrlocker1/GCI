@@ -1,0 +1,77 @@
+name: GalacticChessInvaders
+
+options:
+  bundleIdPrefix: com.zurlocker
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.2"
+  generateEmptyDirectories: false
+  defaultConfig: Debug
+
+packages:
+  ChessKit:
+    url: https://github.com/aperechnev/ChessKit
+    from: 2.0.0
+
+targets:
+
+  GalacticChessInvaders:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: GalacticChessInvaders
+        excludes:
+          - Tests/**
+    resources:
+      - path: assets/GCI.spriteatlas
+    settings:
+      base:
+        SWIFT_VERSION: 6.0
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.zurlocker.GalacticChessInvaders
+        INFOPLIST_FILE: GalacticChessInvaders/Info.plist
+        ENABLE_HARDENED_RUNTIME: NO
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_STYLE: Manual
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "0.1"
+        SWIFT_STRICT_CONCURRENCY: complete
+    dependencies:
+      - package: ChessKit
+        product: ChessKit
+
+  GCITests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - GalacticChessInvaders/Tests
+    settings:
+      base:
+        SWIFT_VERSION: 6.0
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/GalacticChessInvaders.app/Contents/MacOS/GalacticChessInvaders"
+    dependencies:
+      - target: GalacticChessInvaders
+
+schemes:
+  GalacticChessInvaders:
+    build:
+      targets:
+        GalacticChessInvaders: all
+        GCITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - GCITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

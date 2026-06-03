@@ -1,0 +1,570 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		031533BB438B7A4BC1CE82C9 /* HUDNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56497B49CFE839D85ABCC3A /* HUDNode.swift */; };
+		091CA81733FCE104AD2D88E9 /* GameAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9BCEF5A958D912F3D3834BC /* GameAction.swift */; };
+		10EC7FDA96FB9D9DF9ED8846 /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C800709B09587557941485 /* Piece.swift */; };
+		1840BB4464E1128BE071D44C /* TitleScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DB4E6155700677F3736099 /* TitleScene.swift */; };
+		24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */; };
+		452008C69273C0B918DFAA99 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7548E55F1B1E37D9A6AA88 /* GameState.swift */; };
+		456435234471D2982DBDDA74 /* GCITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E88C786A6B62EF1391252D /* GCITests.swift */; };
+		46AAE105A315B67E0A9A7C86 /* GalacticChessInvadersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77F960CE5B7791CFFB374A6A /* GalacticChessInvadersApp.swift */; };
+		605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB7404F3713FE581B43A87 /* ContentView.swift */; };
+		63D5A3F3C96B0C6DBB65926B /* FleetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E018947B59E7F356E2FDF88 /* FleetController.swift */; };
+		761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */; };
+		79B4A975E794F1A966FC3847 /* ChessKit in Frameworks */ = {isa = PBXBuildFile; productRef = C8ADE35311760BC5AC3BADF9 /* ChessKit */; };
+		7B642189B3FC586C84C9A534 /* InputHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089693DE6C70095463C9E308 /* InputHandler.swift */; };
+		7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86607BAC135182D9E5F8BD4 /* PieceNode.swift */; };
+		89F9459783A37520E9B6A7D3 /* DiagnosticsLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C108816F834B07B96432B59 /* DiagnosticsLog.swift */; };
+		97361A240335FEBD8B2AFA78 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */; };
+		A0FCD49C41E45F58B46D09FB /* MoveGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81299DDCADFCC138B75D5794 /* MoveGenerator.swift */; };
+		E05E089FE48382AC59AD93BD /* LaserNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5308FEB0B1858AC43F451354 /* LaserNode.swift */; };
+		E08464B23F92D11F3F247DAB /* SpaceshipNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */; };
+		E363DB037B78F53FB632EDEC /* GameOverScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */; };
+		E382860009AA1E103879DF01 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533060B476CEB068D8FE3931 /* AudioManager.swift */; };
+		F9929020CEFD54511CD99A8E /* GCIBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8C58E5482555CFCBEDC1100E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 707BFE0A0BBB45A4FA54E532 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9BD80453908A8F43871AD964;
+			remoteInfo = GalacticChessInvaders;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		089693DE6C70095463C9E308 /* InputHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputHandler.swift; sourceTree = "<group>"; };
+		321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreManager.swift; sourceTree = "<group>"; };
+		3B7548E55F1B1E37D9A6AA88 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
+		433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceshipNode.swift; sourceTree = "<group>"; };
+		46E88C786A6B62EF1391252D /* GCITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCITests.swift; sourceTree = "<group>"; };
+		46F6F35A994CABC71E91B264 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		470EE873AFB093DAA09877AD /* GCITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GCITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		48DB4E6155700677F3736099 /* TitleScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleScene.swift; sourceTree = "<group>"; };
+		5308FEB0B1858AC43F451354 /* LaserNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaserNode.swift; sourceTree = "<group>"; };
+		533060B476CEB068D8FE3931 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
+		6E018947B59E7F356E2FDF88 /* FleetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetController.swift; sourceTree = "<group>"; };
+		7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsCategory.swift; sourceTree = "<group>"; };
+		77F960CE5B7791CFFB374A6A /* GalacticChessInvadersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalacticChessInvadersApp.swift; sourceTree = "<group>"; };
+		81299DDCADFCC138B75D5794 /* MoveGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveGenerator.swift; sourceTree = "<group>"; };
+		8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		9C108816F834B07B96432B59 /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
+		9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCIBoard.swift; sourceTree = "<group>"; };
+		A56497B49CFE839D85ABCC3A /* HUDNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDNode.swift; sourceTree = "<group>"; };
+		ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverScene.swift; sourceTree = "<group>"; };
+		C6C2B5784E5BF76690D58C93 /* GalacticChessInvaders.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GalacticChessInvaders.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8C800709B09587557941485 /* Piece.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
+		F86607BAC135182D9E5F8BD4 /* PieceNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieceNode.swift; sourceTree = "<group>"; };
+		F8CB7404F3713FE581B43A87 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F9BCEF5A958D912F3D3834BC /* GameAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAction.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9B5863CF4C86AA3DF97D6E6E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				79B4A975E794F1A966FC3847 /* ChessKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1FCC729449E404D8961A14A7 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				F8CB7404F3713FE581B43A87 /* ContentView.swift */,
+				77F960CE5B7791CFFB374A6A /* GalacticChessInvadersApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		2D966E5713FCF544A056D4C2 /* GalacticChessInvaders */ = {
+			isa = PBXGroup;
+			children = (
+				46F6F35A994CABC71E91B264 /* Info.plist */,
+				1FCC729449E404D8961A14A7 /* App */,
+				F75A8D9C8A7035887384E7B4 /* Game */,
+				8596DF32BB855BED7C729C85 /* Scenes */,
+			);
+			path = GalacticChessInvaders;
+			sourceTree = "<group>";
+		};
+		6B53D6A08D48BB8EFBD14E37 /* Logic */ = {
+			isa = PBXGroup;
+			children = (
+				9C108816F834B07B96432B59 /* DiagnosticsLog.swift */,
+				6E018947B59E7F356E2FDF88 /* FleetController.swift */,
+				3B7548E55F1B1E37D9A6AA88 /* GameState.swift */,
+				9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */,
+				81299DDCADFCC138B75D5794 /* MoveGenerator.swift */,
+				7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */,
+				D8C800709B09587557941485 /* Piece.swift */,
+				321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */,
+			);
+			path = Logic;
+			sourceTree = "<group>";
+		};
+		8596DF32BB855BED7C729C85 /* Scenes */ = {
+			isa = PBXGroup;
+			children = (
+				ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */,
+				48DB4E6155700677F3736099 /* TitleScene.swift */,
+			);
+			path = Scenes;
+			sourceTree = "<group>";
+		};
+		8B341BEEF372F9DC14F908B7 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				533060B476CEB068D8FE3931 /* AudioManager.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		8DE56E3CE02A9F0E5C37C8F4 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				46E88C786A6B62EF1391252D /* GCITests.swift */,
+			);
+			name = Tests;
+			path = GalacticChessInvaders/Tests;
+			sourceTree = "<group>";
+		};
+		A2D01DD174BF68EDF156539D = {
+			isa = PBXGroup;
+			children = (
+				2D966E5713FCF544A056D4C2 /* GalacticChessInvaders */,
+				8DE56E3CE02A9F0E5C37C8F4 /* Tests */,
+				FE7BE0EC5E428F3062974AA2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AB99D7336D4B4377EA975237 /* Rendering */ = {
+			isa = PBXGroup;
+			children = (
+				8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */,
+				A56497B49CFE839D85ABCC3A /* HUDNode.swift */,
+				5308FEB0B1858AC43F451354 /* LaserNode.swift */,
+				F86607BAC135182D9E5F8BD4 /* PieceNode.swift */,
+				433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */,
+			);
+			path = Rendering;
+			sourceTree = "<group>";
+		};
+		AF6F3748DD591D1E03B2FB97 /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				F9BCEF5A958D912F3D3834BC /* GameAction.swift */,
+				089693DE6C70095463C9E308 /* InputHandler.swift */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
+		F75A8D9C8A7035887384E7B4 /* Game */ = {
+			isa = PBXGroup;
+			children = (
+				8B341BEEF372F9DC14F908B7 /* Audio */,
+				AF6F3748DD591D1E03B2FB97 /* Input */,
+				6B53D6A08D48BB8EFBD14E37 /* Logic */,
+				AB99D7336D4B4377EA975237 /* Rendering */,
+			);
+			path = Game;
+			sourceTree = "<group>";
+		};
+		FE7BE0EC5E428F3062974AA2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C6C2B5784E5BF76690D58C93 /* GalacticChessInvaders.app */,
+				470EE873AFB093DAA09877AD /* GCITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		05D3C748285522D9E97D386E /* GCITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 47BD495B260035F8E65926C1 /* Build configuration list for PBXNativeTarget "GCITests" */;
+			buildPhases = (
+				0895250AF4C73CF398EED8E6 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E2633DC0FF5ADBDFD882DD2C /* PBXTargetDependency */,
+			);
+			name = GCITests;
+			packageProductDependencies = (
+			);
+			productName = GCITests;
+			productReference = 470EE873AFB093DAA09877AD /* GCITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		9BD80453908A8F43871AD964 /* GalacticChessInvaders */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D4C329CDA05E9E8BFA878BB /* Build configuration list for PBXNativeTarget "GalacticChessInvaders" */;
+			buildPhases = (
+				1AB76CF94A398A8A68E37DD5 /* Sources */,
+				9B5863CF4C86AA3DF97D6E6E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GalacticChessInvaders;
+			packageProductDependencies = (
+				C8ADE35311760BC5AC3BADF9 /* ChessKit */,
+			);
+			productName = GalacticChessInvaders;
+			productReference = C6C2B5784E5BF76690D58C93 /* GalacticChessInvaders.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		707BFE0A0BBB45A4FA54E532 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = AE677C64AF490BC7EE8FF6C3 /* Build configuration list for PBXProject "GalacticChessInvaders" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A2D01DD174BF68EDF156539D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C6CA975AB652A32B9CA48625 /* XCRemoteSwiftPackageReference "ChessKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FE7BE0EC5E428F3062974AA2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				05D3C748285522D9E97D386E /* GCITests */,
+				9BD80453908A8F43871AD964 /* GalacticChessInvaders */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0895250AF4C73CF398EED8E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				456435234471D2982DBDDA74 /* GCITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1AB76CF94A398A8A68E37DD5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E382860009AA1E103879DF01 /* AudioManager.swift in Sources */,
+				605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */,
+				89F9459783A37520E9B6A7D3 /* DiagnosticsLog.swift in Sources */,
+				63D5A3F3C96B0C6DBB65926B /* FleetController.swift in Sources */,
+				F9929020CEFD54511CD99A8E /* GCIBoard.swift in Sources */,
+				46AAE105A315B67E0A9A7C86 /* GalacticChessInvadersApp.swift in Sources */,
+				091CA81733FCE104AD2D88E9 /* GameAction.swift in Sources */,
+				E363DB037B78F53FB632EDEC /* GameOverScene.swift in Sources */,
+				97361A240335FEBD8B2AFA78 /* GameScene.swift in Sources */,
+				452008C69273C0B918DFAA99 /* GameState.swift in Sources */,
+				031533BB438B7A4BC1CE82C9 /* HUDNode.swift in Sources */,
+				7B642189B3FC586C84C9A534 /* InputHandler.swift in Sources */,
+				E05E089FE48382AC59AD93BD /* LaserNode.swift in Sources */,
+				A0FCD49C41E45F58B46D09FB /* MoveGenerator.swift in Sources */,
+				761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */,
+				10EC7FDA96FB9D9DF9ED8846 /* Piece.swift in Sources */,
+				7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */,
+				24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */,
+				E08464B23F92D11F3F247DAB /* SpaceshipNode.swift in Sources */,
+				1840BB4464E1128BE071D44C /* TitleScene.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E2633DC0FF5ADBDFD882DD2C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9BD80453908A8F43871AD964 /* GalacticChessInvaders */;
+			targetProxy = 8C58E5482555CFCBEDC1100E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		641ADBBEA1987890D80FE7CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGNING_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		8DCE896E74806F65F0CDE2F7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGNING_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AABD6D0452589A24D2234534 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GCITests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GalacticChessInvaders.app/Contents/MacOS/GalacticChessInvaders";
+			};
+			name = Debug;
+		};
+		B319289406C2F879C8EDCB2C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		CC3D20FE996C304009E437DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GCITests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GalacticChessInvaders.app/Contents/MacOS/GalacticChessInvaders";
+			};
+			name = Release;
+		};
+		E43793270B7AE6A552BD442B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D4C329CDA05E9E8BFA878BB /* Build configuration list for PBXNativeTarget "GalacticChessInvaders" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8DCE896E74806F65F0CDE2F7 /* Debug */,
+				641ADBBEA1987890D80FE7CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		47BD495B260035F8E65926C1 /* Build configuration list for PBXNativeTarget "GCITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AABD6D0452589A24D2234534 /* Debug */,
+				CC3D20FE996C304009E437DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AE677C64AF490BC7EE8FF6C3 /* Build configuration list for PBXProject "GalacticChessInvaders" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E43793270B7AE6A552BD442B /* Debug */,
+				B319289406C2F879C8EDCB2C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C6CA975AB652A32B9CA48625 /* XCRemoteSwiftPackageReference "ChessKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/aperechnev/ChessKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C8ADE35311760BC5AC3BADF9 /* ChessKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6CA975AB652A32B9CA48625 /* XCRemoteSwiftPackageReference "ChessKit" */;
+			productName = ChessKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 707BFE0A0BBB45A4FA54E532 /* Project object */;
+}
