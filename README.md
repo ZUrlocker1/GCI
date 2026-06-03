@@ -6,6 +6,8 @@ An arcade-chess hybrid for macOS. A real chess game plays out on screen while Bl
 
 Originally prototyped in spring 1983 on an Apple II in TASC-compiled Applesoft BASIC, using the HRCG High Res Character Generator with a chess font, a synth startup tune, and BASIC speaker sound effects. The original floppies were rediscovered 40 years later. This is the full realization.
 
+![](<mockups/GCI title mockup.jpg>)
+
 ## Platform
 
 - **Primary:** macOS (Swift / SpriteKit) — runs in a window
@@ -36,6 +38,4 @@ Neon-vector Recharged — smooth glowing outlines on pure black, bloom via SKEff
 Color palette: `#12E0FF` (player/white) · `#FF2060` (enemy/black) · `#7DFF4D` (scout) · `#FF8A1E` (escort) · `#3AA2FF` (flagship).  
 Font: Press Start 2P.
 
-## Prior Art
 
-No earlier documented game combining a real chess engine with real-time Space Invaders-style shooting has been found. The 1983 Apple II prototype predates all known similar concepts.
