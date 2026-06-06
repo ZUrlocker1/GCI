@@ -286,6 +286,8 @@ When a piece's HP reaches 0:
 | Fire laser | Space bar |
 | Select chess piece | Mouse click on piece |
 | Move chess piece | Mouse click on destination square |
+| Pause game | Escape |
+| How To Play / Info | I · ⌘I · ? |
 
 ### 8.2 Spaceship Properties
 
@@ -419,6 +421,7 @@ MAIN_MENU
                       ├─► LEVEL_CLEAR → SCORE_TALLY → PLAYING (next level)
                       └─► GAME_OVER → SCORE_TALLY → MAIN_MENU
 PLAYING ──► PAUSED ──► PLAYING
+PLAYING ──► INFO   ──► PLAYING (game resumes on BACK or any key)
 ```
 
 ---
@@ -558,9 +561,9 @@ All layers scroll **downward** very slowly. During level-clear the scroll accele
 ### 12.5 HUD Design
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  SCORE: 004750   HI: 012300   LEVEL 03   ♠ ♠ ♠     │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  SCORE: 004750   HI: 012300   LEVEL 03   ♠ ♠ ♠   [ ? ]     │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 - **Font:** monospace pixel font (e.g., Press Start 2P or a custom 8×8 bitmap font). All caps.
@@ -568,6 +571,7 @@ All layers scroll **downward** very slowly. During level-clear the scroll accele
 - **Hi-Score:** center, dim yellow — flashes briefly when beaten.
 - **Level:** right of center, white.
 - **Lives:** right-aligned, shown as small spaceship silhouette icons (♠ placeholder above).
+- **Info button chip:** far right, past the lives display. Rendered as a small neon-outlined pill `[ ? ]` in dim cyan. Clicking or tapping it opens the How To Play screen and pauses the game. Keyboard shortcuts: `I`, `⌘I`, `?`. The chip does not flash or animate during gameplay — it stays subtle so it never competes with live action.
 - **Turn timer:** large digital countdown in the lower-left corner of the board area. Green → yellow → red as it counts down. Pulses on the last 2 seconds.
 - **Auto-move indicator:** when the engine moves white, "AUTO" flashes in orange over the piece for 0.5 seconds.
 - **Chess notation log:** debug/development builds only. Not shown in release builds — it would expose algebraic notation labels (a–h, 1–8) which are intentionally hidden from the player.
@@ -611,9 +615,9 @@ All projectiles have a **neon bloom halo** (blur-and-add shader) and leave a **f
 ### 12.9 Menus & Screens
 
 - **Title screen:** "GALACTIC CHESS INVADERS" in large cyan neon (Press Start 2P), "★ 40 YEARS IN THE MAKING ★" in orange beneath it. A single row of 8 magenta chess pieces slides slowly left and right as a preview. "PRESS ANY KEY TO START" blinks below. Top 5 high scores displayed with initials, score, and level reached.
-- **How To Play screen:** accessible from title. Covers controls, the twist, how to win, stay alive, scoring table (piece icons with point values), and the history note.
+- **How To Play screen:** accessible from the **title screen** and from **within gameplay** via the Info button chip (`[ ? ]` in the HUD) or keyboard shortcuts `I`, `⌘I`, `?`. Opening it during gameplay pauses the game immediately. Content: controls, the dual-input twist, how to win, how to stay alive, scoring table (piece icons with point values), and the origin note. A **BACK** button in the lower-left (or pressing any key) dismisses the screen and resumes gameplay from the exact state it was in.
 - **High score entry:** 8-character initial entry using up/down arrows per character, classic arcade style.
-- **Pause screen:** game blurs/dims, "PAUSED" centered in large text. No menu — just resume on keypress.
+- **Pause screen:** triggered by **Escape**. Game blurs/dims, "PAUSED" centered in large text. No menu — press any key or Escape again to resume.
 - **Level clear screen:** score tally animates upward (points counting up sound effect), then "LEVEL X CLEAR" banner sweeps across.
 - **Game over screen:** "GAME OVER" in large magenta neon. Three stats centered below: FINAL SCORE | HI-SCORE (in orange if beaten) | LEVEL REACHED. A large explosion fireball lingers and fades at center-bottom — the player ship's last moment. "PRESS FIRE TO PLAY AGAIN" blinks; "ESC → MAIN MENU" beneath it.
 
