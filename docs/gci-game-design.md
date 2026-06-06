@@ -5,10 +5,6 @@
 
 ---
 
-> ⚠️ **Naming:** In this document the word *Recharged* is occasionally used as a shorthand for the visual and audio aesthetic (neon glow, dark backgrounds, modern electronic music) inspired by the Atari Recharged game series. **"Recharged" is likely a trademark of Atari** and will not appear in the final product name. An alternative might be used such as: **Remastered, Evolved, Overdrive, Refueled, Supercharged, Reloaded, Reboot, Resurgence or Unleashed.** 
-
----
-
 ## Origin & History
 
 Galactic Chess Invaders was first conceived and prototyped during **spring break 1983** by Zack Urlocker, then an undergraduate student, on an **Apple II**. The demo was written in Applesoft BASIC and compiled with **TASC — The Applesoft Compiler** for performance. Graphics were rendered using the **HRCG (High Res Character Generator)** with a dedicated chess font to animate the pieces in high-resolution mode. Startup music was produced through a simple Apple II synth routine; shot and hit sound effects were programmed directly in BASIC using the built-in speaker.
@@ -54,6 +50,11 @@ The player controls the Black King, who carries a shotgun. The entire White army
 **A note on audio across all reviewed games:** Even the weakest jam entries — HauntedQuest's Chess Invaders and Squareswaves' Chess_Invaders — were redeemed somewhat by good sound effects and a chiptune music track. In every case, audio was the feature that made an otherwise rough game feel like a real game rather than a tech demo. This reinforces GCI's decision to add basic SFX and music early (Phases 4 and 5), well before the game is feature-complete. A music track and satisfying hit/fire sounds are table stakes for this genre, not a polish step.
 
 **Key difference from GCI:** Shotgun King is **entirely turn-based** — player acts, enemies act, alternating. There is no real-time arcade action, no Space Invaders fleet, no simultaneous dual-input. GCI's design — firing the spaceship *while* watching the chess clock tick — is a fundamentally more chaotic and demanding experience. Shotgun King rewards careful positioning; GCI rewards split-second prioritization under simultaneous pressure. Both are valid; they are different games.
+
+---
+
+> ⚠️ **Naming:** In this document the word *Recharged* is occasionally used as a shorthand for the visual and audio aesthetic (neon glow, dark backgrounds, modern electronic music) inspired by the Atari Recharged game series. **"Recharged" is likely a trademark of Atari** and will not appear in the final product name. An alternative might be used such as: **Remastered, Evolved, Overdrive, Refueled, Supercharged, Reloaded, Reboot, Resurgence or Unleashed.** 
+
 
 ---
 
@@ -561,9 +562,9 @@ All layers scroll **downward** very slowly. During level-clear the scroll accele
 ### 12.5 HUD Design
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  SCORE: 004750   HI: 012300   LEVEL 03   ♠ ♠ ♠   [ ? ]     │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  SCORE: 004750   HI: 012300   LEVEL 03   ♠ ♠ ♠   [(i) INFO]    │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 - **Font:** monospace pixel font (e.g., Press Start 2P or a custom 8×8 bitmap font). All caps.
@@ -571,7 +572,7 @@ All layers scroll **downward** very slowly. During level-clear the scroll accele
 - **Hi-Score:** center, dim yellow — flashes briefly when beaten.
 - **Level:** right of center, white.
 - **Lives:** right-aligned, shown as small spaceship silhouette icons (♠ placeholder above).
-- **Info button chip:** far right, past the lives display. Rendered as a small neon-outlined pill `[ ? ]` in dim cyan. Clicking or tapping it opens the How To Play screen and pauses the game. Keyboard shortcuts: `I`, `⌘I`, `?`. The chip does not flash or animate during gameplay — it stays subtle so it never competes with live action.
+- **Info button chip:** far right, past the lives display. Rendered as a small neon-outlined pill in dim cyan showing the word **INFO** preceded by a small icon — either a circled-i `ⓘ` or a question-mark `?` (implementation decision). Clicking or tapping it opens the How To Play screen and pauses the game. Keyboard shortcuts: `I`, `⌘I`, `?`. The chip does not flash or animate during gameplay — it stays subtle so it never competes with live action.
 - **Turn timer:** large digital countdown in the lower-left corner of the board area. Green → yellow → red as it counts down. Pulses on the last 2 seconds.
 - **Auto-move indicator:** when the engine moves white, "AUTO" flashes in orange over the piece for 0.5 seconds.
 - **Chess notation log:** debug/development builds only. Not shown in release builds — it would expose algebraic notation labels (a–h, 1–8) which are intentionally hidden from the player.
@@ -615,7 +616,7 @@ All projectiles have a **neon bloom halo** (blur-and-add shader) and leave a **f
 ### 12.9 Menus & Screens
 
 - **Title screen:** "GALACTIC CHESS INVADERS" in large cyan neon (Press Start 2P), "★ 40 YEARS IN THE MAKING ★" in orange beneath it. A single row of 8 magenta chess pieces slides slowly left and right as a preview. "PRESS ANY KEY TO START" blinks below. Top 5 high scores displayed with initials, score, and level reached.
-- **How To Play screen:** accessible from the **title screen** and from **within gameplay** via the Info button chip (`[ ? ]` in the HUD) or keyboard shortcuts `I`, `⌘I`, `?`. Opening it during gameplay pauses the game immediately. Content: controls, the dual-input twist, how to win, how to stay alive, scoring table (piece icons with point values), and the origin note. A **BACK** button in the lower-left (or pressing any key) dismisses the screen and resumes gameplay from the exact state it was in.
+- **How To Play screen:** accessible from the **title screen** and from **within gameplay** via the Info button chip (`[(i) INFO]` in the HUD) or keyboard shortcuts `I`, `⌘I`, `?`. Opening it during gameplay pauses the game immediately. Content: controls, the dual-input twist, how to win, how to stay alive, scoring table (piece icons with point values), and the origin note. A **BACK** button in the lower-left (or pressing any key) dismisses the screen and resumes gameplay from the exact state it was in.
 - **High score entry:** 8-character initial entry using up/down arrows per character, classic arcade style.
 - **Pause screen:** triggered by **Escape**. Game blurs/dims, "PAUSED" centered in large text. No menu — press any key or Escape again to resume.
 - **Level clear screen:** score tally animates upward (points counting up sound effect), then "LEVEL X CLEAR" banner sweeps across.
