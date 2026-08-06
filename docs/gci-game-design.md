@@ -187,6 +187,22 @@ A "turn" is one complete white-move + black-move cycle, approximately 5 seconds.
 - **Shot down** by the player's spaceship laser.
 - **Lethal** to the spaceship if they reach the bottom strip.
 
+### 5.4 Last Piece — Last Stand Rush
+
+When the black piece count drops to **1**, normal fleet behavior stops and the Last Stand Rush triggers:
+
+1. **Center dash:** The surviving piece slides to the center of the board (file d or e, whichever is closer to its current position) using a fast `SKAction` move — ~0.4 seconds. A brief magenta flare burst plays on arrival.
+2. **Maximum speed:** Fleet movement speed immediately jumps to the Level 5+ cap (110 px/s or current level's maximum, whichever is higher). The piece sweeps the full board width at this speed.
+3. **Aggressive fire:** The piece fires every sweep cycle rather than once per turn — effectively 2–3× its normal fire rate.
+4. **Heartbeat:** Locks to 180 BPM immediately, regardless of current tempo.
+5. **Chess AI:** The engine still takes its chess turn on the normal timer. If the last piece is the King, it moves with full aggression — the engine prioritizes threatening White pieces.
+
+**Visual signal:** The piece's glow briefly pulses white on the center-dash arrival (one frame of full-white colorBlendFactor, then back to its normal magenta). This communicates "something changed" without any text overlay.
+
+**Music duck:** When the Last Stand Rush triggers, the level music fades to **~20% volume over 1 second** via `AVAudioPlayer.setVolume(_:fadeDuration:)`. The heartbeat (now at 180 BPM) and the piece's Critical HP spark crackle become the dominant soundscape. On level clear, music fades back to full volume over 0.5 seconds before the level-clear fanfare plays. This moment typically lasts 10–20 seconds — brief enough to feel like punctuation, long enough to be memorable.
+
+**Playtesting flag:** This sequence is designed to be exciting but may prove overwhelming — particularly if the last piece is a Queen or King with high HP and the player is on their last life. If testing shows it causes frustration rather than tension, the first thing to dial back is the fire rate (revert to once-per-turn). The center-dash and heartbeat spike can stay regardless. The entire feature is gated in `FleetController.triggerLastStand()` — one call site, easy to tune or disable.
+
 ---
 
 ## 6. Raider Ships (Bonus Attackers)
@@ -197,7 +213,7 @@ Periodically, independent arcade ships swoop across the board on attack runs. Th
 
 | Ship | Inspired by | Behavior | HP |
 |---|---|---|---|
-| **Raider Scout** | Space Invaders mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side | 1 |
+| **Raider Scout** | Space Invaders mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side. **First pass of each Scout: no fire** — the player sees the attack pattern before being shot at. | 1 |
 | **Galaxian Escort** | Galaxian escort fighter | Peels off from the *back* of the black fleet formation (rear rank), dives in a curved arc toward the player's spaceship, then exits or loops back up | 1 |
 | **Galaxian Flagship** | Galaxian flagship | Dives in flanked by 2 Escorts (they die first); fires 2 shots on descent; worth most points | 2 (immune to first hit — flashes) |
 
@@ -211,20 +227,71 @@ Periodically, independent arcade ships swoop across the board on attack runs. Th
 
 ### 6.3 Attack Behavior
 
-- **Raider Scout:** fires one projectile straight down from its current x-position as it crosses the board. Projectile behaves like a black-piece shot — damages white pieces it hits, kills the spaceship on contact.
+- **Raider Scout:** fires one projectile straight down from its current x-position as it crosses the board. Projectile behaves like a black-piece shot — damages white pieces it hits, kills the spaceship on contact. **First-pass rule (Galaga precedent):** the first Scout to appear each level makes its crossing without firing — the player sees the attack pattern before being shot at. All subsequent Scouts that level fire normally. Implementation: `RaiderController` tracks a per-level boolean `firstScoutHasFired`; reset to `false` on level start; set to `true` after the first Scout completes its crossing; Scouts spawned while `false` skip their fire command.
 - **Galaxian Escort:** detaches from the back rank of the fleet (visually sliding out from behind the rearmost piece in its column), then swoops down in a curved arc toward the spaceship's last known position. Fires one shot at the apex of its dive. If it reaches the bottom strip without being shot, it costs the player one life (collision) or exits if the ship dodged. After exiting it does not return — a fresh Escort spawns next cycle. If all pieces in a column's back rank have been destroyed, the Escort spawns from the rearmost surviving piece in any adjacent column instead. If the entire fleet has been reduced to front-rank pieces only, the Escort spawns from the rearmost surviving piece on the board.
 - **Galaxian Flagship:** dives with the same arc as Escorts but fires twice and requires 2 hits to destroy. On the first hit it flashes red (visual feedback) and accelerates its dive.
 - **Kamikaze Escort** (Level 4+): A variant Escort that peels off with no shot — instead it dives straight and fast directly at the ship's current position with no warning audio cue. Requires a lateral dodge. Worth 200 pts if shot before impact. If it reaches the bottom strip it costs the player one life.
 
 - **Galaxian Flagship escort shield:** While the Flagship's two flanking Escorts are alive, the Flagship is immune to player laser fire — shots pass through it. Once both Escorts are destroyed, the Flagship becomes vulnerable. A visual indicator (brief white flash + metallic clang SFX) plays when a shot hits the Flagship while it is still shielded, so the player learns the mechanic quickly.
 
-### 6.4 Interaction with White Pieces
+#### King Protection Mode (Level 2+)
+
+Raiders are not merely opportunistic attackers — from Level 2 onward they actively respond to threats against the Black King. When the player's ship has a **clear line of sight to the Black King** (no pieces blocking the column between the ship and the King), King-protection behaviors override normal attack patterns:
+
+- **Raider Scout:** if the King's column is unobstructed as the Scout crosses, it slows and lingers directly over that column — firing an extra shot straight down before resuming its crossing. Effectively plugging the lane for 1–2 seconds.
+- **Galaxian Escort (Level 3+):** instead of targeting the ship's last known position, the Escort targets the **Black King's column** and dives to block it. It fires at the apex as normal, then loops back toward the fleet. The "open King column" condition overrides the random dive timer.
+- **Galaxian Flagship:** when the Black King is at Cracked or Critical HP and an open lane exists, the Flagship dives and **hovers directly in front of the King** for 2 seconds — a living shield. It can be shot normally during the hover (2 HP to destroy). This behavior overrides the standard flanked-dive pattern.
+- **Kamikaze Escort (Level 4+):** if the King column is open and a Kamikaze is active, it dives into the King's column and hovers at mid-board for 1 second before resuming its dive toward the ship. A brief but real obstacle.
+
+The result: opening a clean shot at the King is an achievement the game actively contests. Raiders give the Black King a dynamic bodyguard layer that chess piece placement alone cannot provide. The player must manage both chess defense (positioning pieces) and arcade interception (timing shots around Raider coverage) to land the killing blow.
+
+### 6.4 Jeff Minter Tribute Ships
+
+In honor of Jeff Minter — the programmer behind *Tempest 2000* (Jaguar, 1994) and the legendary Llamasoft catalogue — two bonus ships appear as flyover targets between levels. They are purely arcade targets with no chess identity, no fleet membership, and no attack behavior. They exist to reward attention and delight players who recognize the reference.
+
+Sprite assets are already in `GCI.spriteatlas`: `ship-llama.imageset` and `ship-camel.imageset`.
+
+#### Ship Types
+
+| Ship | Points | HP | Appearance | Visual |
+|---|---|---|---|---|
+| **Llama** | 1,000 | 1 | Level 2 clear and every other level clear thereafter (2, 4, 6…) | Purple neon vector llama outline — long neck, spindly legs, unmistakable silhouette |
+| **Mutant Camel** | 2,000 | 2 (takes 2 hits) | Level 3 clear and every third level clear thereafter (3, 6, 9…) | Gold/orange neon camel — larger than the Llama, moves slightly faster |
+
+#### Behavior
+
+Both ships appear during the **Level Clear score-tally screen**, flying slowly across the board from one edge to the other at mid-height. They travel at 55 px/s (Llama) and 70 px/s (Camel) — slow enough to be a reliable target, fast enough to punish inattention. The player's ship is still active during the tally screen and can fire.
+
+- Neither ship fires, dives, or interacts with the chess board.
+- A brief on-screen label appears for 1.5 seconds when they enter: **"LLAMA — 1000 PTS"** / **"MUTANT CAMEL — 2000 PTS"** in Press Start 2P, dim cyan, above the ship's position.
+- If the Llama is not destroyed before it exits, it makes a soft bleat sound effect as it disappears off-screen. The Camel makes a low honking sound.
+- If destroyed: a small celebratory burst in the ship's color (purple/gold respectively), the point value pops up, and a brief ascending chime plays — slightly more musical than a standard ship explosion.
+- On levels where both the Llama and Camel would appear simultaneously (Level 6, 12…), the **Mutant Camel enters first**, followed 2 seconds later by the **Llama from the opposite edge**. Both are active at the same time.
+
+#### Audio
+
+| Event | Sound |
+|---|---|
+| Llama enters | Soft synthesized bleat (short, high-pitched) |
+| Camel enters | Low synthesized honk |
+| Either ship destroyed | Ascending 3-note chime + burst |
+| Either ship exits unshot | Animal call fades out (Llama: bleat; Camel: low groan) |
+
+#### Design Intent
+
+These ships are a moment of levity and heritage in what is otherwise an intense game. They appear *after* the tension of a level, during the score screen — a reward for surviving, not an additional challenge. Long-time players will recognize the reference; new players will simply see a funny-looking bonus target and shoot it anyway. Both reactions are correct.
+
+*"Everything is better with Llamasoft." — Jeff Minter tradition*
+
+---
+
+### 6.5 Interaction with White Pieces
 
 Raiders are not blocked by white chess pieces — they fly in the mid-board z-layer (visually above the board). Their **shots** do hit white pieces normally.
 
 Galaxian Escorts that dive can clip white pieces in their flight path: each white piece in the path takes 1 damage as the raider passes through (the raider is not destroyed by this).
 
-### 6.5 Visual & Audio
+### 6.6 Visual & Audio
 
 - Raider Scout: classic UFO disc shape, scrolls with a distinct hum sound.
 - Galaxian Escort/Flagship: bright colored neon-vector ships (orange/blue respectively), dive accompanied by a swooping pitch-slide sound effect.
@@ -341,6 +408,16 @@ If the last life is lost the game ends immediately — no respawn.
 
 Score multiplier increases by 0.5× for each level completed.
 
+### 9.1 Extra Life Milestone
+
+**One free life is awarded at 1,500 points.** This happens exactly once per game — reaching 1,500 again after losing that life grants nothing further.
+
+- A brief jingle plays (classic ascending 3-note chime, same as the existing "extra life" SFX in §12.10).
+- The lives display in the HUD ticks up by one with a quick flash.
+- "1UP" appears briefly as a score pop-up at the ship's position.
+
+**Rationale:** 1,500 pts is achievable by an average player completing Level 1 with decent board clearing and a few Scout kills — it rewards early engagement without becoming farmable. Original *Space Invaders* (1978) used 1,500 pts as its free-life threshold; the homage is intentional.
+
 ---
 
 ## 10. Level Structure
@@ -356,7 +433,18 @@ Each level begins with a fresh standard chess setup and full white piece HP. Esc
 - Raiders: Scouts only, 1 every 20s
 - No Escorts, no Flagship
 - Turn timer: 5s
-- *Feel: learnable. Player figures out the dual controls without being shot at by the fleet. Raiders provide the only incoming fire.*
+- *Feel: learnable. Player figures out the dual controls without being shot at by the fleet. Raiders provide the only incoming fire — but the first Scout of each level crosses silently (Galaga precedent), so the player sees the attack pattern before being in danger.*
+
+**First-play hover hints (first run only):** On the first time a player ever reaches Level 1 (tied to the `hasSeenHowToPlay` flag from §14.4), two lightweight floating labels appear at level start:
+
+1. **Above the player's ship:** `← → MOVE   SPACE FIRE` — small pixel-font text, no background, no border. Fades out after 5 seconds or on first ship movement or laser fire, whichever is first.
+2. **Above the d2 pawn** (a natural first chess move): `CLICK PIECE → CLICK SQUARE` — same style. Fades out after 5 seconds or on any chess piece selection, whichever is first.
+
+Both hints are non-blocking: all controls are fully live while the hints are visible. No modal, no sequence, no forced action. If playtesting shows they're distracting, remove the entire feature — they're isolated in a single `HintOverlayNode` class.
+
+**Level 1 warning shot:** When the Black King reaches **Critical HP** (d2 + flicker state, approximately 4 HP remaining) during Level 1, the King fires a single projectile straight down — the first fleet shot the player has ever seen in the game. The shot travels at **50% of the normal Level 2 projectile speed**, making it clearly visible and easy to dodge or shoot down. No audio cue precedes it beyond the normal firing sound; the slow speed is the telegraph.
+
+This is a preview, not a punishment. It tells the player: "Level 2 fires at you. Get ready." If the player kills the King before it reaches Critical HP in one sequence of shots (unlikely but possible), the warning shot is skipped — no forced scripted moment.
 
 #### Level 2 — Pressure Builds
 - Fleet speed: medium (55 px/s)
@@ -404,10 +492,46 @@ Each level begins with a fresh standard chess setup and full white piece HP. Esc
 - Kamikaze frequency increases each level
 - *No ceiling — the game continues until the player dies.*
 
+#### Level 7 — King Activated
+
+A mechanic banner announces `KING ACTIVATED` / `THE KING NOW ATTACKS` at level start.
+
+From Level 7 onward, the Black King is no longer passive — the engine shifts to **aggressive King play**, treating it as an attacking piece rather than one to protect. In chess endgame terms, an active King is genuinely dangerous.
+
+**Chess behavior change:** The `GKMinmaxStrategist` AI weight for King moves is raised sharply — the engine will now actively advance the King toward White's back ranks, use it to threaten White pieces, and prioritise King moves over pawn pushes when an attacking King move is available.
+
+**Visual cue:** The King's glow shifts from standard magenta (`#FF2060`) to a fierce **orange-red** (`#FF4400`) for the duration of Level 7+. This is distinct from the Critical HP crimson pulse — it is a constant color change that says "this piece has changed character." A brief crown-flash animation (one frame of full white followed by the new color) marks the moment the King activates at level start.
+
+**Mechanic banner:** Shown once at Level 7 entry — `KING ACTIVATED` (large) / `THE KING NOW ATTACKS` (subtitle). Level 8+ does not repeat the banner.
+
+#### Level 9 — Armored Pawns
+
+A mechanic banner announces `ARMORED PAWNS` / `CHESS ONLY · BULLETS BOUNCE` at level start.
+
+From Level 9 onward, a portion of regenerated Pawns spawn as **Armored Pawns** — immune to laser fire for their armor window. Only a chess capture can remove them during this period.
+
+**Rules:**
+- Armored Pawns appear only through the regeneration system (standard or defensive), never as part of the starting board formation.
+- Armor duration: **3 chess turns** after materialisation. A turn counter ticks down on each White move completion.
+- After armor expires, the Pawn becomes a normal Pawn — same HP, same behavior, now laser-vulnerable.
+- Laser hits during the armor window: do zero damage, produce a spark ricochet effect, and play a distinct clunk/ricochet SFX.
+- Chess captures work normally during and after the armor window.
+
+**Visual design:**
+- Standard Pawn sprite replaced by an **Armored Pawn variant**: same shape but with a heavy **silver metallic outline** (2px bright silver `#C0C8D0`) and a slightly darker, steel-grey tinted body. Feels immediately heavier and more dangerous than a regular Pawn.
+- When a laser hits: a yellow spark burst at the impact point, the Pawn flashes white for one frame (impact feedback), and the armor outline briefly brightens. No HP lost.
+- As armor expires (turn 3): the silver outline develops a hairline crack animation over 0.5 seconds, then shatters away in a brief particle burst — revealing the standard magenta Pawn beneath. Clear visual signal that it's now vulnerable.
+
+**Audio:**
+- Laser hit during armor: a sharp metallic "chunk" — a short percussive noise burst with a high-frequency click. Completely unlike normal hit sounds; instantly communicates "that didn't work."
+- Armor break: a brief brittle shattering sound (high-pitched glass-crack character) on the turn it expires.
+
+**Mechanic banner:** Shown once at Level 9 entry. Level 10+ does not repeat it.
+
 ### 10.2 Level End Conditions
 
 A level ends when:
-- **Victory:** All black pieces are destroyed (by shooting or chess captures).
+- **Victory:** The Black King is destroyed (shot to 0 HP), captured by a chess move, or checkmated. The level ends immediately — clearing remaining pieces is a score-maximizing strategy, not a requirement. If pieces remain when the King falls, the wave-clear and surviving-white-piece bonuses are not awarded; the board resets clean.
 - **Defeat:** White king is destroyed, or the spaceship loses all 3 lives, or any black piece reaches rank 1 (they've "landed").
 
 On victory, a brief score-tally screen appears before the next level loads.
@@ -557,6 +681,32 @@ The scene has **4 parallax layers**, back to front. (Phase 2.2 implements 2 laye
 
 All layers scroll **downward** very slowly. During level-clear the scroll accelerates into a **hyperspace jump**: stars stretch into lines, white flash, then new level fades in. The wireframe debris chunks in layer 3 should feel like Asteroids Recharged geometry — vector outlines with a soft glow, not solid filled shapes.
 
+#### 12.4a Level Color Temperature Progression
+
+Inspired by *Breakout Recharged*, the background void color shifts subtly between levels — cold at the start, warmer and more ominous as the game progresses. The shift happens during the level-clear hyperspace transition so it reads as a scene change, not a distraction during gameplay.
+
+**Level color table:**
+
+| Level | Void color | Mood |
+|---|---|---|
+| 1 | `#07070F` — deep blue-black | Cold open space |
+| 2 | `#08070F` — indigo-black | Deepening dark |
+| 3 | `#0A0610` — deep violet | Unease begins |
+| 4 | `#0D0610` — purple-black | Threat escalating |
+| 5 | `#100510` — near-crimson black | Danger zone |
+| 6 | `#12050C` — dark red-black | Hostile |
+| 7 | `#140408` — deep crimson | Late-game dread |
+| 8+ | `#160304` — near-red black | Barely survivable |
+
+The star layers tint to complement — Layer 0 stars remain white, Layer 1 stars gain a slight warm tint (`colorBlendFactor` shift toward amber at Level 5+).
+
+**Performance rules — non-negotiable:**
+- Background color is set by changing `scene.backgroundColor` once per level transition, inside the hyperspace flash. Zero per-frame cost.
+- Star layer tinting uses `SKSpriteNode.color` + `colorBlendFactor` — a static property change, not a shader. Zero per-frame cost.
+- **No CIFilter, no fragment shader, no SKEffectNode** for the background color shift. Those are reserved for bloom on piece glows only.
+- Within a level, the background color is static — no gradual hue animation during active gameplay. The shift only happens during the level-clear transition.
+- If profiling shows the background layers consuming meaningful GPU time, drop Layer 2 (nebula wisps) first — it is the most expensive layer and the least missed.
+
 ---
 
 ### 12.5 HUD Design
@@ -617,10 +767,58 @@ All projectiles have a **neon bloom halo** (blur-and-add shader) and leave a **f
 
 - **Title screen:** "GALACTIC CHESS INVADERS" in large cyan neon (Press Start 2P), "★ 40 YEARS IN THE MAKING ★" in orange beneath it. A single row of 8 magenta chess pieces slides slowly left and right as a preview. "PRESS ANY KEY TO START" blinks below. Top 5 high scores displayed with initials, score, and level reached.
 - **How To Play screen:** accessible from the **title screen** and from **within gameplay** via the Info button chip (`[(i) INFO]` in the HUD) or keyboard shortcuts `I`, `⌘I`, `?`. Opening it during gameplay pauses the game immediately. Content: controls, the dual-input twist, how to win, how to stay alive, scoring table (piece icons with point values), and the origin note. A **BACK** button in the lower-left (or pressing any key) dismisses the screen and resumes gameplay from the exact state it was in.
+
+  **Canonical closing line of the How-to-Play screen** (displayed last, in a slightly dimmer style to distinguish it from the instruction text):
+  > *"DON'T KNOW CHESS? JUST SHOOT EVERYTHING — IT STILL WORKS."*
+
+  This line must always be present. It immediately lowers the skill-floor perception for non-chess players and confirms the game is approachable for anyone.
 - **High score entry:** 8-character initial entry using up/down arrows per character, classic arcade style.
 - **Pause screen:** triggered by **Escape**. Game blurs/dims, "PAUSED" centered in large text. No menu — press any key or Escape again to resume.
 - **Level clear screen:** score tally animates upward (points counting up sound effect), then "LEVEL X CLEAR" banner sweeps across.
 - **Game over screen:** "GAME OVER" in large magenta neon. Three stats centered below: FINAL SCORE | HI-SCORE (in orange if beaten) | LEVEL REACHED. A large explosion fireball lingers and fades at center-bottom — the player ship's last moment. "PRESS FIRE TO PLAY AGAIN" blinks; "ESC → MAIN MENU" beneath it.
+
+### 12.10a Level Mechanic Announcement Banner
+
+When a level introduces a genuinely new mechanic for the first time, a **mechanic banner** sweeps in at level start — before gameplay begins, after the level-clear transition. It exists to frame the escalation as a dramatic reveal rather than a surprise attack.
+
+**Format:** Two lines of Press Start 2P pixel text, centered, over the board:
+
+```
+  ══════════════════════════════
+   LINE 1 — MECHANIC NAME      ← large, bright white, ≤18 chars
+   Line 2 — brief explanation  ← smaller, dim cyan, ≤22 chars
+  ══════════════════════════════
+```
+
+**Animation sequence:**
+1. Board and pieces are already visible (level just loaded). Ship is at start position.
+2. Banner slides in from the **left** with a slight elastic overshoot — arrives at center in ~0.35s. Neon glow pulses once on arrival.
+3. Background dims to ~40% while banner is visible (a dark overlay, not a fade to black).
+4. Mechanic sting plays simultaneously with arrival (see audio below).
+5. Banner holds for **2.0 seconds**.
+6. Banner fades out in 0.3s. Dim overlay lifts. Gameplay begins.
+
+Player input is **ignored** during the banner — no movement, no firing, no chess input. Duration is short enough that this never feels like a wait.
+
+**Audio:** A distinct 1.5s synth sting — not the level-clear fanfare. Character shifts with urgency:
+- Levels 2–3: ascending bright arpeggio (exciting, "new power unlocked" feel)
+- Levels 4–5: lower, more ominous two-note chord hit
+- Level 6+: a single deep bass hit with a descending tail ("this is going to hurt")
+
+**Mechanic banner table** (one banner per level, first time only — if the player reaches Level 2 again in the same session, no banner):
+
+| Level | Line 1 | Line 2 |
+|---|---|---|
+| 2 | `FLEET NOW FIRES!` | `DODGE · SHOOT BACK` |
+| 3 | `DOUBLE ATTACK` | `BLACK MOVES TWICE PER TURN` |
+| 4 | `THE DEAD RETURN` | `PIECES RESPAWN · FINISH THEM` |
+| 4 | `KAMIKAZES!` | `WATCH FOR FAST DIVERS` |
+| 5 | `TRIPLE ATTACK` | `3 CHESS MOVES PER TURN` |
+| 6+ | `DEEPER NOW` | `FASTER · MEANER · STILL POSSIBLE` |
+
+Level 4 has two new mechanics (regeneration and Kamikazes). Show them sequentially — regeneration banner first, 2s hold, fade, 0.3s gap, Kamikaze banner, 2s hold, fade, then gameplay.
+
+**Implementation:** `MechanicBannerNode` — a self-contained `SKNode` subclass that takes `(line1: String, line2: String, sting: AudioClip)` and runs the full sequence via `SKAction` chain. `GameScene` calls `showBanner(for level:)` and awaits completion before enabling input. Shown once per mechanic per session, tracked in a `Set<Int>` of already-seen levels in `GameState`.
 
 ### 12.10 Audio Design
 
@@ -686,6 +884,20 @@ Each piece type has a unique explosion sound so the player gets audio feedback o
 
 White piece destruction sounds are the same family but with a lower, "sadder" pitch to signal it's your own piece.
 
+**Critical HP Spark Loop**
+
+When any piece (black or white) enters Critical HP (d2 + flicker state), a quiet looping electrical crackle plays until the piece is destroyed or the level ends. This gives the player an audio signal for near-dead pieces without requiring constant visual scanning.
+
+| Piece type | Crackle pitch character | Notes |
+|---|---|---|
+| Pawn | High thin static — bright, papery | ~800 Hz centre |
+| Knight / Bishop | Mid crackle — slightly buzzy | ~500 Hz centre |
+| Rook | Low rumbling crackle — heavy | ~250 Hz centre |
+| Queen | Two-layer crackle (high + mid) | More complex, more urgent |
+| King | Deep electrical hum + slow crackle | Ominous; should be unmistakable |
+
+**Implementation:** One looping `AVAudioPlayer` per Critical piece, started on Critical-state entry, stopped on destruction or level-clear. Volume: ~25% of master SFX — present but never dominant. If more than 3 pieces are simultaneously Critical, cap playback at 3 (lowest-HP pieces take priority) to avoid audio clutter. All loops use `numberOfLoops = -1`.
+
 **Invader Fleet**
 
 | Sound | Character |
@@ -708,6 +920,32 @@ White piece destruction sounds are the same family but with a lower, "sadder" pi
 | Escort/Flagship dive | Swooping pitch-slide tone (rises then falls as arc peaks) |
 | Flagship first hit (flash) | Sharp metallic clang — communicates "not dead yet" |
 | Any raider destroyed | Signature 3-note explosion unique to raiders |
+
+#### Fleet Heartbeat
+
+A persistent two-beat bass pulse plays throughout every level, speeding up as black pieces are destroyed — directly adapted from the original *Space Invaders* (1978) heartbeat and one of arcade gaming's most effective psychological tools.
+
+**Sound design:** A low synthesized double-thump (thump-thump … pause) at approximately 60–80 Hz with a quick exponential decay. Not an 8-bit beep — closer to a deep electronic heartbeat: sub-bass body, short attack, no sustain. Generated once as a ~150ms `.caf` asset and triggered repeatedly by code; no pitch shifting, no rate manipulation.
+
+**Tempo: driven by piece count, not fleet position.** As Black pieces are destroyed (by laser or chess capture), the BPM steps up. Each step is a discrete jump — no gradual glide between tempos.
+
+| Black pieces remaining | BPM | Inter-beat interval |
+|---|---|---|
+| 13–16 (full fleet) | 52 | ~1.15 s |
+| 9–12 | 66 | ~0.91 s |
+| 7–8 | 80 | ~0.75 s |
+| 5–6 | 100 | ~0.60 s |
+| 3–4 | 130 | ~0.46 s |
+| 2 | 155 | ~0.39 s |
+| 1 (last piece) | 180 | ~0.33 s |
+
+**Beat pattern:** Each beat is a double-thump: `thump₁` → +120ms → `thump₂` → [interval] → repeat. The 120ms inner gap is fixed at all tempos; only the outer gap shrinks.
+
+**Implementation:** A `GameHeartbeat` class drives the pulse using a recursive `SKAction` sequence (`.playSoundFileNamed` + `.wait(forDuration:)`) rather than `AVAudioPlayer.rate` — rate-shifting causes pitch artifacts. On each cycle the class reads `FleetController.remainingPieceCount` to select the next interval. The sequence is started at level open and stopped on level-clear or game-over.
+
+**Mix position:** Heartbeat sits at priority 7.5 in the audio mix — above fleet movement blips but below chess move sounds. Volume: ~50% of master SFX. It should be felt more than heard; it should never drown music.
+
+**Visual sync:** The fleet pieces pulse ±15% brightness in sync with the heartbeat (`§25.7`). The Black King's damage-state pulse (`§25.8`) is locked to the same tempo. Both sync automatically because they read the same `GameHeartbeat.currentBPM` observable.
 
 #### Audio Mix Priorities
 
@@ -738,41 +976,95 @@ The engine should duck (lower volume of) the music by ~30% whenever a level-1 or
 
 ### 13.1 Overview
 
-Power-ups drop from destroyed enemies at random. They are glowing pickup items that fall slowly downward toward the spaceship strip. The player collects them by moving the ship under them — no shooting required. If a pickup reaches the bottom of the screen uncollected it disappears with a small fade.
+Power-ups are delivered exclusively by **Special Scout variants** — rare versions of the Raider Scout that are visually distinct from the standard disc. Shooting a Special Scout destroys it for its point value and immediately activates its associated power-up. No pickup item falls to collect — the effect triggers on destruction.
 
-Only one power-up can be active on screen at a time. If a new one would drop while an existing one is falling, it is discarded (no stacking drops mid-air). This keeps the screen readable.
+Plain Raider Scouts (standard disc shape) never grant power-ups. Only the five Special Scout types do.
 
-### 13.2 Drop Probability
+**Spawn rules:**
+- From Level 2 onward, one Special Scout appears per level, chosen at random from the five types.
+- From Level 5 onward, two Special Scouts per level.
+- Special Scouts spawn on the same real-time interval as standard Scouts but replace one standard Scout spawn — they do not add to the total Scout count.
+- Only one power-up effect can be active at a time. If a second Special Scout is shot while an effect is running, the new effect replaces the old one immediately.
 
-| Source destroyed | Drop chance |
-|---|---|
-| Black Pawn | 8% |
-| Black Knight / Bishop | 15% |
-| Black Rook | 20% |
-| Black Queen | 35% |
-| Raider Scout | 25% |
-| Galaxian Escort | 30% |
-| Galaxian Flagship | 50% (guaranteed on first Flagship per level) |
-| Black King | Always drops a power-up (random type) |
+**Playtesting variables — tune after first playable build:**
+- Which scout types feel satisfying vs. frustrating to encounter
+- Spawn frequency (currently: 1 per level from L2, 2 per level from L5)
+- First level each type appears (currently all from L2 — some types may be better held back)
+- Duration and intensity of each effect (especially Gatling Barrage at 15s and Time Freeze at 3s)
+- Whether any effect feels overpowered enough to break level tension (Nuke clearing all projectiles during Last Stand Rush could defuse the best moment in the game — consider excluding it from Level 5+)
 
-### 13.3 Power-Up Types
+**Design principle — make them feel overwhelming:** Power-ups should feel like a genuine moment of release. When a Recharged game gives you multiball or auto-cannon fire, the screen fills with action and you feel briefly invincible. That's the target feeling. GCI power-ups should err on the side of dramatic excess — too many shots, too fast — rather than modest stat bumps. If a power-up doesn't make the player instinctively grin the first time they get it, it's not strong enough.
 
-#### Shield Bubble
-- **Visual:** cyan hexagonal force-field outline that snaps around the spaceship on collection. Pulses softly.
-- **Effect:** absorbs the next single hit that would destroy the ship. After absorbing one hit the shield shatters (particle burst) and the ship is unprotected again.
-- **Duration:** indefinite — lasts until hit. **Resets at level end** — the shield does not carry over to the next level. It is a tactical tool for the current wave, not a persistent upgrade.
-- **Pickup icon:** small glowing hexagon, cyan.
+### 13.2 Special Scout Types
 
-*(Shield Bubble is the only power-up for v1.0. Additional types — Repair Drone, Smart Bomb, Speed Boost — are reserved for a later update once core gameplay is balanced.)*
+Each Special Scout is visually unmistakable at a glance — different shape, different color, different movement signature. The design principle: the scout's appearance should hint at its power.
 
-### 13.4 Pickup Visuals
+---
 
-All pickups share the same falling behavior and visual language:
-- Icon is a small neon-vector glyph inside a glowing diamond outline.
-- Rotates slowly while falling.
-- Emits a faint light trail behind it as it descends.
-- A brief "collect" flash and chime sound plays on pickup.
-- Color-coded by type: Shield = cyan, (future: Repair = green, Smart Bomb = orange, Speed = yellow).
+#### ⚡ Lightning Scout — Extra Laser Slot
+
+- **Visual:** Yellow-gold neon. Elongated, streamlined shape — more aerodynamic than the standard disc. Crackles with small arcing electricity animations on its hull. Moves **faster** than standard scouts (1.4× speed).
+- **Points:** 200 (harder to hit due to speed)
+- **Effect:** Adds +1 simultaneous laser slot for **45 seconds**. Stacks with pawn promotion bonuses up to the hard cap of 6.
+- **HUD indicator:** A lightning bolt icon appears in the HUD next to the laser count, with a countdown bar beneath it.
+- **SFX on destroy:** Rising electric crackle surge — a fast ascending buzz that resolves into a satisfying snap.
+- **SFX on expiry:** A brief descending crackle signals the extra slot dropping away.
+
+---
+
+#### ❄ Ice Scout — Time Freeze
+
+- **Visual:** Pale icy blue-white neon. Angular, crystalline shape — hexagonal facets, like a geometric snowflake. Moves **slower** than standard scouts (0.6× speed), drifting deliberately.
+- **Points:** 150
+- **Effect:** **3-second time freeze.** Fleet movement stops completely. Chess turn timer pauses. All enemy projectiles in flight freeze in place (they resume after the effect ends — they do not disappear). The player can still move and fire normally.
+- **Music:** `AVAudioPlayer.rate` drops to **0.5** for the duration — the music slows and deepens in pitch, creating an unmistakable "time is warping" sensation. This is the one case where `rate` manipulation is intentional and desired.
+- **SFX on destroy:** A deep, reverberant **whoooosh** — the sound of air rushing as time slows. Immediately followed by a crystalline ring on the freeze's first frame.
+- **SFX on expiry:** A second whoosh (reversed) as time snaps back to normal speed. Music instantly returns to `rate = 1.0`.
+- **Visual during freeze:** The background star layers stop scrolling. A faint blue-white tint washes briefly over the scene on activation and lifts on expiry.
+
+---
+
+#### 🔥 Spread Scout — Gatling Barrage
+
+- **Visual:** Orange neon. Visibly **wider** than a standard scout — a fat, squat disc with five visible exhaust ports across its front edge. Moves at standard speed.
+- **Points:** 150
+- **Effect:** **15-second Gatling mode.** The laser cap is removed entirely and the ship auto-fires a continuous **5-way spread** — centre, ±20°, ±40° — at maximum rate (~8 shots/second) without the player pressing Space. The player retains full ship movement. The result is a dense garden-hose spray of lasers that covers most of the board width. Manual firing does nothing extra during this window — the auto-fire is the effect.
+- **HUD indicator:** An orange spray-fan icon pulses in the HUD with a countdown bar. Hard to miss.
+- **SFX on destroy:** A rapid multi-tone burst — five ascending notes fired in a tight 50ms sequence. Feels like a weapon powering up.
+- **SFX during Gatling mode:** Each shot fires with a lighter, faster version of the standard laser sound. At 8 shots/second the effect sounds like a rapid continuous chatter — a genuine machine-gun feel.
+- **SFX on expiry:** A brief wind-down tone signals the mode ending.
+- **Balance note:** 15 seconds of 5-way auto-fire will clear most of the board. That's intentional — it's a genuine power moment. If playtesting shows it trivialises too much, reduce to 10 seconds or narrow the spread to ±15°/±30°.
+
+---
+
+#### 💥 Bomb Scout — Nuke
+
+- **Visual:** Crimson-red neon. Angular, **spiky** silhouette — jagged protrusions like a sea mine. Flashes red on first hit (it takes **2 hits** to destroy, like the Flagship). The extra HP makes it a meaningful challenge for the reward.
+- **Points:** 250 (2 hits required)
+- **Effect:** On destruction, a **shockwave ring** radiates outward from the scout's position at high speed, destroying all enemy projectiles currently in flight. Pieces and Raiders are unaffected — only in-flight projectiles are cleared.
+- **SFX:** A deep sub-bass explosion ring — a heavy thud followed by a resonant wave of sound that sweeps across the stereo field (left to right), mirroring the visual shockwave.
+- **Visual:** The shockwave is a rapidly-expanding neon ring (magenta → white → transparent) that takes ~0.4 seconds to cross the screen. Small spark bursts appear at every projectile it destroys.
+
+---
+
+#### 🛡 Repair Scout — Shield Bubble
+
+- **Visual:** Cyan-green neon. Standard disc shape but with a **visible hexagonal grid overlay** — looks armoured. Moves at standard speed.
+- **Points:** 100
+- **Effect:** A **hexagonal force-field** snaps around the player's ship. Absorbs the next single hit that would destroy the ship. After absorbing the hit, the shield shatters in a particle burst and the ship is unprotected again. The shield does **not** carry over to the next level.
+- **SFX on destroy:** A soft ascending chime — reassuring and protective in character.
+- **SFX on shield hit:** A resonant metallic clang — the hit is absorbed, but the player hears it clearly. Followed by the shield-shatter sound if it was the last charge.
+- **Visual:** Cyan hexagonal outline softly pulses around the ship while active.
+
+---
+
+### 13.3 Power-Up Pickup Visuals
+
+Since effects trigger on scout destruction (no falling pickup), the visual feedback is on the scout itself:
+
+- On destruction: the scout explodes with its type-color particle burst (gold for Lightning, blue-white for Ice, orange for Spread, red for Bomb, cyan-green for Repair) — larger and more elaborate than a standard scout explosion.
+- A brief **type label** flashes at the destroy position for 0.8 seconds: `EXTRA SHOT`, `TIME FREEZE`, `SPREAD FIRE`, `NUKE`, `SHIELD UP` — large pixel text, same color as the scout, no background.
+- The HUD updates immediately to reflect the active effect.
 
 ---
 
@@ -820,6 +1112,19 @@ After a game ends, if the player's score places in the top 10:
 - High score table stores top 10 entries; **top 5 are displayed on the title screen** with three columns: rank, initials, score, level reached (e.g. L8, L7…). Note: the title screen mockup shows 3-char initials; the actual entry is 8 characters.
 
 Game Center integration is planned for Phase 2 — the data model is designed to support it (score + level stored together) but the Game Center API calls are not wired in v1.0.
+
+### 14.4 First-Run Detection & Auto How-to-Play
+
+On the **very first launch only**, the How-to-Play overlay is shown automatically before the player can start a game.
+
+**Behavior:**
+
+- At startup, read `UserDefaults.standard.bool(forKey: "com.gci.hasSeenHowToPlay")`.
+- If `false` (first run): after the title screen finishes its initial fade-in, trigger the How-to-Play overlay automatically without requiring a keypress. The `PRESS ANY KEY TO START` prompt is suppressed until the overlay is dismissed.
+- On dismiss: write `true` to `hasSeenHowToPlay`. This is permanent — the auto-show never repeats.
+- On all subsequent launches: title screen behaves normally. The INFO button remains available at all times for players who want to re-read the instructions.
+
+**Rationale:** New players have no context for the dual-input mechanic (chess moves + ship) and will otherwise drop the controller on turn 1. One automatic first-run exposure is sufficient — repeated auto-shows would feel patronizing to returning players.
 
 ---
 
@@ -1256,6 +1561,8 @@ Purchased MIDI/MP3 packs from itch.io can be re-rendered in **Logic Pro** using 
 
 #### Option B — Zudio-generated tracks
 
+> **⚠ Pre-ship action required:** Verify that Zudio's commercial licensing terms permit bundling generated tracks in a paid Mac App Store app without per-unit fees or royalties. Zudio's terms may vary by subscription tier. Confirm before submitting to App Store Review — if commercial distribution is not covered, fall back to Option C (CC0 sources) for all tracks. Do not ship with Zudio tracks until this is confirmed in writing or via their published terms.
+
 **[Zudio](https://zudio.co)** — Motorik and Kosmic songs generated by the Zudio app are a strong stylistic fit and already available in `.m4a` — no conversion needed. The Atari Recharged soundtrack (Megan McDuffee, [Vol. 1](https://meganmcduffee.bandcamp.com/album/atari-recharged-original-video-game-soundtrack) / [Vol. 2](https://meganmcduffee.bandcamp.com/album/atari-recharged-original-game-soundtrack-volume-2) / [Vol. 3](https://meganmcduffee.bandcamp.com/album/atari-recharged-original-game-soundtrack-volume-3)) is the sonic benchmark — dark electropop/synthpop, 80s/90s flavour, driving melodic leads, punchy mixes, ~2–2.5 minute loops. Zudio is in that territory.
 
 **Known limitations to work around:**
@@ -1286,6 +1593,14 @@ For a more explicitly retro or electronic sound, or to supplement Zudio tracks:
 3. Bundle `.m4a` files in the Xcode project under a `Music/` folder
 4. Load with `AVAudioPlayer`, `numberOfLoops = -1` for seamless looping
 5. On level start, pick randomly from the level's track pool (avoid repeating last track)
+
+#### Tempest 2000 as a Musical Reference
+
+**Tempest 2000** (Atari Jaguar, 1994) is the strongest musical reference point for GCI. Composed Imagitec Design (a.k.a. Dream Weavers), the 12-track soundtrack — *Thermal Resolution, Mind's Eye, T2K, Ease Yourself, Tracking Depth, Constructive Demolition, Future Tense, Digital Terror, Hyper Prism, Glide Control, Ultra Yak,* and *2000 Dub* — blends driving techno-rave rhythms, dense sample layering, and human voice samples tied directly to gameplay events (most famously an escalating *"Yes! Yes! Yes!"* on power-up warp). This aesthetic maps perfectly onto GCI: both games are fast, arcade-reflex experiences with a pure-black void aesthetic, neon visuals, and an enemy fleet that demands constant attention. The music was authored as **Commodore Amiga MOD files** and played back via the Jaguar's Jerry DSP chip — a format that stores raw audio samples alongside tracker pattern data, making it possible to inspect every note, sample, and effect command directly.
+
+**Finding the MOD files:** The original MOD files are in the publicly released Tempest 2000 source code (Jaguar Sector II, 2008) under `Tempest 2k Music 94/TEMPEST/MOD/`. Several of the tracks are also indexed on [ModArchive.org](https://modarchive.org). A 2021 fan remaster using these files is available at [archive.org/details/tempest-2000-ost-original-remastered-2021-flac-32-bit](https://archive.org/details/tempest-2000-ost-original-remastered-2021-flac-32-bit) — some files have been converted to MIDI using timidity.
+
+**Converting MOD to MIDI on macOS:** The fastest path is `timidity`, available via Homebrew: `brew install timidity`, then `timidity -Ow -o output.mid input.mod` — though note that MOD-to-MIDI conversion is lossy (MOD samples pitch-shift raw audio; MIDI uses instrument programs) so the output captures melody and rhythm but not timbre. For a cleaner analysis workflow, open the MOD in OpenMPT (Windows/Wine), export each channel as a separate MIDI track (`File → Export → MIDI`), then import into GarageBand or Logic Pro on Mac. This lets you inspect scales, chord progressions, basslines, and drum patterns directly in a piano roll — the ground-truth source for understanding what makes the tracks hypnotic.
 
 ---
 
@@ -2372,6 +2687,8 @@ Chess stalemate (no legal moves for white, not in check) is **ignored**. The spa
 
 ### 24.2 Game Over Conditions — Complete List
 
+**The mission is the King.** The level ends the moment the Black King falls — by shooting or by chess capture. Clearing the entire board first earns more points, but it is never required. This is the deliberate strategic choice every level: rush the King once a lane opens, or keep shooting to maximize score before delivering the killing blow.
+
 The game ends immediately under any of the following:
 
 | Condition | Result |
@@ -2380,14 +2697,75 @@ The game ends immediately under any of the following:
 | White king is checkmated | Defeat |
 | Spaceship loses all 3 lives | Defeat |
 | Any black piece reaches rank 1 | Defeat |
-| Black king is checkmated | Victory — level clear |
-| Black king HP reaches 0 (shot) | Victory — level clear, bonus points |
+| Black king HP reaches 0 (shot) | **Victory — level clear.** King shot bonus (+500 pts) awarded. Surviving white piece bonuses do NOT apply if pieces remain — the board resets. |
+| Black king captured by chess move | **Victory — level clear.** Treated identically to King shot — +500 pts bonus, board resets immediately. |
+| Black king checkmated | **Victory — level clear.** Immediate win even if other black pieces remain. Checkmate bonus (+300 pts) awarded in addition to King shot bonus if the King is simultaneously destroyed. |
+| All black pieces destroyed (board clear) | **Victory — level clear.** Only achievable if the King was the last piece destroyed. Full surviving white piece bonuses apply. |
 
-> **Open question — win condition:** The primary intended win condition is **checkmate** (black king in check with no legal moves), consistent with real chess. The design brief mockup suggested "clear the board — destroy every black piece," but this is not the intended design. However, this is worth playtesting: in an arcade game where pieces can be shot down, a full-board-clear condition may feel more natural and satisfying than a pure checkmate ending. Both should be prototyped and tested in Phase 3 before committing. For now, **checkmate is the target**, with board-clear as a secondary path if the black king is shot.
+**How-to-Play wording (canonical):** *"Defeat the Black King — shoot it down or capture it in chess. The level ends the moment the King falls. Clear the board first for maximum points, or go straight for the King. Your call."*
+
+**Checkmate as a bonus path:** Checkmate is not required to win but rewards skilled chess play with an instant win and a +300 bonus on top of the King destruction bonus. Non-chess players can ignore it entirely and win every level by shooting the King down.
 
 ### 24.3 Continues
 
 None. Game over is permanent — the player returns to the title screen. Score is submitted to the local high score table. No mid-game saves.
+
+### 24.3a Game Over Screen & Contextual Tips
+
+**Screen layout:** Game over riff plays. Screen fades to black with centered text:
+
+```
+        ★  GAME OVER  ★
+
+        SCORE   042750
+        LEVEL   3
+        REACHED
+
+        [CONTEXTUAL TIP LINE — see below]
+
+        PRESS ANY KEY
+```
+
+**Contextual tip overlay:** A single tip line appears below the score in a semi-transparent pill/label (legible but clearly secondary). The tip is chosen by evaluating the player's session stats against a priority-ordered list of conditions. The first matching condition wins. If no condition matches, a random general tip is shown.
+
+`GameSession` tracks the following stats during play:
+
+| Stat | Type | Description |
+|---|---|---|
+| `chessMovesMade` | Int | Number of chess moves the player completed |
+| `piecesShot` | Int | Black pieces destroyed by player laser |
+| `scoutsShot` | Int | Raider Scouts destroyed |
+| `kingShotAttempts` | Int | Lasers fired when King column was unobstructed |
+| `pawnsPromoted` | Int | Pawn promotions achieved |
+| `levelReached` | Int | Last level reached |
+| `deathCause` | Enum | `.raider`, `.fleetShot`, `.chessCheckmate`, `.fleetDescent`, `.kingShot` (own King) |
+| `fleetReachedRank1` | Bool | Whether any black piece reached rank 1 |
+| `livesLostToRaiders` | Int | Lives lost specifically to Raider fire |
+
+**Tip priority table** (evaluated top to bottom; first match shown):
+
+| Priority | Condition | Tip text |
+|---|---|---|
+| 1 | `chessMovesMade == 0` | `TIP: CLICK A PIECE · CLICK A SQUARE TO MOVE IN CHESS` |
+| 2 | `livesLostToRaiders >= 2` | `TIP: SHOOT SCOUTS BEFORE THEY START FIRING BACK` |
+| 3 | `fleetReachedRank1 == true` | `TIP: DON'T LET THE FLEET REACH THE BOTTOM ROW` |
+| 4 | `piecesShot == 0 && levelReached == 1` | `TIP: BONUS POINTS IF YOU CLEAR THE BOARD` |
+| 5 | `kingShotAttempts == 0 && levelReached >= 2` | `TIP: OPEN A CLEAR LANE TO TAKE THE KING DIRECTLY` |
+| 6 | `pawnsPromoted == 0 && levelReached >= 3` | `TIP: ADVANCE A PAWN TO ROW 8 FOR AN EXTRA LASER SLOT` |
+| 7 | `chessMovesMade <= 2 && levelReached >= 2` | `TIP: CHESS MOVES CAN CAPTURE BLACK PIECES INSTANTLY` |
+| 8 | `deathCause == .chessCheckmate` | `TIP: IF IN CHECK · ANY MOVE THAT ESCAPES IT WORKS` |
+| 9 | `scoutsShot == 0 && levelReached >= 2` | `TIP: SCOUTS ARE WORTH 100 PTS · AIM FOR THEM FIRST` |
+| 10 | *(fallback — random from pool)* | See general tips pool below |
+
+**General tips pool** (shown when no condition matches; pick one at random each game-over):
+
+- `TIP: CHECKMATE THE KING FOR A 300 PT BONUS`
+- `TIP: YOUR LASER CAP INCREASES WITH EVERY PAWN PROMOTION`
+- `TIP: PIECES AT CRITICAL HP FLICKER · FINISH THEM OFF`
+- `TIP: CHESS PIECES BLOCK THE FLEET'S DESCENT WHEN IN THEIR COLUMN`
+- `TIP: THE FASTER THE FLEET SWEEPS · THE SOONER IT DESCENDS`
+
+**Removal note:** The entire tip system is isolated in a `GameOverTipResolver` class. If playtesting shows tips are intrusive or unhelpful, delete the class and remove the one call site in `GameOverScene`. No other code changes needed.
 
 ### 24.4 Pause
 
@@ -2431,11 +2809,45 @@ Not implemented. Pawns capture only by standard diagonal capture. The move gener
 From Level 4 onward, destroyed black pieces can regenerate. Rules:
 - A regeneration triggers 10 seconds after a black piece is destroyed, subject to the level's regeneration slot cap.
 - The regenerated piece is always a **Pawn**, regardless of what was originally destroyed. It spawns at the back of the fleet at a random column position, with full Pawn HP (2).
-- Regenerated Pawns are visually distinct — they appear with a brief green flash on spawn and have a slightly dimmer glow, so the player can recognize them.
+- Regenerated Pawns are visually distinct — they arrive via a **transporter beam-in effect** (see below) and have a slightly dimmer glow afterwards, so the player can recognise them as respawned.
 - Regenerated Pawns are valid chess pieces. They can advance, promote, and fire shots like any other Pawn.
 - The black King never regenerates.
 - If the level's regeneration slot cap is reached, no further regenerations occur for that level.
 - **If the level ends while a regeneration timer is running, the timer is cancelled.** The board resets fresh at the start of each level — no pending regenerations carry over.
+
+#### Transporter Beam-In Effect
+
+All regenerating pieces materialise via a **Star Trek-style transporter animation** — a column of shimmering particles that resolves into the piece over ~2 seconds. No countdown, no warning box — the shimmering column is the warning.
+
+**Visual sequence:**
+1. At the target square, a narrow vertical column of sparkling cyan-white particles appears — random pixel-sized flecks flickering at ~20 Hz, contained to the piece's bounding box.
+2. Over 1.8 seconds, the particle density increases and the piece sprite fades in from 0% to 100% opacity simultaneously — the piece assembles out of the shimmer.
+3. On full materialisation: a single brief flash (one frame of full white) and the particles dissipate instantly.
+4. The piece is now fully active: takes damage, fires, and is a valid chess target.
+
+**Colour:** Standard regeneration — green-white shimmer. Defensive regeneration (King protection mode) — blue-white shimmer. The colour tells the player at a glance whether the new piece is random or targeted.
+
+**The piece cannot be shot while beaming in.** Its physics body is inactive during the animation — lasers pass through. It becomes hittable on the frame the materialisation flash fires. This gives the player a readable "not yet real" state without requiring any special UI.
+
+**Audio:** A synthesised transporter shimmer — an oscillating, harmonically-rich tone that rises and sustains for ~1.8 seconds, then cuts cleanly on materialisation. Not the copyrighted Paramount sound; a soundalike with the same shimmering character: amplitude-modulated sine wave, 800–1200 Hz band, with a slight pitch wobble (~4 Hz LFO). One `.caf` file, same asset for both standard and defensive spawns (colour difference handles the visual distinction). Volume: ~60% of master SFX — present but not dominating.
+
+#### Defensive Respawn Mode (Level 3+)
+
+From Level 3 onward, when the Black King reaches **Cracked or Critical HP**, the regeneration system shifts from random back-rank spawning to **targeted defensive formation**: regenerated pieces spawn in positions that directly shield the King rather than at random column positions.
+
+- **Pawn:** spawns one square directly in front of the King (in its current logical column) — an immediate HP buffer between the open lane and the King.
+- **Rook (Level 5+):** regenerates in the King's current column at the back rank. The chess engine can now legally move it to defend the file. A Rook in the King's column closes a laser lane entirely until destroyed.
+- **Bishop (Level 6+):** regenerates on a diagonal square adjacent to the King, covering approach angles from the player's current ship position.
+
+Defensively-respawned pieces use the same transporter beam-in effect as standard regeneration, but with a **blue-white column** instead of the standard green — a deliberate signal that these pieces are materialising to protect the King. The urgency of finishing off the King before defenses close is the intended reaction.
+
+| Piece | Available from | Trigger |
+|---|---|---|
+| Pawn (defensive) | Level 3 | King at Cracked HP |
+| Rook | Level 5 | King at Critical HP |
+| Bishop | Level 6 | King at Critical HP |
+
+Defensive spawns consume the same regeneration slot cap as standard regenerations. The Black King itself never regenerates.
 
 ### 24.9 Simultaneous Hits
 
@@ -2487,7 +2899,21 @@ When a chess piece moves (either player or auto-move), it leaves a brief neon gh
 
 The black pieces pulse very slightly in brightness (±15% opacity) in sync with the Space Invaders heartbeat bass notes. As the heartbeat speeds up, so does the pulse. This ties the audio and visual rhythm together subconsciously.
 
-### 25.8 Pawn Promotion Sequence
+### 25.8 King in Danger — Visual Pulse
+
+When the Black King reaches **Cracked damage state** (8 HP remaining — half its maximum), it begins a distinctive red heartbeat pulse overlaid on its magenta glow. This is implemented programmatically on the existing d2 sprite — no additional art asset required:
+
+- The King's glow shifts from magenta (`#FF2060`) toward deep crimson (`#CC0030`), cycling back in a sine wave
+- **Cracked state:** 1 Hz pulse (one beat per second)
+- **Critical state:** 2 Hz pulse — doubles in urgency, matches the accelerating heartbeat rhythm
+- The pulse frequency is intentionally synchronized with the fleet heartbeat sound — visual and audio urgency lock together
+- A faint low-frequency hum (distinct from the standard heartbeat) accompanies the pulse as ambient audio — the King's "distress signal"
+
+**What this communicates without words:** the King is now a viable primary target. A player focused on shooting pawns will notice the red pulse and understand instinctively that the objective has shifted. No tutorial overlay needed.
+
+At 0 HP the King destruction is the most cinematic moment in the game: full-screen white flash, expanding ring shockwave sprite, debris particles drifting for ~2 seconds, 0.6-second screen shake, and a long dramatic explosion sweep — the level's climax, earned.
+
+### 25.9 Pawn Promotion Sequence
 
 The pawn promotion event (§15.5) gets a dedicated 0.5-second "moment":
 1. All other action continues but dims slightly (80% opacity).
@@ -2584,3 +3010,387 @@ The cap resets to 2 at the start of each new level. Engineering multiple promoti
 ---
 
 *End of resolved decisions — v0.2*
+
+---
+
+## 26. Automated Testing Strategy
+
+The existing phase-by-phase testing notes in §22 cover manual verification — running the game and confirming behavior visually. This section defines the **automated test suite** that runs without a human: unit tests, integration tests, and performance benchmarks that can be executed via `xcodebuild test` in CI and before every significant merge.
+
+The guiding principle matches the development phase order: **prove chess logic correct before adding animation; prove collision rules correct before adding physics.** A bug in `MoveGenerator.swift` discovered in Phase 1 is a one-hour fix. The same bug found in Phase 6 after SpriteKit rendering, fleet movement, and collision handling are all built on top of it is a day of archaeology.
+
+---
+
+### 26.1 Test Organization
+
+```
+GalacticChessInvaders/
+└── Tests/
+    ├── ChessLogicTests.swift        ← Phase 1 — legal moves, check, checkmate, HP
+    ├── BoardStateTests.swift        ← Phase 1 — forcePlace, crush events, board integrity
+    ├── ScoringTests.swift           ← Phase 1 — score math, multipliers, persistence
+    ├── GameRulesTests.swift         ← Phase 2 — turn timer, auto-move, state transitions
+    ├── CollisionRulesTests.swift    ← Phase 3 — damage resolution (not SpriteKit physics)
+    ├── LevelProgressionTests.swift  ← Phase 7 — level parameters, escalation, multi-move
+    └── PerformanceTests.swift       ← Phases 1+ — engine speed, pool allocation
+```
+
+All test targets import via `@testable import GalacticChessInvaders` — no symbols need to be made `public` just to test them.
+
+---
+
+### 26.2 Phase 1 — Chess Logic Tests (Highest Priority)
+
+**Write these before any rendering code exists.** The chess logic layer is pure Swift with no SpriteKit imports — it compiles and runs in a test target with zero UI dependencies. All tests here should pass before Phase 2.1 begins.
+
+#### Move Generation
+
+Use FEN strings (Forsyth-Edwards Notation) to set up specific board positions. FEN encodes a complete board state as a single string — ChessKit accepts them directly.
+
+```swift
+// Every piece moves legally from a known position
+func testKnightMovesFromCentre() {
+    let board = GCIBoard(fen: "8/8/8/8/4N3/8/8/8 w - - 0 1")
+    let moves = MoveGenerator.legalMoves(for: .knight, color: .white, at: "e4", on: board)
+    XCTAssertEqual(moves.count, 8)  // knight in centre has 8 squares
+}
+
+func testPawnBlockedByOwnPiece() {
+    let board = GCIBoard(fen: "8/8/8/8/4P3/4P3/8/8 w - - 0 1")
+    let moves = MoveGenerator.legalMoves(for: .pawn, color: .white, at: "e3", on: board)
+    XCTAssertTrue(moves.isEmpty)  // blocked by own pawn on e4
+}
+
+func testPinnedPieceCannotMove() {
+    // White bishop on d3 pinned by black rook on d8 — cannot move off the d-file
+    let board = GCIBoard(fen: "3r4/8/8/8/8/3B4/8/3K4 w - - 0 1")
+    let moves = MoveGenerator.legalMoves(for: .bishop, color: .white, at: "d3", on: board)
+    XCTAssertTrue(moves.isEmpty)
+}
+```
+
+#### Check and Checkmate
+
+```swift
+func testCheckDetected() {
+    // Black rook on e8 puts white king on e1 in check
+    let board = GCIBoard(fen: "4r3/8/8/8/8/8/8/4K3 w - - 0 1")
+    XCTAssertTrue(board.isInCheck(color: .white))
+}
+
+func testFoolsMate() {
+    // Fool's mate — fastest checkmate in chess (2 moves for Black)
+    let board = GCIBoard(fen: "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3")
+    XCTAssertTrue(board.isCheckmate(color: .white))
+    XCTAssertEqual(MoveGenerator.legalMoves(color: .white, on: board).count, 0)
+}
+
+func testScholarsMate() {
+    let board = GCIBoard(fen: "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")
+    XCTAssertTrue(board.isCheckmate(color: .black))
+}
+
+func testStalemate_noGameOver() {
+    // Stalemate: white has no legal moves but is not in check — GCI continues (§24.1)
+    let board = GCIBoard(fen: "k7/8/1Q6/8/8/8/8/K7 b - - 0 1")
+    XCTAssertFalse(board.isCheckmate(color: .black))
+    XCTAssertFalse(board.isInCheck(color: .black))
+    // GCI rule: game does not end on stalemate
+}
+```
+
+#### HP and Damage System
+
+```swift
+func testPawnDiesInOneHit() {
+    var piece = Piece(type: .pawn, color: .black)
+    XCTAssertEqual(piece.hp, 2)
+    piece.applyDamage(2)
+    XCTAssertEqual(piece.hp, 0)
+    XCTAssertTrue(piece.isDestroyed)
+}
+
+func testQueenReachesCriticalState() {
+    var piece = Piece(type: .queen, color: .black)
+    piece.applyDamage(9)
+    XCTAssertEqual(piece.damageState, .critical)
+    XCTAssertFalse(piece.isDestroyed)
+}
+
+func testDamageStates_allPieceTypes() {
+    // Verify chipped/cracked/critical thresholds for every piece
+    let cases: [(PieceType, Int, DamageState)] = [
+        (.pawn,   1, .chipped),
+        (.knight, 2, .chipped), (.knight, 4, .cracked), (.knight, 5, .critical),
+        (.rook,   4, .cracked), (.rook,   6, .critical),
+        (.queen,  6, .cracked), (.queen,  9, .critical),
+        (.king,   8, .cracked), (.king,  12, .critical),
+    ]
+    for (type, damage, expectedState) in cases {
+        var piece = Piece(type: type, color: .black)
+        piece.applyDamage(damage)
+        XCTAssertEqual(piece.damageState, expectedState,
+            "\(type) after \(damage) damage should be \(expectedState)")
+    }
+}
+```
+
+#### Force-Place and Board Integrity
+
+```swift
+func testForcePlaceBypassesLegality() {
+    var board = GCIBoard()
+    board.forcePlace(.pawn, color: .black, at: "e3")  // illegal under chess rules
+    XCTAssertNotNil(board.piece(at: "e3"))
+    XCTAssertEqual(board.piece(at: "e3")?.type, .pawn)
+}
+
+func testCrushEvent_whitePieceRemoved() {
+    var board = GCIBoard()
+    board.place(.pawn, color: .white, at: "e4")
+    board.forcePlace(.pawn, color: .black, at: "e4")  // black descends onto white
+    // White pawn should be gone; black pawn should be present
+    XCTAssertEqual(board.piece(at: "e4")?.color, .black)
+    XCTAssertEqual(board.whitePieceCount, 15)
+}
+```
+
+---
+
+### 26.3 Phase 1 — Scoring Tests
+
+```swift
+func testBasePawnScore() {
+    let score = ScoreManager()
+    score.addPoints(for: .shootPawn, level: 1)
+    XCTAssertEqual(score.total, 25)
+}
+
+func testMultiplierScaling() {
+    let score = ScoreManager()
+    score.addPoints(for: .shootPawn, level: 3)  // 3× multiplier (1.0 + 0.5×2)
+    XCTAssertEqual(score.total, 50)             // 25 × 2.0
+}
+
+func testCheckmateAndShotKing_bothBonuses() {
+    // King shot while in checkmate: 500 (shot) + 300 (checkmate) = 800
+    let score = ScoreManager()
+    score.addPoints(for: .shootKing, level: 1)
+    score.addPoints(for: .checkmatebonus, level: 1)
+    XCTAssertEqual(score.total, 800)
+}
+
+func testHighScorePersistence() {
+    let mgr = ScoreManager()
+    mgr.submit(score: 9999, level: 3, initials: "ZAC")
+    let loaded = ScoreManager()  // fresh instance reads UserDefaults
+    XCTAssertEqual(loaded.topScores().first?.score, 9999)
+}
+```
+
+---
+
+### 26.4 Phase 2 — Game Rules Tests
+
+These test the state machine and turn logic without any SpriteKit. Extract turn-rule logic into a `GameRules` pure-Swift type that `GameScene` delegates to.
+
+```swift
+func testTimerExpiryTriggersAutoMove() {
+    let rules = GameRules(board: GCIBoard.startingPosition())
+    rules.simulateTimerExpiry()
+    XCTAssertEqual(rules.lastMoveSource, .auto)
+    XCTAssertTrue(rules.lastMove?.isLegal == true)
+}
+
+func testCheckExtendsTimer() {
+    var rules = GameRules(board: GCIBoard(fen: "4r3/8/8/8/8/8/8/4K3 w - - 0 1"))
+    XCTAssertEqual(rules.currentTimerDuration, 8.0)  // check → 8s not 5s
+}
+
+func testAutoMove_withPieceSelected_movesSelectedPiece() {
+    var rules = GameRules(board: GCIBoard.startingPosition())
+    rules.selectPiece(at: "e2")
+    rules.simulateTimerExpiry()
+    // Engine must move the e2 pawn, not any other piece
+    XCTAssertEqual(rules.lastMove?.from, "e2")
+}
+
+func testLevelAdvancesOnAllBlackPiecesDestroyed() {
+    var state = GameState(level: 1)
+    state.destroyAllBlackPieces()
+    XCTAssertEqual(state.phase, .levelClear)
+}
+```
+
+---
+
+### 26.5 Phase 3 — Collision Resolution Tests
+
+Test the **rules** of what happens when a collision fires, not the SpriteKit physics that detects it. Extract `CollisionResolver.resolve(laser:hitting:)` as a pure function.
+
+```swift
+func testPlayerLaserDamagesPawn_2HP() {
+    let result = CollisionResolver.resolve(
+        laser: .playerLaser,
+        hitting: Piece(type: .pawn, color: .black, hp: 2)
+    )
+    XCTAssertEqual(result.damageDone, 2)
+    XCTAssertTrue(result.pieceDestroyed)
+    XCTAssertEqual(result.scoreAwarded, 25)
+}
+
+func testFriendlyFire_dealsTwoHP() {
+    let result = CollisionResolver.resolve(
+        laser: .playerLaser,
+        hitting: Piece(type: .knight, color: .white, hp: 6)
+    )
+    XCTAssertEqual(result.damageDone, 2)
+    XCTAssertFalse(result.pieceDestroyed)
+    XCTAssertEqual(result.scoreAwarded, 0)  // no points for friendly fire
+}
+
+func testEnemyShot_dealsOneHP() {
+    let result = CollisionResolver.resolve(
+        laser: .invaderShot,
+        hitting: Piece(type: .rook, color: .white, hp: 8)
+    )
+    XCTAssertEqual(result.damageDone, 1)
+    XCTAssertFalse(result.pieceDestroyed)
+}
+
+func testShipHit_loadsLife() {
+    var ship = SpaceshipState(lives: 3)
+    ship.applyHit()
+    XCTAssertEqual(ship.lives, 2)
+    XCTAssertTrue(ship.isInvincible)  // 2s grace period
+}
+
+func testShipInvincible_noLifeLost() {
+    var ship = SpaceshipState(lives: 2)
+    ship.beginInvincibility()
+    ship.applyHit()
+    XCTAssertEqual(ship.lives, 2)  // hit ignored during grace period
+}
+```
+
+---
+
+### 26.6 Phase 7 — Level Escalation Tests
+
+```swift
+func testLevel3_twoBlackMovesPerTurn() {
+    let params = LevelParameters(level: 3)
+    XCTAssertEqual(params.blackMovesPerTurn, 2)
+}
+
+func testLevel5_threeBlackMovesPerTurn() {
+    XCTAssertEqual(LevelParameters(level: 5).blackMovesPerTurn, 3)
+}
+
+func testMultiMoveEngine_returnsOnlyLegalMoves() {
+    let board = GCIBoard.startingPosition()
+    let moves = ChessEngine.multiMove(count: 2, for: .black, on: board)
+    XCTAssertEqual(moves.count, 2)
+    XCTAssertTrue(moves.allSatisfy { board.isLegal($0) })
+}
+
+func testPawnPromotion_laserCapIncreases() {
+    var state = GameState(level: 1)
+    XCTAssertEqual(state.laserCap, 2)
+    state.applyPromotion()
+    XCTAssertEqual(state.laserCap, 3)
+    state.applyPromotion()
+    XCTAssertEqual(state.laserCap, 4)
+}
+
+func testPawnPromotion_hardCapAt6() {
+    var state = GameState(level: 1)
+    for _ in 0..<10 { state.applyPromotion() }
+    XCTAssertEqual(state.laserCap, 6)
+}
+
+func testLaserCap_resetsOnNewLevel() {
+    var state = GameState(level: 2)
+    state.applyPromotion(); state.applyPromotion()
+    state.advanceLevel()
+    XCTAssertEqual(state.laserCap, 2)
+}
+```
+
+---
+
+### 26.7 Performance Tests
+
+These run continuously and catch regressions before they reach players.
+
+```swift
+func testMoveGenerationPerformance() {
+    let board = GCIBoard.startingPosition()
+    measure {
+        for _ in 0..<1000 {
+            _ = MoveGenerator.legalMoves(color: .white, on: board)
+        }
+    }
+    // XCTest flags any run more than 10% slower than established baseline
+}
+
+func testEngineEvaluationUnder50ms() {
+    let board = GCIBoard.startingPosition()
+    let start = Date()
+    _ = ChessEngine.bestMove(for: .black, on: board, depth: 2)
+    XCTAssertLessThan(Date().timeIntervalSince(start), 0.05)
+}
+
+func testLaserPoolZeroAllocationDuringPlay() {
+    let pool = LaserPool(capacity: 6)
+    // Acquire and release 1000 times — should never allocate
+    let baseline = pool.allocationCount
+    for _ in 0..<1000 {
+        let node = pool.acquire()
+        pool.release(node)
+    }
+    XCTAssertEqual(pool.allocationCount, baseline)
+}
+```
+
+---
+
+### 26.8 What Not to Test
+
+| Do not test | Why |
+|---|---|
+| `SKNode` positions, sizes, or visual states | Fragile, tests the framework not your code |
+| `SKAction` animation timing | Framework responsibility |
+| `GKMinmaxStrategist` move quality | You don't own the algorithm — just verify it returns a legal move |
+| `AVFoundation` audio playback | Mock at the boundary; do not test Apple's audio engine |
+| SpriteKit physics body contacts | Test the collision resolution *handler*, not the physics detection |
+| Fleet pixel positions during sweep | Test logical square updates on descent, not screen coordinates |
+
+---
+
+### 26.9 AI-Assisted Test Generation
+
+Each section of this design document is detailed enough to drive automated test generation. Workflow:
+
+1. Copy a specific rule section (e.g. §7.1 Piece Hit Points, §9 Scoring) into a Claude prompt
+2. Ask: *"Generate XCTest methods covering every case in this table, including boundary conditions and edge cases"*
+3. Review generated tests for correctness — AI knows chess edge cases (pins, discovered check, promotion under check) that are easy to miss manually
+4. Commit tests alongside the implementation they cover
+
+**Regression workflow:** every bug found during playtesting gets a minimal failing XCTest before the fix is written. The fix makes the test pass. The test is committed. That bug cannot regress silently.
+
+**Mutation testing with Muter:** periodically run [Muter](https://github.com/muter-mutation-testing/muter) against `Game/Logic/` — it introduces deliberate bugs (swaps `>=` to `>`, flips a boolean) and verifies your tests catch them. A mutation score below 80% means your test suite has blind spots in the logic layer.
+
+---
+
+### 26.10 Test Phase Gate Summary
+
+| Gate | Tests must pass | Before starting |
+|---|---|---|
+| **Gate 1** | All `ChessLogicTests`, `BoardStateTests`, `ScoringTests`, all performance benchmarks | Phase 2.1 (wire chess to scene) |
+| **Gate 2** | All `GameRulesTests` (turn timer, auto-move, state transitions) | Phase 3.1 (fleet movement) |
+| **Gate 3** | All `CollisionRulesTests` | Phase 3.3 (damage states and juice) |
+| **Gate 4** | All `LevelProgressionTests` | Phase 8 (visual polish) |
+| **Gate 5** | Full suite green, all performance benchmarks pass | Phase 9 (App Store submission) |
+
+The rule: **no phase begins until the previous gate is green.** This is not bureaucracy — it is the difference between finding a `forcePlace` bug in isolation versus finding it after six phases of arcade systems are built on top of it.
