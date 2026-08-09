@@ -112,7 +112,7 @@ The screen is divided into two horizontal zones:
 │   WHITE PIECES  (rows 2–1)            │  ← Player defense zone
 │                                       │
 ├──────────────────────────────────────-│
-│  [▼ 4s]   [──── SPACESHIP ────►]      │  ← Spaceship + timer strip
+│  [▼ 5s]   [──── SPACESHIP ────►]      │  ← Spaceship + timer strip
 └───────────────────────────────────────┘
 ```
 
@@ -185,7 +185,7 @@ Black's chess move happens **after** the fleet completes a lateral sweep. The en
 A "turn" is one complete white-move + black-move cycle, approximately 5 seconds. Once per turn, 1–3 random black pieces (weighted toward front-rank pawns) fire a projectile straight down. Projectiles travel at a fixed speed and can be:
 - **Blocked** by a white piece with HP remaining (piece takes damage).
 - **Shot down** by the player's spaceship laser.
-- **Lethal** to the spaceship if they reach the bottom strip.
+- **Costs one life** if they reach the bottom strip and hit the spaceship.
 
 ### 5.4 Last Piece — Last Stand Rush
 
@@ -314,9 +314,9 @@ Galaxian Escorts that dive can clip white pieces in their flight path: each whit
 
 **Damage is shown by outline erosion — no HP bars, no chipped pixels.** The piece's neon outline cracks and fades through four named states (Full → Chipped → Cracked → Critical) as it takes hits. Higher-value pieces have more complex outlines and more HP, so they degrade more slowly and still look imposing when damaged:
 
-| Piece | Max HP | Hits to reach each damage state |
+| Piece | Max HP | HP damage to reach each damage state |
 |---|---|---|
-| Pawn | 2 | Full→Chipped at 1 hit; destroyed at 2 |
+| Pawn | 2 | Full→Chipped at 1 HP damage; destroyed at 2 |
 | Knight | 6 | Chipped at 2, Cracked at 4, Critical at 5 |
 | Bishop | 6 | Chipped at 2, Cracked at 4, Critical at 5 |
 | Rook | 8 | Chipped at 2, Cracked at 4, Critical at 6 |
@@ -406,7 +406,7 @@ If the last life is lost the game ends immediately — no respawn.
 | Clear a wave (all black pieces gone) | Level × 200 bonus |
 | White piece surviving at level end | 10 × piece value |
 
-Score multiplier increases by 0.5× for each level completed.
+Score multiplier starts at 1.0× and increases by 0.5× at the start of each new level (Level 1: 1.0×, Level 2: 1.5×, Level 3: 2.0×, etc.). Points scored during a level use that level's multiplier.
 
 ### 9.1 Extra Life Milestone
 
@@ -429,7 +429,7 @@ Each level begins with a fresh standard chess setup and full white piece HP. Esc
 #### Level 1 — Tutorial Wave
 - Fleet speed: slow (40 px/s)
 - Black chess moves: 1 per turn, passive engine (avoids losses)
-- Invader shots: **none** — black pieces do not fire in Level 1
+- Invader shots: **none** — black pieces do not fire in Level 1 *(one exception: the King fires a single slow warning shot when it reaches Critical damage — see "Level 1 warning shot" below)*
 - Raiders: Scouts only, 1 every 20s
 - No Escorts, no Flagship
 - Turn timer: 5s
@@ -805,18 +805,20 @@ Player input is **ignored** during the banner — no movement, no firing, no che
 - Levels 4–5: lower, more ominous two-note chord hit
 - Level 6+: a single deep bass hit with a descending tail ("this is going to hurt")
 
-**Mechanic banner table** (one banner per level, first time only — if the player reaches Level 2 again in the same session, no banner):
+**Mechanic banner table** (shown once per mechanic, first time only — not repeated if the player reaches that level again in the same session. Level 4 has two banners shown sequentially; all others have one):
 
 | Level | Line 1 | Line 2 |
 |---|---|---|
 | 2 | `FLEET NOW FIRES!` | `DODGE · SHOOT BACK` |
 | 3 | `DOUBLE ATTACK` | `BLACK MOVES TWICE PER TURN` |
-| 4 | `THE DEAD RETURN` | `PIECES RESPAWN · FINISH THEM` |
-| 4 | `KAMIKAZES!` | `WATCH FOR FAST DIVERS` |
+| 4a | `THE DEAD RETURN` | `PIECES RESPAWN · FINISH THEM` |
+| 4b | `KAMIKAZES!` | `WATCH FOR FAST DIVERS` |
 | 5 | `TRIPLE ATTACK` | `3 CHESS MOVES PER TURN` |
 | 6+ | `DEEPER NOW` | `FASTER · MEANER · STILL POSSIBLE` |
+| 7 | `KING ACTIVATED` | `THE KING NOW ATTACKS` |
+| 9 | `ARMORED PAWNS` | `CHESS ONLY · BULLETS BOUNCE` |
 
-Level 4 has two new mechanics (regeneration and Kamikazes). Show them sequentially — regeneration banner first, 2s hold, fade, 0.3s gap, Kamikaze banner, 2s hold, fade, then gameplay.
+Level 4 shows both banners sequentially — regeneration first (2s hold, fade, 0.3s gap), then Kamikazes (2s hold, fade), then gameplay.
 
 **Implementation:** `MechanicBannerNode` — a self-contained `SKNode` subclass that takes `(line1: String, line2: String, sting: AudioClip)` and runs the full sequence via `SKAction` chain. `GameScene` calls `showBanner(for level:)` and awaits completion before enabling input. Shown once per mechanic per session, tracked in a `Set<Int>` of already-seen levels in `GameState`.
 
@@ -1093,8 +1095,8 @@ If no key is pressed within **12 seconds**, the title screen transitions into **
 |---|---|---|
 | 1 | 4s | **Scoring table** — piece sprites displayed with their point values. "HOW TO SCORE" header. |
 | 2 | 4s | **Ship types** — Raider Scout, Escort, Flagship shown with their point values and a brief animation of their attack pattern. |
-| 3 | 4s | **Power-up** — Shield Bubble pickup shown falling, ship collecting it, then absorbing a hit. "COLLECT POWER-UPS" text. |
-| 4 | 4s | **Pawn promotion** — pawn advancing to rank 8, triple-event animation (queen swap, nearest piece explosion, "MULTI-SHOT" banner). "PROMOTE YOUR PAWNS" text. |
+| 3 | 4s | **Power-up** — a Special Scout (Repair Scout, cyan-green) flies across; player shoots it; Shield Bubble activates around the ship; ship absorbs a hit. "SHOOT SPECIAL SCOUTS FOR POWER-UPS" text. |
+| 4 | 4s | **Pawn promotion** — pawn advancing to rank 8, triple-event animation (queen swap, nearest piece explosion, "MULTI-SHOT ACTIVATED" banner). "PROMOTE YOUR PAWNS" text. |
 | 5 | 4s | **Live gameplay snippet** — 4 seconds of pre-recorded or simulated gameplay showing the fleet sweeping and the ship firing. |
 
 After slide 5 it loops back to the title screen. Pressing any key at any point during attract mode starts the game immediately.
@@ -1171,7 +1173,7 @@ GalacticChessInvaders/
 │   ├── PieceNode.swift            ← SKSpriteNode subclass, damage states, smoke
 │   ├── HUDNode.swift              ← Score, timer, lives, check warning, auto flash
 │   ├── ReticleNode.swift          ← Legal move crosshair indicators
-│   └── PowerUpNode.swift          ← Falling pickup sprite + collect animation
+│   └── PowerUpNode.swift          ← Special Scout destruction effect + label flash
 ├── Scores/
 │   ├── ScoreManager.swift         ← Local top-10 table, UserDefaults persistence
 │   └── InitialsEntryScene.swift   ← 8-character classic arcade name entry
@@ -2398,21 +2400,22 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 
 ---
 
-### Phase 6.2 — Raiders: Flagship, Variants & Power-Up
+### Phase 6.2 — Raiders: Flagship, Variants & Special Scouts
 
-**Goal:** Add the Flagship and the three Escort variants (Kamikaze, Paired, Looping), plus the shield bubble power-up.
+**Goal:** Add the Flagship and the three Escort variants (Kamikaze, Paired, Looping), plus the full Special Scout power-up system (§13).
 
 **Build:**
 - Galaxian Flagship — flanked dive with 2 Escorts, 2 HP, first-hit flash + clang, second hit destroys. 300 pts.
 - Kamikaze Escort — fast no-shot straight dive at ship, no audio warning
 - Paired Escorts — two Escorts dive in synchronized formation
 - Looping Escort — dives, arcs back up, dives a second time before exiting
-- `PowerUpController.swift` — drop probability table, falling pickup
-- `PowerUpNode.swift` — rotating pickup sprite, collection detection
-- Shield bubble effect — hex outline snaps to ship, absorbs one hit, shatters
+- `SpecialScoutController.swift` — per-level spawn logic, scout type selection, effect trigger on destruction
+- `PowerUpNode.swift` — Special Scout destruction burst + type-label flash (no falling pickup — effects trigger on scout destroy)
+- All 5 Special Scout types: Lightning, Ice, Spread, Bomb, Repair (§13.2)
+- Each effect: activation, HUD indicator, expiry (§13.2)
 - Flagship SFX: metallic clang on first hit, raider explosion on second
-- Power-up SFX: soft chime on spawn, ascending ding on collect, crunch+shatter on absorption
-- Flagship added to `Raiders.spriteatlas`
+- Special Scout SFX: per-type destroy sound + effect audio (§13.2)
+- Flagship added to `Raiders.spriteatlas`; Special Scout sprites added to same atlas
 
 **Testing:**
 - Flagship flanked by 2 Escorts — Escorts must die before Flagship takes damage
@@ -2485,7 +2488,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Music ducking — music drops 30% on priority-1/2 SFX events, recovers in 0.5s
 - Score pop float animations, turn timer pulse animation
 - Hyperspace jump on level clear
-- "AUTO", "CHECK", "MULTI-SHOT" banner animations
+- "AUTO", "CHECK", "MULTI-SHOT ACTIVATED" banner animations
 - Title screen attract mode (5-slide cycle, 12s timeout)
 - High score entry (8-character initials, top 10 stored, top 5 displayed)
 - Game over and level clear screens
@@ -2498,7 +2501,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Attract mode cycles 5 slides, any key exits to game
 - High score entry — 8 chars, A–Z/0–9, persists across restarts
 - New high score — entry screen appears, saved to table
-- All banner animations ("AUTO", "CHECK", "MULTI-SHOT") trigger correctly
+- All banner animations ("AUTO", "CHECK", "MULTI-SHOT ACTIVATED") trigger correctly
 - **Pass criteria:** full playthrough from title to game over looks and sounds like a finished arcade game
 
 ---
@@ -2761,7 +2764,7 @@ None. Game over is permanent — the player returns to the title screen. Score i
 
 - `TIP: CHECKMATE THE KING FOR A 300 PT BONUS`
 - `TIP: YOUR LASER CAP INCREASES WITH EVERY PAWN PROMOTION`
-- `TIP: PIECES AT CRITICAL HP FLICKER · FINISH THEM OFF`
+- `TIP: PIECES WITH CRITICAL DAMAGE WILL FLICKER · FINISH THEM OFF`
 - `TIP: CHESS PIECES BLOCK THE FLEET'S DESCENT WHEN IN THEIR COLUMN`
 - `TIP: THE FASTER THE FLEET SWEEPS · THE SOONER IT DESCENDS`
 
@@ -2967,7 +2970,7 @@ Total interruption: 0.5 seconds. Not a pause — the player can still move and s
 **Rule:** White pawn reaches rank 8 →
 1. Pawn instantly becomes a Queen (full 12 HP, Queen sprite with flash animation + ascending arpeggio).
 2. The nearest black piece on screen is **destroyed automatically** — a targeting beam locks onto it and it explodes, no shot required. Points awarded as normal.
-3. The player's spaceship laser cap increases by 1 for the remainder of the level. A "MULTI-SHOT" banner briefly sweeps across the bottom of the screen showing the new cap.
+3. The player's spaceship laser cap increases by 1 for the remainder of the level. A "MULTI-SHOT ACTIVATED" banner briefly sweeps across the bottom of the screen showing the new cap.
 
 **Multi-shot stacks with each promotion:**
 
