@@ -22,6 +22,7 @@
 		7B642189B3FC586C84C9A534 /* InputHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089693DE6C70095463C9E308 /* InputHandler.swift */; };
 		7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86607BAC135182D9E5F8BD4 /* PieceNode.swift */; };
 		89F9459783A37520E9B6A7D3 /* DiagnosticsLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C108816F834B07B96432B59 /* DiagnosticsLog.swift */; };
+		92F5117575286012F40FFBAC /* SoundKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFA8FE0D63A1CAAA9CBA031E /* SoundKey.swift */; };
 		97361A240335FEBD8B2AFA78 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */; };
 		A0FCD49C41E45F58B46D09FB /* MoveGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81299DDCADFCC138B75D5794 /* MoveGenerator.swift */; };
 		E05E089FE48382AC59AD93BD /* LaserNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5308FEB0B1858AC43F451354 /* LaserNode.swift */; };
@@ -63,6 +64,7 @@
 		ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverScene.swift; sourceTree = "<group>"; };
 		C6C2B5784E5BF76690D58C93 /* GalacticChessInvaders.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GalacticChessInvaders.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8C800709B09587557941485 /* Piece.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
+		DFA8FE0D63A1CAAA9CBA031E /* SoundKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundKey.swift; sourceTree = "<group>"; };
 		F86607BAC135182D9E5F8BD4 /* PieceNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieceNode.swift; sourceTree = "<group>"; };
 		F8CB7404F3713FE581B43A87 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F9BCEF5A958D912F3D3834BC /* GameAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAction.swift; sourceTree = "<group>"; };
@@ -94,6 +96,7 @@
 			children = (
 				46F6F35A994CABC71E91B264 /* Info.plist */,
 				1FCC729449E404D8961A14A7 /* App */,
+				9E0416EC85C4E0A17DBE0D16 /* Audio */,
 				F75A8D9C8A7035887384E7B4 /* Game */,
 				8596DF32BB855BED7C729C85 /* Scenes */,
 			);
@@ -139,6 +142,14 @@
 			);
 			name = Tests;
 			path = GalacticChessInvaders/Tests;
+			sourceTree = "<group>";
+		};
+		9E0416EC85C4E0A17DBE0D16 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				DFA8FE0D63A1CAAA9CBA031E /* SoundKey.swift */,
+			);
+			path = Audio;
 			sourceTree = "<group>";
 		};
 		A2D01DD174BF68EDF156539D = {
@@ -296,6 +307,7 @@
 				10EC7FDA96FB9D9DF9ED8846 /* Piece.swift in Sources */,
 				7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */,
 				24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */,
+				92F5117575286012F40FFBAC /* SoundKey.swift in Sources */,
 				E08464B23F92D11F3F247DAB /* SpaceshipNode.swift in Sources */,
 				1840BB4464E1128BE071D44C /* TitleScene.swift in Sources */,
 			);

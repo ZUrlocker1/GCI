@@ -25,6 +25,8 @@ targets:
           - Tests/**
     resources:
       - path: assets/GCI.spriteatlas
+      - path: assets/sfx
+        type: folder
     settings:
       base:
         SWIFT_VERSION: 6.0
