@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Galactic Chess Invaders — Sprite Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07090c; --panel:#0a0d12; --ink:#dfefff; --dim:#6b7b88; --line:rgba(120,160,185,0.14);
+    --cyan:#12e0ff; --magenta:#ff2060; --green:#7dff4d; --orange:#ff8a1e; --blue:#3aa2ff; --yellow:#ffd24d;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --pixel:"Press Start 2P", monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);}
+  body{font-family:var(--mono);-webkit-font-smoothing:antialiased;}
+  canvas{image-rendering:pixelated;display:block;}
+  .wrap{max-width:1220px;margin:0 auto;padding:56px 40px 90px;}
+
+  /* header */
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--cyan);text-transform:uppercase;opacity:.9;}
+  h1{font-family:var(--pixel);font-size:30px;line-height:1.25;margin:14px 0 0;color:#fff;
+     text-shadow:0 0 18px rgba(18,224,255,.45);letter-spacing:1px;}
+  .sub{font-size:13px;color:var(--dim);margin-top:16px;max-width:680px;line-height:1.7;}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px;}
+  .chip{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.5px;color:var(--ink);
+        border:1px solid var(--line);border-radius:999px;padding:7px 13px 7px 9px;background:rgba(255,255,255,.015);}
+  .dot{width:12px;height:12px;border-radius:50%;}
+
+  /* sections */
+  section{margin-top:64px;}
+  .shead{display:flex;align-items:center;gap:18px;margin-bottom:26px;}
+  .shead h2{font-family:var(--pixel);font-size:14px;margin:0;color:var(--cyan);letter-spacing:1px;text-shadow:0 0 12px rgba(18,224,255,.4);}
+  .shead .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent);}
+  .shead .note{font-size:11px;color:var(--dim);letter-spacing:.5px;}
+
+  /* grids */
+  .grid{display:grid;gap:16px;}
+  .g6{grid-template-columns:repeat(6,1fr);}
+  .g4{grid-template-columns:repeat(4,1fr);}
+  .cell{background:#000;border:1px solid var(--line);border-radius:8px;padding:16px 10px 14px;
+        display:flex;flex-direction:column;align-items:center;overflow:hidden;position:relative;}
+  .cell .row-tag{position:absolute;top:9px;left:11px;font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
+  .stage{height:150px;display:flex;align-items:flex-end;justify-content:center;width:100%;}
+  .sprite{position:relative;display:flex;align-items:flex-end;justify-content:center;}
+  .name{font-family:var(--pixel);font-size:11px;color:#eaf6ff;margin-top:16px;letter-spacing:.5px;}
+  .spec{font-size:10px;color:var(--dim);line-height:1.7;text-align:center;margin-top:7px;}
+  .spec b{color:#9fb3c0;font-weight:400;}
+
+  /* side label column for the piece grid */
+  .rowlabel{font-family:var(--pixel);font-size:10px;color:var(--dim);letter-spacing:1px;
+            display:flex;align-items:center;justify-content:center;text-align:center;}
+
+  /* damage + explosion */
+  .strip{display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;}
+  .stepcell{background:#000;border:1px solid var(--line);border-radius:8px;padding:14px 12px;
+            display:flex;flex-direction:column;align-items:center;min-width:150px;flex:1;}
+  .arrow{align-self:center;color:var(--dim);font-size:18px;display:flex;align-items:center;}
+  .step-name{font-size:11px;color:#cfe0ec;margin-top:14px;letter-spacing:.5px;}
+  .step-spec{font-size:10px;color:var(--dim);margin-top:5px;}
+  .smoke{position:absolute;width:46px;height:46px;border-radius:50%;left:50%;top:8%;transform:translateX(-50%);
+         background:radial-gradient(circle,rgba(180,190,200,.5),rgba(180,190,200,0) 70%);filter:blur(3px);}
+  .spark{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--orange);
+         box-shadow:0 0 6px var(--orange),0 0 12px var(--orange);}
+
+  .footer{margin-top:70px;border-top:1px solid var(--line);padding-top:26px;display:grid;
+          grid-template-columns:repeat(3,1fr);gap:28px;}
+  .footer h3{font-family:var(--pixel);font-size:10px;color:var(--cyan);margin:0 0 12px;letter-spacing:.5px;}
+  .footer p{font-size:11px;color:var(--dim);line-height:1.8;margin:0;}
+  .footer code{color:#9fe9ff;font-size:10.5px;}
+  @media (max-width:900px){ .g6,.g4,.footer{grid-template-columns:repeat(2,1fr);} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Galactic Chess Invaders · Asset Reference v1.0</div>
+  <h1>SPRITE SHEET</h1>
+  <p class="sub">Every in-game sprite, drawn on a strict pixel grid and shown with the neon Recharged bloom.
+     Bloom is a render-pass effect (<code style="color:#9fe9ff">SKEffectNode</code>), <b>not</b> baked into the art —
+     the underlying pixels are clean and transparent. Native @1× pixel dimensions are noted on each asset.</p>
+
+  <div class="legend">
+    <div class="chip"><span class="dot" style="background:#12e0ff;box-shadow:0 0 8px #12e0ff"></span>White — Player side (cyan bloom)</div>
+    <div class="chip"><span class="dot" style="background:#ff2060;box-shadow:0 0 8px #ff2060"></span>Black — Enemy fleet (magenta bloom)</div>
+    <div class="chip"><span class="dot" style="background:#7dff4d;box-shadow:0 0 8px #7dff4d"></span>Raider Scout</div>
+    <div class="chip"><span class="dot" style="background:#ff8a1e;box-shadow:0 0 8px #ff8a1e"></span>Escort</div>
+    <div class="chip"><span class="dot" style="background:#3aa2ff;box-shadow:0 0 8px #3aa2ff"></span>Flagship</div>
+    <div class="chip"><span class="dot" style="background:#a64dff;box-shadow:0 0 8px #a64dff"></span>Llama (bonus)</div>
+    <div class="chip"><span class="dot" style="background:#ffb01e;box-shadow:0 0 8px #ffb01e"></span>Camel (bonus)</div>
+  </div>
+
+  <section id="pieces">
+    <div class="shead"><h2>Chess Pieces</h2><div class="rule"></div><div class="note">silhouette shared · colour + bloom distinguish side</div></div>
+    <div class="grid g6" id="pieceGrid"></div>
+  </section>
+
+  <section id="ships">
+    <div class="shead"><h2>Ships</h2><div class="rule"></div><div class="note">player fighter + 3 raider classes</div></div>
+    <div class="grid g4" id="shipGrid"></div>
+  </section>
+
+  <section id="bonus">
+    <div class="shead"><h2>Bonus Ships</h2><div class="rule"></div><div class="note">Jeff Minter tribute · flyover after Level 1</div></div>
+    <div style="font-size:11px;color:var(--dim);margin:-8px 0 16px;letter-spacing:.5px">Rare flyovers across the top lane — shoot for big bonus points. A nod to Llamatron &amp; Attack of the Mutant Camels.</div>
+    <div class="grid g4" id="bonusGrid"></div>
+  </section>
+
+  <section id="damage">
+    <div class="shead"><h2>Damage States</h2><div class="rule"></div><div class="note">damage shown on the sprite — no HP bars</div></div>
+    <div style="font-size:11px;color:var(--dim);margin:-8px 0 16px;letter-spacing:.5px">ENEMY QUEEN · 12 HP · taking player laser fire (2 HP / hit)</div>
+    <div class="strip" id="dmgQueen"></div>
+    <div style="font-size:11px;color:var(--dim);margin:26px 0 16px;letter-spacing:.5px">WHITE PAWN · 2 HP · taking an invader shot</div>
+    <div class="strip" id="dmgPawn"></div>
+  </section>
+
+  <section id="explosions">
+    <div class="shead"><h2>Explosions</h2><div class="rule"></div><div class="note">8-frame bursts · scaled by piece value</div></div>
+    <div class="strip" id="boom"></div>
+  </section>
+
+  <div class="footer">
+    <div><h3>Format</h3><p>Transparent <code>PNG</code>, 32-bit alpha, packed in an Asset-Catalog <code>.spriteatlas</code>. One file per frame.</p></div>
+    <div><h3>Scaling</h3><p>Authored at native @1× (sizes above). Upscale at runtime with <code>texture.filteringMode = .nearest</code> for crisp pixels.</p></div>
+    <div><h3>Glow</h3><p>Applied live via <code>SKEffectNode</code> + Gaussian blur, additive. Never baked into the PNG.</p></div>
+  </div>
+</div>
+
+<script src="sprites.js"></script>
+<script>
+  const PIECES = [
+    ["pawn","Pawn","16×16",2,"1 hit","25"],
+    ["knight","Knight","20×20",6,"3 hits","50"],
+    ["bishop","Bishop","20×20",6,"3 hits","50"],
+    ["rook","Rook","20×20",8,"4 hits","75"],
+    ["queen","Queen","24×24",12,"6 hits","150"],
+    ["king","King","28×28",16,"8 hits","500"],
+  ];
+  const SHIPS = [
+    ["player","Player Fighter","23×19 px","3 lives · single-shot laser"],
+    ["scout","Raider Scout","29×12 px","Mystery ship · 1 HP · 100 pts"],
+    ["escort","Galaxian Escort","22×16 px","Diving attacker · 1 HP · 150 pts"],
+    ["flagship","Galaxian Flagship","28×14 px","Flanked dive · 2 HP · 300 pts"],
+  ];
+  const BONUS = [
+    ["llama","Llama","Llamatron tribute","Top-lane flyover · 1000 pts"],
+    ["camel","Mutant Camel","A.M.C. tribute","Top-lane flyover · 2000 pts"],
+  ];
+
+  function glow(cv,i){ return GCISprites.applyGlow(cv, i==null?0.75:i); }
+
+  // chunk-based battle damage (engine handles the erosion + dash sparks)
+  function chip(cv, dmg, seed){ return GCISprites.applyDamage(cv, dmg, seed); }
+
+  function pieceSprite(type, side, px, opts){
+    opts=opts||{};
+    const wrap=document.createElement("div"); wrap.className="sprite";
+    const cv=GCISprites.renderPieceVector(type, side, px, {dmg:opts.dmg, seed:opts.seed});
+    glow(cv);
+    wrap.appendChild(cv);
+    if(opts.dmg>=0.42){ const sm=document.createElement("div"); sm.className="smoke"; wrap.appendChild(sm); }
+    return wrap;
+  }
+
+  function shipSprite(type, px){ const cv=GCISprites.renderShipVector(type, px); glow(cv); const w=document.createElement("div"); w.className="sprite"; w.appendChild(cv); return w; }
+
+  function explosion(size, color, opts){
+    opts=opts||{};
+    const pad=Math.ceil(size*0.34);
+    const cv=document.createElement("canvas"); cv.width=cv.height=size+pad*2;
+    const ctx=cv.getContext("2d"), c=cv.width/2;
+    let s=99; const rnd=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};
+    // soft outer glow
+    let og=ctx.createRadialGradient(c,c,0,c,c,size*0.7);
+    og.addColorStop(0,color+"55"); og.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=og; ctx.beginPath(); ctx.arc(c,c,size*0.7,0,7); ctx.fill();
+    // billowing flame lobes (additive)
+    ctx.globalCompositeOperation="lighter";
+    const lobes=[[0,0,0.5],[-0.24,-0.12,0.31],[0.26,-0.14,0.29],[-0.14,0.24,0.28],[0.2,0.23,0.26],[0.02,-0.28,0.23]];
+    lobes.forEach(([dx,dy,sc])=>{
+      const lx=c+dx*size, ly=c+dy*size, R=size*sc;
+      const g=ctx.createRadialGradient(lx,ly,0,lx,ly,R);
+      g.addColorStop(0,"#ffffff"); g.addColorStop(0.2,"#ffe27a"); g.addColorStop(0.48,color); g.addColorStop(0.74,"#ff3b1e"); g.addColorStop(1,"rgba(255,59,30,0)");
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(lx,ly,R,0,7); ctx.fill();
+    });
+    // white-hot core
+    const cg=ctx.createRadialGradient(c,c,0,c,c,size*0.22);
+    cg.addColorStop(0,"#ffffff"); cg.addColorStop(0.6,"#ffe9a8"); cg.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(c,c,size*0.22,0,7); ctx.fill();
+    ctx.globalCompositeOperation="source-over";
+    if(opts.ring){ ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=Math.max(2,size*0.018);
+      ctx.beginPath(); ctx.arc(c,c,size*0.6,0,7); ctx.stroke(); }
+    // debris dashes
+    ctx.strokeStyle="#ffd24d"; ctx.lineCap="round"; ctx.lineWidth=Math.max(2,size*0.028); ctx.shadowColor=color; ctx.shadowBlur=size*0.05;
+    for(let i=0;i<11;i++){ const a=i/11*6.283+rnd()*0.3, r0=size*0.5, r1=r0+size*(0.08+rnd()*0.12);
+      ctx.beginPath(); ctx.moveTo(c+Math.cos(a)*r0,c+Math.sin(a)*r0); ctx.lineTo(c+Math.cos(a)*r1,c+Math.sin(a)*r1); ctx.stroke(); }
+    cv.style.filter=`drop-shadow(0 0 6px ${color})`;
+    const w=document.createElement("div"); w.className="sprite"; w.appendChild(cv); return w;
+  }
+
+  // ---- build piece grid (white row, black row, each with a leading label cell handled via tags) ----
+  const pg=document.getElementById("pieceGrid");
+  for(const side of ["white","black"]){
+    PIECES.forEach(([type,name,size,hp,hits,pts])=>{
+      const cell=document.createElement("div"); cell.className="cell";
+      const stage=document.createElement("div"); stage.className="stage";
+      stage.appendChild(pieceSprite(type, side, 5));
+      cell.appendChild(stage);
+      const nm=document.createElement("div"); nm.className="name"; nm.textContent=name; cell.appendChild(nm);
+      const sp=document.createElement("div"); sp.className="spec";
+      sp.innerHTML=`<b>${size}</b> · ${hp} HP<br>${hits} to destroy · ${pts} pts`;
+      cell.appendChild(sp);
+      pg.appendChild(cell);
+    });
+  }
+
+  // ---- ships ----
+  const sg=document.getElementById("shipGrid");
+  SHIPS.forEach(([type,name,size,note])=>{
+    const cell=document.createElement("div"); cell.className="cell";
+    const stage=document.createElement("div"); stage.className="stage";
+    stage.appendChild(shipSprite(type, 5));
+    cell.appendChild(stage);
+    const nm=document.createElement("div"); nm.className="name"; nm.textContent=name; cell.appendChild(nm);
+    const sp=document.createElement("div"); sp.className="spec"; sp.innerHTML=`<b>${size}</b><br>${note}`;
+    cell.appendChild(sp); sg.appendChild(cell);
+  });
+
+  // ---- bonus ships (Minter tributes) ----
+  const bg=document.getElementById("bonusGrid");
+  BONUS.forEach(([type,name,size,note])=>{
+    const cell=document.createElement("div"); cell.className="cell";
+    const stage=document.createElement("div"); stage.className="stage";
+    stage.appendChild(shipSprite(type, 5));
+    cell.appendChild(stage);
+    const nm=document.createElement("div"); nm.className="name"; nm.textContent=name; cell.appendChild(nm);
+    const sp=document.createElement("div"); sp.className="spec"; sp.innerHTML=`<b>${size}</b><br>${note}`;
+    cell.appendChild(sp); bg.appendChild(cell);
+  });
+
+  // ---- damage strips ----
+  function step(node, title, spec){
+    const c=document.createElement("div"); c.className="stepcell";
+    const stage=document.createElement("div"); stage.className="stage"; stage.appendChild(node); c.appendChild(stage);
+    const n=document.createElement("div"); n.className="step-name"; n.textContent=title; c.appendChild(n);
+    const s=document.createElement("div"); s.className="step-spec"; s.textContent=spec; c.appendChild(s);
+    return c;
+  }
+  function arrow(){ const a=document.createElement("div"); a.className="arrow"; a.textContent="→"; return a; }
+
+  const dq=document.getElementById("dmgQueen");
+  const qStages=[[0,"Full","12 / 12 HP"],[0.16,"Chipped","9 / 12 HP"],[0.34,"Cracked","6 / 12 HP"],[0.54,"Critical","3 / 12 HP"]];
+  qStages.forEach((st,i)=>{ dq.appendChild(step(pieceSprite("queen","black",6,{dmg:st[0],seed:11+i}), st[1], st[2])); dq.appendChild(arrow()); });
+  dq.appendChild(step(explosion(96,"#ff3b3b"), "Destroyed", "0 HP · large boom"));
+
+  const dp=document.getElementById("dmgPawn");
+  dp.appendChild(step(pieceSprite("pawn","white",6,{dmg:0}), "Full", "2 / 2 HP")); dp.appendChild(arrow());
+  dp.appendChild(step(pieceSprite("pawn","white",6,{dmg:0.5,seed:4}), "Cracked", "1 / 2 HP · smoke")); dp.appendChild(arrow());
+  dp.appendChild(step(explosion(70,"#ff8a1e"), "Destroyed", "0 HP · small boom"));
+
+  const bm=document.getElementById("boom");
+  bm.appendChild(step(explosion(64,"#ff8a1e"), "Small", "Pawn · Escort"));
+  bm.appendChild(step(explosion(92,"#ffae3a"), "Medium", "Knight · Bishop · Rook"));
+  bm.appendChild(step(explosion(120,"#ff4d3d"), "Large", "Queen · Flagship"));
+  bm.appendChild(step(explosion(140,"#ffffff",{ring:true}), "King / Mothership", "Full-screen flash + shockwave"));
+</script>
+</body>
+</html>
