@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Galactic Chess Invaders — Screen Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0d10; }
+  * { box-sizing: border-box; }
+  canvas { image-rendering: pixelated; }
+
+  /* ---- starfield + drift ---- */
+  @keyframes gciStar { from { transform: translateY(0); } to { transform: translateY(-700px); } }
+  @keyframes gciDrift { 0% { transform: translate(0,0); } 50% { transform: translate(-14px,22px); } 100% { transform: translate(0,0); } }
+  @keyframes gciDrift2 { 0% { transform: translate(0,0); } 50% { transform: translate(20px,-14px); } 100% { transform: translate(0,0); } }
+
+  /* ---- ui ---- */
+  @keyframes gciBlink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+  @keyframes gciPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.1); } }
+  @keyframes gciPop { 0%,100% { transform: scale(0.9); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
+  @keyframes gciFloat { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(4px); } }
+  @keyframes gciSlide { 0%,100% { transform: translateX(-36px); } 50% { transform: translateX(36px); } }
+  @keyframes gciHalo {
+    0%,100% { opacity: 0.8; box-shadow: 0 0 12px #00dfff, inset 0 0 8px #00dfff; }
+    50% { opacity: 1; box-shadow: 0 0 22px #00dfff, inset 0 0 16px #00dfff; }
+  }
+  @keyframes gciCycle {
+    0%   { color: #00dfff; text-shadow: 0 0 20px #00dfff, 0 0 6px #00dfff; }
+    33%  { color: #ff2060; text-shadow: 0 0 20px #ff2060, 0 0 6px #ff2060; }
+    66%  { color: #ffffff; text-shadow: 0 0 20px #66e7ff, 0 0 6px #66e7ff; }
+    100% { color: #00dfff; text-shadow: 0 0 20px #00dfff, 0 0 6px #00dfff; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="sprites.js"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="gci-shared.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="menus" title="Front End" subtitle="Title screen — neon, attract-ready">
+          <DCArtboard id="title" label="Title Screen" width={FRAME.w} height={FRAME.h}>
+            <TitleScreen />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="gameplay" title="Gameplay" subtitle="Core loop — dual chess + arcade">
+          <DCArtboard id="start" label="Level 1 · Wave Start" width={FRAME.w} height={FRAME.h}>
+            <GameplayStart />
+          </DCArtboard>
+          <DCArtboard id="select" label="Piece Selected · Move Reticles + Timer Warning" width={FRAME.w} height={FRAME.h}>
+            <GameplaySelected />
+          </DCArtboard>
+          <DCArtboard id="combat" label="Level 3 · Mid-Combat" width={FRAME.w} height={FRAME.h}>
+            <GameplayCombat />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="menus" title="Menus & Info" subtitle="Front-of-house and end states">
+          <DCArtboard id="help" label="How To Play" width={FRAME.w} height={FRAME.h}>
+            <HelpScreen />
+          </DCArtboard>
+          <DCArtboard id="gameover" label="Game Over" width={FRAME.w} height={FRAME.h}>
+            <GameOverScreen />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
