@@ -192,8 +192,8 @@ A "turn" is one complete white-move + black-move cycle, approximately 5 seconds.
 When the black piece count drops to **1**, normal fleet behavior stops and the Last Stand Rush triggers:
 
 1. **Center dash:** The surviving piece slides to the center of the board (file d or e, whichever is closer to its current position) using a fast `SKAction` move — ~0.4 seconds. A brief magenta flare burst plays on arrival.
-2. **Maximum speed:** Fleet movement speed immediately jumps to the Level 5+ cap (110 px/s or current level's maximum, whichever is higher). The piece sweeps the full board width at this speed.
-3. **Aggressive fire:** The piece fires every sweep cycle rather than once per turn — effectively 2–3× its normal fire rate.
+2. **Maximum speed:** Fleet movement speed immediately locks at **2.5× that level's base speed** (the §18.2 speed multiplier ceiling). The piece sweeps the full board width at this speed.
+3. **Aggressive fire:** The piece fires **once per complete lateral crossing** (wall-to-wall), independent of the chess turn timer — effectively 2–3× its normal fire rate.
 4. **Heartbeat:** Locks to 180 BPM immediately, regardless of current tempo.
 5. **Chess AI:** The engine still takes its chess turn on the normal timer. If the last piece is the King, it moves with full aggression — the engine prioritizes threatening White pieces.
 
@@ -213,7 +213,7 @@ Periodically, independent arcade ships swoop across the board on attack runs. Th
 
 | Ship | Inspired by | Behavior | HP |
 |---|---|---|---|
-| **Raider Scout** | Space Invaders mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side. **First pass of each Scout: no fire** — the player sees the attack pattern before being shot at. | 1 |
+| **Raider Scout** | Space Invaders mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side. **First Scout of each level: no fire** — the player sees the attack pattern before being shot at. Subsequent Scouts that level fire normally. | 1 |
 | **Galaxian Escort** | Galaxian escort fighter | Peels off from the *back* of the black fleet formation (rear rank), dives in a curved arc toward the player's spaceship, then exits or loops back up | 1 |
 | **Galaxian Flagship** | Galaxian flagship | Dives in flanked by 2 Escorts (they die first); fires 2 shots on descent; worth most points | 2 (immune to first hit — flashes) |
 
@@ -480,7 +480,7 @@ This is a preview, not a punishment. It tells the player: "Level 2 fires at you.
 - Piece regeneration: up to 4 regenerations per level
 - Invader shots: 3 per turn (cap); projectile speed increases by 20%
 - Raiders: mix of paired Escorts, looping Escorts, Kamikazes, and 2–3 Flagship appearances
-- Random black piece "rushes" — once per fleet sweep, one black piece jumps 2 ranks forward
+- Random black piece "rushes" — once per wall bounce (descent step), one black piece jumps 2 ranks forward
 - Turn timer: 3s
 - *Feel: barely controlled chaos. Chess moves are survival decisions, not strategy.*
 
@@ -508,12 +508,12 @@ From Level 7 onward, the Black King is no longer passive — the engine shifts t
 
 A mechanic banner announces `ARMORED PAWNS` / `CHESS ONLY · BULLETS BOUNCE` at level start.
 
-From Level 9 onward, a portion of regenerated Pawns spawn as **Armored Pawns** — immune to laser fire for their armor window. Only a chess capture can remove them during this period.
+From Level 9 onward, **50% of regenerated Pawns** spawn as **Armored Pawns** — immune to laser fire for their armor window. Only a chess capture can remove them during this period.
 
 **Rules:**
 - Armored Pawns appear only through the regeneration system (standard or defensive), never as part of the starting board formation.
 - Armor duration: **3 chess turns** after materialisation. A turn counter ticks down on each White move completion.
-- After armor expires, the Pawn becomes a normal Pawn — same HP, same behavior, now laser-vulnerable.
+- After armor expires, the Pawn becomes a normal Pawn — same HP, same behavior, now laser-vulnerable. If destroyed by laser after armor has expired, it scores **15 pts** (reduced rate — the armor window was the hard part, and the pawn regenerated; it shouldn't reward as much as a starting-board pawn at 25 pts).
 - Laser hits during the armor window: do zero damage, produce a spark ricochet effect, and play a distinct clunk/ricochet SFX.
 - Chess captures work normally during and after the armor window.
 
@@ -1010,7 +1010,7 @@ Each Special Scout is visually unmistakable at a glance — different shape, dif
 - **Effect:** Adds +1 simultaneous laser slot for **45 seconds**. Stacks with pawn promotion bonuses up to the hard cap of 6.
 - **HUD indicator:** A lightning bolt icon appears in the HUD next to the laser count, with a countdown bar beneath it.
 - **SFX on destroy:** Rising electric crackle surge — a fast ascending buzz that resolves into a satisfying snap.
-- **SFX on expiry:** A brief descending crackle signals the extra slot dropping away.
+- **SFX on expiry:** A brief descending crackle signals the extra slot dropping away. On expiry, the cap **reverts to base (2) plus the current level's earned promotion bonuses** — e.g. if the player has promoted 2 pawns this level, the cap drops to 4, not 2. The Lightning bonus is simply removed from the stack.
 
 ---
 
@@ -2834,9 +2834,9 @@ All regenerating pieces materialise via a **Star Trek-style transporter animatio
 
 **Audio:** A synthesised transporter shimmer — an oscillating, harmonically-rich tone that rises and sustains for ~1.8 seconds, then cuts cleanly on materialisation. Not the copyrighted Paramount sound; a soundalike with the same shimmering character: amplitude-modulated sine wave, 800–1200 Hz band, with a slight pitch wobble (~4 Hz LFO). One `.caf` file, same asset for both standard and defensive spawns (colour difference handles the visual distinction). Volume: ~60% of master SFX — present but not dominating.
 
-#### Defensive Respawn Mode (Level 3+)
+#### Defensive Respawn Mode (Level 4+)
 
-From Level 3 onward, when the Black King reaches **Cracked or Critical HP**, the regeneration system shifts from random back-rank spawning to **targeted defensive formation**: regenerated pieces spawn in positions that directly shield the King rather than at random column positions.
+From Level 4 onward, when the Black King reaches **Cracked or Critical HP**, the regeneration system shifts from random back-rank spawning to **targeted defensive formation**: regenerated pieces spawn in positions that directly shield the King rather than at random column positions.
 
 - **Pawn:** spawns one square directly in front of the King (in its current logical column) — an immediate HP buffer between the open lane and the King.
 - **Rook (Level 5+):** regenerates in the King's current column at the back rank. The chess engine can now legally move it to defend the file. A Rook in the King's column closes a laser lane entirely until destroyed.
@@ -2846,7 +2846,7 @@ Defensively-respawned pieces use the same transporter beam-in effect as standard
 
 | Piece | Available from | Trigger |
 |---|---|---|
-| Pawn (defensive) | Level 3 | King at Cracked HP |
+| Pawn (defensive) | Level 4 | King at Cracked HP |
 | Rook | Level 5 | King at Critical HP |
 | Bishop | Level 6 | King at Critical HP |
 
@@ -2961,6 +2961,8 @@ Total interruption: 0.5 seconds. Not a pause — the player can still move and s
 
 **Rule:** Check detected → white's next turn timer becomes 8s. If the player fails to act, the auto-move engine fires but is constrained to moves that resolve check only. If no legal resolving move exists → checkmate → game over.
 
+**Multi-move interaction:** When Black makes multiple chess moves per turn (Level 3+), check state is evaluated **once, after all Black moves have completed**. If White is in check at the start of White's turn, the 8s extension applies. An intermediate check mid-sequence that resolves by the final Black move does not trigger the extension — only the final board state matters.
+
 ---
 
 ### 15.5 Pawn Promotion — Power-Up Event
@@ -2969,7 +2971,7 @@ Total interruption: 0.5 seconds. Not a pause — the player can still move and s
 
 **Rule:** White pawn reaches rank 8 →
 1. Pawn instantly becomes a Queen (full 12 HP, Queen sprite with flash animation + ascending arpeggio).
-2. The nearest black piece on screen is **destroyed automatically** — a targeting beam locks onto it and it explodes, no shot required. Points awarded as normal.
+2. The nearest black piece on screen is **destroyed automatically** — a targeting beam locks onto it and it explodes, no shot required. Points awarded at the **laser-shot rate** (not chess-capture rate) — e.g. 25 pts for a Pawn, 50 for a Knight or Bishop, 75 for a Rook, 150 for a Queen.
 3. The player's spaceship laser cap increases by 1 for the remainder of the level. A "MULTI-SHOT ACTIVATED" banner briefly sweeps across the bottom of the screen showing the new cap.
 
 **Multi-shot stacks with each promotion:**
