@@ -1614,13 +1614,24 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - ⚡ **All piece sprites in `Pieces.spriteatlas`** from day one
 - ⚡ **Chess engine called via `Task.detached`** — never on main thread, verified from first move
 - ⚡ **`ReticleNode` pool** — 32 nodes pre-created, shown/hidden not added/removed
+- **Chess SFX (basic set)** — wired here because even a functional chess game is dead without sound feedback:
+  - Piece selected — soft click
+  - White piece moves — soft thud
+  - Black piece moves — same, slightly lower pitch
+  - Piece captures — heavier impact thud
+  - Check — two-note alarm stab
+  - Checkmate — descending multi-note fanfare stab
+  - Auto-move fired — buzzer + move sound
+  - Turn timer warning (≤2s) — rapid ticking
+  - Illegal move attempt — short low buzz
 **Testing:**
 - Click white piece — reticles appear at correct legal destinations
 - Click reticle — piece slides to new position
 - Timer counts down, expiry fires auto-move, "AUTO" appears
 - Timer expiry with piece selected — engine moves that specific piece
-- Check detected — timer extends to 8s
-- Checkmate — game over state reached
+- Check detected — alarm plays, timer extends to 8s
+- Checkmate — fanfare plays, game over state reached
+- Every chess sound plays on its correct trigger, none play spuriously
 - Window resize — pieces stay in correct positions at 3 different sizes
 - ⚡ 60fps, draw count ≤5, node count ≤80 with all 32 pieces on screen
 - **Pass criteria:** full chess game playable to checkmate at 60fps — may look rough, must work correctly
@@ -1721,11 +1732,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - White piece destroyed — lower sadder explosion pop
 - Ship hit / destroyed — loud noise burst
 - Ship respawn — short ascending tone
-- Chess piece move (white) — soft click/thud
-- Chess piece move (black) — same, slightly lower pitch
-- Check warning — two-note alarm stab
-- Auto-move fired — buzzer + move sound
-- Turn timer warning (≤2s) — rapid ticking
+- Chess SFX already in from Phase 2.1 (piece select, move, capture, check, checkmate, auto-move, timer tick)
 **Testing:**
 - Every listed sound plays on its correct trigger
 - No sounds play when they shouldn't (e.g. no explosion on a non-destroying hit)
