@@ -685,7 +685,8 @@ When multiple sounds fire simultaneously, priority order (highest first):
 9. Music
 The engine should duck (lower volume of) the music by ~30% whenever a level-1 or level-2 priority sound plays, then fade back up over ~0.5 seconds.
 #### Settings
-- Master volume slider
+Volume controls live in a proper Settings screen (added Phase 5), accessible from the title screen and pause menu. No interim pause-menu sliders — full settings or nothing.
+- Master volume
 - Music volume (separate)
 - SFX volume (separate)
 - Toggle: Music on/off
@@ -1741,8 +1742,8 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Game feels noticeably more alive than silent Phase 3
 - **Pass criteria:** a full level playthrough with no jarring silences on any major event
 ---
-### Phase 5 — Background Music
-**Goal:** Add the chiptune soundtrack. Music should loop cleanly and respond to basic game state changes — at minimum it stops on game over and plays a fanfare on level clear.
+### Phase 5 — Background Music + Settings
+**Goal:** Add the chiptune soundtrack and a proper Settings screen. Music should loop cleanly and respond to basic game state changes. Settings are persistent and extensible — not a temporary hack.
 **Build:**
 - Main gameplay chiptune loop — looping cleanly with no audible gap
 - Per-level music track — pick randomly from level pool, loop for duration of wave
@@ -1750,7 +1751,12 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Game over riff — descending death riff
 - Title screen music — plays on the title/attract screen, stops when game starts
 - Basic music/SFX volume balance — music ducked slightly under loud SFX
-- Volume settings in pause menu — master, music, SFX sliders
+- **`SettingsView.swift`** — full SwiftUI settings screen, persistent via `UserDefaults`:
+  - Master volume, Music volume, SFX volume (sliders)
+  - Music on/off toggle
+  - Stubbed sections for Gameplay (difficulty), Controls (key remapping), and Display — structure present now so adding entries later requires no rework
+- Settings accessible from **two entry points**: Settings button on title screen, Settings button in pause menu
+- Pause menu updated: Escape shows PAUSED overlay with Resume and Settings buttons (no longer just "press any key")
 **Testing:**
 - Music loops without a gap or click
 - Music track loops cleanly throughout the wave without pops or gaps
@@ -1758,8 +1764,10 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Game over riff plays on defeat, does not loop
 - Title music stops cleanly when game starts
 - Music and SFX do not clash at default volume levels
-- Volume sliders work correctly and persist across sessions
-- **Pass criteria:** a full playthrough with music feels like a complete arcade experience; music energy matches the level's intensity target
+- Volume sliders work correctly and persist across app restarts
+- Settings reachable from both title screen and pause menu
+- Stubbed Gameplay/Controls/Display sections present but clearly marked as coming soon
+- **Pass criteria:** a full playthrough with music feels like a complete arcade experience; settings persist correctly across sessions
 ---
 ### Phase 6.1 — Raiders: Scout & Basic Escort
 **Goal:** Get the two simplest raiders working correctly before adding complex variants. Establish the `RaiderController` architecture that all subsequent raiders build on.
