@@ -1,6 +1,6 @@
 # Galactic Chess Invaders — Game Design Document
 **Version 1.0**
-*Target: macOS (Swift/SpriteKit), later iOS/iPadOS*
+*Target: macOS first (Swift/SpriteKit); iOS/iPadOS is possible later but not yet committed*
 *"40 years in the making!"*
 ---
 ## Origin & History
@@ -41,7 +41,7 @@ The chess game is real but fast and shallow. Arcade reflex, not deep strategy, d
 ---
 ## 2. Core Loop
 ```
-[Timer counts down 5s]
+[Chess turn timer counts down]
        |
        v
 [Player makes a chess move  OR  timer expires → computer auto-moves white]
@@ -61,6 +61,10 @@ The chess game is real but fast and shallow. Arcade reflex, not deep strategy, d
        └──► back to top
 ```
 These phases overlap in real time — the chess turn timer ticks while invader projectiles are already in flight. The game never fully pauses for chess.
+
+**Canonical timing rule:** Chess turns are paced by a fixed **chess beat**, not by fleet sweep completion. The beat duration is the level's turn timer in §21.1: Level 1–2 = 5s, Level 3+ = 4s. During each beat the player may make one White chess move at any time. If the player has not moved when the beat expires, the engine auto-moves White. Black's chess move or moves then execute once for that beat, and the next beat begins.
+
+Fleet movement, raider movement, projectiles, ship movement, and shooting continue independently during the chess beat. Fleet wall bounces and visual half-drops do **not** trigger extra black chess moves. If playtesting shows black chess moves feel too fast at higher levels, tune the level's chess beat duration upward; do not tie chess move timing to screen width, fleet speed, or sweep completion.
 ---
 ## 3. The Game Board
 ### 3.1 Layout
@@ -82,7 +86,7 @@ The screen is divided into two horizontal zones:
 └───────────────────────────────────────┘
 ```
 - The 8×8 chess board fills the center of the screen.
-- Each square is large enough to render a piece sprite at its largest damage-frame size (28×28 px for the King).
+- Each square is large enough to render the tallest displayed chess piece without overlap. Displayed piece size is derived from the runtime board square size, not from fixed pixel dimensions (see §12.2).
 - No column or row labels are shown on screen. Algebraic notation (a–h, 1–8) is used internally and in debug builds only.
 ### 3.2 Coordinate System
 Standard algebraic notation internally. Rendering maps rank/file to screen pixels. The spaceship travels in a strip below rank 1.
@@ -92,45 +96,60 @@ Standard algebraic notation internally. Rendering maps rank/file to screen pixel
 - All standard piece moves (including promotion).
 - Captures remove the captured piece.
 - Check and checkmate are recognized.
-- Castling and en passant are **not implemented** — kept simple for arcade pace.
+- Castling and en passant are **not implemented for either side in v1.0** — kept simple for arcade pace and to avoid special-case interactions with forced fleet movement.
 ### 4.2 What Changes
 | Rule | Standard Chess | GCI |
 |---|---|---|
-| Turn time | Unlimited | 5 seconds; auto-move on expiry |
+| Turn time | Unlimited | Level-based chess beat; auto-move on expiry |
 | Piece HP | N/A | Each piece has hit points; damage shown by outline erosion |
 | Destroyed pieces | Only by capture | Also by shooting or HP reaching 0 |
 | King loss | Illegal (checkmate ends game) | Shooting the king ends the chess game early |
 | Promotion | Pawn reaches rank 8 | Still valid; promotes under fire |
 ### 4.3 Auto-Move on Timer Expiry
-When the 5-second timer expires without a player move, the chess engine picks white's move (same 1-2 ply engine that drives black). A brief "AUTO" flash appears over the piece that moved. This keeps the game flowing and prevents the player from stalling to focus on shooting.
-### 4.4 Chess Engine
+When the level's chess beat expires without a player move, the chess engine picks White's move (same 1-2 ply engine that drives Black). A brief "AUTO" flash appears over the piece that moved. This keeps the game flowing and prevents the player from stalling to focus on shooting.
+
+**Selected-piece constraint:** If the player has selected a piece but not yet confirmed a destination, the engine is constrained to moves for that selected piece only — it picks the best legal move available to that piece. If the selected piece has no legal moves (e.g. it is pinned), the engine ignores the selection and picks the best overall legal move instead.
+### 4.4 Simplified Chess: No Castling or En Passant
+GCI intentionally uses simplified chess movement for **both White and Black** in v1.0:
+- **Castling is disabled.** Kings and rooks move only as individual pieces. No castling reticle is shown for White, and the Black engine never selects a castling move.
+- **En passant is disabled.** Pawns capture only by normal diagonal capture. No en passant reticle is shown for White, and the Black engine never selects an en passant move.
+
+This is not a player-skill assumption; it is an implementation and readability decision. GCI's board can change through non-chess events: fleet descent, crushes, shooting, regeneration, and forced placement. Castling and en passant both depend on special move history and board-state rights that are easy to make confusing once pieces can be destroyed or forcibly moved outside normal chess rules.
+
+**Implementation rule:** Even if the chess library supports castling and en passant, `MoveGenerator` filters those moves out before returning legal moves to the UI or the AI. `GCIBoard` also clears castling rights and en-passant target squares when constructing or updating library board state. There is no v1.0 code path where either side can castle or capture en passant.
+### 4.5 Chess Engine
 - **Depth:** 1-2 ply minimax (fast, ~milliseconds).
 - **Evaluation:** Material count only. No positional tables.
 - **Personality:** Slightly biased to keep pieces alive (avoids trading into losing positions by more than ~1 pawn). Will not sacrifice pieces tactically.
 - **Black also uses this engine** to choose its chess moves each turn — but black's movement on-screen follows the Invader pattern, not just chess rules (see §5).
-**Aggressive mode (Level 2+):** From Level 2 onward the engine is weighted to prefer attacking moves. Specifically: captures are scored higher than positional moves, pawns are actively advanced, and the engine prefers moves that put white in check or threaten multiple pieces simultaneously. This is implemented as a score modifier in `GCIBoard.score(for:)` passed to `GKMinmaxStrategist`. The aggressive weighting increases each level (see §18.1).
+**Aggressive mode (Level 2+):** From Level 2 onward the engine is weighted to prefer attacking moves. Specifically: captures are scored higher than positional moves, pawns are actively advanced, and the engine prefers moves that put white in check or threaten multiple pieces simultaneously. This is implemented as a score modifier in `GCIBoard.score(for:)` passed to `GKMinmaxStrategist`. The aggressive weighting increases each level (see §21.1).
 ---
 ## 5. The Invader Fleet — Black Pieces
 ### 5.1 Formation Movement
 Black pieces maintain their starting chess positions *relative to each other* as they shift laterally, exactly like Space Invaders:
 1. Shift right N pixels per frame until the rightmost piece reaches the right wall.
-2. Drop down one half-rank.
+2. Drop down one **visual half-rank**. This is animation only: black pieces remain on their current logical chess rank.
 3. Shift left until the leftmost piece hits the left wall.
-4. Drop down one half-rank.
+4. Drop down a second **visual half-rank**. The two visual half-rank drops now total one full rank, so each black piece's logical chess rank updates by one rank toward White.
 5. Repeat.
 The fleet's lateral speed increases as pieces are eliminated (classic Invaders behavior).
+**Canonical rule:** Black pieces stay on their current logical chess rank until the **second** sweep/drop of the pair is complete. The first wall-bounce drop is purely visual. Only after the second wall-bounce drop does the board state change.
 ### 5.2 Chess Moves vs. Fleet Movement
-Black's chess move happens **after** the fleet completes a lateral sweep. The engine picks the best legal chess move; the selected piece slides to its new square with a brief animation. This ordering gives the player a moment to react to the fleet's new position before a chess threat materialises on top of it — fleet moves, then one piece makes a deliberate chess advance. The gap between sweep completion and the chess move may be padded at lower levels to avoid the game feeling overwhelming; at Level 1 black should not feel too reactive (see §18.1 for per-level timing).
+Black's chess move happens once per scheduled chess beat, **after** White's move for that beat has been completed or auto-moved. It is not triggered by fleet sweep completion. The engine picks the best legal chess move; the selected piece slides to its new square with a brief animation.
+
+The fleet may complete zero, one, or multiple lateral sweeps during a chess beat depending on level speed, piece count, and screen size. Those sweeps affect visual pressure and, every second visual half-drop, logical rank descent (see §23.6). They do **not** create additional black chess turns. This keeps black move cadence predictable: approximately one black chess response every 5s on Levels 1–2 and every 4s on Levels 3+ unless retuned during playtest.
+
+If White moves early, Black does not immediately get extra turns. The player's early move is applied, then the game waits for the current chess beat to reach its black-move phase. The ship, lasers, projectiles, raiders, and fleet all remain active during that wait.
 *Design note:* Black's king will rarely move under normal chess engine logic, making it a hard but high-value shooting target.
 ### 5.3 Invader Firing
-A "turn" is one complete white-move + black-move cycle, approximately 5 seconds. Once per turn, 1–3 random black pieces (weighted toward front-rank pawns) fire a projectile straight down. Projectiles travel at a fixed speed and can be:
+A "turn" is one scheduled chess beat: one White move or auto-move, followed by Black's configured chess move or moves for that level. Once per turn, 0–3 random black pieces (weighted toward front-rank pawns) fire a projectile straight down. (Level 1 has 0 shots/turn — see §21.1.) Projectiles travel at a fixed speed and can be:
 - **Blocked** by a white piece with HP remaining (piece takes damage).
 - **Shot down** by the player's spaceship laser.
 - **Costs one life** if they reach the bottom strip and hit the spaceship.
 ### 5.4 Last Piece — Last Stand Rush
 When the black piece count drops to **1**, normal fleet behavior stops and the Last Stand Rush triggers:
 1. **Center dash:** The surviving piece slides to the center of the board (file d or e, whichever is closer to its current position) using a fast `SKAction` move — ~0.4 seconds. A brief magenta flare burst plays on arrival.
-2. **Maximum speed:** Fleet movement speed immediately locks at **2.5× that level's base speed** (the §18.2 speed multiplier ceiling). The piece sweeps the full board width at this speed.
+2. **Maximum speed:** Fleet movement speed immediately locks at **2.5× that level's base speed** (the §21.2 speed multiplier ceiling). The piece sweeps the full board width at this speed.
 3. **Aggressive fire:** The piece fires **once per complete lateral crossing** (wall-to-wall), independent of the chess turn timer — effectively 2–3× its normal fire rate.
 4. **Heartbeat:** Locks to 180 BPM immediately, regardless of current tempo.
 5. **Chess AI:** The engine still takes its chess turn on the normal timer. If the last piece is the King, it moves with full aggression — the engine prioritizes threatening White pieces.
@@ -143,7 +162,7 @@ Periodically, independent arcade ships swoop across the board on attack runs. Th
 ### 6.1 Ship Types
 | Ship | Inspired by | Behavior | HP |
 |---|---|---|---|
-| **Raider Scout** | Space Invaders mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side. **First Scout of each level: no fire** — the player sees the attack pattern before being shot at. Subsequent Scouts that level fire normally. | 1 |
+| **Raider Scout** | Space Invaders mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side. **First Scout of each level does not fire during its crossing** — the player sees the attack pattern before being shot at. Subsequent Scouts that level fire normally. The player's ship can always move and fire. | 1 |
 | **Galaxian Escort** | Galaxian escort fighter | Peels off from the *back* of the black fleet formation (rear rank), dives in a curved arc toward the player's spaceship, then exits or loops back up | 1 |
 | **Galaxian Flagship** | Galaxian flagship | Dives in flanked by 2 Escorts (they die first); fires 2 shots on descent; worth most points | 2 (immune to first hit — flashes) |
 ### 6.2 Spawn Timing
@@ -153,7 +172,7 @@ Periodically, independent arcade ships swoop across the board on attack runs. Th
 - Later levels: spawn rate increases, Flagships appear 2–3× per level.
 - A maximum of 2 raider ships are on screen at once so they don't overwhelm the chess action.
 ### 6.3 Attack Behavior
-- **Raider Scout:** fires one projectile straight down from its current x-position as it crosses the board. Projectile behaves like a black-piece shot — damages white pieces it hits, kills the spaceship on contact. **First-pass rule (Galaga precedent):** the first Scout to appear each level makes its crossing without firing — the player sees the attack pattern before being shot at. All subsequent Scouts that level fire normally. Implementation: `RaiderController` tracks a per-level boolean `firstScoutHasFired`; reset to `false` on level start; set to `true` after the first Scout completes its crossing; Scouts spawned while `false` skip their fire command.
+- **Raider Scout:** fires one projectile straight down from its current x-position as it crosses the board. Projectile behaves like a black-piece shot — damages white pieces it hits, kills the spaceship on contact. **First-pass rule (Galaga precedent):** the first Scout to appear each level makes its crossing without firing — the player sees the attack pattern before being shot at. All subsequent Scouts that level fire normally. Implementation: `RaiderController` tracks a per-level boolean `firstScoutWarningPassUsed`; reset to `false` on level start; set to `true` after the first Scout completes its crossing; Scouts spawned while `false` skip their fire command.
 - **Galaxian Escort:** detaches from the back rank of the fleet (visually sliding out from behind the rearmost piece in its column), then swoops down in a curved arc toward the spaceship's last known position. Fires one shot at the apex of its dive. If it reaches the bottom strip without being shot, it costs the player one life (collision) or exits if the ship dodged. After exiting it does not return — a fresh Escort spawns next cycle. If all pieces in a column's back rank have been destroyed, the Escort spawns from the rearmost surviving piece in any adjacent column instead. If the entire fleet has been reduced to front-rank pieces only, the Escort spawns from the rearmost surviving piece on the board.
 - **Galaxian Flagship:** dives with the same arc as Escorts but fires twice and requires 2 hits to destroy. On the first hit it flashes red (visual feedback) and accelerates its dive.
 - **Kamikaze Escort** (Level 4+): A variant Escort that peels off with no shot — instead it dives straight and fast directly at the ship's current position with no warning audio cue. Requires a lateral dodge. Worth 200 pts if shot before impact. If it reaches the bottom strip it costs the player one life.
@@ -241,11 +260,12 @@ When a piece's HP reaches 0:
 | Fire laser | Space bar |
 | Select chess piece | Mouse click on piece |
 | Move chess piece | Mouse click on destination square |
-| Pause game | Escape |
+| Pause / resume | P, or Escape when no chess piece is selected |
+| Deselect chess piece | Escape, right-click, or click empty space |
 | How To Play / Info | I · ⌘I · ? |
 ### 8.2 Spaceship Properties
 - Moves horizontally only, confined to the bottom strip below rank 1.
-- Two-shot laser cap under normal conditions — up to 2 lasers on screen simultaneously. This increases with pawn promotions (see §15.8).
+- Two-shot laser cap under normal conditions — up to 2 lasers on screen simultaneously. This increases with pawn promotions (see §25.9).
 - Has **3 lives** (shown as ship icons in HUD). Loses a life when an invader projectile reaches the bottom strip and hits the ship, or when an enemy piece advances to rank 1.
 - No HP on the spaceship — one hit = one life lost, then respawn at center.
 ### 8.3 Firing Lanes
@@ -254,7 +274,7 @@ The laser fires straight up from the ship's current column. White pieces in the 
 When the spaceship is hit it explodes, a life icon is removed from the HUD, and the ship respawns at the horizontal center of the bottom strip after a 1-second delay. The respawned ship is **invincible for 2 seconds**, flashing rapidly to signal the grace period. It can still move and fire during those 2 seconds. After 2 seconds invincibility ends with a final bright flash.
 If the last life is lost the game ends immediately — no respawn.
 ### 8.5 Lives & HP Between Levels
-- **Lives carry over** between levels. Losing a life on level 2 means starting level 3 with 2 lives. Lives are never replenished except via a future power-up (Phase 2).
+- **Lives carry over** between levels. Losing a life on level 2 means starting level 3 with 2 lives. Lives can be replenished by reaching the 1,500-point milestone (see §9.1 — awarded once per game) or via future power-ups.
 - **White piece HP resets to full** at the start of each new level. All 16 white pieces are restored to their starting positions and full HP — a fresh chess setup every level.
 - **Spaceship position resets** to center-bottom at each level start.
 ---
@@ -271,6 +291,7 @@ If the last life is lost the game ends immediately — no respawn.
 | Chess capture (Knight/Bishop) | 25 |
 | Chess capture (Rook) | 40 |
 | Chess capture (Queen) | 75 |
+| Chess capture (King) | 500 |
 | Shoot down invader projectile | 5 |
 | Shoot Raider Scout (Space Invader ship) | 100 |
 | Shoot Galaxian Escort | 150 |
@@ -283,7 +304,7 @@ If the last life is lost the game ends immediately — no respawn.
 Score multiplier starts at 1.0× and increases by 0.5× at the start of each new level (Level 1: 1.0×, Level 2: 1.5×, Level 3: 2.0×, etc.). Points scored during a level use that level's multiplier.
 ### 9.1 Extra Life Milestone
 **One free life is awarded at 1,500 points.** This happens exactly once per game — reaching 1,500 again after losing that life grants nothing further.
-- A brief jingle plays (classic ascending 3-note chime, same as the existing "extra life" SFX in §12.10).
+- A brief jingle plays (classic ascending 3-note chime, same as the existing "extra life" SFX in §12.12).
 - The lives display in the HUD ticks up by one with a quick flash.
 - "1UP" appears briefly as a score pop-up at the ship's position.
 **Rationale:** 1,500 pts is achievable by an average player completing Level 1 with decent board clearing and a few Scout kills — it rewards early engagement without becoming farmable. Original *Space Invaders* (1978) used 1,500 pts as its free-life threshold; the homage is intentional.
@@ -294,11 +315,11 @@ Each level begins with a fresh standard chess setup and full white piece HP. Esc
 #### Level 1 — Tutorial Wave
 - Fleet speed: slow (40 px/s)
 - Black chess moves: 1 per turn, passive engine (avoids losses)
-- Invader shots: **none** — black pieces do not fire in Level 1 *(one exception: the King fires a single slow warning shot when it reaches Critical damage — see "Level 1 warning shot" below)*
+- Scheduled fleet shots: **none** — black chess pieces do not make normal per-turn projectile attacks in Level 1. The player's ship can always fire. Exceptions: Raiders follow their own rules, and the Black King fires one slow warning shot if it reaches Critical damage (see "Level 1 warning shot" below).
 - Raiders: Scouts only, 1 every 20s
 - No Escorts, no Flagship
 - Turn timer: 5s
-- *Feel: learnable. Player figures out the dual controls without being shot at by the fleet. Raiders provide the only incoming fire — but the first Scout of each level crosses silently (Galaga precedent), so the player sees the attack pattern before being in danger.*
+- *Feel: learnable. Player figures out the dual controls without normal scheduled fleet shots. Raiders provide the only repeatable incoming fire — but the first Scout of each level crosses without shooting (Galaga precedent), so the player sees the attack pattern before being in danger. The Black King's Level 1 warning shot is a one-time preview, not part of the normal fleet firing cadence.*
 **First-play hover hints (first run only):** On the first time a player ever reaches Level 1 (tied to the `hasSeenHowToPlay` flag from §14.4), two lightweight floating labels appear at level start:
 1. **Above the player's ship:** `← → MOVE   SPACE FIRE` — small pixel-font text, no background, no border. Fades out after 5 seconds or on first ship movement or laser fire, whichever is first.
 2. **Above the d2 pawn** (a natural first chess move): `CLICK PIECE → CLICK SQUARE` — same style. Fades out after 5 seconds or on any chess piece selection, whichever is first.
@@ -314,35 +335,36 @@ This is a preview, not a punishment. It tells the player: "Level 2 fires at you.
 - *Feel: chess starts mattering. Black pieces advance toward you with intent.*
 #### Level 3 — Double Trouble
 - Fleet speed: medium-fast (70 px/s)
-- Black chess moves: **2 per turn** — both pieces animate simultaneously, creating a dramatic visual surge that makes the formation suddenly unpredictable. Both moves are chosen by the engine at once before either animates; they execute in parallel with a shared animation trigger
+- Black chess moves: **2 per turn** — two distinct pieces move to two distinct destination squares, creating a dramatic visual surge that makes the formation suddenly unpredictable. The moves are selected as a non-conflicting set before either animates; they execute in parallel with a shared animation trigger
 - Invader shots: 2 per turn; diagonal shots introduced
 - Raiders: Escorts now dive in **synchronized pairs**
 - Flagship appears for the first time (once per level)
 - Turn timer: 4s
 - *Feel: the player is constantly reacting. Two chess moves per turn means the board shifts rapidly.*
-- *Implementation note: for 2 (and 3) simultaneous moves, the engine evaluates and selects all moves before any animation begins, then triggers all piece animations with a shared `SKAction` group so they fire in parallel. This looks dramatic — multiple pieces surging at once — and is simpler to implement than sequential re-evaluation.*
+- *Implementation note: for 2 (and 3) simultaneous moves, use the simple multi-move selection rule in §25.5. Moves animate in parallel with a shared `SKAction` group after the legal set is chosen.*
 #### Level 4 — Relentless
 - Fleet speed: fast (90 px/s)
 - Black chess moves: 2 per turn, fully aggressive engine
 - **Piece regeneration begins:** destroyed black pieces occasionally respawn as Pawns at the back of the fleet after ~10 seconds. Maximum 2 regenerations per level.
 - Invader shots: 2–3 per turn, fire rate spikes when fewer than 5 pieces remain
+- **Projectile speed increases to 200 px/s** (up from 180 px/s at Levels 2–3)
 - Raiders: Escorts **loop back** after diving — they arc up and attack a second time before exiting. Flagship appears 1–2× per level.
 - **Kamikaze Escorts** introduced: fast no-shot dive straight at the ship. No warning, requires a lateral dodge.
 - Turn timer: 4s
 - *Feel: the fleet never fully dies. Regeneration makes clearing the board feel urgent.*
 #### Level 5 — Overwhelming
 - Fleet speed: very fast (110 px/s)
-- Black chess moves: **3 per turn** — all three animate simultaneously, the board reshuffles dramatically every sweep
+- Black chess moves: **3 per turn** — all three animate simultaneously at the black-move phase of the scheduled chess beat
 - Piece regeneration: up to 4 regenerations per level
 - Invader shots: 3 per turn (cap); projectile speed increases by 20%
 - Raiders: mix of paired Escorts, looping Escorts, Kamikazes, and 2–3 Flagship appearances
-- Random black piece "rushes" — once per wall bounce (descent step), one black piece jumps 2 ranks forward
-- Turn timer: 3s
+- Random black piece "rushes" — once per full-rank logical descent, after the second visual half-drop has updated the board state, one black piece jumps 2 ranks forward
+- Turn timer: 4s
 - *Feel: barely controlled chaos. Chess moves are survival decisions, not strategy.*
 #### Level 6+ — Infinite Escalation
 - Each level beyond 5 adds: +15 px/s fleet speed, +10% projectile speed, one additional regeneration slot
 - Chess moves per turn stays at 3 (cap)
-- Turn timer stays at 3s (floor)
+- Turn timer stays at 4s (floor)
 - Flagship appears 3× per level minimum
 - Kamikaze frequency increases each level
 - *No ceiling — the game continues until the player dies.*
@@ -372,7 +394,7 @@ From Level 9 onward, **50% of regenerated Pawns** spawn as **Armored Pawns** —
 ### 10.2 Level End Conditions
 A level ends when:
 - **Victory:** The Black King is destroyed (shot to 0 HP), captured by a chess move, or checkmated. The level ends immediately — clearing remaining pieces is a score-maximizing strategy, not a requirement. If pieces remain when the King falls, the wave-clear and surviving-white-piece bonuses are not awarded; the board resets clean.
-- **Defeat:** White king is destroyed, or the spaceship loses all 3 lives, or any black piece reaches rank 1 (they've "landed").
+- **Defeat:** White king is destroyed, White king is checkmated, or the spaceship loses all remaining lives, or any black piece reaches rank 1 (they've "landed").
 On victory, a brief score-tally screen appears before the next level loads.
 ---
 ## 11. Game States
@@ -388,7 +410,7 @@ PLAYING ──► INFO   ──► PLAYING (game resumes on BACK or any key)
 ## 12. Visuals & Audio
 ### 12.1 Overall Art Direction
 The visual style is **neon-vector Recharged** — smooth glowing outlines on a pure black void, with bloom added live at runtime. The aesthetic is retro-inspired but modern: Tron-like neon line art, not a blown-up low-resolution game. Think Atari Recharged, not Intellivision.
-**The key visual rule:** sprites must look sharp and smooth at their display size on any screen — Retina Mac, standard display, or iOS. The danger to avoid is low-resolution assets scaled up 2× or 3×, which produces blocky, jagged, stairstepped edges. Sprites should be authored at sufficient resolution that they look clean when scaled *down* to fit the board, never scaled up.
+**The key visual rule:** sprites must look sharp and smooth at their display size on Mac screens, including Retina and standard displays. The danger to avoid is low-resolution assets scaled up 2× or 3×, which produces blocky, jagged, stairstepped edges. Sprites should be authored at sufficient resolution that they look clean when scaled *down* to fit the board, never scaled up.
 **Core principles:**
 - **Retro-inspired, modern execution** — neon glow and classic chess silhouettes, but crisp and smooth, not chunky or pixelated
 - **Bloom at runtime** — clean line art; glow added live via `SKEffectNode`, not baked into sprite sheets
@@ -420,8 +442,13 @@ Both sides share the same silhouette shapes. Color and glow distinguish them:
 | **Black (enemy)** | `#FF2060` magenta-pink | Empty / dark fill | Slightly more intense pulse |
 Interiors are largely empty — the outline and its bloom do the work. A player identifies side instantly by color, without reading the shape. Both palettes are consistent across all six piece types on each side.
 #### Sprite Sizes & Shapes
-Actual asset dimensions from `GCI.spriteatlas` (PNG size at @2x; logical display size on Retina is half):
-| Piece | Silhouette | PNG size (@2x) | Logical size |
+There are three different sizes to keep distinct:
+- **Source asset size:** the pixel dimensions of the PNG in `GCI.spriteatlas`. These stay large so the neon outlines remain smooth on Retina displays.
+- **Displayed size:** the size of the `SKSpriteNode` on screen. This is calculated at runtime from the board square size.
+- **Collision / selection size:** the gameplay hit area derived from the displayed node size. This may be slightly larger than the visible sprite for easier mouse selection and forgiving laser hits.
+
+Actual source asset dimensions from `GCI.spriteatlas`:
+| Piece | Silhouette | Source PNG size (@2x) | Reference logical size if unscaled |
 |---|---|---|---|
 | **Pawn** | Round head, short neck, flared base — smallest piece | 160×232 px | ~80×116 pt |
 | **Bishop** | Tall stepped mitre, narrow waist, flared base | 176×264 px | ~88×132 pt |
@@ -430,12 +457,27 @@ Actual asset dimensions from `GCI.spriteatlas` (PNG size at @2x; logical display
 | **King** | Cross finial top, wide layered base — tallest piece | 192×288 px | ~96×144 pt |
 | **Knight** | Horse head in profile, mane and neck detail — only asymmetric piece | 208×264 px | ~104×132 pt |
 Ships (for reference):
-| Ship | PNG size (@2x) | Logical size |
+| Ship | Source PNG size (@2x) | Reference logical size if unscaled |
 |---|---|---|
 | Player Fighter | 232×200 px | ~116×100 pt |
 | Raider Scout | 280×144 px | ~140×72 pt |
 | Galaxian Escort | 224×176 px | ~112×88 pt |
 | Galaxian Flagship | 272×160 px | ~136×80 pt |
+**Canonical display sizing rule for macOS v1.0:** The source PNG dimensions above are **not** the on-screen size. `BoardLayout` computes `squareSize` from the current scene size after reserving space for the HUD, spaceship strip, and any visible diagnostics sidebar. Each chess piece is scaled so its displayed bounding box fits inside its square with consistent margins:
+- Pawn: max height 62% of `squareSize`
+- Knight / Bishop / Rook: max height 72% of `squareSize`
+- Queen: max height 78% of `squareSize`
+- King: max height 82% of `squareSize`
+
+The piece keeps its source aspect ratio. If width would exceed 90% of `squareSize`, width becomes the limiting dimension instead. This prevents tall pieces from overlapping adjacent ranks and wide pieces from overlapping adjacent files.
+
+**Minimum playable size:** On macOS, `squareSize` should not fall below 48 pt in normal windowed play. At the minimum supported window size (640×500 pt), the board layout must still keep the King at approximately 39 pt tall or larger (`48 * 0.82`) and keep selection targets usable. If a smaller window would force `squareSize < 48`, the app should preserve the minimum window size or letterbox the playfield rather than shrinking the board further.
+
+**Collision sizing:** Piece physics bodies use the displayed node size, not source PNG pixels. Default body: centered circle with radius `min(displayedWidth, displayedHeight) * 0.42`. This is an arcade hitbox, not a pixel-perfect silhouette. It should be forgiving enough that a vertical laser through a piece's visual body registers consistently, while still narrow enough that shots in adjacent files do not hit accidentally. If a specific piece feels unfair in playtest, adjust its displayed-size-derived circle or rectangle; never use source PNG dimensions directly.
+
+**Mouse selection sizing:** Mouse selection on macOS uses the displayed node bounds padded by 8 pt on all sides, with a minimum selectable rectangle of 40×40 pt. The visible sprite does not grow just because the selection target is padded.
+
+**Future touch note:** If an iOS/iPadOS port is pursued later, touch targets should be re-evaluated separately. Do not let future touch requirements distort the Mac v1.0 board layout.
 **Atlas naming convention:** `chess-[w/b]-[piece][-d1/-d2].png` — e.g. `chess-w-pawn.png` (full), `chess-b-rook-d1.png` (chipped), `chess-w-queen-d2.png` (cracked). Ships: `ship-[player/scout/escort/flagship].png`.
 > ⚠️ **Smoothness note:** The current pawn sprite has some stairstepping in its outline. All sprites must look clean and smooth at their logical display size — not jagged or blocky. If any asset shows stairstepping at display scale, it should be redrawn at higher resolution or with smoother curves before ship. The bloom from `SKEffectNode` softens edges slightly but is not a substitute for smooth source art.
 The Recharged glow is rendered by the parent `SKEffectNode` bloom pass — it is never baked into the artwork, keeping the outlines clean and sharp underneath. No `filteringMode = .nearest` needed — these are smooth vector-style shapes, not pixel art.
@@ -463,7 +505,7 @@ Visual feedback that would normally rely on the grid is handled differently:
 The result: pieces read as ships in open space, not tokens on a board. The chess structure is invisible; the arcade feel is total.
 ---
 ### 12.4 Background & Layers
-The scene has **4 parallax layers**, back to front. (Phase 2.2 implements 2 layers; the remaining 2 layers are added in Phase 8 — see §22.)
+The scene has **4 parallax layers**, back to front. (Phase 2.2 implements 2 layers; the remaining 2 layers are added in Phase 8 — see §20.)
 | Layer | Content | Scroll speed |
 |---|---|---|
 | 0 (furthest) | Dense starfield — tiny 1px white dots, pure black bg | 0.2× |
@@ -471,7 +513,7 @@ The scene has **4 parallax layers**, back to front. (Phase 2.2 implements 2 laye
 | 2 | Neon nebula wisps — thin glowing streaks of cyan and magenta, very faint | 0.3× horizontal drift |
 | 3 (closest) | Occasional geometric debris — wireframe polygon shapes (Recharged style) drifting past | 0.8× |
 All layers scroll **downward** very slowly. During level-clear the scroll accelerates into a **hyperspace jump**: stars stretch into lines, white flash, then new level fades in. The wireframe debris chunks in layer 3 should feel like Asteroids Recharged geometry — vector outlines with a soft glow, not solid filled shapes.
-#### 12.4a Level Color Temperature Progression
+### 12.5 Level Color Temperature Progression
 Inspired by *Breakout Recharged*, the background void color shifts subtly between levels — cold at the start, warmer and more ominous as the game progresses. The shift happens during the level-clear hyperspace transition so it reads as a scene change, not a distraction during gameplay.
 **Level color table:**
 | Level | Void color | Mood |
@@ -492,7 +534,7 @@ The star layers tint to complement — Layer 0 stars remain white, Layer 1 stars
 - Within a level, the background color is static — no gradual hue animation during active gameplay. The shift only happens during the level-clear transition.
 - If profiling shows the background layers consuming meaningful GPU time, drop Layer 2 (nebula wisps) first — it is the most expensive layer and the least missed.
 ---
-### 12.5 HUD Design
+### 12.6 HUD Design
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  SCORE: 004750   HI: 012300   LEVEL 03   ♠ ♠ ♠   [(i) INFO]    │
@@ -508,7 +550,7 @@ The star layers tint to complement — Layer 0 stars remain white, Layer 1 stars
 - **Auto-move indicator:** when the engine moves white, "AUTO" flashes in orange over the piece for 0.5 seconds.
 - **Chess notation log:** debug/development builds only. Not shown in release builds — it would expose algebraic notation labels (a–h, 1–8) which are intentionally hidden from the player.
 ---
-### 12.6 Lasers & Projectiles
+### 12.7 Lasers & Projectiles
 | Projectile | Visual |
 |---|---|
 | Player laser | Bright cyan-white vertical beam, 2px core + bloom halo. Leaves a fading neon trail. |
@@ -518,7 +560,7 @@ The star layers tint to complement — Layer 0 stars remain white, Layer 1 stars
 | Escort/Flagship shot | Wide orange bolt with a trailing comet tail of particles |
 All projectiles have a **neon bloom halo** (blur-and-add shader) and leave a **fading ghost trail** 4–6 pixels long. The overall effect should look like the projectiles in Asteroids Recharged or Tempest — bright cores with soft halos burning against pure black.
 ---
-### 12.7 Explosions & Particle Effects
+### 12.8 Explosions & Particle Effects
 - **Small explosion** (Pawn, Escort): 8-frame sprite burst, ~24×24 px, orange/yellow
 - **Medium explosion** (Knight, Bishop, Rook): same but ~36×36 px, adds white flash frame
 - **Large explosion** (Queen, Flagship): ~48×48 px, multi-color (red → orange → white center), screen briefly flashes
@@ -527,12 +569,12 @@ All projectiles have a **neon bloom halo** (blur-and-add shader) and leave a **f
 - **Piece damaged (not destroyed)**: small spark burst at impact point, 3-frame, no lingering particles
 - **Smoke trail**: looping 4-frame animation attached to damaged pieces at ≤50% HP (complements the chipped sprite rather than replacing it)
 ---
-### 12.8 Raider Ship Visuals
+### 12.9 Raider Ship Visuals
 - **Raider Scout**: classic flying-saucer disc, 24×16 px. Wireframe-style outline with a spinning inner ring animation. Glows acid green, blinking underbelly light. Recharged-style — geometric, minimal, luminous.
 - **Galaxian Escort**: narrow dart shape, 16×20 px. Hot orange outline, cyan engine glow at the tail. Wing-flap 2-frame animation in formation; elongated dive silhouette when attacking.
 - **Galaxian Flagship**: wide and imposing, 32×24 px. Electric blue outline with gold/white center detailing. On first hit: full-body white flash and a shield-ring ripple effect before it accelerates. The most visually striking ship on screen.
 ---
-### 12.9 Menus & Screens
+### 12.10 Menus & Screens
 - **Title screen:** "GALACTIC CHESS INVADERS" in large cyan neon (Press Start 2P), "★ 40 YEARS IN THE MAKING ★" in orange beneath it. A single row of 8 magenta chess pieces slides slowly left and right as a preview. "PRESS ANY KEY TO START" blinks below. Top 5 high scores displayed with initials, score, and level reached.
 - **How To Play screen:** accessible from the **title screen** and from **within gameplay** via the Info button chip (`[(i) INFO]` in the HUD) or keyboard shortcuts `I`, `⌘I`, `?`. Opening it during gameplay pauses the game immediately. Content: controls, the dual-input twist, how to win, how to stay alive, scoring table (piece icons with point values), and the origin note. A **BACK** button in the lower-left (or pressing any key) dismisses the screen and resumes gameplay from the exact state it was in.
 
@@ -541,10 +583,10 @@ All projectiles have a **neon bloom halo** (blur-and-add shader) and leave a **f
 
   This line must always be present. It immediately lowers the skill-floor perception for non-chess players and confirms the game is approachable for anyone.
 - **High score entry:** 8-character initial entry using up/down arrows per character, classic arcade style.
-- **Pause screen:** triggered by **Escape**. Game blurs/dims, "PAUSED" centered in large text. No menu — press any key or Escape again to resume.
-- **Level clear screen:** score tally animates upward (points counting up sound effect), then "LEVEL X CLEAR" banner sweeps across.
+- **Pause screen:** triggered by **P**, or by **Escape** when no chess piece is selected. Game blurs/dims, "PAUSED" centered in large text. No menu, no settings, no secondary options. Press **P** or **Escape** again to resume while paused. Other gameplay input is ignored while paused.
+- **Level clear screen:** score tally animates upward (points counting up sound effect), then "LEVEL X CLEAR" banner sweeps across. The two Jeff Minter tribute ships (§6.4 — llama silhouette and camel silhouette) make a brief flyover pass across the screen during the tally, purely decorative.
 - **Game over screen:** "GAME OVER" in large magenta neon. Three stats centered below: FINAL SCORE | HI-SCORE (in orange if beaten) | LEVEL REACHED. A large explosion fireball lingers and fades at center-bottom — the player ship's last moment. "PRESS FIRE TO PLAY AGAIN" blinks; "ESC → MAIN MENU" beneath it.
-### 12.10a Level Mechanic Announcement Banner
+### 12.11 Level Mechanic Announcement Banner
 When a level introduces a genuinely new mechanic for the first time, a **mechanic banner** sweeps in at level start — before gameplay begins, after the level-clear transition. It exists to frame the escalation as a dramatic reveal rather than a surprise attack.
 **Format:** Two lines of Press Start 2P pixel text, centered, over the board:
 ```
@@ -578,9 +620,9 @@ Player input is **ignored** during the banner — no movement, no firing, no che
 | 9 | `ARMORED PAWNS` | `CHESS ONLY · BULLETS BOUNCE` |
 Level 4 shows both banners sequentially — regeneration first (2s hold, fade, 0.3s gap), then Kamikazes (2s hold, fade), then gameplay.
 **Implementation:** `MechanicBannerNode` — a self-contained `SKNode` subclass that takes `(line1: String, line2: String, sting: AudioClip)` and runs the full sequence via `SKAction` chain. `GameScene` calls `showBanner(for level:)` and awaits completion before enabling input. Shown once per mechanic per session, tracked in a `Set<Int>` of already-seen levels in `GameState`.
-### 12.10 Audio Design
-**SFX:** 8-bit / chiptune style — short synthesized tones. Generated with jsfxr or similar, exported as `.caf` for minimum latency (see §19.3).
-**Music:** Modern electronic / dark synthpop in the Atari Recharged vein — not classic 8-bit beeps. Think driving synth with 80s/90s flavor: melodic, punchy, loopable. See §19.4 for sources and workflow.
+### 12.12 Audio Design
+**SFX:** 8-bit / chiptune style — short synthesized tones. Generated with jsfxr or similar, exported as `.caf` for minimum latency (see §17.3).
+**Music:** Modern electronic / dark synthpop in the Atari Recharged vein — not classic 8-bit beeps. Think driving synth with 80s/90s flavor: melodic, punchy, loopable. See §17.4 for sources and workflow.
 #### Soundtrack
 Each level has a **pool of 1–3 tracks**; one is picked randomly at wave start (never repeating the same track twice in a row). Higher levels use faster, more intense tracks. This is simpler and more reliable than adaptive tempo shifting, which causes pitch artifacts when using `AVAudioPlayer.rate`.
 | Level | Tracks | Feel |
@@ -612,7 +654,6 @@ Additionally:
 | Black piece moves (chess) | Same but lower pitch | Distinguishes whose turn moved |
 | Auto-move (timer expired) | Buzzer + move sound | Slightly harsh to signal the player was too slow |
 | Turn timer warning (≤2s) | Rapid high-pitched ticking | Gets faster each tick |
-| Castling | Double-move sound played in quick succession | |
 | Pawn promotion | Ascending arpeggio flourish | Celebratory |
 | Check | Sharp two-note alarm stab | Demands attention |
 **Piece Destruction**
@@ -671,7 +712,7 @@ A persistent two-beat bass pulse plays throughout every level, speeding up as bl
 **Beat pattern:** Each beat is a double-thump: `thump₁` → +120ms → `thump₂` → [interval] → repeat. The 120ms inner gap is fixed at all tempos; only the outer gap shrinks.
 **Implementation:** A `GameHeartbeat` class drives the pulse using a recursive `SKAction` sequence (`.playSoundFileNamed` + `.wait(forDuration:)`) rather than `AVAudioPlayer.rate` — rate-shifting causes pitch artifacts. On each cycle the class reads `FleetController.remainingPieceCount` to select the next interval. The sequence is started at level open and stopped on level-clear or game-over.
 **Mix position:** Heartbeat sits at priority 7.5 in the audio mix — above fleet movement blips but below chess move sounds. Volume: ~50% of master SFX. It should be felt more than heard; it should never drown music.
-**Visual sync:** The fleet pieces pulse ±15% brightness in sync with the heartbeat (`§25.7`). The Black King's damage-state pulse (`§25.8`) is locked to the same tempo. Both sync automatically because they read the same `GameHeartbeat.currentBPM` observable.
+**Visual sync:** The fleet pieces pulse ±15% brightness in sync with the heartbeat (`§24.7`). The Black King's damage-state pulse (`§24.8`) is locked to the same tempo. Both sync automatically because they read the same `GameHeartbeat.currentBPM` observable.
 #### Audio Mix Priorities
 When multiple sounds fire simultaneously, priority order (highest first):
 1. Ship destroyed / King destroyed
@@ -685,7 +726,7 @@ When multiple sounds fire simultaneously, priority order (highest first):
 9. Music
 The engine should duck (lower volume of) the music by ~30% whenever a level-1 or level-2 priority sound plays, then fade back up over ~0.5 seconds.
 #### Settings
-Volume controls live in a proper Settings screen (added Phase 5), accessible from the title screen and pause menu. No interim pause-menu sliders — full settings or nothing.
+Volume controls live in a proper Settings screen (added Phase 5), accessible separately from pause. Pause is never a settings menu. Settings may be opened from the title screen and from a dedicated subtle Settings control or keyboard shortcut during gameplay; opening Settings pauses the game, but it is not part of the pause overlay.
 - Master volume
 - Music volume (separate)
 - SFX volume (separate)
@@ -695,6 +736,7 @@ Volume controls live in a proper Settings screen (added Phase 5), accessible fro
 ### 13.1 Overview
 Power-ups are delivered exclusively by **Special Scout variants** — rare versions of the Raider Scout that are visually distinct from the standard disc. Shooting a Special Scout destroys it for its point value and immediately activates its associated power-up. No pickup item falls to collect — the effect triggers on destruction.
 Plain Raider Scouts (standard disc shape) never grant power-ups. Only the five Special Scout types do.
+Flagships, Escorts, Kamikazes, Looping Escorts, Paired Escorts, chess pieces, and environmental events never drop or grant power-ups in v1.0.
 **Spawn rules:**
 - From Level 2 onward, one Special Scout appears per level, chosen at random from the five types.
 - From Level 5 onward, two Special Scouts per level.
@@ -752,8 +794,8 @@ Each Special Scout is visually unmistakable at a glance — different shape, dif
 - **SFX on shield hit:** A resonant metallic clang — the hit is absorbed, but the player hears it clearly. Followed by the shield-shatter sound if it was the last charge.
 - **Visual:** Cyan hexagonal outline softly pulses around the ship while active.
 ---
-### 13.3 Power-Up Pickup Visuals
-Since effects trigger on scout destruction (no falling pickup), the visual feedback is on the scout itself:
+### 13.3 Power-Up Activation Visuals
+Since power-ups activate immediately when a Special Scout is destroyed, there is no pickup sprite, falling item, or fly-under collection step. The visual feedback is on the scout itself:
 - On destruction: the scout explodes with its type-color particle burst (gold for Lightning, blue-white for Ice, orange for Spread, red for Bomb, cyan-green for Repair) — larger and more elaborate than a standard scout explosion.
 - A brief **type label** flashes at the destroy position for 0.8 seconds: `EXTRA SHOT`, `TIME FREEZE`, `SPREAD FIRE`, `NUKE`, `SHIELD UP` — large pixel text, same color as the scout, no background.
 - The HUD updates immediately to reflect the active effect.
@@ -799,8 +841,8 @@ On the **very first launch only**, the How-to-Play overlay is shown automaticall
 - On all subsequent launches: title screen behaves normally. The INFO button remains available at all times for players who want to re-read the instructions.
 **Rationale:** New players have no context for the dual-input mechanic (chess moves + ship) and will otherwise drop the controller on turn 1. One automatic first-run exposure is sufficient — repeated auto-shows would feel patronizing to returning players.
 ---
-## 16. Technical Architecture (Swift / macOS)
-### 16.1 Recommended Stack
+## 15. Technical Architecture (Swift / macOS)
+### 15.1 Recommended Stack
 | Component | Technology |
 |---|---|
 | Game rendering | **SpriteKit** (native macOS/iOS) |
@@ -809,33 +851,42 @@ On the **very first launch only**, the How-to-Play overlay is shown automaticall
 | State management | Swift actors / structured concurrency |
 | Audio | **AVFoundation** or **SKAudioNode** |
 | Data persistence | **UserDefaults** (high scores, settings) |
-### 16.2 Module Breakdown
+### 15.2 Module Breakdown
 ```
 GalacticChessInvaders/
 ├── App/
 │   ├── GCIApp.swift               ← SwiftUI entry point
 │   └── ContentView.swift          ← SpriteKit scene host
 ├── Game/
-│   ├── GameScene.swift            ← Main SpriteKit scene, game loop
-│   ├── GameState.swift            ← Turn state machine
-│   ├── TurnTimer.swift            ← 5-second countdown, check extension
+│   ├── GameState.swift            ← Pure turn state machine, no SpriteKit
+│   ├── TurnTimer.swift            ← level-based chess beat countdown, check extension
 │   ├── LevelManager.swift         ← Wave/level progression
-│   └── AttractMode.swift          ← Title screen + attract mode sequencer
+│   ├── GameRules.swift            ← Pure rule coordination, receives GameAction values
+│   └── AttractMode.swift          ← Pure title/attract sequencing state
 ├── Chess/
 │   ├── Board.swift                ← 8×8 board model (logical only, not rendered)
 │   ├── Piece.swift                ← Piece type, color, HP
 │   ├── MoveGenerator.swift        ← Legal move generation
 │   ├── ChessEngine.swift          ← 1-2 ply minimax
 │   └── ChessNotation.swift        ← Algebraic notation helpers
-├── Arcade/
-│   ├── Spaceship.swift            ← Player ship node, laser cap, shield state
-│   ├── Laser.swift                ← Projectile nodes (player + enemy)
-│   ├── FleetController.swift      ← Invader formation movement + descent
-│   ├── RaiderController.swift     ← Scout / Escort / Flagship spawn + AI
-│   ├── PowerUpController.swift    ← Drop logic, pickup collection, shield effect
-│   └── CollisionHandler.swift     ← Physics contact delegate, all hit resolution
+├── ArcadeRules/
+│   ├── SpaceshipState.swift       ← Pure ship state: lives, laser cap, shield, invincibility
+│   ├── ProjectileState.swift      ← Pure projectile state: owner, damage, speed, active/inactive
+│   ├── FleetRules.swift           ← Pure fleet descent counters, logical rank updates, rush rules
+│   ├── RaiderRules.swift          ← Pure raider spawn choices, targeting, power-up selection
+│   ├── PowerUpRules.swift         ← Pure effect activation, replacement, expiry
+│   └── CollisionResolver.swift    ← Pure collision outcomes: damage, scoring, destruction
+├── Scene/
+│   ├── GameScene.swift            ← Main SpriteKit scene, game loop, rule-to-node coordinator
+│   ├── BoardLayout.swift          ← Converts logical board positions to scene coordinates
+│   ├── FleetController.swift      ← SpriteKit fleet node movement; calls FleetRules on full-rank descent
+│   ├── RaiderController.swift     ← SpriteKit raider spawning/animation; follows RaiderRules
+│   ├── CollisionHandler.swift     ← SKPhysicsContactDelegate; delegates outcomes to CollisionResolver
+│   └── AudioManager.swift         ← AVFoundation / SKAudioNode playback
 ├── Nodes/
 │   ├── PieceNode.swift            ← SKSpriteNode subclass, damage states, smoke
+│   ├── SpaceshipNode.swift        ← SpriteKit ship node, visual movement, respawn animation
+│   ├── LaserNode.swift            ← SpriteKit projectile node, pooled and animated
 │   ├── HUDNode.swift              ← Score, timer, lives, check warning, auto flash
 │   ├── ReticleNode.swift          ← Legal move crosshair indicators
 │   └── PowerUpNode.swift          ← Special Scout destruction effect + label flash
@@ -844,41 +895,47 @@ GalacticChessInvaders/
 │   └── InitialsEntryScene.swift   ← 8-character classic arcade name entry
 └── Assets.xcassets/
 ```
-### 16.3 Rendering the Dual Systems
+### 15.3 Rendering the Dual Systems
 - **Chess moves** are discrete events: a piece moves from square A to square B via a smooth `SKAction.move`. Square coordinates are converted to screen positions by a `BoardLayout` helper — the grid is pure math, never rendered.
-- **Fleet movement** runs continuously via `SKAction.repeatForever` on a fleet parent node — all piece nodes are children, so they shift together. On each descent step, logical squares are updated via `GCIBoard.forcePlace()` — bypassing chess legality. The chess engine always evaluates from the current descended position. See §20.5 for full rules including crush events.
+- **Fleet movement** runs continuously via `SKAction.repeatForever` on a fleet parent node — all piece nodes are children, so they shift together. Wall bounces create **visual half-rank drops**. The first half-drop does not change logical chess squares. After the second consecutive half-drop, the fleet has visually descended one full rank; only then are logical squares updated via `GCIBoard.forcePlace()` — bypassing chess legality. The chess engine always evaluates from the last completed full-rank logical descent, not from the in-between half-rank visual position. See §23.6 for full rules including crush events.
 - **Collision detection** uses SpriteKit's physics bodies and `SKPhysicsContactDelegate`. Categories: `laser`, `enemyPiece`, `friendlyPiece`, `enemyProjectile`, `ship`.
-### 16.4 iOS Port Considerations
-- Replace keyboard controls with on-screen D-pad (move ship) + tap-to-fire button.
-- Chess piece selection via tap-then-tap (tap piece, then tap destination).
-- `UIAdaptivePresentationController` for split-screen iPad support.
-- Use `UIRequiresFullScreen = false` in Info.plist to allow iPad multitasking.
-- SpriteKit scenes scale cleanly to any screen size using `.aspectFill` + safe-area insets.
+### 15.4 Logic / SpriteKit Boundary
+The codebase keeps every rule that can be tested without rendering in pure Swift. SpriteKit classes detect input, animate nodes, and report events; pure rule classes decide what those events mean.
+
+**Pure rule/state layer:** `Game/`, `Chess/`, `ArcadeRules/`, and `Scores/` do not import `SpriteKit`, `AppKit`, or `UIKit`. They store board state, HP, lives, score, timers, laser caps, power-up timers, legal moves, fleet logical descent, and collision outcomes.
+
+**SpriteKit scene layer:** `Scene/` and `Nodes/` may import `SpriteKit`. They own `SKScene`, `SKSpriteNode`, `SKAction`, physics bodies, particles, visual coordinates, hit detection, and audio playback. They do not decide scoring, legal chess moves, HP rules, or game-over conditions themselves.
+
+**Event flow:** `GameScene` translates player/platform input into `GameAction`, asks pure rule objects for the result, then updates SpriteKit nodes to match. `CollisionHandler` receives physics contacts, converts them to rule inputs, calls `CollisionResolver`, and applies the returned effects to nodes and audio. `FleetController` runs visual sweeps, but only `FleetRules` decides when a full-rank logical descent happens and which board mutations are applied.
+### 15.5 Future Portability Considerations
+The v1.0 implementation target is macOS only. iOS/iPadOS may be considered later, but it is not a committed v1.0 or Phase 2 requirement.
+
+Mac v1.0 should still avoid unnecessary platform coupling: keep game rules pure Swift, keep input translated through `GameAction`, and keep board layout responsive to the current scene size. Those choices help the Mac build immediately and preserve the option of a future port without forcing mobile UI work now.
 ---
-## 17. iOS Portability Architecture
-This section defines how the macOS codebase must be structured from day one so that the iOS port in Phase 2 is a matter of adding a platform layer — not rewriting the game.
+## 16. Portability Architecture
+This section defines how the macOS codebase should be structured so that game logic stays testable and the project does not accidentally depend on macOS-only concepts. A future iOS/iPadOS port is optional and not yet scheduled.
 ---
-### 17.1 Core Principle: Separate Logic from Platform
+### 16.1 Core Principle: Separate Logic from Platform
 Every system in the game belongs to one of three layers:
 ```
 ┌─────────────────────────────────────────┐
 │           GAME LOGIC LAYER              │  ← Pure Swift. No UIKit, no AppKit,
-│  Chess engine, board model, scoring,    │     no SpriteKit. Runs identically
-│  level manager, fleet AI, collision     │     on macOS and iOS.
+│  Chess engine, board model, scoring,    │     no SpriteKit. Runs independently
+│  level manager, fleet AI, collision     │     of platform UI.
 │  rules, HP system, turn timer           │
 ├─────────────────────────────────────────┤
-│         RENDERING / SCENE LAYER         │  ← SpriteKit (shared macOS + iOS).
+│         RENDERING / SCENE LAYER         │  ← SpriteKit.
 │  GameScene, PieceNode, HUDNode,         │     SKScene works on both platforms
 │  particle effects, audio nodes          │     with zero changes.
 ├─────────────────────────────────────────┤
 │        PLATFORM INPUT LAYER             │  ← Separate per platform.
-│  macOS: keyboard + mouse handlers       │     Swapped out at compile time
-│  iOS: touch, virtual joystick, buttons  │     using #if os(iOS) / os(macOS)
+│  macOS: keyboard + mouse handlers       │     Future platforms would add
+│  Future: touch/gamepad/etc.             │     their own adapters.
 └─────────────────────────────────────────┘
 ```
 **Rule:** The game logic layer must never import `AppKit`, `UIKit`, `SpriteKit`, or reference screen coordinates. It communicates with the scene layer through a clean protocol interface only.
 ---
-### 17.2 Input Abstraction
+### 16.2 Input Abstraction
 The game must never respond directly to keyboard events or mouse clicks in the game logic. Instead, all input is translated into **abstract game actions** before being passed to the logic layer:
 ```swift
 enum GameAction {
@@ -892,22 +949,21 @@ enum GameAction {
 }
 ```
 - On **macOS**: keyboard and mouse events are translated into `GameAction` values by a `MacInputHandler`.
-- On **iOS**: touch events, virtual joystick deltas, and button taps are translated into `GameAction` values by a `TouchInputHandler`.
+- On a future touch platform: touch events, virtual joystick deltas, and button taps would be translated into `GameAction` values by a platform-specific input handler.
 - The game logic layer receives only `GameAction` — it has no idea whether the source was a key press or a finger tap.
-This means adding iOS controls in Phase 2 requires writing `TouchInputHandler` only — nothing in the game logic changes.
+This means future input work should not require changing chess rules, scoring, fleet rules, or collision outcomes.
 ---
-### 17.3 macOS Window Behavior
+### 16.3 macOS Window Behavior
 The game runs in a **standard resizable macOS window** — it does not take over the screen on launch. The user can optionally go full screen via the green traffic-light button or `⌃⌘F` as with any Mac app, but this is never forced.
 **Default window size:** 900×700 points — large enough to see all pieces clearly, small enough to sit comfortably on a 13" laptop screen without dominating the desktop.
 **Minimum window size:** 640×500 points — below this pieces become too small to click reliably.
 **Resizing behavior:** the SpriteKit scene uses `scaleMode = .aspectFit` on macOS so the playfield scales cleanly inside any window size, with black letterbox bars if the window proportions differ from the scene's native ratio. The game never stretches or crops.
 The app should **not** set `NSWindowStyleMask.fullSizeContentView` or hide the title bar — the standard macOS chrome (title bar, traffic lights, menu bar) remains visible at all times in windowed mode.
 ---
-### 17.4 SpriteKit — Already Cross-Platform
-SpriteKit runs on macOS, iOS, and iPadOS with the same API. The `GameScene`, all `SKSpriteNode` subclasses, `SKAction` animations, particle emitters, and `SKAudioNode` audio all work without modification. This is the main reason SpriteKit was chosen over a Mac-only framework.
-The one exception: `SKView` is embedded differently on macOS (`NSView`) vs iOS (`UIView`). This is handled by a thin wrapper in `ContentView.swift` using `#if os(iOS)`.
+### 16.4 SpriteKit
+SpriteKit is the rendering framework for macOS v1.0. It also leaves open a possible future path to iOS/iPadOS, but the current implementation should be judged first on Mac windowed gameplay, Mac input feel, and Mac performance.
 ---
-### 17.4 Screen Size & Layout
+### 16.5 Screen Size & Layout
 The game must never use hardcoded pixel coordinates. All positions must be calculated relative to the scene size at runtime.
 ```swift
 // Wrong — hardcoded
@@ -917,32 +973,25 @@ shipNode.position = CGPoint(x: 512, y: 40)
 shipNode.position = CGPoint(x: scene.size.width / 2, y: scene.size.height * 0.05)
 ```
 **Key layout rules:**
-- The playfield scales to fill the available screen using `SKScene.scaleMode = .aspectFill`
+- On macOS v1.0, the playfield uses `SKScene.scaleMode = .aspectFit` so resizing never crops the board, HUD, or spaceship strip
 - The spaceship strip height is defined as a **percentage of scene height** (5%), not a fixed pixel value
-- Piece sprite sizes (16–28px) are defined as a fraction of the square size, which is derived from scene width at runtime
+- Displayed piece sizes are defined as percentages of `squareSize` using the canonical display sizing rule in §12.2; source PNG pixel dimensions are never used directly for layout
 - HUD elements anchor to screen edges using `SKNode` anchor points — top-left for score, top-right for lives
-- Safe area insets are respected on iPhone (notch, home indicator) using `UIWindow.safeAreaInsets` on iOS
+- Future non-Mac layouts may choose different scale modes and safe-area behavior, but those are not v1.0 requirements
 ---
-### 17.5 Audio
-`AVFoundation` and `SKAudioNode` both work identically on macOS and iOS. No changes needed for audio in the port.
-One consideration: iOS may interrupt audio for phone calls, Siri, etc. The game should observe `AVAudioSession` interruption notifications on iOS and auto-pause when audio is interrupted. On macOS this is not needed.
-```swift
-// iOS only — add to AppDelegate or scene setup
-#if os(iOS)
-NotificationCenter.default.addObserver(
-    forName: AVAudioSession.interruptionNotification, ...)
-#endif
-```
+### 16.6 Audio
+`AVFoundation` and `SKAudioNode` are acceptable for macOS v1.0 audio. Future platform-specific audio interruption handling can be designed if an iOS/iPadOS port is approved later; it is not part of the Mac v1.0 scope.
 ---
-### 17.6 Asset Scaling — @1x / @2x / @3x
-All sprite assets must be provided in three resolutions in `Assets.xcassets`:
-- `@1x` — standard (older non-Retina, rarely used)
-- `@2x` — Retina Mac, older iPhones
-- `@3x` — iPhone Pro models, new iPads
+### 16.7 Asset Scaling — Mac v1.0
+All sprite assets for Mac v1.0 must be provided at sufficient resolution for both standard and Retina Mac displays:
+- `@1x` — standard Mac display
+- `@2x` — Retina Mac display
+
+`@3x` assets are not required for Mac v1.0. If an iOS/iPadOS port is approved later, `@3x` assets can be added during that porting work.
 The neon-vector aesthetic uses smooth outlines — **do not set `filteringMode = .nearest`** on piece sprites (that is for pixel art and would introduce no benefit here). Sprite textures should use the default linear filtering so smooth vector shapes scale cleanly on Retina displays. The bloom glow from `SKEffectNode` renders at screen resolution automatically.
 ---
-### 17.7 iOS-Specific UI Elements to Build in Phase 2
-These do not exist on macOS and must be added for iOS:
+### 16.8 Optional Future Touch UI
+The following are not part of Mac v1.0. If an iOS/iPadOS port is approved later, that work will need its own design pass:
 | Element | Description |
 |---|---|
 | Virtual joystick | Left thumb zone — two arrow buttons or an analog stick for ship movement |
@@ -953,9 +1002,10 @@ These do not exist on macOS and must be added for iOS:
 | Landscape-only lock | Game is landscape only on iPhone. Set `UISupportedInterfaceOrientations` to landscape in Info.plist |
 | iPad layout | More screen real estate — HUD can be richer, pieces can be larger |
 ---
-### 17.8 Persistence
-`UserDefaults` works identically on macOS and iOS — no changes needed for high score storage.
-For Phase 2 Game Center integration, the `ScoreManager` class should be designed with a protocol so the local `UserDefaults` implementation can be swapped for a `GameCenterScoreManager` without touching any other code:
+### 16.9 Persistence
+Mac v1.0 stores high scores and settings in `UserDefaults`.
+
+If online leaderboards or cross-device sync are approved later, the `ScoreManager` class should already be designed behind a protocol so the local implementation can be swapped without touching game rules:
 ```swift
 protocol ScoreStorage {
     func submitScore(_ score: Int, level: Int, initials: String)
@@ -965,48 +1015,38 @@ protocol ScoreStorage {
 // v1.0
 class LocalScoreManager: ScoreStorage { ... }
 
-// Phase 2
+// Optional future online leaderboard implementation
 class GameCenterScoreManager: ScoreStorage { ... }
 ```
 ---
-### 17.9 Shared Codebase Structure
-The project should use a **single Xcode target with conditional compilation** rather than two separate targets. Most files are shared; platform differences are handled inline with `#if os(iOS)`:
+### 16.10 Shared Codebase Structure
+Mac v1.0 should use a single macOS app target. Keep folders organized so future platform work can reuse pure rules, but do not create an iOS target until that port is explicitly approved:
 ```
 GalacticChessInvaders.xcodeproj
 ├── Targets:
-│   ├── GCI-macOS        (macOS deployment target)
-│   └── GCI-iOS          (iOS deployment target — Phase 2)
-├── Shared/              ← Everything in here compiles for both
+│   └── GCI-macOS        (macOS deployment target)
+├── Shared/              ← Pure rules and shared SpriteKit scene code
 │   ├── Game/
 │   ├── Chess/
-│   ├── Arcade/
+│   ├── ArcadeRules/
+│   ├── Scene/
 │   ├── Nodes/
 │   └── Scores/
 ├── macOS/               ← macOS-only files
 │   ├── MacInputHandler.swift
 │   └── AppDelegate.swift
-└── iOS/                 ← iOS-only files (Phase 2)
-    ├── TouchInputHandler.swift
-    ├── VirtualJoystick.swift
-    └── AppDelegate.swift
 ```
-This structure means the Phase 2 iOS port is primarily:
-1. Write `TouchInputHandler.swift`
-2. Write `VirtualJoystick.swift` and on-screen buttons
-3. Test layout on iPhone and iPad screen sizes
-4. Handle audio session interruptions
-5. Submit to App Store
-The game logic, chess engine, rendering, audio, and scoring require no changes.
+This structure keeps the Mac build straightforward while preserving reusable game logic. Future platform folders should be added only when a future platform becomes real scope.
 ---
-## 19. Libraries & Tools
+## 17. Libraries & Tools
 All dependencies are chosen to be lightweight, actively maintained, MIT/BSD licensed, and Swift Package Manager compatible. The goal is a small, auditable dependency tree — not a framework graveyard.
 ---
-### 19.1 Chess Logic — ChessKit
+### 17.1 Chess Logic — ChessKit
 **Package:** `https://github.com/aperechnev/ChessKit`
 **License:** MIT
 **Swift Package Manager:** Yes — add as a package dependency in Xcode
 **Status:** Active. v2.0.0 released September 2025, Swift 6 compatible.
-ChessKit is a pure Swift chess logic library with no UIKit or AppKit dependencies. It uses UInt64 bitboards internally for fast move generation and handles legal moves, check, checkmate, FEN notation, and PGN. Castling and en passant are supported but will not be called — they are simply ignored.
+ChessKit is a pure Swift chess logic library with no UIKit or AppKit dependencies. It uses UInt64 bitboards internally for fast move generation and handles legal moves, check, checkmate, FEN notation, and PGN. The library may support castling and en passant, but GCI v1.0 does not: those moves are filtered out of all White UI move lists and all Black AI move lists.
 **What we use it for:**
 - `MoveGenerator` — all legal moves for a given board position
 - Check and checkmate detection
@@ -1016,11 +1056,12 @@ ChessKit is a pure Swift chess logic library with no UIKit or AppKit dependencie
 - The "aggressive mode" weighting for Level 2+
 - HP tracking (ChessKit has no concept of piece health)
 - Multi-move-per-turn logic (Level 3+)
+- Filtering out castling and en passant for both sides
 ChessKit replaces writing a move generator from scratch — the most tedious and bug-prone part of a chess engine. The AI evaluation on top of it is small and straightforward.
 **Alternative:** `chesskit-app/chesskit-swift` — nearly identical quality, good fallback if integration issues arise.
 **Do not use:** `SteveBarnegren/SwiftChess` (abandoned), `nvzqz/Sage` (explicitly abandoned by author).
 ---
-### 19.2 Chess AI — Apple GameplayKit (built-in)
+### 17.2 Chess AI — Apple GameplayKit (built-in)
 **Framework:** `GameplayKit` — ships with macOS and iOS, no dependency needed.
 Rather than writing a minimax loop from scratch, use Apple's `GKMinmaxStrategist`. It implements minimax with alpha-beta pruning and only requires implementing the `GKGameModel` protocol on our board state — roughly 4 methods.
 ```swift
@@ -1040,9 +1081,9 @@ strategist.maxLookAheadDepth = 2   // 1-2 ply
 strategist.randomSource = nil       // deterministic
 let move = strategist.bestMove(for: currentPlayer)
 ```
-`GKMinmaxStrategist` runs synchronously but fast at depth 2 — wrap in `Task.detached` as per §19 performance rules. This is also used for `GKStateMachine` (game states: title, playing, paused, level clear, game over).
+`GKMinmaxStrategist` runs synchronously but fast at depth 2 — wrap in `Task.detached` as per §18 performance rules. This is also used for `GKStateMachine` (game states: title, playing, paused, level clear, game over).
 ---
-### 19.3 Sound Effects — pre-made library + generators + AVFoundation (built-in)
+### 17.3 Sound Effects — pre-made library + generators + AVFoundation (built-in)
 **Playback:** `AVFoundation` — ships with macOS and iOS, no dependency needed.
 Two complementary approaches: start with a pre-made library for common sounds, then use a generator for anything custom or missing.
 #### Pre-made Library — The Motion Monkey Retro Arcade Pack
@@ -1054,12 +1095,12 @@ The best single starting point for GCI. 300+ original retro arcade sounds, **CC0
 | Weapons / sci-fi lasers | Player laser fire, enemy shots |
 | Impacts | Piece hit / damage |
 | UI / beeps / clicks | Menu navigation, screen transitions, timer tick |
-| Level / screen events | New level, game over, power-up collected |
+| Level / screen events | New level, game over, power-up activated |
 | Arcade speech | "Game Over", "Power Up", "Bonus" stings |
 Download the full pack, audition everything, and map the best candidates to GCI events. Many sounds work for multiple purposes.
 #### Custom SFX Generator — jsfxr / ChipTone
 For any sounds not covered by the library, or to create a unique signature sound (e.g. the player's specific laser tone):
-- **[jsfxr](https://sfxr.me)** — browser-based, instant, no install. One-click randomise for laser/explosion/pickup/hit categories, then tweak parameters. Export as `.wav`.
+- **[jsfxr](https://sfxr.me)** — browser-based, instant, no install. One-click randomise for laser/explosion/power-up/hit categories, then tweak parameters. Export as `.wav`.
 - **[ChipTone](https://sfbgames.itch.io/chiptone)** — more powerful, free download, better for complex layered sounds or richer explosions.
 - **[Bfxr](https://www.bfxr.net)** — desktop app (Mac/Win), sfxr-based with a mixer for combining multiple sounds into one. Good for the King explosion which should feel massive.
 #### Workflow (for all SFX sources)
@@ -1072,7 +1113,7 @@ For any sounds not covered by the library, or to create a unique signature sound
 4. For polyphonic sounds (rapid laser fire, simultaneous explosions) maintain a pool of 3–4 `AVAudioPlayer` instances per sound and round-robin between them
 No third-party Swift audio library needed. `AVFoundation` handles everything.
 ---
-### 19.4 Music — AVFoundation (built-in) + curated tracks
+### 17.4 Music — AVFoundation (built-in) + curated tracks
 **Playback:** `AVFoundation` — built-in, no dependency. Load `.m4a` files with `AVAudioPlayer`, loop with `numberOfLoops = -1`.
 **Style target:** Modern electronic / dark synthpop in the Atari Recharged vein — driving, melodic, punchy. *Not* classic 8-bit beeps. The Recharged series (Asteroids, Breakout, Centipede) uses fully modern electronic production by Megan McDuffee: dark electropop with 80s/90s flavor, strong melodic leads, short 2–2.5 minute loops. GCI should aim for the same territory.
 **Per-level song pool** (simpler and more reliable than adaptive tempo):
@@ -1145,12 +1186,12 @@ For a more explicitly retro or electronic sound, or to supplement Zudio tracks:
 **Finding the MOD files:** The original MOD files are in the publicly released Tempest 2000 source code (Jaguar Sector II, 2008) under `Tempest 2k Music 94/TEMPEST/MOD/`. Several of the tracks are also indexed on [ModArchive.org](https://modarchive.org). A 2021 fan remaster using these files is available at [archive.org/details/tempest-2000-ost-original-remastered-2021-flac-32-bit](https://archive.org/details/tempest-2000-ost-original-remastered-2021-flac-32-bit) — some files have been converted to MIDI using timidity.
 **Converting MOD to MIDI on macOS:** The fastest path is `timidity`, available via Homebrew: `brew install timidity`, then `timidity -Ow -o output.mid input.mod` — though note that MOD-to-MIDI conversion is lossy (MOD samples pitch-shift raw audio; MIDI uses instrument programs) so the output captures melody and rhythm but not timbre. For a cleaner analysis workflow, open the MOD in OpenMPT (Windows/Wine), export each channel as a separate MIDI track (`File → Export → MIDI`), then import into GarageBand or Logic Pro on Mac. This lets you inspect scales, chord progressions, basslines, and drum patterns directly in a piano roll — the ground-truth source for understanding what makes the tracks hypnotic.
 ---
-### 19.5 Game Math — simd (built-in)
+### 17.5 Game Math — simd (built-in)
 **Framework:** `simd` — part of the Swift standard library, no dependency.
 Use `SIMD2<Float>` for 2D positions and velocities, `simd_float2x2` for transforms. This is faster than `CGPoint` arithmetic for game logic calculations and is what SpriteKit uses internally.
 No third-party math library is needed or recommended.
 ---
-### 19.6 Full Dependency Summary
+### 17.6 Full Dependency Summary
 | Dependency | Type | Source | Used for |
 |---|---|---|---|
 | **ChessKit** | Swift Package | `github.com/aperechnev/ChessKit` | Legal move generation, check/checkmate |
@@ -1168,23 +1209,23 @@ No third-party math library is needed or recommended.
 | **OpenMPTSwift** | Optional Swift Package | `github.com/lukasz-pomianek/OpenMPTSwift` | Only if tracker file format chosen for music |
 **Total runtime code dependencies: 1** (ChessKit). Everything else is Apple built-in frameworks or asset generation tools. This is intentional — fewer dependencies means fewer breakages across Xcode and Swift version updates.
 ---
-### 19.7 Adding ChessKit to the Xcode Project
+### 17.7 Adding ChessKit to the Xcode Project
 In Xcode:
 1. File → Add Package Dependencies
 2. Enter: `https://github.com/aperechnev/ChessKit`
 3. Select version rule: Up to Next Major from `2.0.0`
-4. Add to the `GCI-macOS` target (and `GCI-iOS` when Phase 10 begins)
+4. Add to the `GCI-macOS` target
 Then in `MoveGenerator.swift`:
 ```swift
 import ChessKit
 // Board, Position, Move, Piece types are now available
 ```
 ---
-## 20. Performance Architecture
+## 18. Performance Architecture
 This section defines the performance rules that must be followed from Phase 0 onward. Violating these patterns produces games that run fine early and degrade as features are added — exactly what we want to avoid. None of these require exotic techniques; they are standard SpriteKit/Swift practices applied consistently.
-**Target:** 60 fps on a 2019 MacBook Pro and iPhone 12 at all times, including during the most chaotic moments (fleet at full speed, multiple raiders, projectiles in flight, explosions active simultaneously).
+**Target:** 60 fps on a 2019 MacBook Pro at all times, including during the most chaotic moments (fleet at full speed, multiple raiders, projectiles in flight, explosions active simultaneously).
 ---
-### 20.1 Never Block the Main Thread
+### 18.1 Never Block the Main Thread
 The single most important rule. SpriteKit renders on the main thread. Anything that takes more than ~4ms on the main thread causes a dropped frame.
 **What must never run on the main thread:**
 - Chess engine move generation and evaluation
@@ -1203,7 +1244,7 @@ Task.detached(priority: .userInitiated) {
 }
 ```
 ---
-### 20.2 Object Pooling for Frequently Created Nodes
+### 18.2 Object Pooling for Frequently Created Nodes
 Creating and destroying `SKNode` objects every time the player fires or a projectile hits is expensive — it triggers memory allocation, SpriteKit scene graph updates, and garbage collection pressure. At arcade speed (player firing rapidly, dozens of projectiles per level) this adds up fast.
 **Pool these objects from day one:**
 | Object | Why pool it |
@@ -1233,7 +1274,7 @@ class LaserPool {
 ```
 Pre-warm pools at level start, not on first use.
 ---
-### 20.3 Texture Atlases — One Draw Call Per Atlas
+### 18.3 Texture Atlases — One Draw Call Per Atlas
 Each individual texture file requires a separate GPU draw call. With 12 piece types × 4 animation frames + projectiles + HUD elements, a naive implementation makes 50+ draw calls per frame. SpriteKit batches draw calls automatically **only when sprites share the same texture atlas**.
 **Rule:** Pack all sprites into texture atlases using Xcode's `.spriteatlas` folder format. Group by usage:
 ```
@@ -1247,7 +1288,7 @@ Assets.xcassets/
 ```
 Sprites within the same atlas render in a single draw call. Target: fewer than 10 draw calls per frame during normal gameplay. Check with SpriteKit's built-in stats overlay (`showsNodeCount`, `showsDrawCount`).
 ---
-### 20.4 Keep the Node Tree Shallow and Small
+### 18.4 Keep the Node Tree Shallow and Small
 SpriteKit traverses the entire node tree every frame. Deep hierarchies and large node counts slow this traversal.
 **Rules:**
 - Maximum node count during gameplay: **~150 nodes**. This is generous — a full board has 32 pieces + projectiles + HUD + background = well under 150 if managed correctly.
@@ -1255,7 +1296,7 @@ SpriteKit traverses the entire node tree every frame. Deep hierarchies and large
 - Destroyed pieces are **removed from the scene graph immediately** after their explosion animation completes — not kept hidden.
 - Background parallax layers use **a small number of large sprites** that wrap/tile, not hundreds of individual star sprites. Use an `SKTileMapNode` or a single scrolling texture for the starfield.
 ---
-### 20.5 Use SKAction for All Animations
+### 18.5 Use SKAction for All Animations
 `SKAction` is SpriteKit's native animation system — it runs on the render thread without touching Swift code each frame. Manual position updates in `update()` are slower and harder to cancel.
 **Rule:** Every animation — piece movement, projectile travel, explosions, fleet sweep, idle bob — uses `SKAction`. Never animate by mutating `node.position` directly in `update()`.
 ```swift
@@ -1270,11 +1311,11 @@ laserNode.run(move) { [weak self] in self?.laserPool.release(laserNode) }
 ```
 The fleet's lateral sweep uses `SKAction.repeatForever` on the parent fleet node — all 16 piece nodes move together at zero per-piece cost.
 ---
-### 20.6 Simple Physics Bodies
+### 18.6 Simple Physics Bodies
 SpriteKit's physics engine is accurate but not free. Complex polygon bodies are significantly more expensive than primitive shapes.
 **Rules:**
 - All collision bodies are **circles or rectangles only** — no polygon paths.
-- Piece collision bodies: circle, radius = half the sprite width.
+- Piece collision bodies: centered circle, radius = `min(displayedWidth, displayedHeight) * 0.42`, based on displayed node size.
 - Laser collision bodies: thin rectangle.
 - Use **category bitmasks** correctly so SpriteKit skips collision checks between pairs that can never interact (e.g. player laser vs player laser):
 ```swift
@@ -1290,7 +1331,7 @@ laserBody.contactTestBitMask = PhysicsCategory.enemyPiece | PhysicsCategory.frie
 laserBody.collisionBitMask   = 0  // no physical bounce — just contact events
 ```
 ---
-### 20.7 Preload All Audio at Startup
+### 18.7 Preload All Audio at Startup
 Creating an `AVAudioPlayer` or loading a sound file at the moment a sound needs to play causes a stutter — file I/O on or near the main thread. At arcade speed (laser fire, rapid hits) this becomes severe.
 **Rule:** All SFX are loaded into memory once during the loading screen before gameplay begins. Store them in `AudioManager` as ready-to-play instances. Playing a sound must be a single method call with zero I/O:
 ```swift
@@ -1312,7 +1353,7 @@ class AudioManager {
 ```
 For sounds that may overlap (e.g. rapid laser fire), use multiple pre-created player instances per sound and round-robin between them.
 ---
-### 20.8 Delta-Time Based Movement
+### 18.8 Delta-Time Based Movement
 Never tie game speed to frame rate. On a fast machine running at 120fps, pieces would move twice as fast as on a 60fps machine if movement is frame-based.
 **Rule:** All movement is calculated using `deltaTime` — the elapsed time since the last frame — not a fixed per-frame amount:
 ```swift
@@ -1325,7 +1366,7 @@ override func update(_ currentTime: TimeInterval) {
 ```
 SpriteKit's `SKAction` handles this automatically — another reason to prefer it over manual updates.
 ---
-### 20.9 The Bloom Shader — Use Once, Apply Everywhere
+### 18.9 The Bloom Shader — Use Once, Apply Everywhere
 The neon bloom effect (blur-and-add) is the most visually expensive operation in the game. Applied naively to every node it would destroy performance.
 **Rule:** Apply the bloom shader to a **single `SKEffectNode`** that is the parent of all glowing content. One shader pass covers everything beneath it:
 ```swift
@@ -1339,7 +1380,7 @@ scene.addChild(effectNode)
 ```
 `shouldRasterize = true` is critical — it tells SpriteKit to cache the composited result and only re-render when something beneath the effect node actually changes. Without it the shader runs every frame regardless.
 ---
-### 20.10 Profiling Schedule
+### 18.10 Profiling Schedule
 Performance must be measured, not assumed. Use Instruments at the end of each phase:
 | Phase | What to measure | Target |
 |---|---|---|
@@ -1351,51 +1392,50 @@ Performance must be measured, not assumed. Use Instruments at the end of each ph
 Tools: **Instruments → Game Performance** template (combines GPU, CPU, and memory). Check `SKScene.showsNodeCount` and `SKScene.showsDrawCount` during development — keep draw count under 10 and node count under 150.
 **Fix performance issues at the phase they appear, not at the end.** A frame drop discovered in Phase 3 is a 1-hour fix. The same issue discovered in Phase 8 after layers of polish are built on top of it can be a week of rearchitecting.
 ---
-## 21. Developer Diagnostics Log
-### 21.1 Overview
+## 19. Developer Diagnostics Log
+### 19.1 Overview
 The game includes a built-in live diagnostics log — a scrollable console view showing real-time events as they happen. It is the primary tool for understanding what the game is doing during development and playtesting without attaching Xcode's debugger.
 The log is:
 - **On by default in debug builds**, off by default in release builds
 - Togglable at runtime with `L` on Mac or a button on iOS regardless of build type
 - Monospace green text on black background — visually distinct from the game, reads like a classic terminal
 ---
-### 21.2 Log Layout — macOS
+### 19.2 Log Layout — macOS
 The log appears as a **right sidebar** within the game window. The game scene occupies the left portion; the log occupies a fixed-width right panel.
 ```
 ┌──────────────────────────────┬─────────────────────────┐
 │                              │ GALACTIC CHESS INVADERS │
 │                              │ ─── DIAGNOSTIC LOG ──── │
 │                              │                         │
-│        GAME SCENE            │ STARTUP  Splash screen  │
-│                              │ STARTUP  Music started  │
-│                              │ INIT     Board created  │
-│                              │ INIT     Pieces placed  │
-│                              │ WHITE    e2→e4          │
-│                              │ BLACK    e7→e5          │
-│                              │ HIT      White Pawn d4  │
-│                              │          -2HP (4→2)     │
-│                              │ FLEET    Swept right    │
-│                              │ RAIDER   Scout entered  │
+│        GAME SCENE            │ 000.00 L00 B00 STARTUP  │
+│                              │ 000.02 L00 B00 STARTUP  │
+│                              │ 001.40 L01 B00 INIT     │
+│                              │ 001.42 L01 B00 INIT     │
+│                              │ 003.74 L01 B01 WHITE    │
+│                              │ 003.91 L01 B01 BLACK    │
+│                              │ 004.20 L01 B01 HIT      │
+│                              │ 004.36 L01 B01 FLEET    │
+│                              │ 006.10 L01 B02 RAIDER   │
 │                              │ ...                     │
 │                              │ [scroll up for history] │
 └──────────────────────────────┴─────────────────────────┘
 ```
-- **Sidebar width:** 280 points — wide enough for readable log lines, narrow enough to leave the game playable
+- **Sidebar width:** 360 points — wide enough for the time/level/beat prefix plus readable event text, narrow enough to leave the game playable
 - **Font:** SF Mono or system monospace, 11pt, bright green (`#00ff44`) on pure black
 - **Auto-scrolls** to the latest entry. The player can scroll up to read history — auto-scroll resumes when they scroll back to the bottom
 - **Full session history retained** — all events since launch are kept in memory (capped at 2,000 lines to prevent memory growth in long sessions)
 - A thin neon separator line divides the game scene from the log panel
 - Log panel can be shown/hidden with `L` — game scene expands to fill the full window width when hidden
 ---
-### 21.3 Log Layout — iPhone
-On iPhone the screen is too small for a sidebar. The log is a **separate full-screen view** toggled by a small `[LOG]` button in the corner of the game screen.
+### 19.3 Optional Future Touch Log Layout
+If an iPhone or other small-screen touch version is approved later, the screen will likely be too small for a sidebar. The log should become a **separate full-screen view** toggled by a small `[LOG]` button in the corner of the game screen.
 ```
 ┌─────────────────────────┐       ┌─────────────────────────┐
 │                         │  ←→   │ ─── DIAGNOSTIC LOG ───  │
-│      GAME SCREEN        │       │ STARTUP  Splash screen  │
-│                    [LOG]│       │ INIT     Pieces placed  │
-│                         │       │ WHITE    e2→e4          │
-└─────────────────────────┘       │ BLACK    e7→e5          │
+│      GAME SCREEN        │       │ 000.00 L00 B00 STARTUP  │
+│                    [LOG]│       │ 001.42 L01 B00 INIT     │
+│                         │       │ 003.74 L01 B01 WHITE    │
+└─────────────────────────┘       │ 003.91 L01 B01 BLACK    │
                                   │ ...                     │
                                   │                  [GAME] │
                                   └─────────────────────────┘
@@ -1405,12 +1445,19 @@ On iPhone the screen is too small for a sidebar. The log is a **separate full-sc
 - The log view is scrollable — full history visible
 - Same monospace green-on-black styling
 ---
-### 21.4 Log Categories & Format
+### 19.4 Log Categories & Format
 Every log line follows the format:
 ```
-CATEGORY    message text
+EEE.ee L## B## CATEGORY  message text
 ```
-Categories are fixed-width (8 chars), padded with spaces. This keeps columns aligned for easy reading.
+The prefix is mandatory for every log line:
+- `EEE.ee` = elapsed time in seconds since app launch, fixed to two decimals and padded to at least three digits before the decimal (`000.00`, `012.43`, `125.07`)
+- `L##` = current level, padded to two digits (`L01`, `L05`, `L12`); use `L00` before gameplay starts
+- `B##` = current chess beat within the level, padded to two digits (`B01`, `B03`, `B12`); use `B00` before the first beat of a level starts
+- `CATEGORY` = fixed-width 8-character label, padded with spaces
+- `message text` = concise event description
+
+Use `B##` rather than `T##` because the game uses a timed chess beat, not a traditional alternating chess turn. The beat number increments when a new White move/auto-move window begins and resets to `B00` at each level start until the first beat begins.
 | Category | Meaning |
 |---|---|
 | `STARTUP ` | App launch, scene transitions, music start |
@@ -1422,10 +1469,10 @@ Categories are fixed-width (8 chars), padded with spaces. This keeps columns ali
 | `CAPTURE ` | Chess capture (piece taken by move) |
 | `FLEET   ` | Fleet movement events |
 | `RAIDER  ` | Raider ship spawn, fire, exit, destroy |
-| `POWERUP ` | Power-up drop, collection, effect |
+| `POWERUP ` | Special Scout effect activation, replacement, expiry |
 | `PROMOTE ` | Pawn promotion event |
 | `SCORE   ` | Points awarded |
-| `TIMER   ` | Turn timer events (expiry, check extension) |
+| `TIMER   ` | Chess beat timer events (start, expiry, check extension) |
 | `CHECK   ` | Check or checkmate detected |
 | `LEVEL   ` | Level start, clear, game over |
 | `AUDIO   ` | Music state changes, SFX triggers |
@@ -1434,53 +1481,53 @@ Categories are fixed-width (8 chars), padded with spaces. This keeps columns ali
 **Color scheme:** category label is always **green** (`#00ff44`), description text is always **white** (`#ffffff`). This applies uniformly to all categories. Exceptions for specific categories (e.g. ERROR label in red, CHECK label in red) can be added later once the log is running and we see which events need to stand out during playtesting.
 `INPUT` events are suppressed by default even in debug builds — they are too frequent. Enable with a separate flag `logInput = true` in `DiagnosticsLog.swift`.
 ---
-### 21.5 Example Log Output
+### 19.5 Example Log Output
 ```
-STARTUP  App launched (macOS 15.2, debug build)
-STARTUP  Window created 900×700
-STARTUP  GameScene loaded
-STARTUP  Intro music started
-STARTUP  Title screen displayed
-INPUT    Key pressed → GameAction.startGame
-LEVEL    Level 1 started
-INIT     Board reset, 16 white + 16 black pieces placed
-INIT     Spaceship positioned at centre
-TIMER    Turn 1 started (5.0s)
-INPUT    Mouse click → BoardPosition(e2)
-WHITE    Piece selected: White Pawn at e2
-INPUT    Mouse click → BoardPosition(e4)
-WHITE    Pawn moved e2→e4
-TIMER    Turn 1 completed in 2.3s
-TIMER    Turn 2 started (5.0s)
-BLACK    Engine chose: Pawn e7→e5 (eval: +0.0)
-FLEET    Fleet swept right (speed: 40px/s)
-FLEET    Fleet fired: Black Pawn d7 → projectile spawned
-TIMER    Turn 2 completed (auto)
-HIT      White Pawn d2 hit by projectile (-1 HP → 3HP→2HP)
-RAIDER   Scout entered from left at rank 4
-RAIDER   Scout fired projectile at x=340
-RAIDER   Scout exited right (not destroyed)
-SCORE    +5 pts (projectile shot down) → total: 5
-HIT      White Pawn d2 hit by projectile (-1 HP → 2HP→1HP)
-HIT      White Pawn d2 hit by projectile (-1 HP → 1HP→0HP)
-DESTROY  White Pawn d2 destroyed (HP exhausted)
-BLACK    Engine chose: Pawn d7→d5 (eval: +0.2)
-CHECK    White King in check from Black Bishop c5
-TIMER    Check detected — timer extended to 8.0s
-WHITE    Pawn moved e4→e5 (resolves check)
-CHECK    Check resolved
-PROMOTE  White Pawn reached rank 8 at e8
-PROMOTE  Pawn→Queen (HP set to 12)
-PROMOTE  Auto-destroy: nearest Black Pawn at f7 (500→0 HP)
-DESTROY  Black Pawn f7 destroyed (promotion bonus)
-PROMOTE  Multi-shot +1 (laser cap now: 3)
-SCORE    +25 pts (promotion capture) → total: 475
-LEVEL    Level 1 cleared — all black pieces destroyed
-SCORE    Level clear bonus: 200 pts → total: 675
-LEVEL    Level 2 started
+000.00 L00 B00 STARTUP  App launched (macOS 15.2, debug build)
+000.02 L00 B00 STARTUP  Window created 900x700
+000.08 L00 B00 STARTUP  GameScene loaded
+000.11 L00 B00 STARTUP  Intro music started
+000.14 L00 B00 STARTUP  Title screen displayed
+002.31 L00 B00 INPUT    Key pressed -> GameAction.startGame
+002.45 L01 B00 LEVEL    Level 1 started
+002.47 L01 B00 INIT     Board reset, 16 white + 16 black pieces placed
+002.50 L01 B00 INIT     Spaceship positioned at centre
+002.58 L01 B01 TIMER    Beat 1 started (5.0s)
+003.12 L01 B01 INPUT    Mouse click -> BoardPosition(e2)
+003.13 L01 B01 WHITE    Piece selected: White Pawn at e2
+004.82 L01 B01 INPUT    Mouse click -> BoardPosition(e4)
+004.84 L01 B01 WHITE    Pawn moved e2->e4
+004.88 L01 B01 BLACK    Engine chose: Pawn e7->e5 (eval: +0.0)
+004.95 L01 B01 TIMER    Beat 1 completed in 2.37s
+004.96 L01 B02 TIMER    Beat 2 started (5.0s)
+005.61 L01 B02 FLEET    Fleet swept right (speed: 40px/s)
+006.04 L01 B02 FLEET    Visual half-drop 1/2; logical ranks unchanged
+006.44 L01 B02 RAIDER   First Scout entered from left at rank 4
+009.96 L01 B02 TIMER    Beat 2 expired; auto-move pending
+010.02 L01 B02 WHITE    Auto-move selected: Knight g1->f3
+010.08 L01 B02 BLACK    Engine chose: Pawn d7->d5 (eval: +0.2)
+010.14 L01 B02 TIMER    Beat 2 completed (auto)
+010.15 L01 B03 TIMER    Beat 3 started (5.0s)
+011.35 L01 B03 RAIDER   Scout exited right (warning pass, no shot fired)
+012.43 L01 B03 FLEET    Visual half-drop 2/2; logical ranks descended
+013.10 L01 B03 CHECK    White King in check from Black Bishop c5
+013.11 L01 B03 TIMER    Check detected; beat extended to 8.0s
+014.90 L01 B03 WHITE    Pawn moved e4->e5 (resolves check)
+014.92 L01 B03 CHECK    Check resolved
+018.66 L01 B05 PROMOTE  White Pawn reached rank 8 at e8
+018.67 L01 B05 PROMOTE  Pawn->Queen (HP set to 12)
+018.69 L01 B05 DESTROY  Black Pawn f7 destroyed (promotion bonus)
+018.70 L01 B05 PROMOTE  Multi-shot +1 (laser cap now: 3)
+018.71 L01 B05 SCORE    +25 pts (promotion capture) -> total: 475
+026.30 L01 B09 LEVEL    Level 1 cleared; all black pieces destroyed
+026.31 L01 B09 SCORE    Level clear bonus: 200 pts -> total: 675
+029.00 L02 B00 LEVEL    Level 2 started
+029.03 L02 B00 INIT     Board reset, 16 white + 16 black pieces placed
+029.18 L02 B01 TIMER    Beat 1 started (5.0s)
+031.40 L02 B01 HIT      White Pawn d2 hit by projectile (-1 HP -> 1HP)
 ```
 ---
-### 21.6 Implementation
+### 19.6 Implementation
 ```swift
 // DiagnosticsLog.swift — shared across all platforms
 
@@ -1509,6 +1556,9 @@ class DiagnosticsLog: ObservableObject {
     static let shared = DiagnosticsLog()
 
     @Published var lines: [LogLine] = []
+    var currentLevel: Int = 0
+    var currentBeat: Int = 0
+    private let appStartTime = Date()
     var isEnabled: Bool = {
         #if DEBUG
         return true
@@ -1522,8 +1572,14 @@ class DiagnosticsLog: ObservableObject {
     func log(_ category: LogCategory, _ message: String) {
         guard isEnabled else { return }
         if category == .input && !logInput { return }
-        let line = LogLine(category: category, message: message)
-        DispatchQueue.main.async {
+        let line = LogLine(
+            elapsedSeconds: Date().timeIntervalSince(appStartTime),
+            level: currentLevel,
+            beat: currentBeat,
+            category: category,
+            message: message
+        )
+        Task { @MainActor in
             self.lines.append(line)
             if self.lines.count > self.maxLines {
                 self.lines.removeFirst()
@@ -1533,16 +1589,18 @@ class DiagnosticsLog: ObservableObject {
 }
 
 // Usage anywhere in the codebase:
-DiagnosticsLog.shared.log(.white, "Pawn moved e2→e4")
-DiagnosticsLog.shared.log(.hit, "White Pawn d2 hit (-1 HP → 2HP)")
+DiagnosticsLog.shared.currentLevel = 1
+DiagnosticsLog.shared.currentBeat = 3
+DiagnosticsLog.shared.log(.white, "Pawn moved e2->e4")
+DiagnosticsLog.shared.log(.hit, "White Pawn d2 hit (-1 HP -> 2HP)")
 DiagnosticsLog.shared.log(.check, "White King in check from Black Bishop c5")
 ```
-The `DiagnosticsLog` is a singleton `ObservableObject`. The SwiftUI log panel observes it and updates automatically as new lines arrive. The game logic layer calls `DiagnosticsLog.shared.log(...)` directly — no coupling to the view layer.
+The `DiagnosticsLog` is a singleton `ObservableObject`. The SwiftUI log panel observes it and updates automatically as new lines arrive. `GameState` updates `currentLevel` and `currentBeat` at level start and beat start; all subsequent logs automatically include that context. The game logic layer calls `DiagnosticsLog.shared.log(...)` directly — no coupling to the view layer.
 ---
-### 21.7 Log Panel in Phase 0
+### 19.7 Log Panel in Phase 0
 The log panel should be built in **Phase 0** alongside the skeleton app — it is a development tool, not a game feature, and it pays dividends from the very first line of game code written. By the time chess logic and arcade systems are added, every event will already be flowing into the log automatically.
 ---
-## 22. Development Phases & Testing
+## 20. Development Phases & Testing
 ---
 ### Phase 0 — Skeleton (App runs, title screen shows, music plays)
 **Goal:** Get the Xcode project compiling and launching. Nothing is playable. This phase proves the project structure is sound and gives an early win before any real logic is written. Performance foundations are established here so every subsequent phase builds on them.
@@ -1554,7 +1612,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - "PRESS ANY KEY TO START" blinking text
 - Placeholder chiptune music loop playing on launch (even a simple repeating tone is fine)
 - Pressing any key transitions to a static game screen — black background, placeholder colored rectangles where pieces will go, no interaction
-- `DiagnosticsLog.swift` — singleton log, category system, 2,000-line cap
+- `DiagnosticsLog.swift` — singleton log, time/level/beat prefix, category system, 2,000-line cap
 - Right sidebar log panel (macOS) — scrollable, monospace green on black, auto-scrolls to bottom
 - `L` key toggles sidebar on/off; game scene expands to fill window when hidden
 - Log panel shows STARTUP and INIT events from the moment the app launches
@@ -1583,7 +1641,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - `Piece.swift` — piece types, colors, HP values
 - `MoveGenerator.swift` — all legal moves for all piece types (no castling, no en passant)
 - `ChessEngine.swift` — 1-2 ply minimax, material evaluation, aggressive mode flag
-- `TurnTimer.swift` — countdown logic, expiry callback, 8s check extension
+- `TurnTimer.swift` — level-based chess beat countdown logic, expiry callback, 8s check extension
 - `LevelManager.swift` — level parameters table, state transitions
 - ⚡ **Chess engine is pure Swift with no SpriteKit imports** — it must compile and run in a command-line test target with zero UI dependencies. This enforces the logic/rendering separation from the first line of chess code.
 - ⚡ **Engine designed for async execution** — `ChessEngine.bestMove()` is marked `async` from day one, even though it won't be called from a background thread until Phase 2. Retrofitting async onto a synchronous design is painful.
@@ -1596,6 +1654,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Unit test engine produces only legal moves
 - Unit test HP damage — piece takes damage, reaches 0, is removed from board model
 - Unit test turn timer — fires at correct interval, extends to 8s on check
+- Unit test chess beat scheduler — fleet sweep completion does not trigger a black chess move; black moves only during the scheduled black-move phase
 - ⚡ Performance test: 1,000 move generations complete in under 100ms
 - ⚡ Performance test: full 1-2 ply engine evaluation completes in under 50ms per turn
 - **Pass criteria:** all unit tests green; chess engine plays a complete game to conclusion with no illegal moves; performance benchmarks pass
@@ -1603,12 +1662,12 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 ### Phase 2.1 — Playfield: Chess Functional
 **Goal:** Wire the chess logic to the scene so chess is fully playable. Sprites are simple neon-colored shapes — correct size and color, not final art. Input, game state, HUD, and coordinate system all established correctly here.
 **Build:**
-- `BoardNode.swift` — coordinate mapping, no visible grid. `boardLayout.screenPosition(for: square)` helper, all positions as fractions of scene size — no hardcoded pixels
-- `PieceNode.swift` — simple colored rectangles at correct sizes (16–28px), correct glow colors (white=cyan, black=magenta); damage frames stubbed as progressively dimmer/thinner outlines (will be replaced by final neon-vector damage states in Phase 2.2)
+- `BoardLayout.swift` — coordinate mapping, no visible grid. `boardLayout.screenPosition(for: square)` helper, all positions as fractions of scene size — no hardcoded pixels
+- `PieceNode.swift` — simple colored placeholder silhouettes scaled by the §12.2 display sizing rule, correct glow colors (white=cyan, black=magenta); damage frames stubbed as progressively dimmer/thinner outlines (will be replaced by final neon-vector damage states in Phase 2.2)
 - `HUDNode.swift` — score, level, lives, turn timer in pixel font
 - `ReticleNode.swift` — plain crosshair markers, no glow yet
 - `MacInputHandler.swift` — keyboard + mouse → `GameAction` abstraction
-- `GameState.swift` — turn state machine connecting logic to scene
+- `GameRules.swift` + `GameState.swift` — pure turn state machine and rule coordinator; `GameScene` reads their results and updates nodes
 - Piece move animation — smooth `SKAction.move` slide
 - Auto-move "AUTO" flash indicator
 - Check warning — king flashes, HUD warning
@@ -1630,10 +1689,14 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Click reticle — piece slides to new position
 - Timer counts down, expiry fires auto-move, "AUTO" appears
 - Timer expiry with piece selected — engine moves that specific piece
+- Fleet sweep completion during an active chess beat does not trigger a black chess move
 - Check detected — alarm plays, timer extends to 8s
 - Checkmate — fanfare plays, game over state reached
 - Every chess sound plays on its correct trigger, none play spuriously
 - Window resize — pieces stay in correct positions at 3 different sizes
+- Window resize — `squareSize` remains ≥48 pt at the minimum supported 640×500 window, or the playfield letterboxes instead of shrinking below that minimum
+- Piece layout — displayed piece bounds never overlap adjacent ranks/files at minimum, default, or full-screen window sizes
+- Mouse selection — every displayed piece has at least a 40×40 pt selectable rectangle, and selection padding does not overlap a neighboring piece's selectable rectangle at minimum window size
 - ⚡ 60fps, draw count ≤5, node count ≤80 with all 32 pieces on screen
 - **Pass criteria:** full chess game playable to checkmate at 60fps — may look rough, must work correctly
 ---
@@ -1663,14 +1726,15 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 ### Phase 3.1 — Arcade Layer: Fleet Movement
 **Goal:** Get the black fleet sweeping and descending correctly. No shooting yet — just prove the Invader formation movement works alongside chess.
 **Build:**
-- `FleetController.swift` — lateral sweep via `SKAction.repeatForever` on fleet parent node, half-rank descent, wall detection, speed scaling by piece count
+- `FleetRules.swift` — pure two-step descent counter, full-rank logical descent, speed scaling by piece count
+- `FleetController.swift` — SpriteKit lateral sweep via `SKAction.repeatForever` on fleet parent node; calls `FleetRules` at wall bounces
 - Fleet speed multiplier table wired to piece count
 - ⚡ **Fleet movement is one `SKAction` on the parent node** — 16 pieces move at zero per-piece cost
-- Log entries: `FLEET Swept right (40px/s)`, `FLEET Dropped half-rank`, `FLEET Speed 1.2× (12 pieces remain)`
+- Log entries: `FLEET Swept right (40px/s)`, `FLEET Visual half-drop 1/2`, `FLEET Logical rank descended`, `FLEET Speed 1.2× (12 pieces remain)`
 **Testing:**
-- Fleet sweeps right, hits wall, drops half a rank, sweeps left, repeats
+- Fleet sweeps right, hits wall, drops a visual half-rank with no logical board change, sweeps left, drops a second visual half-rank, then updates logical ranks by one
 - Fleet speeds up correctly as pieces are eliminated — verify all 5 multiplier steps
-- Fleet movement does not affect chess logic — pieces snap to correct logical squares for move generation
+- First visual half-drop does not affect chess logic; every second half-drop updates black logical ranks by one, and pieces snap to correct logical squares for move generation
 - Chess game remains fully playable while fleet is sweeping
 - ⚡ 60fps with full fleet sweeping continuously
 - **Pass criteria:** fleet sweeps indefinitely without drift, chess still fully playable alongside it
@@ -1678,9 +1742,12 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 ### Phase 3.2 — Arcade Layer: Shooting & Collision
 **Goal:** Add the spaceship, player laser, invader shots, HP damage, and lives. The core shoot-em-up loop.
 **Build:**
-- `Spaceship.swift` — horizontal movement, 2-shot laser cap, 3 lives, respawn + 2s invincibility
-- `Laser.swift` — player and enemy projectile nodes
-- `CollisionHandler.swift` — physics contact delegate. Physics bodies circles/rects only, bitmasks set correctly
+- `SpaceshipState.swift` — pure ship lives, 2-shot laser cap, shield state, respawn/invincibility timers
+- `ProjectileState.swift` — pure player/enemy projectile ownership, damage, speed, active state
+- `SpaceshipNode.swift` — SpriteKit ship movement and respawn animation
+- `LaserNode.swift` — SpriteKit player/enemy projectile nodes
+- `CollisionResolver.swift` — pure damage/scoring/destruction outcomes
+- `CollisionHandler.swift` — SpriteKit physics contact delegate. Physics bodies circles/rects only, bitmasks set correctly; delegates rule decisions to `CollisionResolver`
 - Fleet firing — 1 shot per turn (Level 1: none), weighted toward front-rank pawns
 - HP damage — player laser 2 HP per hit, invader shot 1 HP per hit, friendly fire 2 HP
 - Piece destruction on HP=0 — removed from board model immediately
@@ -1709,7 +1776,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Sprite flicker on pieces at ≤25% HP
 - Explosion animation on piece destruction (placeholder single burst — full per-piece animations in Phase 8)
 - Score pop-up labels floating up from destroyed targets
-- Screen shake per event (intensities per §21.1)
+- Screen shake per event (intensities per §24.1)
 - Hit freeze on high-value piece destruction (2–4 frames)
 - ⚡ **`ScorePopPool`** — 20 label nodes pre-created, reused for every pop-up
 **Testing:**
@@ -1755,8 +1822,8 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
   - Master volume, Music volume, SFX volume (sliders)
   - Music on/off toggle
   - Stubbed sections for Gameplay (difficulty), Controls (key remapping), and Display — structure present now so adding entries later requires no rework
-- Settings accessible from **two entry points**: Settings button on title screen, Settings button in pause menu
-- Pause menu updated: Escape shows PAUSED overlay with Resume and Settings buttons (no longer just "press any key")
+- Settings accessible from **separate entry points**: Settings button on title screen, plus a dedicated subtle Settings control or keyboard shortcut during gameplay. Opening Settings during gameplay pauses the game until Settings closes.
+- Pause remains a simple overlay, not a menu. `P` always toggles pause/resume. `Escape` first cancels an active chess selection; if there is no active selection, it toggles pause/resume. The pause overlay has no buttons and no settings/options menu.
 **Testing:**
 - Music loops without a gap or click
 - Music track loops cleanly throughout the wave without pops or gaps
@@ -1765,7 +1832,8 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Title music stops cleanly when game starts
 - Music and SFX do not clash at default volume levels
 - Volume sliders work correctly and persist across app restarts
-- Settings reachable from both title screen and pause menu
+- Settings reachable from title screen and from its dedicated gameplay entry point, not from the pause overlay
+- Pause/resume via Escape and P freezes and restores the game without changing selection, settings, or game state
 - Stubbed Gameplay/Controls/Display sections present but clearly marked as coming soon
 - **Pass criteria:** a full playthrough with music feels like a complete arcade experience; settings persist correctly across sessions
 ---
@@ -1782,7 +1850,8 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Raider destroyed SFX: 3-note explosion distinct from fleet pieces
 - Scoring: Scout 100 pts, Escort 150 pts
 **Testing:**
-- Scout enters from left or right edge, crosses at correct height, fires one shot, exits
+- First Scout in a level enters from left or right edge, crosses at correct height without firing, and exits
+- Subsequent Scouts in that level cross at the same height, fire one shot, and exit
 - Scout shot is acid green — visually distinct from fleet shots
 - Escort peels off from back rank, not a random position
 - Escort dives toward ship's last known position (not current position)
@@ -1813,9 +1882,12 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Kamikaze — no shot, fast straight dive, requires lateral dodge
 - Paired Escorts — two dive in formation simultaneously
 - Looping Escort — dives, loops up, dives again before exiting
-- Shield drop ~50% from Flagship — verify over 20 kills
-- Shield collects on ship flyunder, absorbs one hit, shatters visually and aurally
-- Shield does not stack — second pickup ignored while active
+- Special Scouts replace standard Scout spawns according to §13.1; no falling pickup item is created
+- Destroying a Special Scout immediately activates its power-up at the scout's destruction position
+- Destroying a Repair Scout immediately activates Shield Bubble around the player's ship
+- Shield Bubble absorbs one ship hit, then shatters visually and aurally
+- Destroying a second Special Scout while any power-up is active replaces the previous effect immediately
+- Flagships do not drop shields or power-ups
 - All new SFX trigger correctly
 - ⚡ 60fps with Flagship + 2 Escorts + full fleet + projectiles simultaneously
 - **Pass criteria:** all raider types and power-up behave correctly with audio across 5+ levels of play
@@ -1824,13 +1896,16 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 **Goal:** Make black play smarter and faster as levels increase. These are changes to the chess engine and turn structure only — no new arcade content.
 **Build:**
 - Aggressive engine mode (Level 2+) — engine weights pawn advancement and attacking moves over passive play
-- 2 chess moves per turn (Level 3) — two pieces relocate each turn
-- 3 chess moves per turn (Level 5) — three pieces relocate
+- 2 chess moves per turn (Level 3) — two distinct pieces relocate to two distinct destination squares each turn
+- 3 chess moves per turn (Level 5) — three distinct pieces relocate to three distinct destination squares each turn when enough non-conflicting legal moves exist
 - Score multiplier wired to level — 1.0× at Level 1, +0.5× per level
 **Testing:**
 - Level 2: engine demonstrably prefers advancing pawns — log BLACK moves over 10 turns and verify advancement bias
 - Level 3: exactly 2 BLACK log entries per turn
 - Level 5: exactly 3 BLACK log entries per turn
+- Multi-move turns never select the same source piece twice
+- Multi-move turns never select the same destination square twice
+- If fewer than the target number of non-conflicting legal moves exist, Black makes the available non-conflicting legal moves only
 - Score multiplier — verify +25 pawn capture scores 25 on Level 1, 37 on Level 2, 50 on Level 3
 - Chess game remains legal throughout — no illegal moves produced by multi-move turns
 - **Pass criteria:** AI escalation verified by log output across Levels 1–5; no illegal chess states
@@ -1840,7 +1915,7 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 **Build:**
 - Diagonal invader shots (Level 3+) — 45° projectiles, purple glow, 160 px/s. Collision detection uses SpriteKit physics bodies (not strict geometric 45° line intersection) — the shot hits any piece whose physics body it overlaps during travel
 - Piece regeneration (Level 4+) — destroyed black pieces respawn as Pawns after 10s, dimmer glow, slot cap per level
-- Fleet rush mechanic (Level 5+) — one random piece jumps 2 ranks forward per fleet sweep
+- Fleet rush mechanic (Level 5+) — one random piece jumps 2 ranks forward after each full-rank logical descent
 - Pawn promotion triple event — auto-queen swap, targeting beam destroys nearest black piece, laser cap +1 (stacks per promotion, hard cap 6, resets next level)
 **Testing:**
 - Level 3: diagonal shots appear, travel at 45° at correct speed
@@ -1898,10 +1973,10 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - App Store guidelines compliance
 - **Pass criteria:** no crashes in 2 hours, 60 fps, App Store submission accepted
 ---
-### Phase 10 — iPad Port
-**Goal:** Ship on iPad using the shared codebase. iPad first because its larger screen is closer to the Mac layout — lower risk than iPhone.
+### Optional Future Port — iPad
+**Goal:** Not part of Mac v1.0. If an iPad version is approved later, use the shared codebase and perform a dedicated touch/layout design pass. iPad is likely lower risk than iPhone because its larger screen is closer to the Mac layout.
 **Build:**
-- New iOS target in Xcode project (shared `Shared/` folder unchanged)
+- New iOS target in Xcode project, only after the port is explicitly approved
 - `TouchInputHandler.swift` — translates touch → `GameAction`
 - `VirtualJoystick.swift` — left-thumb zone for ship movement
 - On-screen fire button — large tap target, bottom-right
@@ -1922,8 +1997,8 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 - Level 1–3 full playthrough on iPad — no control frustrations
 - **Pass criteria:** complete playthrough on iPad Pro and iPad mini with no input errors
 ---
-### Phase 11 — iPhone Port
-**Goal:** Ship on iPhone. Smaller screen and narrower aspect ratio require the most layout work.
+### Optional Future Port — iPhone
+**Goal:** Not part of Mac v1.0. If an iPhone version is approved later, smaller screen size and narrower aspect ratio will require the most layout work.
 **Build:**
 - iPhone layout pass — smaller piece sprites, compact HUD, tighter touch zones
 - Larger touch targets for piece selection (pieces are smaller but tap area is padded)
@@ -1944,8 +2019,8 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 | Feature | Phase | Notes |
 |---|---|---|
 | Game Center leaderboards | 2 | Online high scores by level; replaces local-only table |
-| iCloud sync | 2 | High scores and settings across Mac and iPhone |
-| Additional power-ups | 2 | Repair Drone, Smart Bomb, Speed Boost (designed in §13, not built in v1.0) |
+| iCloud sync | Future | High scores and settings across devices if a multi-device strategy is approved |
+| Additional power-ups | Future | Post-launch DLC possibilities; v1.0 ships with the five Special Scout types only (§13) |
 | Chess960 mode | 2 | Randomized starting positions — changes fleet formation shape each game |
 | Multiplayer (local) | 3 | Two players: one flies the ship, one makes chess moves |
 | Deeper engine option | 3 | Optional 3-4 ply for "hard" difficulty setting |
@@ -1953,18 +2028,21 @@ The log panel should be built in **Phase 0** alongside the skeleton app — it i
 | Replay system | 3 | Record and play back last game |
 | Soundtrack volume reactivity | 2 | Full dynamic music system tied to game state (designed in §12, basic version in v1.0) |
 ---
-## 18. Difficulty Tuning
+## 21. Difficulty Tuning
 All values below are starting points for playtesting — they should be adjusted once the game is running. The key feel target: Level 1 should be learnable, Level 3 should feel urgent, Level 5+ should feel overwhelming-but-survivable.
-### 18.1 Per-Level Parameters
+### 21.1 Per-Level Parameters
 | Level | Fleet speed (px/s) | Black moves/turn | Shots/turn | Proj. speed | Turn timer | Regen slots | Raider interval |
 |---|---|---|---|---|---|---|---|
 | 1 | 40 | 1 (passive) | **0** | — | 5s | 0 | 20s, Scouts only |
 | 2 | 55 | 1 (aggressive) | 1–2 | 180 px/s | 5s | 0 | 15s, Escorts begin |
 | 3 | 70 | 2 (aggressive) | 2 | 180 px/s | 4s | 0 | 12s, paired Escorts, Flagship ×1 |
 | 4 | 90 | 2 (aggressive) | 2–3 | 200 px/s | 4s | 2 | 10s, looping + Kamikaze Escorts |
-| 5 | 110 | 3 (aggressive) | 3 | 216 px/s | 3s | 4 | 8s, all raider types |
-| 6+ | +15/level | 3 (cap) | 3 (cap) | +10%/level | 3s (floor) | +1/level | 6s (floor) |
-### 18.2 Speed Scaling Within a Level
+| 5 | 110 | 3 (aggressive) | 3 | 216 px/s | 4s | 4 | 8s, all raider types |
+| 6+ | +15/level | 3 (cap) | 3 (cap) | +10%/level | 4s (floor) | +1/level | 6s (floor) |
+
+*Note: "Proj. speed" above is straight-down invader shot speed. Diagonal shots (Level 3+) travel at 160 px/s regardless of level — see §21.3.*
+
+### 21.2 Speed Scaling Within a Level
 As black pieces are eliminated the fleet speeds up, classic Invaders-style:
 | Black pieces remaining | Speed multiplier |
 |---|---|
@@ -1973,7 +2051,7 @@ As black pieces are eliminated the fleet speeds up, classic Invaders-style:
 | 8 | 1.5× |
 | 4 | 2.0× |
 | 1 | 2.5× |
-### 18.3 Projectile Speeds
+### 21.3 Projectile Speeds
 | Projectile | Speed (px/s) |
 |---|---|
 | Invader shot (straight) | 180 |
@@ -1983,8 +2061,8 @@ As black pieces are eliminated the fleet speeds up, classic Invaders-style:
 | Player laser | 400 |
 Player laser is always faster than any incoming projectile so shooting down enemy shots is reliably possible.
 ---
-## 23. Controls Reference
-### 23.1 macOS (Keyboard + Mouse / Trackpad)
+## 22. Controls Reference
+### 22.1 macOS (Keyboard + Mouse / Trackpad)
 The player operates two systems simultaneously — the spaceship with the keyboard (left hand) and chess with the mouse or trackpad (right hand). This split is intentional and central to the game's tension. Both inputs are always live; selecting a chess piece never freezes the ship.
 | Action | Input |
 |---|---|
@@ -1993,14 +2071,16 @@ The player operates two systems simultaneously — the spaceship with the keyboa
 | Fire laser | `Space` |
 | Select white chess piece | Left-click on piece |
 | Confirm chess move | Left-click on destination reticle |
-| Deselect piece | Right-click or `Escape` (when piece selected) |
-| Pause / unpause | `P` or `Escape` (when nothing selected) |
+| Deselect piece | `Escape`, right-click, or left-click empty space |
+| Pause / resume | `P`, or `Escape` when no chess piece is selected |
 | Quit to title | `⌘Q` |
 Both `←/→` arrow keys **and** `A/D` keys are supported simultaneously with no configuration — the player uses whichever feels natural. This makes the game comfortable on both external keyboards (arrow keys) and laptop keyboards where WASD keeps the left hand centred on the trackpad.
+Escape is contextual in the standard "back/cancel" sense. If a chess piece is selected, Escape cancels that selection and removes the reticles. If no chess piece is selected, Escape pauses the game. While paused, Escape resumes the game. `P` is the dedicated pause/resume toggle and does not affect chess selection.
 #### Timer expiry with a piece selected
-If the 5-second turn timer expires while the player has a white piece selected, the chess engine picks the **best available move for that specific piece** and executes it automatically. The reticles flash once before the move fires, giving a half-second visual warning. This rewards partial intent — the player chose a piece, the engine completes the thought.
+If the level's chess beat expires while the player has a white piece selected, the chess engine picks the **best available move for that specific piece** and executes it automatically. The reticles flash once before the move fires, giving a half-second visual warning. This rewards partial intent — the player chose a piece, the engine completes the thought.
 If no legal move exists for the selected piece (e.g. it is pinned), the engine deselects it and picks any legal white move instead.
-### 23.2 iOS / iPadOS (Touch)
+### 22.2 Optional Future Touch Controls
+Not part of Mac v1.0. If an iOS/iPadOS port is approved later, likely controls are:
 | Action | Input |
 |---|---|
 | Move ship | Left virtual joystick (bottom-left zone) |
@@ -2008,21 +2088,21 @@ If no legal move exists for the selected piece (e.g. it is pinned), the engine d
 | Select + move chess piece | Tap piece, then tap destination reticle |
 | Deselect piece | Tap empty space |
 | Pause | Pause button (top-right corner) |
-The left half of the screen drives the ship; the right half (and upper area) handles chess. The split is natural for two-thumb play on iPhone and iPad.
-### 23.3 Dual-Input Design Note
+The left half of the screen would drive the ship; the right half (and upper area) would handle chess. This needs a dedicated touch playtest pass before any mobile commitment.
+### 22.3 Dual-Input Design Note
 The game is explicitly designed around the difficulty of doing two things at once: flying and shooting with one hand while making timed chess decisions with the other. This is the core skill loop. Controls should never be simplified to remove this tension.
 ---
-## 24. Edge Cases & Rules Clarifications
-### 24.1 Stalemate
+## 23. Edge Cases & Rules Clarifications
+### 23.1 Stalemate
 Chess stalemate (no legal moves for white, not in check) is **ignored**. The spaceship can always act — shoot, dodge — even if no chess move is currently legal. The turn timer still runs; when it expires the auto-move engine will find that no chess move is available and simply does nothing. The game continues. This situation is rare in practice given that pieces are being destroyed throughout the game.
-### 24.2 Game Over Conditions — Complete List
+### 23.2 Game Over Conditions — Complete List
 **The mission is the King.** The level ends the moment the Black King falls — by shooting or by chess capture. Clearing the entire board first earns more points, but it is never required. This is the deliberate strategic choice every level: rush the King once a lane opens, or keep shooting to maximize score before delivering the killing blow.
 The game ends immediately under any of the following:
 | Condition | Result |
 |---|---|
 | White king HP reaches 0 (shot) | Defeat |
 | White king is checkmated | Defeat |
-| Spaceship loses all 3 lives | Defeat |
+| Spaceship loses all remaining lives | Defeat |
 | Any black piece reaches rank 1 | Defeat |
 | Black king HP reaches 0 (shot) | **Victory — level clear.** King shot bonus (+500 pts) awarded. Surviving white piece bonuses do NOT apply if pieces remain — the board resets. |
 | Black king captured by chess move | **Victory — level clear.** Treated identically to King shot — +500 pts bonus, board resets immediately. |
@@ -2030,9 +2110,9 @@ The game ends immediately under any of the following:
 | All black pieces destroyed (board clear) | **Victory — level clear.** Only achievable if the King was the last piece destroyed. Full surviving white piece bonuses apply. |
 **How-to-Play wording (canonical):** *"Defeat the Black King — shoot it down or capture it in chess. The level ends the moment the King falls. Clear the board first for maximum points, or go straight for the King. Your call."*
 **Checkmate as a bonus path:** Checkmate is not required to win but rewards skilled chess play with an instant win and a +300 bonus on top of the King destruction bonus. Non-chess players can ignore it entirely and win every level by shooting the King down.
-### 24.3 Continues
+### 23.3 Continues
 None. Game over is permanent — the player returns to the title screen. Score is submitted to the local high score table. No mid-game saves.
-### 24.3a Game Over Screen & Contextual Tips
+### 23.4 Game Over Screen & Contextual Tips
 **Screen layout:** Game over riff plays. Screen fades to black with centered text:
 ```
         ★  GAME OVER  ★
@@ -2078,31 +2158,40 @@ None. Game over is permanent — the player returns to the title screen. Score i
 - `TIP: CHESS PIECES BLOCK THE FLEET'S DESCENT WHEN IN THEIR COLUMN`
 - `TIP: THE FASTER THE FLEET SWEEPS · THE SOONER IT DESCENDS`
 **Removal note:** The entire tip system is isolated in a `GameOverTipResolver` class. If playtesting shows tips are intrusive or unhelpful, delete the class and remove the one call site in `GameOverScene`. No other code changes needed.
-### 24.4 Pause
-Pressing `P` (macOS) or the pause button (iOS) freezes everything: fleet movement, projectiles in flight, timers, raider ships, particles, music. The screen dims and "PAUSED" appears centered. Pressing `P` again or tapping "Resume" restores exactly the state that was frozen — no input is processed while paused.
-### 24.5 Piece Logical Position During Fleet Sweep
+### 23.5 Pause
+Pressing `P` on macOS freezes everything: fleet movement, projectiles in flight, timers, raider ships, particles, music. The screen dims and "PAUSED" appears centered. Pressing `P` again or clicking "Resume" restores exactly the state that was frozen — no input is processed while paused.
+### 23.6 Piece Logical Position During Fleet Sweep
 **The fleet sweep is not purely cosmetic — it advances the chess game.**
-As the black fleet sweeps laterally and descends, each piece's logical chess square updates to match its new board position. After each half-rank descent, every black piece's logical square is updated. This means the chess engine always works from the fleet's current board position, not the starting position. Black's pieces are genuinely advancing on the board — threatening new squares, exerting new pressure on white's position — not just drifting across the screen decoratively.
+As the black fleet sweeps laterally and descends, visual movement and logical chess position are deliberately separated. Each wall bounce drops the fleet by one **visual half-rank**, but the pieces stay on their current logical chess rank after the first half-drop. Only after the **second** half-drop completes has the fleet descended one full rank; at that moment every black piece's logical chess square is updated by one rank toward White.
+
+This means the chess engine always works from the last completed **full-rank logical descent**, not from the fleet's in-between half-rank visual position. Black's pieces are genuinely advancing on the board — threatening new squares, exerting new pressure on white's position — but only on every second sweep/drop cycle.
 The analogy: it is as if the black player has secretly moved all their pieces forward while white wasn't looking. White has no recourse — the new positions are simply where the army is now.
 **Two positions, one canonical:**
 - **Visual position:** the sprite's actual screen coordinates, updated continuously by `SKAction` on the fleet parent node. Used for shooting hit detection and rendering.
-- **Logical position:** the chess square (a1–h8), updated at each descent step and after each chess move. Used for all move generation, threat calculation, and projectile origin.
-After each half-rank descent the `FleetController` iterates all living black pieces and calls `board.forceSet(piece, square: newSquare)` — bypassing legality checks entirely. This is intentional: fleet movement is an arcade event, not a chess move.
-**Collision with white pieces:** When the fleet descends and a black piece's new logical square is already occupied by a white piece, a **crush event** fires:
+- **Logical position:** the chess square (a1–h8), updated only after every second visual half-drop and after each chess move. Used for all move generation, threat calculation, and projectile origin.
+The `FleetController` tracks a two-step descent counter:
+1. **Half-drop 1/2:** fleet drops visually by half a rank; no `GCIBoard` mutation, no crush checks, no logical rank change.
+2. **Half-drop 2/2:** fleet drops visually by another half-rank; the two half-drops equal one full rank, so `FleetController` iterates all living black pieces and calls `board.forceSet(piece, square: newSquare)` — bypassing legality checks entirely.
+This is intentional: fleet movement is an arcade event, not a chess move.
+**Collision with white pieces:** Crush events are checked only on the second half-drop, when the full-rank logical descent is applied. If a black piece's new logical square is already occupied by a white piece, a **crush event** fires:
 - The white piece is immediately removed from the board (no HP check — the crush is instant)
 - A dedicated "crushed" animation plays: the black piece briefly enlarges and the white piece shatters outward in fragments, then the black piece settles on the square
 - No points are awarded for a crushed white piece (it was the black fleet's advance, not the player's action)
 - If the crushed piece was the **white King**, this triggers game over (defeat) immediately
 **Architecture note — bypassing chess legality:** ChessKit enforces legal moves through its `move()` API. Fleet descent and fleet rush events must use a **direct board state mutation** (`forceSet` or equivalent) that bypasses legality validation. GCI maintains its own `GCIBoard` wrapper around ChessKit's position; all forced placements go through `GCIBoard.forcePlace(piece:at:)` which updates the internal bitboard directly. The chess engine (GKMinmaxStrategist) evaluates from the resulting position — it does not know or care how pieces arrived at their squares. This is by design: GCI's chess is a living, cheating game where the rules bend to serve the arcade action.
-**Lateral sweep (same rank):** The lateral left-right oscillation does *not* update logical squares — file (column) changes happen only on descent. A piece sweeping horizontally is visually in motion but logically still on its last-descended rank/file until the next downward step. This keeps the chess engine stable between descents.
-### 24.6 Castling
-Not implemented. The king and rooks move as individual pieces only. The chess engine will never attempt to castle, and the move generator does not generate castling as a legal move.
-### 24.7 En Passant
-Not implemented. Pawns capture only by standard diagonal capture. The move generator does not generate en passant.
-### 24.8 Piece Regeneration
+**Lateral sweep and first half-drop:** The lateral left-right oscillation does *not* update logical squares. The first visual half-drop after a wall bounce also does *not* update logical squares. A black piece remains logically on its last completed rank/file until the second half-drop applies the next full-rank descent. This keeps the chess engine stable between full-rank descents.
+### 23.7 Castling
+Not implemented for either side in v1.0. The King and rooks move as individual pieces only. The move generator never returns castling moves for White or Black. The UI never shows a castling reticle. The Black chess engine never evaluates or selects castling. Any castling rights present in imported FEN/library state are cleared before GCI move generation runs.
+
+Rationale: castling moves two pieces, depends on historical movement rights, and creates unclear interactions with forced fleet descent, shooting destruction, regeneration, and the no-visible-grid presentation. It is more complexity than value for the arcade-chess pace.
+### 23.8 En Passant
+Not implemented for either side in v1.0. Pawns capture only by normal diagonal capture. The move generator never returns en passant moves for White or Black. The UI never shows an en passant reticle. The Black chess engine never evaluates or selects en passant. Any en-passant target square present in imported FEN/library state is cleared before GCI move generation runs.
+
+Rationale: en passant depends on the immediately previous pawn move and becomes hard to explain when the board can also change through fleet descent, shooting, crushes, and regeneration. Disabling it keeps pawn behavior readable under time pressure.
+### 23.9 Piece Regeneration
 From Level 4 onward, destroyed black pieces can regenerate. Rules:
 - A regeneration triggers 10 seconds after a black piece is destroyed, subject to the level's regeneration slot cap.
-- The regenerated piece is always a **Pawn**, regardless of what was originally destroyed. It spawns at the back of the fleet at a random column position, with full Pawn HP (2).
+- The regenerated piece is always a **Pawn**, regardless of what was originally destroyed. This is intentional: v1.0 regenerates only Pawns for simplicity and balance. Higher-value piece regeneration (Rook, Bishop in defensive mode) is introduced in later levels specifically and not as a general rule. It spawns at the back of the fleet at a random column position, with full Pawn HP (2).
 - Regenerated Pawns are visually distinct — they arrive via a **transporter beam-in effect** (see below) and have a slightly dimmer glow afterwards, so the player can recognise them as respawned.
 - Regenerated Pawns are valid chess pieces. They can advance, promote, and fire shots like any other Pawn.
 - The black King never regenerates.
@@ -2130,14 +2219,14 @@ Defensively-respawned pieces use the same transporter beam-in effect as standard
 | Rook | Level 5 | King at Critical HP |
 | Bishop | Level 6 | King at Critical HP |
 Defensive spawns consume the same regeneration slot cap as standard regenerations. The Black King itself never regenerates.
-### 24.9 Simultaneous Hits
+### 23.10 Simultaneous Hits
 If a player laser hits two sprites in the same frame (e.g., a projectile and a piece behind it), both take damage. Collision resolution processes all contacts in the frame before removing any nodes — no single-frame sequencing issues.
-### 24.10 Score Multiplier
+### 23.11 Score Multiplier
 The score multiplier starts at 1.0× and increases by 0.5× at the start of each new level (Level 1: 1.0×, Level 2: 1.5×, Level 3: 2.0×, etc.). All points scored during a level are multiplied by that level's multiplier. The "WHITE PIECE SURVIVING" end-of-level bonus is also multiplied. The multiplier is never reset mid-game — it is a persistent reward for reaching higher levels.
 ---
-## 25. Game Feel ("Juice")
+## 24. Game Feel ("Juice")
 These are the small details that make the game feel physically satisfying. None of them affect game logic — they are all purely presentational.
-### 25.1 Screen Shake
+### 24.1 Screen Shake
 | Event | Shake intensity | Duration |
 |---|---|---|
 | Player ship destroyed | Medium | 0.4s |
@@ -2146,19 +2235,19 @@ These are the small details that make the game feel physically satisfying. None 
 | Flagship destroyed | Medium | 0.3s |
 | Player laser hits a piece | Micro-shake | 0.05s |
 Shake is implemented as a rapid random offset on the camera node, decaying exponentially. It should feel punchy, not nauseating.
-### 25.2 Hit Freeze
+### 24.2 Hit Freeze
 When a high-value piece is destroyed (Queen, King, Flagship), the game freezes for **2–4 frames** before the explosion animation plays. This is the classic "hit stop" or "hitstun" technique — it makes big impacts feel weighty. Small hits (Pawns, Scouts) get no freeze.
-### 25.3 Score Pop
+### 24.3 Score Pop
 Every time points are awarded, the score value pops up at the location of the destroyed piece/target (+150, +500, etc.) in the piece's glow color, floats upward ~30 pixels, then fades out over 0.8 seconds. The HUD score simultaneously ticks upward digit by digit.
-### 25.4 Turn Timer Pulse
+### 24.4 Turn Timer Pulse
 The countdown timer pulses (briefly scales up ~10%) on each whole second tick. At 2 seconds remaining it turns red and pulses on every half-second. At 1 second it flashes rapidly. This makes the timer feel urgent without being distracting during calm moments.
-### 25.5 Laser Impact Flash
+### 24.5 Laser Impact Flash
 When the player's laser hits anything, there is a single-frame white flash at the impact point — 1 frame only, no linger. Rapid-fire hits create a staccato strobe effect that reads as "I am definitely hitting this."
-### 25.6 Piece Movement Trails
+### 24.6 Piece Movement Trails
 When a chess piece moves (either player or auto-move), it leaves a brief neon ghost trail along its path — the same color as its glow. The trail fades within 0.3 seconds. This makes chess moves visible even when the player is focused on shooting.
-### 25.7 Fleet Heartbeat Pulse
+### 24.7 Fleet Heartbeat Pulse
 The black pieces pulse very slightly in brightness (±15% opacity) in sync with the Space Invaders heartbeat bass notes. As the heartbeat speeds up, so does the pulse. This ties the audio and visual rhythm together subconsciously.
-### 25.8 King in Danger — Visual Pulse
+### 24.8 King in Danger — Visual Pulse
 When the Black King reaches **Cracked damage state** (8 HP remaining — half its maximum), it begins a distinctive red heartbeat pulse overlaid on its magenta glow. This is implemented programmatically on the existing d2 sprite — no additional art asset required:
 - The King's glow shifts from magenta (`#FF2060`) toward deep crimson (`#CC0030`), cycling back in a sine wave
 - **Cracked state:** 1 Hz pulse (one beat per second)
@@ -2167,8 +2256,8 @@ When the Black King reaches **Cracked damage state** (8 HP remaining — half it
 - A faint low-frequency hum (distinct from the standard heartbeat) accompanies the pulse as ambient audio — the King's "distress signal"
 **What this communicates without words:** the King is now a viable primary target. A player focused on shooting pawns will notice the red pulse and understand instinctively that the objective has shifted. No tutorial overlay needed.
 At 0 HP the King destruction is the most cinematic moment in the game: full-screen white flash, expanding ring shockwave sprite, debris particles drifting for ~2 seconds, 0.6-second screen shake, and a long dramatic explosion sweep — the level's climax, earned.
-### 25.9 Pawn Promotion Sequence
-The pawn promotion event (§15.5) gets a dedicated 0.5-second "moment":
+### 24.9 Pawn Promotion Sequence
+The pawn promotion event (§25.6) gets a dedicated 0.5-second "moment":
 1. All other action continues but dims slightly (80% opacity).
 2. Targeting beam locks onto nearest black piece — a bright line drawn from the promoted queen to the target.
 3. Target explodes.
@@ -2176,29 +2265,46 @@ The pawn promotion event (§15.5) gets a dedicated 0.5-second "moment":
 5. Opacity returns to normal.
 Total interruption: 0.5 seconds. Not a pause — the player can still move and shoot during it.
 ---
-## 15. Design Decisions
-### 15.1 Legal Move Indicators
+## 25. Design Decisions
+### 25.1 Legal Move Indicators
 **Decision:** Shown, but faint.
-**Rule:** Select a white piece → dim neon-green crosshair reticles appear at every valid destination. Visible enough to be useful, unobtrusive enough not to dominate the screen during combat. Click any reticle to confirm the move. Click elsewhere or press Escape to deselect. Reticles vanish the moment the piece moves or is deselected.
+**Rule:** Select a white piece → dim neon-green crosshair reticles appear at every valid destination. Visible enough to be useful, unobtrusive enough not to dominate the screen during combat. Click any reticle to confirm the move. Press Escape, right-click, or left-click empty space to deselect. Reticles vanish the moment the piece moves or is deselected.
 ---
-### 15.2 Auto-Move Quality
+### 25.2 Auto-Move Quality
 **Decision:** When the timer expires the computer makes a **reasonable chess move** for white using the same 1-2 ply engine that drives black. This is fairer than random — it won't throw away pieces — but it won't be inspired either. "AUTO" flashes orange above the moved piece for 0.5 seconds.
 **Rule:** Timer expires → chess engine selects best available white move → executes it → "AUTO" indicator fires. The player is not punished by a blunder, but they lose control of that turn's chess decision.
 ---
-### 15.3 Fleet Descent Rate
-**Decision:** The fleet drops **half a rank** per wall bounce. This gives 12 bounces before the fleet reaches the white piece zone — more time to thin out the fleet by shooting before they get dangerously close. Lateral speed still increases as pieces are eliminated, maintaining escalating tension.
-**Rule:** Fleet hits right wall → drops half a rank → sweeps left → drops half a rank → repeat. Game over trigger: any black piece reaches rank 1. Descent rate is fixed across all levels; only lateral speed scales with level and remaining piece count.
+### 25.3 Fleet Descent Rate
+**Decision:** The fleet drops **one visual half-rank** per wall bounce, but black pieces stay on their current logical chess rank until the second sweep/drop completes. Two visual half-rank drops equal one full-rank logical descent. This gives 12 wall-bounce drops, or 6 full logical rank descents, before the fleet reaches the white back rank — more time to thin out the fleet by shooting before they get dangerously close. Lateral speed still increases as pieces are eliminated, maintaining escalating tension.
+**Rule:** Fleet hits right wall → drops visual half-rank 1/2 with no logical board change → sweeps left → drops visual half-rank 2/2 and updates every black piece's logical rank by one → repeat. Game over trigger: any black piece reaches rank 1 after a full-rank logical descent. Descent rate is fixed across all levels; only lateral speed scales with level and remaining piece count.
 ---
-### 15.4 Check Behavior
+### 25.4 Check Behavior
 **Decision:** Timer extends to **8 seconds** when white is in check. The arcade action (invader shots, raider ships) continues unpaused. A red "CHECK" warning pulses in the HUD and the white king's sprite glows red.
 **Rule:** Check detected → white's next turn timer becomes 8s. If the player fails to act, the auto-move engine fires but is constrained to moves that resolve check only. If no legal resolving move exists → checkmate → game over.
 **Multi-move interaction:** When Black makes multiple chess moves per turn (Level 3+), check state is evaluated **once, after all Black moves have completed**. If White is in check at the start of White's turn, the 8s extension applies. An intermediate check mid-sequence that resolves by the final Black move does not trigger the extension — only the final board state matters.
 ---
-### 15.5 Pawn Promotion — Power-Up Event
+### 25.5 Black Multi-Move Selection
+**Decision:** Black multi-move turns should be simple, legal, and readable rather than perfectly optimal. From Level 3 onward, when Black gets 2 or 3 chess moves in the scheduled black-move phase, those moves must use **distinct source pieces** and **distinct destination squares**.
+
+**Rule:** Generate candidate Black legal moves from the current board, score them with the normal material/aggression evaluation, then choose greedily:
+1. Sort legal candidate moves from best to worst.
+2. Select the best move whose source piece has not already been selected this turn and whose destination square has not already been claimed this turn.
+3. Temporarily reserve that source piece and destination square.
+4. Continue until the level's Black move count is reached, or until no legal non-conflicting candidate remains.
+
+If fewer than the target number of non-conflicting legal moves exist, Black simply makes fewer moves that turn. Do not force a bad or illegal move just to hit the count.
+
+**No same-piece repeats:** A piece that has already been selected for a multi-move turn cannot move again in that same black-move phase.
+
+**No shared destinations:** Two Black pieces cannot move to the same destination square in the same black-move phase.
+
+**Good-enough AI:** The selected set does not need to be globally optimal as a combined tactical sequence. It only needs to pass the normal legal-move filter, avoid obvious losing moves according to the existing evaluation, and satisfy the distinct-piece / distinct-destination constraints. This keeps the implementation stable and the on-screen action understandable.
+---
+### 25.6 Pawn Promotion — Power-Up Event
 **Decision:** Promotion is a **dramatic power-up moment**, not just a piece swap.
 **Rule:** White pawn reaches rank 8 →
 1. Pawn instantly becomes a Queen (full 12 HP, Queen sprite with flash animation + ascending arpeggio).
-2. The nearest black piece on screen is **destroyed automatically** — a targeting beam locks onto it and it explodes, no shot required. Points awarded at the **laser-shot rate** (not chess-capture rate) — e.g. 25 pts for a Pawn, 50 for a Knight or Bishop, 75 for a Rook, 150 for a Queen.
+2. The nearest black piece on screen is **destroyed automatically** — a targeting beam locks onto it and it explodes, no shot required. Points awarded at the **laser-shot rate** (not chess-capture rate) — e.g. 25 pts for a Pawn, 50 for a Knight or Bishop, 75 for a Rook, 150 for a Queen, 500 for the King. **Special case:** if the nearest piece is the Black King, the targeting beam counts as a King shot — the level ends immediately with Victory, and the +500 King shot bonus is awarded.
 3. The player's spaceship laser cap increases by 1 for the remainder of the level. A "MULTI-SHOT ACTIVATED" banner briefly sweeps across the bottom of the screen showing the new cap.
 **Multi-shot stacks with each promotion:**
 | Promotions this level | Laser cap |
@@ -2211,22 +2317,22 @@ Total interruption: 0.5 seconds. Not a pause — the player can still move and s
 The cap resets to 2 at the start of each new level. Engineering multiple promotions in one level is a legitimate high-skill strategy — the reward is a significantly faster firing rate that can tear through the fleet. White has 8 pawns, so the theoretical maximum of 6 is achievable but requires reaching rank 8 with 4 pawns under fire.
 *Black pawns reaching rank 1 auto-promote to Queen with no power-up effects — they simply add a second enemy Queen to the fleet.*
 ---
-### 15.6 Friendly Fire
+### 25.7 Friendly Fire
 **Decision:** Always allowed, no warning, no prompt.
 **Rule:** Player laser hits a white piece → piece loses 2 HP. If HP reaches 0 the piece is destroyed — no points awarded. A distinct low/mournful explosion sound plays to confirm it was your own piece. This is a deliberate tactical option for clearing firing lanes.
 ---
-### 15.7 Black King Movement
+### 25.8 Black King Movement
 **Decision:** The black King **moves with the fleet** left and right, exactly like all other black pieces. It is not special-cased. This makes it a moving target and harder to snipe — but it still scores 500 pts if shot.
 **Rule:** Black King is a full member of the fleet parent node and participates in all lateral sweeps. It moves to a new chess square when the engine selects a king move (rare). The King is the highest-HP piece (16 HP) so shooting it down requires sustained fire or a clear lane — it won't die from a stray shot.
 ---
-### 15.8 Spaceship Firing Rate
-**Decision:** Up to **2 simultaneous lasers** on screen under normal conditions. Each white pawn promotion increases the cap by 1 (stacking), up to a hard cap of 6. Resets to 2 each level. See §15.5 for the full stacking table.
-**Rule:** `Spaceship.activeLaserCount` tracks in-flight shots. Normal cap: 2. Post-promotion cap: 3. Each laser that exits the screen or hits a target decrements the count, freeing a slot. On iOS the fire button dims (not disables) when at the cap — tapping still queues a shot for the instant a slot opens.
+### 25.9 Spaceship Firing Rate
+**Decision:** Up to **2 simultaneous lasers** on screen under normal conditions. Each white pawn promotion increases the cap by 1 (stacking), up to a hard cap of 6. Resets to 2 each level. See §25.6 for the full stacking table.
+**Rule:** `Spaceship.activeLaserCount` tracks in-flight shots. Normal cap: 2. Post-promotion cap: 3. Each laser that exits the screen or hits a target decrements the count, freeing a slot. On macOS, pressing Space while at the cap does nothing; the next Space press after a slot opens fires normally. Future touch controls may choose to queue or dim fire input separately.
 ---
 *End of resolved decisions — v0.2*
 ---
 ## 26. Automated Testing Strategy
-The existing phase-by-phase testing notes in §22 cover manual verification — running the game and confirming behavior visually. This section defines the **automated test suite** that runs without a human: unit tests, integration tests, and performance benchmarks that can be executed via `xcodebuild test` in CI and before every significant merge.
+The existing phase-by-phase testing notes in §20 cover manual verification — running the game and confirming behavior visually. This section defines the **automated test suite** that runs without a human: unit tests, integration tests, and performance benchmarks that can be executed via `xcodebuild test` in CI and before every significant merge.
 The guiding principle matches the development phase order: **prove chess logic correct before adding animation; prove collision rules correct before adding physics.** A bug in `MoveGenerator.swift` discovered in Phase 1 is a one-hour fix. The same bug found in Phase 6 after SpriteKit rendering, fleet movement, and collision handling are all built on top of it is a day of archaeology.
 ---
 ### 26.1 Test Organization
@@ -2289,7 +2395,7 @@ func testScholarsMate() {
 }
 
 func testStalemate_noGameOver() {
-    // Stalemate: white has no legal moves but is not in check — GCI continues (§24.1)
+    // Stalemate: white has no legal moves but is not in check — GCI continues (§23.1)
     let board = GCIBoard(fen: "k7/8/1Q6/8/8/8/8/K7 b - - 0 1")
     XCTAssertFalse(board.isCheckmate(color: .black))
     XCTAssertFalse(board.isInCheck(color: .black))
@@ -2359,7 +2465,7 @@ func testBasePawnScore() {
 
 func testMultiplierScaling() {
     let score = ScoreManager()
-    score.addPoints(for: .shootPawn, level: 3)  // 3× multiplier (1.0 + 0.5×2)
+    score.addPoints(for: .shootPawn, level: 3)  // 2.0× multiplier (1.0 + 0.5×2)
     XCTAssertEqual(score.total, 50)             // 25 × 2.0
 }
 
@@ -2367,7 +2473,7 @@ func testCheckmateAndShotKing_bothBonuses() {
     // King shot while in checkmate: 500 (shot) + 300 (checkmate) = 800
     let score = ScoreManager()
     score.addPoints(for: .shootKing, level: 1)
-    score.addPoints(for: .checkmatebonus, level: 1)
+    score.addPoints(for: .checkmateBonus, level: 1)
     XCTAssertEqual(score.total, 800)
 }
 
@@ -2400,6 +2506,16 @@ func testAutoMove_withPieceSelected_movesSelectedPiece() {
     rules.simulateTimerExpiry()
     // Engine must move the e2 pawn, not any other piece
     XCTAssertEqual(rules.lastMove?.from, "e2")
+}
+
+func testFleetSweepDoesNotTriggerBlackMove() {
+    var rules = GameRules(board: GCIBoard.startingPosition())
+    rules.playerMove("e2", "e4")
+    rules.simulateFleetSweepCompletion()
+    XCTAssertEqual(rules.blackMovesThisBeat, 0)
+
+    rules.advanceToBlackMovePhase()
+    XCTAssertEqual(rules.blackMovesThisBeat, 1)
 }
 
 func testLevelAdvancesOnAllBlackPiecesDestroyed() {
@@ -2472,6 +2588,22 @@ func testMultiMoveEngine_returnsOnlyLegalMoves() {
     let moves = ChessEngine.multiMove(count: 2, for: .black, on: board)
     XCTAssertEqual(moves.count, 2)
     XCTAssertTrue(moves.allSatisfy { board.isLegal($0) })
+}
+
+func testMultiMoveEngine_usesDistinctPiecesAndDestinations() {
+    let board = GCIBoard.startingPosition()
+    let moves = ChessEngine.multiMove(count: 3, for: .black, on: board)
+    XCTAssertEqual(Set(moves.map(\.from)).count, moves.count)
+    XCTAssertEqual(Set(moves.map(\.to)).count, moves.count)
+}
+
+func testMultiMoveEngine_allowsFewerMovesWhenNonConflictingMovesRunOut() {
+    let board = GCIBoard(fen: "8/8/8/8/8/8/7p/6Kk b - - 0 1")
+    let moves = ChessEngine.multiMove(count: 3, for: .black, on: board)
+    XCTAssertLessThanOrEqual(moves.count, 3)
+    XCTAssertTrue(moves.allSatisfy { board.isLegal($0) })
+    XCTAssertEqual(Set(moves.map(\.from)).count, moves.count)
+    XCTAssertEqual(Set(moves.map(\.to)).count, moves.count)
 }
 
 func testPawnPromotion_laserCapIncreases() {
