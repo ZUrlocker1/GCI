@@ -191,10 +191,11 @@ final class ChessEngine {
     func forceTurn(_ color: PieceColor) {
         position.turn = color
         position.enPassant = nil
-        // Consecutive moves by one side are not a chess position sequence, so
-        // they must not feed the repetition table.
-        positionCounts.removeAll(keepingCapacity: true)
-        positionCounts[position] = 1
+        // Deliberately leaves the repetition table alone. Clearing it here meant
+        // Level 3+ wiped the table on every Black turn, so threefold repetition
+        // could never fire at exactly the levels most prone to grinding. The
+        // recorded positions are still real board states; no count is added,
+        // because no move was made.
     }
 
     // MARK: - Search

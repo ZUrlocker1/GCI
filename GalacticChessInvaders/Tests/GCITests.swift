@@ -2092,3 +2092,55 @@ final class BlackCheckmateDetectionTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Review fixes
+
+final class ReviewFixTests: XCTestCase {
+
+    /// forceTurn used to clear the repetition table. Level 3+ calls it on every
+    /// Black turn, so threefold repetition could never fire at exactly the levels
+    /// most prone to grinding.
+    func testRepetitionSurvivesForcedTurns() throws {
+        let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/8/R6K w - - 0 1"))
+        var plies = 0
+        outer: for _ in 0..<40 {
+            for (from, to) in [("a1", "a2"), ("h8", "g8"), ("a2", "a1"), ("g8", "h8")] {
+                if engine.isDrawnByRepetition { break outer }
+                _ = engine.make(from: from, to: to)
+                plies += 1
+            }
+            engine.forceTurn(engine.turn)      // what Level 3+ does every turn
+        }
+        XCTAssertTrue(engine.isDrawnByRepetition, "still not drawn after \(plies) plies")
+        XCTAssertLessThan(plies, 20)
+    }
+
+    /// Walks the occupied mask rather than all 64 squares; must still agree.
+    func testPiecesMatchesASquareBySquareScan() throws {
+        for fen in [Chess.FEN.standard,
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+                    "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"] {
+            let board = try XCTUnwrap(Chess.FEN.position(from: fen)).board
+            let scanned = (0..<64).compactMap { index -> (Chess.Square, Chess.Piece)? in
+                board[index].map { (Chess.Square(index: index), $0) }
+            }
+            let walked = board.pieces()
+            XCTAssertEqual(walked.count, scanned.count)
+            for (square, piece) in walked {
+                XCTAssertEqual(board[square], piece)
+            }
+        }
+        XCTAssertTrue(Chess.Board().pieces().isEmpty)
+    }
+
+    @MainActor
+    func testScoreRoundsRatherThanTruncates() {
+        ScoreManager.shared.clearHighScores()
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.advanceLevel()          // ×1.5
+        ScoreManager.shared.addPoints(25)           // 37.5
+        XCTAssertEqual(ScoreManager.shared.currentScore, 38,
+                       "truncating quietly under-paid every scaled capture")
+        ScoreManager.shared.resetForNewGame()
+    }
+}
