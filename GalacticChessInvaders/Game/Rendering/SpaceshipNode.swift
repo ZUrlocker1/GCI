@@ -1,23 +1,52 @@
 // SpaceshipNode.swift
-// Player ship SKSpriteNode. Tracks invincibility state and shield bubble.
-// Respawn flash, shield visual, and shield-break animation handled here.
-// Phase 1+: full implementation.
+// The player ship: horizontal movement, respawn invincibility, shield state.
+// Movement is driven by a signed direction set from GameAction, integrated in
+// update(deltaTime:bounds:) so travel is frame-rate independent.
 
 import SpriteKit
 
 final class SpaceshipNode: SKSpriteNode {
+
+    static let speed: CGFloat = 420          // points per second
+    private static let displayHeight: CGFloat = 40
+
     private(set) var isInvincible = false
     private(set) var hasShield = false
 
+    /// -1 left, 0 stopped, +1 right.
+    var direction: CGFloat = 0
+
+    init() {
+        let texture = SKTexture(imageNamed: "ship-player")
+        let source = texture.size()
+        let scale = source.height > 0 ? Self.displayHeight / source.height : 1
+        super.init(texture: texture,
+                   color: .clear,
+                   size: CGSize(width: source.width * scale, height: Self.displayHeight))
+        colorBlendFactor = 0.15
+        color = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
+        zPosition = 6
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    /// Integrate movement, clamped to `bounds` (x range of the travel lane).
+    func update(deltaTime: TimeInterval, bounds: ClosedRange<CGFloat>) {
+        guard direction != 0 else { return }
+        let next = position.x + direction * Self.speed * CGFloat(deltaTime)
+        position.x = min(max(next, bounds.lowerBound), bounds.upperBound)
+    }
+
+    // MARK: - States
+
     func startRespawnInvincibility(duration: TimeInterval = 2.0) {
-        // Phase 1+: rapid alpha flicker for `duration` seconds, then stop
         isInvincible = true
         let flash = SKAction.sequence([
             SKAction.fadeAlpha(to: 0.2, duration: 0.1),
             SKAction.fadeAlpha(to: 1.0, duration: 0.1)
         ])
-        let flicker = SKAction.repeat(flash, count: Int(duration / 0.2))
-        run(flicker) { [weak self] in
+        run(SKAction.repeat(flash, count: Int(duration / 0.2))) { [weak self] in
             self?.isInvincible = false
             self?.alpha = 1.0
         }

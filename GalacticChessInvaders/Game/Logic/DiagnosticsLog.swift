@@ -7,6 +7,10 @@ import Foundation
 
 enum LogCategory: String {
     case startup = "STARTUP  "
+    // Moves are tagged by side rather than a generic CHESS, so scanning the log
+    // shows at a glance who moved.
+    case white   = "WHITE    "
+    case black   = "BLACK    "
     case chess   = "CHESS    "
     case fleet   = "FLEET    "
     case shoot   = "SHOOT    "
@@ -18,6 +22,8 @@ enum LogCategory: String {
     case input   = "INPUT    "
     case audio   = "AUDIO    "
     case error   = "ERROR    "
+    /// Standalone banner lines that read as the whole message, e.g. RESTART.
+    case restart = "RESTART  "
 }
 
 struct LogLine: Identifiable {
@@ -35,6 +41,8 @@ final class DiagnosticsLog {
     static let shared = DiagnosticsLog()
 
     var lines: [LogLine] = []
+    var fps: Double = 60.0
+    var nodeCount: Int = 0
     var isEnabled: Bool = {
         #if DEBUG
         return true

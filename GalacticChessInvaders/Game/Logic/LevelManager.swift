@@ -1,0 +1,88 @@
+// LevelManager.swift
+// Per-level tuning parameters and level progression.
+// Pure Swift — the table from design doc §21.1, in one place so balance changes
+// never require hunting through gameplay code.
+
+import Foundation
+
+struct LevelParameters {
+    let level: Int
+    /// Fleet lateral sweep speed in points per second, before the
+    /// pieces-remaining multiplier from §21.2 is applied.
+    let fleetSpeed: CGFloat
+    let blackMovesPerTurn: Int
+    /// Invader shots fired per turn, as an inclusive range (Level 1 fires none).
+    let shotsPerTurn: ClosedRange<Int>
+    /// Straight-down invader projectile speed. Diagonal shots are always 160.
+    let projectileSpeed: CGFloat
+    /// The chess beat: how long White has before the engine auto-moves.
+    let turnTimer: TimeInterval
+    let regenSlots: Int
+    let raiderInterval: TimeInterval
+    /// Level 1 Black plays passively; every level above it plays aggressively.
+    let isAggressive: Bool
+}
+
+@MainActor
+final class LevelManager {
+
+    /// Timer granted to White when in check, replacing the level's beat (§25.4).
+    static let checkExtension: TimeInterval = 8.0
+
+    private(set) var level: Int = 1
+
+    var parameters: LevelParameters { Self.parameters(for: level) }
+
+    func reset() { level = 1 }
+
+    func advance() { level += 1 }
+
+    /// The §21.1 table. Levels 1–5 are explicit; 6+ scales by formula with the
+    /// stated caps and floors.
+    static func parameters(for level: Int) -> LevelParameters {
+        let clamped = max(1, level)
+        switch clamped {
+        case 1:
+            return LevelParameters(level: 1, fleetSpeed: 40, blackMovesPerTurn: 1,
+                                   shotsPerTurn: 0...0, projectileSpeed: 0,
+                                   turnTimer: 5, regenSlots: 0, raiderInterval: 20,
+                                   isAggressive: false)
+        case 2:
+            return LevelParameters(level: 2, fleetSpeed: 55, blackMovesPerTurn: 1,
+                                   shotsPerTurn: 1...2, projectileSpeed: 180,
+                                   turnTimer: 5, regenSlots: 0, raiderInterval: 15,
+                                   isAggressive: true)
+        case 3:
+            return LevelParameters(level: 3, fleetSpeed: 70, blackMovesPerTurn: 2,
+                                   shotsPerTurn: 2...2, projectileSpeed: 180,
+                                   turnTimer: 4, regenSlots: 0, raiderInterval: 12,
+                                   isAggressive: true)
+        case 4:
+            return LevelParameters(level: 4, fleetSpeed: 90, blackMovesPerTurn: 2,
+                                   shotsPerTurn: 2...3, projectileSpeed: 200,
+                                   turnTimer: 4, regenSlots: 2, raiderInterval: 10,
+                                   isAggressive: true)
+        case 5:
+            return LevelParameters(level: 5, fleetSpeed: 110, blackMovesPerTurn: 3,
+                                   shotsPerTurn: 3...3, projectileSpeed: 216,
+                                   turnTimer: 4, regenSlots: 4, raiderInterval: 8,
+                                   isAggressive: true)
+        default:
+            // 6+: fleet +15/level, projectile +10%/level compounding from L5,
+            // moves and shots capped at 3, timer floored at 4s, raiders at 6s.
+            let over = clamped - 5
+            let projectile = 216.0 * pow(1.1, Double(over))
+            return LevelParameters(
+                level: clamped,
+                fleetSpeed: 110 + CGFloat(15 * over),
+                blackMovesPerTurn: 3,
+                shotsPerTurn: 3...3,
+                projectileSpeed: CGFloat(projectile),
+                turnTimer: 4,
+                regenSlots: 4 + over,
+                raiderInterval: max(6, 8 - TimeInterval(over)),
+                isAggressive: true
+            )
+        }
+    }
+}
