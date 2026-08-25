@@ -27,6 +27,7 @@ targets:
       - path: assets/GCI.spriteatlas
       - path: assets/sfx
         type: folder
+      - path: assets/PressStart2P-Regular.ttf
     settings:
       base:
         SWIFT_VERSION: 6.0
