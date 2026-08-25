@@ -1,87 +1,189 @@
 // GCIBoard.swift
-// Wraps ChessKit to add GCI-specific features:
-//   - HP tracking per piece
-//   - forcePlace() for fleet descent (bypasses chess legality)
-//   - GKGameModel conformance for GKMinmaxStrategist
+// Authoritative game state: the chess position (via ChessEngine) plus the
+// arcade layer chess does not model — per-piece HP and force-placement.
 //
-// This is the bridge between the chess library and GCI's arcade rules.
-// Phase 0: stub. Flesh out in Phase 1 (chess engine integration).
+// Pure Swift; no SpriteKit. The rendering layer reads from here, never writes.
 
 import Foundation
-// import ChessKit   ← uncomment once ChessKit SPM package is added in Xcode
 
+@MainActor
 final class GCIBoard {
 
-    // MARK: - Board State
-    // Phase 1: replace with ChessKit Position
-    private var pieces: [String: Piece] = [:]   // key: algebraic square e.g. "e2"
+    private var engine = ChessEngine()
+
+    /// Arcade state keyed by algebraic square. Mirrors the engine position,
+    /// but carries HP, which the chess engine knows nothing about.
+    private var pieces: [String: Piece] = [:]
+
+    /// Exposed for the engine search and for tests.
+    var currentPosition: Chess.Position { engine.position }
+    var currentHistory: [Chess.Board] { engine.recentBoards }
+
+    /// All three refer to the side whose turn it is.
+    var turn: PieceColor { engine.turn }
+    var isCheck: Bool { engine.isCheck }
+    var isMate: Bool { engine.isMate }
+    var isStalemate: Bool { engine.isStalemate }
 
     // MARK: - Setup
 
     func setupStandardPosition() {
-        // Phase 1: initialise from ChessKit starting position
-        // For now, place pieces manually for testing
-        DiagnosticsLog.shared.log(.chess, "Board: standard position set")
+        engine = ChessEngine()
+        pieces = [:]
+        for occupant in engine.occupants() {
+            pieces[occupant.square] = Piece(type: occupant.type,
+                                            color: occupant.color,
+                                            square: occupant.square)
+        }
+        DiagnosticsLog.shared.log(.chess, "Board: standard position set (\(pieces.count) pieces)")
     }
 
-    // MARK: - Piece Access
-
-    func piece(at square: String) -> Piece? {
-        pieces[square]
+    /// Where a check against `color` originates, for the board to visualise.
+    func checkThreat(against color: PieceColor) -> ChessEngine.CheckThreat? {
+        engine.checkThreat(against: color)
     }
+
+    // MARK: - Piece access
+
+    func piece(at square: String) -> Piece? { pieces[square] }
+
+    func allPieces() -> [Piece] { Array(pieces.values) }
 
     func allPieces(color: PieceColor) -> [Piece] {
         pieces.values.filter { $0.color == color }
     }
 
-    // MARK: - Chess Moves (via ChessKit)
+    // MARK: - Chess moves
 
-    /// Apply a legal chess move. Updates logical square.
-    func applyChessMove(from: String, to: String) {
-        guard var piece = pieces[from] else { return }
-        pieces[from] = nil
-        piece.logicalSquare = to
-        pieces[to] = piece
-        DiagnosticsLog.shared.log(.chess, "\(piece.color) \(piece.type) \(from)→\(to)")
+    func legalDestinations(from square: String) -> [String] {
+        engine.legalDestinations(from: square)
     }
 
-    // MARK: - Force Placement (Fleet Descent)
+    /// Plays a move for the side to move. Returns the captured piece, if any.
+    /// Returns nil overall if the move was rejected as illegal.
+    /// `annotation` is appended to the log line — used to mark auto-moves.
+    @discardableResult
+    func applyChessMove(from: String, to: String, annotation: String? = nil) -> MoveOutcome? {
+        guard let applied = engine.make(from: from, to: to) else {
+            DiagnosticsLog.shared.log(.input, "illegal move \(from)-\(to) rejected")
+            return nil
+        }
+        guard var moving = pieces[from] else { return nil }
+
+        // For en passant the captured pawn is not on the destination square.
+        let captured = applied.capturedSquare.flatMap { pieces[$0] }
+        if let capturedSquare = applied.capturedSquare { pieces[capturedSquare] = nil }
+        pieces[from] = nil
+
+        if let promoted = applied.promotedTo {
+            // Promotion replaces the piece outright, so it arrives at full HP.
+            moving = Piece(type: promoted, color: moving.color, square: to)
+        } else {
+            moving.logicalSquare = to
+        }
+        pieces[to] = moving
+
+        // Castling moves the rook as well, keeping its accumulated HP.
+        if let rookMove = applied.rookMove, var rook = pieces[rookMove.from] {
+            pieces[rookMove.from] = nil
+            rook.logicalSquare = rookMove.to
+            pieces[rookMove.to] = rook
+        }
+
+        // "rook a2-b2", tagged WHITE or BLACK so the side is obvious at a glance.
+        var line = "\(applied.type.rawValue) \(from)-\(to)"
+        if let captured, applied.capturedSquare != to {
+            line += " takes \(captured.type.rawValue) en passant"
+        } else if let captured {
+            line += " takes \(captured.type.rawValue)"
+        } else if applied.rookMove != nil {
+            line += " castles"
+        }
+        if let annotation { line += "  (\(annotation))" }
+        DiagnosticsLog.shared.log(applied.color.logCategory, line)
+
+        if let promoted = applied.promotedTo {
+            DiagnosticsLog.shared.log(.promote, "pawn promoted to \(promoted.rawValue) at \(to)")
+        }
+
+        return MoveOutcome(from: from, to: to,
+                           moved: moving,
+                           captured: captured,
+                           capturedSquare: applied.capturedSquare,
+                           rookMove: applied.rookMove,
+                           promotedTo: applied.promotedTo)
+    }
+
+    /// Searches for a move off the main thread, then applies it here.
+    func makeEngineMove(depth: Int = 2,
+                        constraints: ChessEngine.SearchConstraints = .none,
+                        annotation: String? = nil) async -> MoveOutcome? {
+        let position = engine.position
+        let history = engine.recentBoards
+        let found = await Task.detached(priority: .userInitiated) {
+            ChessEngine.searchBestMove(in: position, depth: depth,
+                                       constraints: constraints, avoiding: history)
+        }.value
+
+        guard let found else {
+            DiagnosticsLog.shared.log(.chess, "Engine found no legal move")
+            return nil
+        }
+        return applyChessMove(from: found.from, to: found.to, annotation: annotation)
+    }
+
+    // MARK: - Force placement (fleet descent)
 
     /// Place a piece on a square, bypassing all chess legality checks.
     /// Used by FleetController on every descent step.
-    /// If a white piece occupies the target square, a crush event fires.
     func forcePlace(_ piece: Piece, at square: String) -> CrushEvent? {
         var crush: CrushEvent? = nil
 
         if let occupant = pieces[square], occupant.color != piece.color {
-            // Crush event: black piece lands on white piece's square
             crush = CrushEvent(crushedPiece: occupant, atSquare: square)
             DiagnosticsLog.shared.log(.fleet, "CRUSH: \(occupant.color) \(occupant.type) at \(square) crushed by \(piece.type)")
         }
 
-        var movedPiece = piece
-        movedPiece.logicalSquare = square
-        pieces[square] = movedPiece
+        pieces[piece.logicalSquare] = nil
+        var moved = piece
+        moved.logicalSquare = square
+        pieces[square] = moved
 
         return crush
     }
 
     // MARK: - Damage
 
-    /// Apply damage to piece at square. Returns true if piece is destroyed.
+    /// Apply damage to the piece at `square`. Returns true if it was destroyed.
     @discardableResult
     func applyDamage(_ amount: Int, at square: String) -> Bool {
-        guard pieces[square] != nil else { return false }
-        let destroyed = pieces[square]!.applyDamage(amount)
+        guard var target = pieces[square] else { return false }
+        let destroyed = target.applyDamage(amount)
         if destroyed {
             pieces[square] = nil
-            DiagnosticsLog.shared.log(.destroy, "Piece at \(square) destroyed (HP exhausted)")
+            DiagnosticsLog.shared.log(.destroy, "\(target.color) \(target.type.rawValue) at \(square) destroyed")
+        } else {
+            pieces[square] = target
+            DiagnosticsLog.shared.log(.hit, "\(target.color) \(target.type.rawValue) \(square) hit -\(amount) → \(target.hp)HP")
         }
         return destroyed
     }
 }
 
 // MARK: - Supporting Types
+
+struct MoveOutcome {
+    let from: String
+    let to: String
+    let moved: Piece
+    let captured: Piece?
+    /// Where the captured piece stood — differs from `to` for en passant.
+    let capturedSquare: String?
+    /// The rook's journey when this move was a castle.
+    let rookMove: (from: String, to: String)?
+    /// What a pawn became, when this move was a promotion.
+    let promotedTo: PieceType?
+}
 
 struct CrushEvent {
     let crushedPiece: Piece

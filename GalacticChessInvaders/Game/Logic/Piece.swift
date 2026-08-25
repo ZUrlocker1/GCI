@@ -42,6 +42,14 @@ enum PieceColor {
         case .black: return "b"
         }
     }
+
+    /// Log category, so each move line is tagged WHITE or BLACK.
+    var logCategory: LogCategory {
+        switch self {
+        case .white: return .white
+        case .black: return .black
+        }
+    }
 }
 
 /// The four visual damage states driven by HP percentage.
