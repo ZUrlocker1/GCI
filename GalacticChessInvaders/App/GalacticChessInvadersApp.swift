@@ -1,24 +1,41 @@
 import SwiftUI
 import CoreText
+import AppKit
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+}
 
 @main
 struct GalacticChessInvadersApp: App {
 
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     init() {
         registerBundledFonts()
+        // Every SFX player is built and prepared here so gameplay never touches
+        // the filesystem (§18: zero I/O during play).
+        AudioManager.shared.preloadAll()
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .frame(minWidth: 640, minHeight: 500)
+                .onAppear { applyAppIcon() }
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 960, height: 700)
     }
 
-    // Register fonts from the app bundle so SpriteKit (and SwiftUI) can use them
-    // by PostScript name — e.g. "PressStart2P-Regular" — without Info.plist entries.
+    // Force-set the app icon at runtime so macOS LaunchServices cache cannot show a blank icon.
+    // NSApp is guaranteed non-nil by the time .onAppear fires.
+    private func applyAppIcon() {
+        guard let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+              let image = NSImage(contentsOf: url) else { return }
+        NSApp.applicationIconImage = image
+    }
+
     private func registerBundledFonts() {
         let fontNames = ["PressStart2P-Regular"]
         for name in fontNames {
@@ -30,7 +47,6 @@ struct GalacticChessInvadersApp: App {
             if CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
                 DiagnosticsLog.shared.log(.startup, "Font registered: \(name)")
             } else {
-                // Already registered (e.g. second run) is not an error
                 DiagnosticsLog.shared.log(.startup, "Font already registered: \(name)")
             }
         }

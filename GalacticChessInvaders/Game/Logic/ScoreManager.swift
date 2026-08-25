@@ -25,6 +25,19 @@ final class ScoreManager {
 
     private init() {
         loadHighScores()
+        if highScores.isEmpty { seedDefaultScores() }
+    }
+
+    /// Placeholders so the table is not empty on a first run. Deliberately tiny,
+    /// so any real game displaces them instead of them squatting the top five.
+    private func seedDefaultScores() {
+        highScores = [
+            HighScoreEntry(initials: "ZACK",  score: 100, level: 1),
+            HighScoreEntry(initials: "BEN",   score:  90, level: 1),
+            HighScoreEntry(initials: "STEVE", score:  80, level: 1),
+            HighScoreEntry(initials: "WOZ",   score:  70, level: 1),
+            HighScoreEntry(initials: "NOLAN", score:  60, level: 1),
+        ]
     }
 
     // MARK: - Scoring
@@ -70,6 +83,16 @@ final class ScoreManager {
         }
         saveHighScores()
         DiagnosticsLog.shared.log(.score, "High score submitted: \(entry.initials) \(entry.score) L\(entry.level)")
+    }
+
+    /// Wipes the table completely, including what is persisted. Bound to the `X`
+    /// restart so a polluted table can be cleared without deleting preferences
+    /// by hand. Deliberately leaves it empty rather than reseeding, so it is
+    /// obvious the wipe happened.
+    func clearHighScores() {
+        highScores = []
+        UserDefaults.standard.removeObject(forKey: highScoreKey)
+        DiagnosticsLog.shared.log(.score, "high score table cleared")
     }
 
     private func saveHighScores() {

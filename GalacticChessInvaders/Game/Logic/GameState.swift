@@ -8,6 +8,10 @@ import SpriteKit
 
 // MARK: - Base State
 
+// GCIState is always driven from GameScene.update() which is @MainActor.
+// Override methods use MainActor.assumeIsolated because GKState's ObjC methods
+// are nonisolated but callers always originate on the main actor.
+@MainActor
 class GCIState: GKState {
     weak var scene: SKScene?
     init(scene: SKScene) { self.scene = scene }
@@ -23,12 +27,17 @@ class TitleState: GCIState {
     }
 
     override func didEnter(from previousState: GKState?) {
-        gameScene?.showTitleScreen()
-        DiagnosticsLog.shared.log(.startup, "Title screen displayed")
+        MainActor.assumeIsolated {
+            gameScene?.showTitleScreen()
+            AudioManager.shared.playMusic("GCI-intro")
+            DiagnosticsLog.shared.log(.startup, "Title screen displayed")
+        }
     }
 
     override func willExit(to nextState: GKState) {
-        gameScene?.hideTitleScreen()
+        MainActor.assumeIsolated {
+            gameScene?.hideTitleScreen()
+        }
     }
 }
 
@@ -36,14 +45,20 @@ class TitleState: GCIState {
 
 class PlayingState: GCIState {
     override func isValidNextState(_ stateClass: AnyClass) -> Bool {
-        stateClass == PausedState.self || stateClass == GameOverState.self
+        stateClass == PausedState.self || stateClass == GameOverState.self || stateClass == TitleState.self
     }
 
     override func didEnter(from previousState: GKState?) {
-        gameScene?.showPlaceholderBoard()   // Phase 0: placeholder; Phase 2.1: real board
-        DiagnosticsLog.shared.log(.level, "Level 1 started")
-        DiagnosticsLog.shared.log(.startup, "Board reset, 16 white + 16 black pieces placed")
-        DiagnosticsLog.shared.log(.startup, "Spaceship positioned at centre")
+        // Resolve outside the closure: GKState is not Sendable, so capturing
+        // previousState in a main-actor closure is a data-race risk. A Bool is fine.
+        let isResumingFromPause = previousState is PausedState
+        MainActor.assumeIsolated {
+            // Resuming from pause re-enters this state — don't wipe the live board.
+            guard !isResumingFromPause else { return }
+            gameScene?.showBoard()
+            gameScene?.showHUD()
+            DiagnosticsLog.shared.log(.level, "Level 1 started")
+        }
     }
 
     override func update(deltaTime seconds: TimeInterval) {
@@ -55,15 +70,21 @@ class PlayingState: GCIState {
 
 class PausedState: GCIState {
     override func isValidNextState(_ stateClass: AnyClass) -> Bool {
-        stateClass == PlayingState.self
+        stateClass == PlayingState.self || stateClass == TitleState.self
     }
 
     override func didEnter(from previousState: GKState?) {
-        gameScene?.showPausedOverlay()
+        MainActor.assumeIsolated {
+            gameScene?.showPausedOverlay()
+            AudioManager.shared.pauseMusic()
+        }
     }
 
     override func willExit(to nextState: GKState) {
-        gameScene?.hidePausedOverlay()
+        MainActor.assumeIsolated {
+            gameScene?.hidePausedOverlay()
+            AudioManager.shared.resumeMusic()
+        }
     }
 }
 
@@ -75,8 +96,15 @@ class GameOverState: GCIState {
     }
 
     override func didEnter(from previousState: GKState?) {
-        let score = ScoreManager.shared.currentScore
-        DiagnosticsLog.shared.log(.level, "GAME OVER — final score: \(score)")
-        // Phase 2+: show GameOverScene with score tally and explosion
+        MainActor.assumeIsolated {
+            gameScene?.showGameOverOverlay()
+            AudioManager.shared.stopMusic()
+        }
+    }
+
+    override func willExit(to nextState: GKState) {
+        MainActor.assumeIsolated {
+            gameScene?.hideGameOverOverlay()
+        }
     }
 }

@@ -26,6 +26,14 @@ final class InputHandler {
             return
         }
 
+        // I · ⌘I · ? open How To Play (§9). Matched on characters rather than
+        // key code so "?" works regardless of keyboard layout.
+        if isInfoShortcut(event) {
+            DiagnosticsLog.shared.log(.input, "Info shortcut → showInfo")
+            dispatch(.showInfo)
+            return
+        }
+
         let action = gameAction(for: event.keyCode, isDown: true)
         if let action {
             DiagnosticsLog.shared.log(.input, "KeyDown \(event.keyCode) → \(action)")
@@ -33,14 +41,45 @@ final class InputHandler {
         }
     }
 
+    private func isInfoShortcut(_ event: NSEvent) -> Bool {
+        // charactersIgnoringModifiers so ⇧/ reports "?" and ⌘I reports "i".
+        guard let characters = event.charactersIgnoringModifiers?.lowercased() else { return false }
+        if characters == "?" { return true }
+        if characters == "i" {
+            // Plain I, or ⌘I. Ignore other modifier combinations.
+            let relevant = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            return relevant.isEmpty || relevant == .command
+        }
+        return false
+    }
+
+    /// Any key dismisses the How To Play overlay and resumes play (§10).
+    func handleOverlayKeyDown() {
+        dispatch(.dismissOverlay)
+    }
+
     func handleKeyUp(_ event: NSEvent) {
         let action = gameAction(for: event.keyCode, isDown: false)
         if let action { dispatch(action) }
     }
 
-    func handleMouseDown(at location: CGPoint, in scene: SKScene) {
-        // Phase 2.1: convert screen position to board square via BoardLayout
+    func handleMouseDown(at location: CGPoint, in scene: SKScene, inTitleScreen: Bool = false) {
+        if inTitleScreen {
+            dispatch(.confirmStart)
+            return
+        }
         DiagnosticsLog.shared.log(.input, "Click at (\(Int(location.x)), \(Int(location.y)))")
+    }
+
+    /// A click that the scene has already resolved to a board square (nil = off-board).
+    /// `hasSelection` decides whether this reads as picking a piece or naming a destination.
+    func handleBoardClick(square: String?, hasSelection: Bool) {
+        guard let square else {
+            if hasSelection { dispatch(.deselectPiece) }
+            return
+        }
+        dispatch(hasSelection ? .movePieceTo(boardSquare: square)
+                              : .selectPieceAt(boardSquare: square))
     }
 
     // MARK: - Key Mapping

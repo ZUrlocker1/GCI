@@ -26,6 +26,8 @@ enum GameAction {
     case confirmStart
     case confirmRestart
     case returnToMenu
+    case showInfo         // I · ⌘I · ? — opens How To Play and pauses play
+    case dismissOverlay   // any key while How To Play is open
 
     // Dev / debug
     case toggleDiagnostics   // L key — shows/hides the diagnostics sidebar

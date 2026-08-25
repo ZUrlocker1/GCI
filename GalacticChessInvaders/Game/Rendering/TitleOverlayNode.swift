@@ -33,8 +33,8 @@ final class TitleOverlayNode: SKNode {
     private func setupTitle() {
         // Two-line layout to stay within the scene width at a readable size
         let lines: [(text: String, yOffset: CGFloat, size: CGFloat)] = [
-            ("GALACTIC",        190, 40),
-            ("CHESS INVADERS",  130, 32),
+            ("GALACTIC",        240, 60),
+            ("CHESS INVADERS",  170, 48),
         ]
 
         for (text, y, fontSize) in lines {
@@ -87,11 +87,11 @@ final class TitleOverlayNode: SKNode {
     private func setupSubtitle() {
         let label = SKLabelNode(fontNamed: Self.titleFont)
         label.text = "\u{2605} 40 YEARS IN THE MAKING \u{2605}"   // ★ ... ★
-        label.fontSize = 12
+        label.fontSize = 18
         label.fontColor = Self.orange
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
-        label.position = CGPoint(x: 0, y: 92)
+        label.position = CGPoint(x: 0, y: 88)
         addChild(label)
     }
 
@@ -101,19 +101,24 @@ final class TitleOverlayNode: SKNode {
         let fleetNode = SKNode()
         fleetNode.position = CGPoint(x: 0, y: 44)
 
-        let count    = 8
-        let spacing  = CGFloat(56)
-        let startX   = -CGFloat(count - 1) * spacing / 2
+        // Back rank — the fleet the player will face
+        let pieces = ["rook","knight","bishop","queen","king","bishop","knight","rook"]
+        let spacing: CGFloat = 76
+        let targetHeight: CGFloat = 54       // scaled display height per piece
+        let startX = -CGFloat(pieces.count - 1) * spacing / 2
 
-        // Use simple rounded rectangles as piece stand-ins until sprites are ready
-        let pieceSize = CGSize(width: 24, height: 30)
-        for i in 0..<count {
-            let rect = SKShapeNode(rectOf: pieceSize, cornerRadius: 3)
-            rect.fillColor   = Self.magenta.withAlphaComponent(0.6)
-            rect.strokeColor = Self.magenta
-            rect.lineWidth   = 1.5
-            rect.position    = CGPoint(x: startX + CGFloat(i) * spacing, y: 0)
-            fleetNode.addChild(rect)
+        for (i, pieceName) in pieces.enumerated() {
+            let textureName = "chess-b-\(pieceName)"
+            let texture     = SKTexture(imageNamed: textureName)
+            let texSize     = texture.size()
+            let scale       = targetHeight / texSize.height
+            let dispSize    = CGSize(width: texSize.width * scale, height: targetHeight)
+
+            let sprite           = SKSpriteNode(texture: texture, size: dispSize)
+            sprite.position      = CGPoint(x: startX + CGFloat(i) * spacing, y: 0)
+            sprite.color         = Self.magenta
+            sprite.colorBlendFactor = 0.12
+            fleetNode.addChild(sprite)
         }
 
         // Classic Invaders left-right sweep
@@ -157,56 +162,47 @@ final class TitleOverlayNode: SKNode {
         header.fontColor = Self.cyan
         header.horizontalAlignmentMode = .center
         header.verticalAlignmentMode = .center
-        header.position = CGPoint(x: 0, y: -80)
+        header.position = CGPoint(x: 0, y: -130)
         addChild(header)
 
         // Divider line
         let divider = SKShapeNode(rectOf: CGSize(width: 380, height: 1))
         divider.fillColor   = Self.cyan.withAlphaComponent(0.4)
         divider.strokeColor = .clear
-        divider.position    = CGPoint(x: 0, y: -96)
+        divider.position    = CGPoint(x: 0, y: -146)
         addChild(divider)
 
-        // Top 5 entries from ScoreManager, falling back to placeholder dashes
+        // Top 5 entries from ScoreManager (seeded with defaults if no real scores yet)
         let entries = ScoreManager.shared.topHighScores(limit: 5)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+
         for i in 0..<5 {
-            let y = CGFloat(-112 - i * 26)
+            let y = CGFloat(-162 - i * 26)
 
             let rank = SKLabelNode(fontNamed: Self.titleFont)
             rank.text = "\(i + 1)."
-            rank.fontSize = 11
-            rank.fontColor = Self.orange
-            rank.horizontalAlignmentMode = .left
-            rank.verticalAlignmentMode = .center
-            rank.position = CGPoint(x: -170, y: y)
+            rank.fontSize = 11; rank.fontColor = Self.orange
+            rank.horizontalAlignmentMode = .left; rank.verticalAlignmentMode = .center
+            rank.position = CGPoint(x: -175, y: y)
             addChild(rank)
 
-            let initials = SKLabelNode(fontNamed: Self.titleFont)
-            initials.text = i < entries.count ? entries[i].initials.padding(toLength: 8, withPad: " ", startingAt: 0) : "---"
-            initials.fontSize = 11
-            initials.fontColor = .white
-            initials.horizontalAlignmentMode = .left
-            initials.verticalAlignmentMode = .center
-            initials.position = CGPoint(x: -130, y: y)
-            addChild(initials)
+            let name = SKLabelNode(fontNamed: Self.titleFont)
+            name.text = i < entries.count ? entries[i].initials : "---"
+            name.fontSize = 11; name.fontColor = .white
+            name.horizontalAlignmentMode = .left; name.verticalAlignmentMode = .center
+            name.position = CGPoint(x: -140, y: y)
+            addChild(name)
 
-            let score = SKLabelNode(fontNamed: Self.titleFont)
-            score.text = i < entries.count ? String(format: "%07d", entries[i].score) : "-------"
-            score.fontSize = 11
-            score.fontColor = .white
-            score.horizontalAlignmentMode = .right
-            score.verticalAlignmentMode = .center
-            score.position = CGPoint(x: 60, y: y)
-            addChild(score)
-
-            let level = SKLabelNode(fontNamed: Self.titleFont)
-            level.text = i < entries.count ? "L\(entries[i].level)" : ""
-            level.fontSize = 11
-            level.fontColor = Self.cyan.withAlphaComponent(0.7)
-            level.horizontalAlignmentMode = .left
-            level.verticalAlignmentMode = .center
-            level.position = CGPoint(x: 74, y: y)
-            addChild(level)
+            let scoreStr = i < entries.count
+                ? (formatter.string(from: NSNumber(value: entries[i].score)) ?? "\(entries[i].score)")
+                : "---"
+            let scoreLbl = SKLabelNode(fontNamed: Self.titleFont)
+            scoreLbl.text = scoreStr
+            scoreLbl.fontSize = 11; scoreLbl.fontColor = .white
+            scoreLbl.horizontalAlignmentMode = .right; scoreLbl.verticalAlignmentMode = .center
+            scoreLbl.position = CGPoint(x: 140, y: y)
+            addChild(scoreLbl)
         }
     }
 }
