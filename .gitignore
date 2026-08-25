@@ -49,3 +49,6 @@ TestResults/
 
 # Audio source files — large binaries, regenerate with assets/sfx/convert_to_caf.sh
 assets/sfx/
+
+# Generated icon variants — the chosen one is installed as Resources/AppIcon.icns
+icon_options/
