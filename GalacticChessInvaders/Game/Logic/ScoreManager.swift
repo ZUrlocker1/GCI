@@ -48,6 +48,10 @@ final class ScoreManager {
 
     // MARK: - High Scores
 
+    func topHighScores(limit: Int) -> [HighScoreEntry] {
+        Array(highScores.prefix(limit))
+    }
+
     var isHighScore: Bool {
         highScores.count < maxHighScores || currentScore > (highScores.last?.score ?? 0)
     }

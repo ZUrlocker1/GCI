@@ -26,4 +26,7 @@ enum GameAction {
     case confirmStart
     case confirmRestart
     case returnToMenu
+
+    // Dev / debug
+    case toggleDiagnostics   // L key — shows/hides the diagnostics sidebar
 }

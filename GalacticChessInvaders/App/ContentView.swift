@@ -2,19 +2,48 @@ import SwiftUI
 import SpriteKit
 
 struct ContentView: View {
+    @State private var showSidebar = true
+
     var body: some View {
         HStack(spacing: 0) {
-            // Main game view
-            SpriteView(scene: GameScene.shared)
+            GameSKViewRepresentable()
                 .ignoresSafeArea()
 
-            // Diagnostics sidebar (debug builds only)
             #if DEBUG
-            DiagnosticsSidebarView()
-                .frame(width: 280)
+            if showSidebar {
+                DiagnosticsSidebarView()
+                    .frame(width: 280)
+            }
+            #endif
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .gciToggleSidebar)) { _ in
+            #if DEBUG
+            showSidebar.toggle()
+            DiagnosticsLog.shared.log(.startup, "Sidebar \(showSidebar ? "shown" : "hidden")")
             #endif
         }
     }
+}
+
+// Custom NSViewRepresentable so we can enable SpriteKit debug overlays in debug builds.
+// SpriteView (SwiftUI wrapper) does not expose showsFPS / showsNodeCount / showsDrawCount.
+struct GameSKViewRepresentable: NSViewRepresentable {
+    func makeNSView(context: Context) -> SKView {
+        let view = SKView()
+        view.presentScene(GameScene.shared)
+        #if DEBUG
+        view.showsFPS = true
+        view.showsNodeCount = true
+        view.showsDrawCount = true
+        #endif
+        return view
+    }
+
+    func updateNSView(_ nsView: SKView, context: Context) {}
+}
+
+extension Notification.Name {
+    static let gciToggleSidebar = Notification.Name("gciToggleSidebar")
 }
 
 // MARK: - Diagnostics Sidebar
