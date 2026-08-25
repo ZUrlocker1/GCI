@@ -5,6 +5,7 @@
 import XCTest
 @testable import GalacticChessInvaders
 
+@MainActor
 final class PieceTests: XCTestCase {
 
     func testPawnMaxHP() {
@@ -63,6 +64,7 @@ final class PieceTests: XCTestCase {
     }
 }
 
+@MainActor
 final class ScoreManagerTests: XCTestCase {
 
     override func setUp() {

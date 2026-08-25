@@ -6,6 +6,7 @@
 
 import Foundation
 
+@MainActor
 final class FleetController {
     static let shared = FleetController()
     private init() {}

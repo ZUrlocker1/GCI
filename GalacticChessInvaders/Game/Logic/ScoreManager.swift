@@ -10,6 +10,7 @@ struct HighScoreEntry: Codable {
     var level: Int
 }
 
+@MainActor
 @Observable
 final class ScoreManager {
     static let shared = ScoreManager()

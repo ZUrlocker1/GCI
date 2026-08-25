@@ -9,6 +9,7 @@ import SpriteKit
 #if os(macOS)
 import AppKit
 
+@MainActor
 final class InputHandler {
     static let shared = InputHandler()
     private init() {}
@@ -72,6 +73,7 @@ final class InputHandler {
 
 #else
 // iOS stub — full implementation in Phase 10
+@MainActor
 final class InputHandler {
     static let shared = InputHandler()
     private init() {}

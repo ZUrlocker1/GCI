@@ -208,6 +208,7 @@ class GameScene: SKScene {
 
 // MARK: - Physics Contact
 
+@MainActor
 extension GameScene: SKPhysicsContactDelegate {
     func didBegin(_ contact: SKPhysicsContact) {
         // Phase 3+: laser/piece, shot/ship, ship/projectile contacts
