@@ -754,7 +754,14 @@ class GameScene: SKScene {
                 constraints: .init(excludedSources: usedSources,
                                    excludedDestinations: usedDestinations,
                                    avoidsKingCapture: index > 0))
-            guard let outcome else { break }
+            guard let outcome else {
+                // Black has no move. On an extra move that just means fewer moves
+                // this turn (§25.5), so hand the turn back. On the *first* move it
+                // means mate or stalemate — the turn must stay with Black or
+                // endGameIfDecided evaluates the wrong side and misses it.
+                if index > 0 { board.forceTurn(.white) }
+                break
+            }
             apply(outcome)
             // Exclude where it came from *and* where it landed: §25.5 forbids a
             // piece moving twice, and after moving it is sitting on `to`.
@@ -762,9 +769,6 @@ class GameScene: SKScene {
             usedSources.insert(outcome.to)
             usedDestinations.insert(outcome.to)
         }
-
-        // Whatever happened, it is White's move now.
-        if board.turn == .black { board.forceTurn(.white) }
     }
 
     /// Orange "AUTO" over the piece the engine moved, 0.5s (§19).
