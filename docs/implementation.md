@@ -98,8 +98,8 @@ Deviations
       extra pulses, CHECKMATE banner, sting, then the overlay
 - [x] Chess SFX — see Phase 4
 - [x] King glows red on check (§25.4) — pulsing red halo plus red wash, either side
-- [x] Level progression — checkmating Black clears the wave: WAVE CLEAR overlay,
-      any key continues, score multiplier / tighter beat / multi-move all engage
+- [x] Level progression — checkmating Black shows YOU WIN, any key continues to
+      the next level; score multiplier / tighter beat / multi-move all engage
 - [x] Checkmate bonus (300), scaled by the level multiplier
 - [x] High score entry — up to 8 characters, Return submits at any length, offered
       once per game; persists across games; seeded defaults are 60–100 so any real

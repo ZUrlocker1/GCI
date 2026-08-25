@@ -15,20 +15,21 @@ final class GameOverNode: SKNode {
         /// Black checkmated but the run continues into the next wave.
         case waveCleared(next: Int)
 
+        /// Speaks to the player, not the game model: "wave clear" is an internal
+        /// notion and does not tell someone they just won.
         var headline: String {
             switch self {
-            case .whiteMated:  return "GAME OVER"
-            case .blackMated:  return "VICTORY"
-            case .stalemate:   return "STALEMATE"
-            case .waveCleared: return "WAVE CLEAR"
+            case .whiteMated: return "GAME OVER"
+            case .blackMated, .waveCleared: return "YOU WIN"
+            case .stalemate:  return "STALEMATE"
             }
         }
 
         var detail: String {
             switch self {
-            case .whiteMated:  return "WHITE IS CHECKMATED"
-            case .blackMated, .waveCleared: return "BLACK IS CHECKMATED"
-            case .stalemate:   return "NO LEGAL MOVES — DRAW"
+            case .whiteMated: return "WHITE CHECKMATED"
+            case .blackMated, .waveCleared: return "BLACK CHECKMATED"
+            case .stalemate:  return "NO LEGAL MOVES — DRAW"
             }
         }
 
