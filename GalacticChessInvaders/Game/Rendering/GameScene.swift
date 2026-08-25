@@ -59,6 +59,11 @@ class GameScene: SKScene {
     private weak var glowingKing: PieceNode?
     /// Last countdown value sounded, so the warning ticks once per second.
     private var lastTickedSecond = -1
+    /// Diagnostics are @Observable, so writing them invalidates the sidebar view.
+    /// At 60fps that is 60 SwiftUI re-renders a second for numbers nobody can read
+    /// that fast, plus a full node-tree walk each time.
+    private var lastStatsUpdate: TimeInterval = 0
+    private static let statsInterval: TimeInterval = 0.25
     private var selectedSquare: String?
     private var isEngineThinking = false
 
@@ -1046,12 +1051,7 @@ class GameScene: SKScene {
             // The end-of-game hold owns the beat while it runs.
             if advanceReveal(dt) {
                 turnTimerNode?.isHidden = true
-                #if DEBUG
-                if dt > 0 {
-                    DiagnosticsLog.shared.fps = (1.0 / dt).rounded()
-                    DiagnosticsLog.shared.nodeCount = countAllNodes()
-                }
-                #endif
+                publishStats(dt: dt, now: currentTime)
                 return
             }
 
@@ -1084,11 +1084,17 @@ class GameScene: SKScene {
             }
         }
 
+        publishStats(dt: dt, now: currentTime)
+    }
+
+    /// Four times a second is plenty for a readout, and it keeps both the node
+    /// walk and the SwiftUI invalidation out of the per-frame path.
+    private func publishStats(dt: TimeInterval, now: TimeInterval) {
         #if DEBUG
-        if dt > 0 {
-            DiagnosticsLog.shared.fps = (1.0 / dt).rounded()
-            DiagnosticsLog.shared.nodeCount = countAllNodes()
-        }
+        guard dt > 0, now - lastStatsUpdate >= Self.statsInterval else { return }
+        lastStatsUpdate = now
+        DiagnosticsLog.shared.fps = (1.0 / dt).rounded()
+        DiagnosticsLog.shared.nodeCount = countAllNodes()
         #endif
     }
 

@@ -43,7 +43,9 @@ final class ScoreManager {
     // MARK: - Scoring
 
     func addPoints(_ base: Int, source: String = "") {
-        let points = Int(Double(base) * multiplier)
+        // Rounded, not truncated: ×1.5 on a 25-point pawn is 37.5, and
+        // truncating quietly paid 37 on every scaled capture.
+        let points = Int((Double(base) * multiplier).rounded())
         currentScore += points
         DiagnosticsLog.shared.log(.score, "\(source.isEmpty ? "" : "\(source): ")+\(points) pts (×\(multiplier)) → \(currentScore)")
     }

@@ -5,8 +5,9 @@
 // representation with incrementally maintained per-kind/per-colour masks, and
 // the square indexing scheme, follow its design.
 //
-// Omitted deliberately, because GCI's rules exclude them (design doc §4):
-// castling, en passant, SAN notation, threefold repetition, fifty-move rule.
+// The rules are standard chess, which is what makes the published perft suite
+// usable as ground truth. Only SAN notation is omitted — GCI logs moves as
+// "rook a2-b2" and never needs algebraic notation.
 //
 // Pure Swift, no SpriteKit. Everything here is a Sendable value type so a
 // position can be handed to a detached task for engine search.
@@ -206,11 +207,18 @@ enum Chess {
             Square(mask: bitboards.king & bitboards.mask(for: color))
         }
 
+        /// Walks the occupied mask rather than all 64 squares, and reads each
+        /// square once instead of twice — this runs at every search leaf.
         func pieces() -> [(square: Square, piece: Piece)] {
             var result: [(Square, Piece)] = []
             result.reserveCapacity(32)
-            for index in 0..<64 where self[index] != nil {
-                result.append((Square(index: index), self[index]!))
+            var remaining = bitboards.occupied
+            while remaining != 0 {
+                let index = remaining.trailingZeroBitCount
+                remaining &= remaining &- 1        // clear the lowest set bit
+                if let piece = self[index] {
+                    result.append((Square(index: index), piece))
+                }
             }
             return result
         }
