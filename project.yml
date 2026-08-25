@@ -8,11 +8,6 @@ options:
   generateEmptyDirectories: false
   defaultConfig: Debug
 
-packages:
-  ChessKit:
-    url: https://github.com/aperechnev/ChessKit
-    from: 2.0.0
-
 targets:
 
   GalacticChessInvaders:
@@ -23,11 +18,12 @@ targets:
       - path: GalacticChessInvaders
         excludes:
           - Tests/**
-    resources:
-      - path: assets/GCI.spriteatlas
-      - path: assets/sfx
+          # Bundled as a folder reference below so the vendor subdirectories
+          # survive; SoundKey resolves paths like "sfx/kenney-digital/x.caf",
+          # and Xcode's default resource handling would flatten them.
+          - Resources/sfx/**
+      - path: GalacticChessInvaders/Resources/sfx
         type: folder
-      - path: assets/PressStart2P-Regular.ttf
     settings:
       base:
         SWIFT_VERSION: 6.0
@@ -41,9 +37,6 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         MARKETING_VERSION: "0.1"
         SWIFT_STRICT_CONCURRENCY: complete
-    dependencies:
-      - package: ChessKit
-        product: ChessKit
 
   GCITests:
     type: bundle.unit-test

@@ -21,13 +21,19 @@ The chess game is real but fast and shallow (5-second turn timer, 1–2 ply engi
 | Language | Swift 6 |
 | Game rendering | SpriteKit |
 | UI / menus | SwiftUI (hosts SpriteKit scene) |
-| Chess logic | ChessKit (SPM: `https://github.com/aperechnev/ChessKit`) |
-| Chess AI | GameplayKit — `GKMinmaxStrategist`, depth 2 |
+| Chess logic | Own implementation (`Game/Logic/Chess/`), adapted from ChessKit (MIT) |
+| Chess AI | Own negamax search, depth 2 (`ChessEngine.searchBestMove`) |
 | Audio | AVFoundation — preloaded `AVAudioPlayer` instances |
 | State machine | GameplayKit — `GKStateMachine` |
 | Game math | simd |
 
-**Total runtime Swift dependencies: 1** (ChessKit). Everything else is Apple built-in.
+**Total runtime Swift dependencies: 0.** Everything is Apple built-in.
+
+ChessKit was originally planned as an SPM dependency but cannot be used: in every
+released version (1.3.7 and 2.0.0) `FenSerialization` and `Position` have no
+public initializer, so an external consumer cannot construct a `Position` at all
+— their own README example does not compile. Its algorithms were instead ported
+into `Game/Logic/Chess/` under the MIT licence, with attribution in each file.
 
 ---
 
@@ -51,14 +57,19 @@ GCI/
     │   └── ContentView.swift
     ├── Game/
     │   ├── Logic/
-    │   │   ├── GCIBoard.swift        ← wraps ChessKit, adds force-place, HP tracking
+    │   │   ├── GCIBoard.swift        ← game state: chess position + HP + force-place
     │   │   ├── Piece.swift           ← piece type, color, HP, damage state
     │   │   ├── FleetController.swift ← invader movement, descent, logical square updates
-    │   │   ├── MoveGenerator.swift   ← wraps ChessKit move generation
+    │   │   ├── ChessEngine.swift     ← facade over the chess model + negamax search
+    │   │   ├── Chess/
+    │   │   │   ├── Chess.swift       ← squares, pieces, moves, bitboard board
+    │   │   │   ├── ChessRules.swift  ← move generation, attacks, check/mate
+    │   │   │   └── ChessFEN.swift    ← FEN parse / write
     │   │   ├── GameState.swift       ← GKStateMachine states
     │   │   └── ScoreManager.swift    ← score, multiplier, high score persistence
     │   ├── Rendering/
     │   │   ├── GameScene.swift       ← main SKScene, update loop, physics delegate
+    │   │   ├── BoardNode.swift       ← 8×8 grid, labels, selection, legal-move dots
     │   │   ├── PieceNode.swift       ← SKSpriteNode subclass, damage state frames
     │   │   ├── SpaceshipNode.swift   ← player ship node, laser cap, shield state
     │   │   ├── LaserNode.swift       ← laser projectile node
@@ -110,9 +121,10 @@ GCI/
 ## Key Game Mechanics (Quick Reference)
 
 ### Chess
-- Real chess engine (ChessKit + GKMinmaxStrategist, depth 1–2)
+- Real chess rules, own implementation; negamax search at depth 2
 - 5-second turn timer; on expiry, engine auto-moves White (constrained to selected piece if one is selected; otherwise picks best available)
-- No castling, no en passant
+- Castling, en passant and all four promotions are implemented and verified
+  against the standard perft suite; GCI's gameplay auto-queens on promotion
 - Win: Black King checkmated OR Black King shot to 0 HP
 - Lose: White King shot to 0 HP, White King checkmated, ship loses 3 lives, or Black piece reaches Rank 1
 
@@ -197,23 +209,31 @@ struct PhysicsCategory {
 
 ## Current Phase
 
-**Phase 0 — Project Skeleton** (starting point)
-- SwiftUI app shell, SpriteKit scene presented in window
-- Black `#000000` background confirmed at 60fps
-- Parallax starfield placeholder (2 twinkling star layers)
-- `GKStateMachine` wired: TITLE → PLAYING → GAME_OVER
-- `DiagnosticsLog` sidebar visible with STARTUP messages
-- ChessKit added via SPM
+**Phase 1 — Real Chess Board** (complete)
+- `Game/Logic/Chess/` — chess model, move generation, check/mate, FEN
+- `ChessEngine` — facade plus depth-2 negamax search, run off the main thread
+- `GCIBoard` — chess position + per-piece HP + `forcePlace` for fleet descent
+- `BoardNode` — 8×8 grid, coordinate labels, selection highlight, legal-move markers
+- `PieceNode` — square-fitted sprites, cyan/magenta tint, damage-state swaps
+- `SpaceshipNode` — ship at the bottom, delta-time arrow-key movement
+- Click-to-select / click-to-move for White; Black replies via the engine
+- Verified: standard perft suite matches exactly at depths 1–4
+
+Not yet built: fleet sweep and descent, lasers and shooting, turn timer, scoring
+on capture, level progression, game-over flow.
 
 See `docs/gci-game-design.md` §22 for the full 11-phase development plan.
 
 ---
 
-## Adding ChessKit (SPM)
+## Chess Implementation Notes
 
-In Xcode: File → Add Package Dependencies → `https://github.com/aperechnev/ChessKit` → Up to Next Major from 2.0.0
+`Game/Logic/Chess/` is a self-contained chess model, ported from ChessKit (MIT):
+bitboard board representation, ray-scan move generation, and bitboard attack
+detection. Departures from the original are documented in the file headers — most
+notably `isAttacked(_:by:in:)` replaces ChessKit's turn-coupled `isCheck`, and
+includes king adjacency rather than patching it in the king's generator.
 
-```swift
-import ChessKit
-// Board, Position, Move, Piece types available
-```
+Correctness is pinned by `ChessPerftTests`, which enumerates the standard
+reference positions and must match the published node counts exactly (~11M nodes
+at depth 4). Any change to move generation should be validated against it.
