@@ -101,9 +101,9 @@ Deviations
 - [x] Level progression — checkmating Black shows YOU WIN, any key continues to
       the next level; score multiplier / tighter beat / multi-move all engage
 - [x] Checkmate bonus (300), scaled by the level multiplier
-- [x] High score entry — up to 8 characters, Return submits at any length, offered
-      once per game; persists across games; seeded defaults are 60–100 so any real
-      game displaces them
+- [x] High score entry — up to 8 characters (letters, digits, symbols), Return
+      submits at any length, offered once per game; persists across games; seeded
+      defaults are 60–100 so any real game displaces them
 - [x] HUD hi-score drawn (best ever, or your run once you pass it)
 - [x] Hidden test mode — `T` toggles; White auto-moves on a 1s beat, labelled
       TEST MODE in the gutter and logged; ends automatically at mate/stalemate

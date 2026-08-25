@@ -438,7 +438,7 @@ class GameScene: SKScene {
         guard on != isTestMode else { return }
         isTestMode = on
         testModeLabel?.isHidden = !on
-        DiagnosticsLog.shared.log(.restart, on ? "TEST MODE ON" : "TEST MODE OFF")
+        DiagnosticsLog.shared.log(.test, on ? "ON" : "OFF")
 
         guard retimingBeat, turnTimer.isRunning, !isEndingGame else { return }
         turnTimer.start(level: levels.parameters,
@@ -478,7 +478,8 @@ class GameScene: SKScene {
         buildPlayfield()
         DiagnosticsLog.shared.log(.level,
             "Level \(levels.level) — beat \(Int(levels.parameters.turnTimer))s, "
-            + "\(levels.parameters.blackMovesPerTurn) black move(s)/turn")
+            + "\(levels.parameters.blackMovesPerTurn) black move(s)/turn, "
+            + "×\(ScoreManager.shared.multiplier)")
     }
 
     private func buildPlayfield() {
@@ -735,16 +736,31 @@ class GameScene: SKScene {
         isEngineThinking = true
         defer { isEngineThinking = false }
 
-        for _ in 0..<levels.parameters.blackMovesPerTurn {
+        for index in 0..<levels.parameters.blackMovesPerTurn {
+            // Chess hands the turn to White after every move, so an extra Black
+            // move has to be granted explicitly. Without this the loop always
+            // broke on its second pass and multi-move never ran at any level.
+            if index > 0 {
+                guard board.turn == .white, !board.isMate, !board.isStalemate else { break }
+                board.forceTurn(.black)
+            }
             guard board.turn == .black else { break }
+
             let outcome = await board.makeEngineMove(
                 constraints: .init(excludedSources: usedSources,
-                                   excludedDestinations: usedDestinations))
+                                   excludedDestinations: usedDestinations,
+                                   avoidsKingCapture: index > 0))
             guard let outcome else { break }
             apply(outcome)
+            // Exclude where it came from *and* where it landed: §25.5 forbids a
+            // piece moving twice, and after moving it is sitting on `to`.
             usedSources.insert(outcome.from)
+            usedSources.insert(outcome.to)
             usedDestinations.insert(outcome.to)
         }
+
+        // Whatever happened, it is White's move now.
+        if board.turn == .black { board.forceTurn(.white) }
     }
 
     /// Orange "AUTO" over the piece the engine moved, 0.5s (§19).
@@ -841,10 +857,9 @@ class GameScene: SKScene {
         // Only the player's captures score; Black taking White pieces must not
         // reward the player.
         if let captured = outcome.captured, captured.color == .black {
-            ScoreManager.shared.addPoints(captured.type.pointValue)
+            ScoreManager.shared.addPoints(captured.type.pointValue,
+                                          source: captured.type.rawValue)
             refreshHUD()
-            DiagnosticsLog.shared.log(.score,
-                "Captured \(captured.type) +\(captured.type.pointValue) → \(ScoreManager.shared.currentScore)")
         }
 
         // Capture reads over the move, so play only the louder of the two.
