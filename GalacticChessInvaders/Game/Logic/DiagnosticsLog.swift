@@ -1,6 +1,7 @@
 // DiagnosticsLog.swift
 // Green-on-black developer log. Debug builds only — compiled out in release.
 // Displayed as a sidebar on macOS, a separate view on iOS.
+// @MainActor: always accessed from the main thread (SpriteKit game loop + SwiftUI).
 
 import Foundation
 
@@ -28,6 +29,7 @@ struct LogLine: Identifiable {
     var categoryLabel: String { category.rawValue }
 }
 
+@MainActor
 @Observable
 final class DiagnosticsLog {
     static let shared = DiagnosticsLog()
@@ -40,7 +42,7 @@ final class DiagnosticsLog {
         return false
         #endif
     }()
-    var logInput: Bool = false  // INPUT events are high-frequency; off by default
+    var logInput: Bool = false
 
     private let maxLines = 2000
 
@@ -49,19 +51,9 @@ final class DiagnosticsLog {
     func log(_ category: LogCategory, _ message: String) {
         guard isEnabled else { return }
         if category == .input && !logInput { return }
-
-        let line = LogLine(category: category, message: message)
-        Task { @MainActor in
-            self.lines.append(line)
-            if self.lines.count > self.maxLines {
-                self.lines.removeFirst()
-            }
-        }
+        lines.append(LogLine(category: category, message: message))
+        if lines.count > maxLines { lines.removeFirst() }
     }
 
-    func clear() {
-        Task { @MainActor in
-            self.lines.removeAll()
-        }
-    }
+    func clear() { lines.removeAll() }
 }

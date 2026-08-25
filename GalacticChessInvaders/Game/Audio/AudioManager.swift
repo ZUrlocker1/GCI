@@ -7,6 +7,7 @@
 import AVFoundation
 import Foundation
 
+@MainActor
 final class AudioManager {
     static let shared = AudioManager()
     private init() {}
