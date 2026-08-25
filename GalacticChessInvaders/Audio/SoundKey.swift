@@ -102,7 +102,7 @@ extension SoundKey {
         // Player
         case .playerLaserFire:          return "kenney-sci-fi/laserRetro_001.caf"
         case .playerLaserMiss:          return "kenney-digital/phaserDown1.caf"
-        case .playerShipDestroyed:      return "gdc-bundle/DSGNBass_Rattling Downer 3.caf"
+        case .playerShipDestroyed:      return "gdc-bundle/DSGNBass_Rattling Downer 3_344 Audio_Bass Drops and Downers Vol 3.caf"
         case .playerExtraLife:          return "kenney-digital/powerUp11.caf"
         // Chess UI
         case .pieceSelected:            return "kenney-digital/pepSound1.caf"
@@ -116,8 +116,8 @@ extension SoundKey {
         // Piece destruction
         case .pawnDestroyed:            return "kenney-sci-fi/explosionCrunch_000.caf"
         case .knightDestroyed:          return "kenney-sci-fi/explosionCrunch_002.caf"
-        case .bishopDestroyed:          return "gdc-bundle/DSGNTonl_Designed Metal Bowed Screech Tonal Reverb 7.caf"
-        case .rookDestroyed:            return "gdc-bundle/DSGNTonl_Metal Scrape Low Tonal LFE 4.caf"
+        case .bishopDestroyed:          return "gdc-bundle/DSGNTonl_Designed Metal Bowed Screech Tonal Reverb 7_The Noisery_Moaning Metal.caf"
+        case .rookDestroyed:            return "gdc-bundle/DSGNTonl_Metal Scrape Low Tonal LFE 4_The Noisery_Moaning Metal.caf"
         case .queenDestroyed:           return "kenney-sci-fi/explosionCrunch_003.caf"
         case .kingDestroyed:            return "gdc-bundle/EffectiveTrailer_Booms_Vol2_214.caf"
         // Hits
