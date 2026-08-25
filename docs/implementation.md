@@ -64,6 +64,7 @@ Deviations
 - [x] `TurnTimer.swift` — chess beat, 8s check extension, warning threshold
 - [x] `LevelManager.swift` — the whole §21.1 table
 - [x] Perft exact at depths 1–4 (28 values, 11.3M nodes)
+- [x] Draw detection — threefold repetition and the fifty-move rule
 - [x] Perf criteria met — 1,000 generations 5.6ms (budget 100ms), search 0.5ms (50ms)
 
 Deviations
@@ -73,9 +74,16 @@ Deviations
 - Castling, en passant and all four promotions implemented, though §4 excluded
   them — standard rules make the published perft suite usable as ground truth.
   Gameplay still auto-queens
-- Threefold repetition and the fifty-move rule added after playtest: a depth-2
-  engine cannot force mate with an overwhelming edge, so it shuffled for ~200
-  plies. Without draw rules a game need never end
+- **Draw rules added, reversing a documented omission.** §4 listed only win/lose
+  conditions. A depth-2 search cannot force mate even with queen and rook against
+  a bare king, so it shuffles: one playtest ran ~200 plies. Threefold repetition
+  is keyed on the whole position (side to move, castling rights and the
+  en-passant square all count); a capture or pawn move resets the clock and
+  clears the table. Measured over 60 engine games: median 76 plies, max 269, none
+  unfinished. Endings observed: 58 mate, 1 repetition, 1 fifty-move
+- Stalemate ends the game as a draw. Note it is *not* what a queen chasing a bare
+  king produces — that side is in check with legal moves available, which is a
+  repetition draw, not stalemate
 - Own negamax instead of `GKMinmaxStrategist` (`GKGameModel` fights Swift 6
   concurrency)
 - Engine variation: positional term + repetition penalty + random tie-break among
@@ -96,7 +104,8 @@ Deviations
       dashed for knights, magenta when White is checked and cyan when Black is
 - [x] Reticle pool — 32 pre-created, allocates nothing on selection
 - [x] Capture scoring (White's captures only)
-- [x] Game over overlay — NEW GAME? Y/N, distinguishes win / loss / stalemate
+- [x] Game over overlay — NEW GAME? Y/N; distinguishes win, loss, stalemate and
+      the two draws, each saying why
 - [x] Checkmate reveal — 2.5s hold on the board first: mating path traced with
       extra pulses, CHECKMATE banner, sting, then the overlay
 - [x] Chess SFX — see Phase 4
@@ -143,6 +152,18 @@ guideline, above the 40pt tap target.
 Not started.
 
 ---
+
+## Known performance characteristics
+
+- Depth-2 search: **0.40ms** from the opening, **1.95ms** midgame, against a
+  50ms budget. The engine is not a bottleneck and needs no pruning
+- 1,000 legal-move generations: 5.6ms against a 100ms budget
+- `Board.pieces()` walks the occupied mask rather than all 64 squares; it runs at
+  every search leaf
+- Diagnostics publish at 4Hz, not per frame — `DiagnosticsLog` is `@Observable`,
+  so per-frame writes invalidated the sidebar 60 times a second
+- Starfield is ~170 batched sprites in one draw call; `SKShapeNode` cannot batch
+  and would have cost one draw call each
 
 ## Verification notes
 
