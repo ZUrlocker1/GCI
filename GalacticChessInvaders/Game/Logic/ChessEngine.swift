@@ -49,17 +49,33 @@ final class ChessEngine {
     /// is not fighting its own history in a cramped position.
     private static let historyDepth = 8
 
+    /// How often each position has occurred, for the threefold-repetition draw.
+    /// Keyed on the whole position — side to move, castling rights and the
+    /// en-passant square all form part of "the same position".
+    private var positionCounts: [Chess.Position: Int] = [:]
+    /// Plies since the last capture or pawn move, for the fifty-move draw.
+    private(set) var halfmoveClock = 0
+
+    /// Both standard draw rules. GCI originally omitted them, but a depth-2
+    /// engine with an overwhelming material edge cannot force mate: it shuffles,
+    /// and without these the game never terminates. Observed running ~200 plies.
+    var isDrawnByRepetition: Bool { (positionCounts[position] ?? 0) >= 3 }
+    var isDrawnByMoveLimit: Bool { halfmoveClock >= 100 }   // 50 full moves
+    var isDrawn: Bool { isDrawnByRepetition || isDrawnByMoveLimit }
+
     init() {
         // The standard FEN is a constant we control, so the parse cannot fail.
         position = Chess.FEN.position(from: Chess.FEN.standard)
             ?? Chess.Position(board: Chess.Board(), turn: .white)
         recentBoards = [position.board]
+        positionCounts[position] = 1
     }
 
     init?(fen: String) {
         guard let parsed = Chess.FEN.position(from: fen) else { return nil }
         position = parsed
         recentBoards = [parsed.board]
+        positionCounts[position] = 1
     }
 
     // MARK: - Position readout
@@ -139,7 +155,18 @@ final class ChessEngine {
                         Chess.Square(file: rookTo,   rank: rank).coordinate)
         }
 
+        // A capture or a pawn move makes the position irreversible, which is what
+        // resets the fifty-move clock and makes earlier positions unrepeatable.
+        let isIrreversible = mover.kind == .pawn || captured != nil
         position = ChessRules.applying(move, to: position)
+
+        if isIrreversible {
+            halfmoveClock = 0
+            positionCounts.removeAll(keepingCapacity: true)
+        } else {
+            halfmoveClock += 1
+        }
+        positionCounts[position, default: 0] += 1
 
         recentBoards.append(position.board)
         if recentBoards.count > Self.historyDepth { recentBoards.removeFirst() }
@@ -164,6 +191,10 @@ final class ChessEngine {
     func forceTurn(_ color: PieceColor) {
         position.turn = color
         position.enPassant = nil
+        // Consecutive moves by one side are not a chess position sequence, so
+        // they must not feed the repetition table.
+        positionCounts.removeAll(keepingCapacity: true)
+        positionCounts[position] = 1
     }
 
     // MARK: - Search

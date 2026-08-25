@@ -1927,3 +1927,77 @@ final class BlackMultiMoveTests: XCTestCase {
         XCTAssertFalse(board.legalDestinations(from: "e5").contains("d6"))
     }
 }
+
+// MARK: - Draw rules
+
+/// A depth-2 engine with an overwhelming material edge cannot force mate, so it
+/// shuffles. Without the standard draw rules a game can run indefinitely — one
+/// playtest ground on for roughly 200 plies of a queen chasing a bare king.
+final class DrawRuleTests: XCTestCase {
+
+    func testThreefoldRepetitionIsDetected() throws {
+        let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/8/R6K w - - 0 1"))
+        XCTAssertFalse(engine.isDrawn)
+
+        var plies = 0
+        outer: for _ in 0..<12 {
+            for (from, to) in [("a1", "a2"), ("h8", "g8"), ("a2", "a1"), ("g8", "h8")] {
+                if engine.isDrawnByRepetition { break outer }
+                _ = engine.make(from: from, to: to)
+                plies += 1
+            }
+        }
+        XCTAssertTrue(engine.isDrawnByRepetition)
+        XCTAssertLessThan(plies, 20, "should be caught promptly, not eventually")
+    }
+
+    /// A capture or pawn move makes earlier positions unreachable, so both the
+    /// clock and the repetition table reset.
+    func testCaptureResetsTheClockAndTable() throws {
+        let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/p7/R6K w - - 0 1"))
+        XCTAssertNotNil(engine.make(from: "a1", to: "a2"))
+        XCTAssertEqual(engine.halfmoveClock, 0)
+        XCTAssertFalse(engine.isDrawn)
+    }
+
+    @MainActor
+    func testNormalPlayIsNotFalselyDrawn() {
+        for _ in 0..<10 {
+            let board = GCIBoard()
+            board.setupStandardPosition()
+            for ply in 0..<30 {
+                guard let move = ChessEngine.searchBestMove(in: board.currentPosition, depth: 2,
+                                                           avoiding: board.currentHistory),
+                      board.applyChessMove(from: move.from, to: move.to) != nil else { break }
+                XCTAssertFalse(board.isDrawn, "false draw at ply \(ply)")
+            }
+        }
+    }
+
+    /// The reported case: queen and rook against a bare king.
+    func testAnUnwinnableGrindStillTerminates() throws {
+        for _ in 0..<10 {
+            let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/8/q5rK w - - 0 1"))
+            var finished = false
+            for _ in 0..<400 {
+                if engine.isMate || engine.isStalemate || engine.isDrawn { finished = true; break }
+                guard let move = ChessEngine.searchBestMove(in: engine.position, depth: 2,
+                                                           avoiding: engine.recentBoards),
+                      engine.make(from: move.from, to: move.to) != nil else { finished = true; break }
+            }
+            XCTAssertTrue(finished, "the game never reached a conclusion")
+        }
+    }
+
+    @MainActor
+    func testDrawOutcomesReadClearly() {
+        for outcome in [GameOverNode.Outcome.stalemate, .drawnByRepetition, .drawnByMoveLimit] {
+            XCTAssertEqual(outcome.headline, "DRAW")
+            XCTAssertFalse(outcome.isFavourable)
+            XCTAssertFalse(outcome.detail.isEmpty)
+        }
+        XCTAssertNotEqual(GameOverNode.Outcome.drawnByRepetition.detail,
+                          GameOverNode.Outcome.drawnByMoveLimit.detail,
+                          "the two draws should say why")
+    }
+}
