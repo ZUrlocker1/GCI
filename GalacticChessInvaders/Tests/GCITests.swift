@@ -972,7 +972,7 @@ final class GameOverNodeTests: XCTestCase {
     /// Losing and winning must not both read "GAME OVER".
     func testWinAndLossReadDifferently() {
         XCTAssertEqual(GameOverNode.Outcome.whiteMated.headline, "GAME OVER")
-        XCTAssertEqual(GameOverNode.Outcome.blackMated.headline, "VICTORY")
+        XCTAssertEqual(GameOverNode.Outcome.blackMated.headline, "YOU WIN")
         XCTAssertNotEqual(GameOverNode.Outcome.whiteMated.detail,
                           GameOverNode.Outcome.blackMated.detail)
     }
