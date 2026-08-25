@@ -12,6 +12,8 @@ final class GameOverNode: SKNode {
         case whiteMated                 // player lost — game over
         case blackMated                 // player won outright
         case stalemate
+        case drawnByRepetition
+        case drawnByMoveLimit
         /// Black checkmated but the run continues into the next wave.
         case waveCleared(next: Int)
 
@@ -21,7 +23,7 @@ final class GameOverNode: SKNode {
             switch self {
             case .whiteMated: return "GAME OVER"
             case .blackMated, .waveCleared: return "YOU WIN"
-            case .stalemate:  return "STALEMATE"
+            case .stalemate, .drawnByRepetition, .drawnByMoveLimit: return "DRAW"
             }
         }
 
@@ -29,7 +31,9 @@ final class GameOverNode: SKNode {
             switch self {
             case .whiteMated: return "WHITE CHECKMATED"
             case .blackMated, .waveCleared: return "BLACK CHECKMATED"
-            case .stalemate:  return "NO LEGAL MOVES — DRAW"
+            case .stalemate:         return "NO LEGAL MOVES"
+            case .drawnByRepetition: return "SAME POSITION THREE TIMES"
+            case .drawnByMoveLimit:  return "50 MOVES, NO CAPTURE"
             }
         }
 
@@ -44,7 +48,8 @@ final class GameOverNode: SKNode {
         var isFavourable: Bool {
             switch self {
             case .blackMated, .waveCleared: return true
-            case .whiteMated, .stalemate:   return false
+            case .whiteMated, .stalemate, .drawnByRepetition, .drawnByMoveLimit:
+                return false
             }
         }
     }

@@ -641,7 +641,7 @@ class GameScene: SKScene {
     @discardableResult
     private func endGameIfDecided() -> Bool {
         let loser = board.turn
-        guard board.isMate || board.isStalemate else { return false }
+        guard board.isMate || board.isStalemate || board.isDrawn else { return false }
 
         // A test run has served its purpose once the game reaches a conclusion,
         // so it does not silently carry into the next one.
@@ -653,8 +653,12 @@ class GameScene: SKScene {
         }
         if board.isMate {
             outcome = .whiteMated
-        } else {
+        } else if board.isStalemate {
             outcome = .stalemate
+        } else if board.isDrawnByRepetition {
+            outcome = .drawnByRepetition
+        } else {
+            outcome = .drawnByMoveLimit
         }
         DiagnosticsLog.shared.log(loser.logCategory, outcome.detail.lowercased())
 

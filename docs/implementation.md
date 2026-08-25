@@ -73,6 +73,9 @@ Deviations
 - Castling, en passant and all four promotions implemented, though §4 excluded
   them — standard rules make the published perft suite usable as ground truth.
   Gameplay still auto-queens
+- Threefold repetition and the fifty-move rule added after playtest: a depth-2
+  engine cannot force mate with an overwhelming edge, so it shuffled for ~200
+  plies. Without draw rules a game need never end
 - Own negamax instead of `GKMinmaxStrategist` (`GKGameModel` fights Swift 6
   concurrency)
 - Engine variation: positional term + repetition penalty + random tie-break among

@@ -24,6 +24,9 @@ final class GCIBoard {
     var isCheck: Bool { engine.isCheck }
     var isMate: Bool { engine.isMate }
     var isStalemate: Bool { engine.isStalemate }
+    var isDrawnByRepetition: Bool { engine.isDrawnByRepetition }
+    var isDrawnByMoveLimit: Bool { engine.isDrawnByMoveLimit }
+    var isDrawn: Bool { engine.isDrawn }
 
     // MARK: - Setup
 
