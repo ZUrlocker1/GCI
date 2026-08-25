@@ -1,6 +1,7 @@
 // GameState.swift
 // GKStateMachine states for the game lifecycle.
 // Each state owns its enter/exit/update logic.
+// States call back into GameScene via the typed gameScene computed property.
 
 import GameplayKit
 import SpriteKit
@@ -10,6 +11,8 @@ import SpriteKit
 class GCIState: GKState {
     weak var scene: SKScene?
     init(scene: SKScene) { self.scene = scene }
+
+    var gameScene: GameScene? { scene as? GameScene }
 }
 
 // MARK: - Title State
@@ -18,10 +21,14 @@ class TitleState: GCIState {
     override func isValidNextState(_ stateClass: AnyClass) -> Bool {
         stateClass == PlayingState.self
     }
+
     override func didEnter(from previousState: GKState?) {
-        DiagnosticsLog.shared.log(.level, "State → TITLE")
-        // Phase 0: show title text placeholder
-        // Phase 1+: present TitleScene with fleet animation, high scores
+        gameScene?.showTitleScreen()
+        DiagnosticsLog.shared.log(.startup, "Title screen displayed")
+    }
+
+    override func willExit(to nextState: GKState) {
+        gameScene?.hideTitleScreen()
     }
 }
 
@@ -31,9 +38,14 @@ class PlayingState: GCIState {
     override func isValidNextState(_ stateClass: AnyClass) -> Bool {
         stateClass == PausedState.self || stateClass == GameOverState.self
     }
+
     override func didEnter(from previousState: GKState?) {
-        DiagnosticsLog.shared.log(.level, "State → PLAYING")
+        gameScene?.showPlaceholderBoard()   // Phase 0: placeholder; Phase 2.1: real board
+        DiagnosticsLog.shared.log(.level, "Level 1 started")
+        DiagnosticsLog.shared.log(.startup, "Board reset, 16 white + 16 black pieces placed")
+        DiagnosticsLog.shared.log(.startup, "Spaceship positioned at centre")
     }
+
     override func update(deltaTime seconds: TimeInterval) {
         // Phase 2+: tick fleet controller, turn timer, etc.
     }
@@ -45,8 +57,13 @@ class PausedState: GCIState {
     override func isValidNextState(_ stateClass: AnyClass) -> Bool {
         stateClass == PlayingState.self
     }
+
     override func didEnter(from previousState: GKState?) {
-        DiagnosticsLog.shared.log(.level, "State → PAUSED")
+        gameScene?.showPausedOverlay()
+    }
+
+    override func willExit(to nextState: GKState) {
+        gameScene?.hidePausedOverlay()
     }
 }
 
@@ -56,8 +73,10 @@ class GameOverState: GCIState {
     override func isValidNextState(_ stateClass: AnyClass) -> Bool {
         stateClass == TitleState.self || stateClass == PlayingState.self
     }
+
     override func didEnter(from previousState: GKState?) {
-        DiagnosticsLog.shared.log(.level, "State → GAME OVER — score: \(ScoreManager.shared.currentScore)")
-        // Phase 1+: show GameOverScene
+        let score = ScoreManager.shared.currentScore
+        DiagnosticsLog.shared.log(.level, "GAME OVER — final score: \(score)")
+        // Phase 2+: show GameOverScene with score tally and explosion
     }
 }
