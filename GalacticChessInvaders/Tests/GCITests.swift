@@ -3,6 +3,8 @@
 // Run with ⌘U in Xcode.
 
 import XCTest
+import SpriteKit
+import AVFoundation
 @testable import GalacticChessInvaders
 
 @MainActor
@@ -67,7 +69,9 @@ final class PieceTests: XCTestCase {
 @MainActor
 final class ScoreManagerTests: XCTestCase {
 
-    override func setUp() {
+    // The async form inherits the class's @MainActor isolation; the synchronous
+    // override does not, and cannot touch the main-actor singleton.
+    override func setUp() async throws {
         ScoreManager.shared.resetForNewGame()
     }
 
@@ -95,5 +99,1709 @@ final class ScoreManagerTests: XCTestCase {
         ScoreManager.shared.advanceLevel()   // multiplier now 1.5
         ScoreManager.shared.addPoints(100)
         XCTAssertEqual(ScoreManager.shared.currentScore, 150)
+    }
+}
+
+// MARK: - Chess rules
+
+/// Perft (node enumeration) against the standard reference suite. Matching these
+/// published counts exercises castling, en passant, all four promotions, pins,
+/// discovered checks and check evasion — a move generator that agrees on every
+/// one of them is almost certainly correct.
+///
+/// Depth 4 on all seven positions is ~11M nodes and takes a couple of seconds;
+/// depth 3 and below is fast enough for every run.
+final class ChessPerftTests: XCTestCase {
+
+    private static let suite: [(name: String, fen: String, counts: [Int])] = [
+        ("start", Chess.FEN.standard,
+         [20, 400, 8902, 197281]),
+        ("kiwipete", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+         [48, 2039, 97862, 4085603]),
+        ("position 3", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+         [14, 191, 2812, 43238]),
+        ("position 4", "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+         [6, 264, 9467, 422333]),
+        ("position 4 mirrored", "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1",
+         [6, 264, 9467, 422333]),
+        ("position 5", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 0 1",
+         [44, 1486, 62379, 2103487]),
+        ("position 6", "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 1",
+         [46, 2079, 89890, 3894594]),
+    ]
+
+    private func perft(_ position: Chess.Position, _ depth: Int) -> Int {
+        let moves = ChessRules.legalMoves(in: position)
+        if depth <= 1 { return moves.count }
+        return moves.reduce(0) { $0 + perft(ChessRules.applying($1, to: position), depth - 1) }
+    }
+
+    func testPerftToDepth3() {
+        for entry in Self.suite {
+            guard let position = Chess.FEN.position(from: entry.fen) else {
+                return XCTFail("could not parse FEN for \(entry.name)")
+            }
+            for depth in 1...3 {
+                XCTAssertEqual(perft(position, depth), entry.counts[depth - 1],
+                               "\(entry.name) perft(\(depth))")
+            }
+        }
+    }
+
+    func testPerftDepth4() throws {
+        try XCTSkipIf(ProcessInfo.processInfo.environment["GCI_FAST_TESTS"] != nil,
+                      "slow test; ~11M nodes")
+        for entry in Self.suite {
+            guard let position = Chess.FEN.position(from: entry.fen) else {
+                return XCTFail("could not parse FEN for \(entry.name)")
+            }
+            XCTAssertEqual(perft(position, 4), entry.counts[3], "\(entry.name) perft(4)")
+        }
+    }
+}
+
+final class ChessRulesTests: XCTestCase {
+
+    private func position(_ fen: String) throws -> Chess.Position {
+        try XCTUnwrap(Chess.FEN.position(from: fen), "bad FEN: \(fen)")
+    }
+
+    private func destinations(from square: String, in position: Chess.Position) throws -> Set<String> {
+        let origin = try XCTUnwrap(Chess.Square(coordinate: square))
+        return Set(ChessRules.legalMoves(from: origin, in: position).map { $0.to.coordinate })
+    }
+
+    func testBackRankMate() throws {
+        let mate = try position("R6k/6pp/8/8/8/8/8/7K b - - 0 1")
+        XCTAssertTrue(ChessRules.isCheck(in: mate))
+        XCTAssertTrue(ChessRules.isMate(in: mate))
+        XCTAssertTrue(ChessRules.legalMoves(in: mate).isEmpty)
+    }
+
+    func testCheckWithEscapeIsNotMate() throws {
+        // Same as above but the g-pawn has advanced, opening g7 for the king.
+        let escape = try position("R6k/7p/6p1/8/8/8/8/7K b - - 0 1")
+        XCTAssertTrue(ChessRules.isCheck(in: escape))
+        XCTAssertFalse(ChessRules.isMate(in: escape))
+    }
+
+    func testStalemateIsNotCheck() throws {
+        let stalemate = try position("k7/8/1Q6/8/8/8/8/K7 b - - 0 1")
+        XCTAssertFalse(ChessRules.isCheck(in: stalemate))
+        XCTAssertTrue(ChessRules.isStalemate(in: stalemate))
+    }
+
+    func testPinnedPieceCannotMove() throws {
+        // White knight e2 is pinned to its king on e1 by the rook on e8.
+        let pin = try position("4r2k/8/8/8/8/8/4N3/4K3 w - - 0 1")
+        XCTAssertEqual(try destinations(from: "e2", in: pin), [])
+    }
+
+    func testKingsMayNotBecomeAdjacent() throws {
+        let kings = try position("8/8/8/8/8/4k3/8/4K3 w - - 0 1")
+        XCTAssertEqual(try destinations(from: "e1", in: kings), ["d1", "f1"])
+    }
+
+    func testPromotionOffersAllFourPieces() throws {
+        let promo = try position("7k/P7/8/8/8/8/8/7K w - - 0 1")
+        let origin = try XCTUnwrap(Chess.Square(coordinate: "a7"))
+        let moves = ChessRules.legalMoves(from: origin, in: promo)
+        XCTAssertEqual(moves.count, 4)
+        XCTAssertEqual(Set(moves.compactMap { $0.promotion }),
+                       [.queen, .rook, .bishop, .knight])
+    }
+
+    func testBlockedPawnHasNoMoves() throws {
+        let blocked = try position("7k/8/8/8/8/n7/P7/7K w - - 0 1")
+        XCTAssertEqual(try destinations(from: "a2", in: blocked), [])
+    }
+
+    func testCastlingAvailableBothSides() throws {
+        let castle = try position("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+        let dests = try destinations(from: "e1", in: castle)
+        XCTAssertTrue(dests.contains("g1"), "kingside")
+        XCTAssertTrue(dests.contains("c1"), "queenside")
+    }
+
+    func testCastlingMovesRookAndClearsRights() throws {
+        let castle = try position("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+        let origin = try XCTUnwrap(Chess.Square(coordinate: "e1"))
+        let kingside = try XCTUnwrap(
+            ChessRules.legalMoves(from: origin, in: castle)
+                .first { $0.to.coordinate == "g1" })
+
+        let after = ChessRules.applying(kingside, to: castle)
+        XCTAssertEqual(after.board["g1"]?.kind, .king)
+        XCTAssertEqual(after.board["f1"]?.kind, .rook, "rook jumps to f1")
+        XCTAssertNil(after.board["h1"])
+        XCTAssertNil(after.board["e1"])
+        XCTAssertFalse(after.castling.contains(.whiteKingside))
+        XCTAssertFalse(after.castling.contains(.whiteQueenside))
+        XCTAssertTrue(after.castling.contains(.blackKingside), "black keeps its rights")
+    }
+
+    func testCannotCastleThroughCheck() throws {
+        // Black rook on f8 covers f1, the square the king would cross.
+        let through = try position("5r2/8/8/8/8/8/8/R3K2R w KQ - 0 1")
+        XCTAssertFalse(try destinations(from: "e1", in: through).contains("g1"))
+    }
+
+    func testCannotCastleOutOfCheck() throws {
+        // Black rook on e8 checks the king down the e-file.
+        let inCheck = try position("4r3/8/8/8/8/8/8/R3K2R w KQ - 0 1")
+        let dests = try destinations(from: "e1", in: inCheck)
+        XCTAssertFalse(dests.contains("g1"))
+        XCTAssertFalse(dests.contains("c1"))
+    }
+
+    func testCapturingRookClearsCastlingRight() throws {
+        // Black rook a8 takes the white rook on a1, killing queenside rights.
+        let grab = try position("r3k3/8/8/8/8/8/8/R3K3 b q - 0 1")
+        let origin = try XCTUnwrap(Chess.Square(coordinate: "a8"))
+        let capture = try XCTUnwrap(
+            ChessRules.legalMoves(from: origin, in: grab)
+                .first { $0.to.coordinate == "a1" })
+        let after = ChessRules.applying(capture, to: grab)
+        XCTAssertFalse(after.castling.contains(.whiteQueenside))
+    }
+
+    func testEnPassantCapturesTheBypassedPawn() throws {
+        // Black has just played d7-d5; White's e5 pawn may take on d6.
+        let ep = try position("7k/8/8/3pP3/8/8/8/7K w - d6 0 1")
+        let origin = try XCTUnwrap(Chess.Square(coordinate: "e5"))
+        let capture = try XCTUnwrap(
+            ChessRules.legalMoves(from: origin, in: ep)
+                .first { $0.to.coordinate == "d6" })
+
+        let after = ChessRules.applying(capture, to: ep)
+        XCTAssertEqual(after.board["d6"]?.kind, .pawn, "capturing pawn lands on d6")
+        XCTAssertNil(after.board["d5"], "the bypassed pawn is removed")
+        XCTAssertNil(after.board["e5"])
+    }
+
+    func testEnPassantIsOnlyAvailableImmediately() throws {
+        // Identical position with no en-passant square recorded.
+        let stale = try position("7k/8/8/3pP3/8/8/8/7K w - - 0 1")
+        XCTAssertFalse(try destinations(from: "e5", in: stale).contains("d6"))
+    }
+
+    func testDoubleStepSetsEnPassantSquare() throws {
+        let start = try position(Chess.FEN.standard)
+        let origin = try XCTUnwrap(Chess.Square(coordinate: "e2"))
+        let double = try XCTUnwrap(
+            ChessRules.legalMoves(from: origin, in: start)
+                .first { $0.to.coordinate == "e4" })
+        XCTAssertEqual(ChessRules.applying(double, to: start).enPassant?.coordinate, "e3")
+    }
+
+    func testEnPassantExposingKingIsIllegal() throws {
+        // Position 3's signature case: both en-passant captures would clear the
+        // fourth rank and expose the black king on h4 to the rook on b4.
+        let tricky = try position("8/2p5/3p4/KP5r/1R2Pp1k/8/6P1/8 b - e3 0 1")
+        XCTAssertFalse(try destinations(from: "f4", in: tricky).contains("e3"))
+    }
+}
+
+final class ChessFENTests: XCTestCase {
+
+    func testRoundTrip() throws {
+        let fens = [
+            Chess.FEN.standard,
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+            "7k/8/8/3pP3/8/8/8/7K w - d6 0 1",
+        ]
+        for fen in fens {
+            let position = try XCTUnwrap(Chess.FEN.position(from: fen), fen)
+            XCTAssertEqual(Chess.FEN.string(from: position), fen)
+        }
+    }
+
+    func testRejectsMalformedBoard() {
+        XCTAssertNil(Chess.FEN.position(from: "rnbqkbnr/pppppppp/8/8/8 w - - 0 1"), "too few ranks")
+        XCTAssertNil(Chess.FEN.position(from: "xxxxxxxx/8/8/8/8/8/8/8 w - - 0 1"), "bad piece char")
+        XCTAssertNil(Chess.FEN.position(from: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR x - - 0 1"), "bad turn")
+    }
+}
+
+@MainActor
+final class GCIBoardTests: XCTestCase {
+
+    func testStandardPositionHas32Pieces() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        XCTAssertEqual(board.allPieces().count, 32)
+        XCTAssertEqual(board.allPieces(color: .white).count, 16)
+        XCTAssertEqual(board.allPieces(color: .black).count, 16)
+        XCTAssertEqual(board.turn, .white)
+    }
+
+    func testPieceStartsAtFullHP() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        XCTAssertEqual(board.piece(at: "e1")?.type, .king)
+        XCTAssertEqual(board.piece(at: "e1")?.hp, PieceType.king.maxHP)
+    }
+
+    func testLegalMoveMovesThePieceAndHandsOverTheTurn() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        let outcome = board.applyChessMove(from: "e2", to: "e4")
+        XCTAssertNotNil(outcome)
+        XCTAssertNil(board.piece(at: "e2"))
+        XCTAssertEqual(board.piece(at: "e4")?.type, .pawn)
+        XCTAssertEqual(board.turn, .black)
+    }
+
+    func testIllegalMoveIsRejectedAndLeavesTheBoardAlone() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        XCTAssertNil(board.applyChessMove(from: "e2", to: "e5"), "three squares is not a pawn move")
+        XCTAssertEqual(board.piece(at: "e2")?.type, .pawn)
+        XCTAssertEqual(board.turn, .white, "a rejected move must not pass the turn")
+    }
+
+    func testDamageErodesHPThenDestroys() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        XCTAssertFalse(board.applyDamage(1, at: "a7"), "pawn has 2 HP")
+        XCTAssertEqual(board.piece(at: "a7")?.hp, 1)
+        XCTAssertTrue(board.applyDamage(1, at: "a7"))
+        XCTAssertNil(board.piece(at: "a7"))
+    }
+
+    func testForcePlaceCrushesAnEnemyOccupant() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        let invader = Piece(type: .rook, color: .black, square: "a8")
+        let crush = board.forcePlace(invader, at: "a2")
+        XCTAssertEqual(crush?.crushedPiece.color, .white)
+        XCTAssertEqual(crush?.atSquare, "a2")
+        XCTAssertEqual(board.piece(at: "a2")?.color, .black)
+        XCTAssertNil(board.piece(at: "a8"), "the invader vacates its old square")
+    }
+}
+
+final class ChessEngineTests: XCTestCase {
+
+    func testEngineTakesAFreeQueen() throws {
+        let grab = try XCTUnwrap(Chess.FEN.position(from: "3q3k/8/8/8/8/8/8/3Q3K w - - 0 1"))
+        let best = ChessEngine.searchBestMove(in: grab, depth: 2)
+        XCTAssertEqual(best?.to, "d8")
+    }
+
+    func testEngineReturnsNilWhenMated() throws {
+        let mate = try XCTUnwrap(Chess.FEN.position(from: "R6k/6pp/8/8/8/8/8/7K b - - 0 1"))
+        XCTAssertNil(ChessEngine.searchBestMove(in: mate, depth: 2))
+    }
+
+    func testPlayerPromotionAlwaysTakesTheQueen() {
+        let engine = ChessEngine(fen: "7k/P7/8/8/8/8/8/7K w - - 0 1")
+        let applied = engine?.make(from: "a7", to: "a8")
+        XCTAssertEqual(applied?.promotedTo, .queen)
+    }
+
+    func testEnPassantReportsTheCapturedSquare() {
+        let engine = ChessEngine(fen: "7k/8/8/3pP3/8/8/8/7K w - d6 0 1")
+        let applied = engine?.make(from: "e5", to: "d6")
+        XCTAssertEqual(applied?.capturedType, .pawn)
+        XCTAssertEqual(applied?.capturedSquare, "d5", "not the destination square")
+    }
+
+    func testCastlingReportsTheRookJourney()  {
+        let engine = ChessEngine(fen: "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+        let applied = engine?.make(from: "e1", to: "g1")
+        XCTAssertEqual(applied?.rookMove?.from, "h1")
+        XCTAssertEqual(applied?.rookMove?.to, "f1")
+    }
+}
+
+// MARK: - Board geometry
+
+/// The square ↔ point mapping backs click handling, so an off-by-one here would
+/// silently move the wrong piece. These run without an SKView.
+@MainActor
+final class BoardNodeTests: XCTestCase {
+
+    func testEverySquareRoundTrips() {
+        let board = BoardNode()
+        for file in "abcdefgh" {
+            for rank in 1...8 {
+                let square = "\(file)\(rank)"
+                guard let point = board.center(of: square) else {
+                    return XCTFail("no centre for \(square)")
+                }
+                XCTAssertEqual(board.square(at: point), square)
+            }
+        }
+    }
+
+    func testOrientationPutsWhiteAtTheBottom() {
+        let board = BoardNode()
+        let a1 = board.center(of: "a1")
+        XCTAssertEqual(a1, CGPoint(x: 32, y: 32))
+        XCTAssertEqual(board.center(of: "h8"), CGPoint(x: 480, y: 480))
+        XCTAssertEqual(board.center(of: "b1")?.x, (a1?.x ?? 0) + BoardNode.squareSize)
+        XCTAssertEqual(board.center(of: "a2")?.y, (a1?.y ?? 0) + BoardNode.squareSize)
+    }
+
+    func testOffBoardPointsAreRejectedNotClamped() {
+        let board = BoardNode()
+        XCTAssertNil(board.square(at: CGPoint(x: -1, y: 10)))
+        XCTAssertNil(board.square(at: CGPoint(x: BoardNode.boardSize, y: 10)))
+        XCTAssertNil(board.square(at: CGPoint(x: 10, y: BoardNode.boardSize + 1)))
+        XCTAssertEqual(board.square(at: .zero), "a1")
+    }
+
+    func testInvalidSquareStringsHaveNoCentre() {
+        let board = BoardNode()
+        for bad in ["", "e", "e9", "e0", "i4", "ee", "e10"] {
+            XCTAssertNil(board.center(of: bad), "\(bad) should not resolve")
+        }
+    }
+
+    /// The fleet slides between squares, so a drawn grid would misrepresent
+    /// where pieces are. Nothing but interaction feedback may be rendered.
+    func testDrawsNoGridOrLabels() {
+        let board = BoardNode()
+        var labels = 0
+        var shapes = 0
+        var stack = Array(board.children)
+        while let node = stack.popLast() {
+            if node is SKLabelNode { labels += 1 }
+            if node is SKShapeNode { shapes += 1 }
+            stack.append(contentsOf: node.children)
+        }
+        XCTAssertEqual(labels, 0, "no coordinate labels")
+        // Only the selection outline plus the pooled dot/ring pair per marker.
+        XCTAssertEqual(shapes, 1 + BoardNode.markerPoolSize * 2,
+                       "no square fills, grid lines or border")
+    }
+
+    func testMarkersDoNotLeakNodes() {
+        let board = BoardNode()
+        let baseline = board.children.count
+        board.showLegalMoves(["e4", "e5"], captures: ["e5"])
+        board.showSelection(at: "e2")
+        board.showLegalMoves(["d4"], captures: [])
+        board.clearMarkers()
+        XCTAssertEqual(board.children.count, baseline)
+    }
+
+    func testBoardFitsThePlayArea() {
+        // Scene is 960×700 with the HUD occupying the top band.
+        let boardTop = 120 + BoardNode.boardSize
+        XCTAssertLessThanOrEqual(boardTop, 700 - HUDNode.height, "board must clear the HUD")
+        XCTAssertLessThan(BoardNode.boardSize, 960, "board must fit the scene width")
+    }
+}
+
+@MainActor
+final class PieceNodeTests: XCTestCase {
+
+    func testSpriteFitsTheSquare() {
+        let node = PieceNode(piece: Piece(type: .king, color: .white, square: "e1"),
+                             squareSize: BoardNode.squareSize)
+        XCTAssertLessThanOrEqual(node.size.height, BoardNode.squareSize)
+        XCTAssertEqual(node.size.height, BoardNode.squareSize * 0.82, accuracy: 0.01)
+    }
+
+    func testSideDeterminesTint() {
+        let white = PieceNode(piece: Piece(type: .rook, color: .white, square: "a1"),
+                              squareSize: BoardNode.squareSize)
+        let black = PieceNode(piece: Piece(type: .rook, color: .black, square: "a8"),
+                              squareSize: BoardNode.squareSize)
+        XCTAssertNotEqual(white.color, black.color)
+        XCTAssertGreaterThan(white.colorBlendFactor, 0)
+    }
+
+    func testSquareTracksTheMove() {
+        let node = PieceNode(piece: Piece(type: .rook, color: .white, square: "a1"),
+                             squareSize: BoardNode.squareSize)
+        XCTAssertEqual(node.square, "a1")
+        node.animateMove(to: "a4", point: CGPoint(x: 32, y: 224))
+        XCTAssertEqual(node.square, "a4")
+    }
+}
+
+// MARK: - Turn timer & levels
+
+@MainActor
+final class TurnTimerTests: XCTestCase {
+
+    private var level1: LevelParameters { LevelManager.parameters(for: 1) }
+    private var level3: LevelParameters { LevelManager.parameters(for: 3) }
+
+    func testStartsAtTheLevelBeatDuration() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: false)
+        XCTAssertEqual(timer.duration, 5.0)
+        XCTAssertEqual(timer.remaining, 5.0)
+        XCTAssertTrue(timer.isRunning)
+        XCTAssertFalse(timer.isExtended)
+    }
+
+    func testLevel3UsesTheShorterBeat() {
+        let timer = TurnTimer()
+        timer.start(level: level3, inCheck: false)
+        XCTAssertEqual(timer.duration, 4.0)
+    }
+
+    func testCheckExtendsTheBeatToEightSeconds() {
+        let timer = TurnTimer()
+        timer.start(level: level3, inCheck: true)
+        XCTAssertEqual(timer.duration, 8.0, "check overrides the level beat")
+        XCTAssertTrue(timer.isExtended)
+    }
+
+    func testExpiresExactlyOnce() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: false)
+        var expiries = 0
+        for _ in 0..<600 where timer.update(deltaTime: 0.05) { expiries += 1 }
+        XCTAssertEqual(expiries, 1, "the beat must fire once, then stop itself")
+        XCTAssertFalse(timer.isRunning)
+        XCTAssertEqual(timer.remaining, 0)
+    }
+
+    func testDoesNotExpireEarly() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: false)
+        // 4.9s of a 5s beat.
+        for _ in 0..<49 { XCTAssertFalse(timer.update(deltaTime: 0.1)) }
+        XCTAssertTrue(timer.isRunning)
+    }
+
+    func testWarningOnlyInTheFinalTwoSeconds() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: false)
+        XCTAssertFalse(timer.isWarning)
+        _ = timer.update(deltaTime: 2.5)   // 2.5 left
+        XCTAssertFalse(timer.isWarning)
+        _ = timer.update(deltaTime: 1.0)   // 1.5 left
+        XCTAssertTrue(timer.isWarning)
+    }
+
+    func testPauseDoesNotGiftTime() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: false)
+        _ = timer.update(deltaTime: 2.0)
+        timer.pause()
+        XCTAssertFalse(timer.update(deltaTime: 10.0), "a paused beat must not tick")
+        XCTAssertEqual(timer.remaining, 3.0, accuracy: 0.0001)
+        timer.resume()
+        XCTAssertTrue(timer.isRunning)
+        XCTAssertEqual(timer.remaining, 3.0, accuracy: 0.0001)
+    }
+
+    func testStopClearsState() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: true)
+        timer.stop()
+        XCTAssertFalse(timer.isRunning)
+        XCTAssertFalse(timer.isExtended)
+        XCTAssertEqual(timer.remaining, 0)
+    }
+
+    func testDisplaySecondsRoundsUp() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: false)
+        XCTAssertEqual(timer.displaySeconds, 5)
+        _ = timer.update(deltaTime: 0.1)     // 4.9 left
+        XCTAssertEqual(timer.displaySeconds, 5, "still in the fifth second")
+        _ = timer.update(deltaTime: 4.5)     // 0.4 left
+        XCTAssertEqual(timer.displaySeconds, 1, "under a second still reads 1")
+    }
+}
+
+@MainActor
+final class LevelManagerTests: XCTestCase {
+
+    func testStartsAtLevelOneAndAdvances() {
+        let levels = LevelManager()
+        XCTAssertEqual(levels.level, 1)
+        levels.advance()
+        XCTAssertEqual(levels.level, 2)
+        levels.reset()
+        XCTAssertEqual(levels.level, 1)
+    }
+
+    func testLevelOneIsPassiveAndFiresNoShots() {
+        let one = LevelManager.parameters(for: 1)
+        XCTAssertFalse(one.isAggressive)
+        XCTAssertEqual(one.shotsPerTurn, 0...0)
+        XCTAssertEqual(one.blackMovesPerTurn, 1)
+        XCTAssertEqual(one.fleetSpeed, 40)
+    }
+
+    func testTableMatchesTheDesignDoc() {
+        // §21.1 — turn timer, black moves, fleet speed per level.
+        XCTAssertEqual(LevelManager.parameters(for: 2).turnTimer, 5)
+        XCTAssertEqual(LevelManager.parameters(for: 3).turnTimer, 4)
+        XCTAssertEqual(LevelManager.parameters(for: 3).blackMovesPerTurn, 2)
+        XCTAssertEqual(LevelManager.parameters(for: 5).blackMovesPerTurn, 3)
+        XCTAssertEqual(LevelManager.parameters(for: 5).fleetSpeed, 110)
+        XCTAssertEqual(LevelManager.parameters(for: 4).regenSlots, 2)
+    }
+
+    func testHighLevelsRespectCapsAndFloors() {
+        let ten = LevelManager.parameters(for: 10)
+        XCTAssertEqual(ten.blackMovesPerTurn, 3, "capped at 3")
+        XCTAssertEqual(ten.shotsPerTurn, 3...3, "capped at 3")
+        XCTAssertEqual(ten.turnTimer, 4, "floored at 4s")
+        XCTAssertEqual(ten.raiderInterval, 6, "floored at 6s")
+        XCTAssertEqual(ten.fleetSpeed, 110 + 75, "+15 per level past 5")
+        XCTAssertGreaterThan(ten.projectileSpeed, LevelManager.parameters(for: 5).projectileSpeed)
+    }
+
+    func testLevelZeroClampsToOne() {
+        XCTAssertEqual(LevelManager.parameters(for: 0).level, 1)
+        XCTAssertEqual(LevelManager.parameters(for: -5).level, 1)
+    }
+}
+
+// MARK: - Auto-move constraints
+
+final class AutoMoveTests: XCTestCase {
+
+    private func position(_ fen: String) throws -> Chess.Position {
+        try XCTUnwrap(Chess.FEN.position(from: fen))
+    }
+
+    func testAutoMoveHonoursTheSelectedPiece() throws {
+        // White has a free queen capture on d8, but the player had the a1 rook
+        // selected — the auto-move must play the rook.
+        let p = try position("3q3k/8/8/8/8/8/8/R2Q3K w - - 0 1")
+        let best = ChessEngine.searchBestMove(in: p, depth: 2,
+                                              constraints: .init(restrictedTo: "a1"))
+        XCTAssertEqual(best?.from, "a1")
+    }
+
+    func testAutoMoveFallsBackWhenSelectedPieceIsStuck() throws {
+        // The h1 king is boxed in by its own pieces; restriction must not
+        // produce nil, or a stalled player would get no move at all.
+        let p = try position("3q3k/8/8/8/8/8/6PP/R5NK w - - 0 1")
+        let best = ChessEngine.searchBestMove(in: p, depth: 2,
+                                              constraints: .init(restrictedTo: "h1"))
+        XCTAssertNotNil(best)
+        XCTAssertNotEqual(best?.from, "h1")
+    }
+
+    func testCheckLeavesOnlyResolvingMoves() throws {
+        // Black rook on e8 checks the white king on e1. Every legal move must
+        // resolve it — that is what makes the §25.4 constraint automatic.
+        let p = try position("4r2k/8/8/8/8/8/8/4K3 w - - 0 1")
+        let moves = ChessRules.legalMoves(in: p)
+        XCTAssertFalse(moves.isEmpty)
+        for move in moves {
+            XCTAssertFalse(ChessRules.isCheck(in: ChessRules.applying(move, to: p)) &&
+                           ChessRules.applying(move, to: p).turn == .white,
+                           "\(move.coordinateNotation) left White in check")
+        }
+    }
+
+    func testExcludedSourcesAndDestinationsAreRespected() throws {
+        // §25.5: a piece may not move twice, and two pieces may not share a
+        // destination, within one Black multi-move phase.
+        let p = try position(Chess.FEN.standard)
+        let first = try XCTUnwrap(ChessEngine.searchBestMove(in: p, depth: 1))
+        let second = ChessEngine.searchBestMove(
+            in: p, depth: 1,
+            constraints: .init(excludedSources: [first.from],
+                               excludedDestinations: [first.to]))
+        XCTAssertNotNil(second)
+        XCTAssertNotEqual(second?.from, first.from)
+        XCTAssertNotEqual(second?.to, first.to)
+    }
+
+    func testExhaustedExclusionsYieldNilRatherThanAnIllegalMove() throws {
+        // Only one legal move exists; excluding its source must return nil so
+        // Black makes fewer moves rather than something illegal.
+        let p = try position("7k/8/8/8/8/8/8/K7 w - - 0 1")
+        let only = ChessRules.legalMoves(in: p).map { $0.from.coordinate }
+        let blocked = ChessEngine.searchBestMove(
+            in: p, depth: 1, constraints: .init(excludedSources: Set(only)))
+        XCTAssertNil(blocked)
+    }
+}
+
+// MARK: - Performance
+
+final class ChessPerformanceTests: XCTestCase {
+
+    /// Phase 1 pass criterion: 1,000 move generations from the starting position
+    /// in under 100 ms total.
+    func testMoveGenerationThroughput() throws {
+        let start = try XCTUnwrap(Chess.FEN.position(from: Chess.FEN.standard))
+        let began = Date()
+        var total = 0
+        for _ in 0..<1_000 {
+            total += ChessRules.legalMoves(in: start).count
+        }
+        let elapsed = Date().timeIntervalSince(began)
+        XCTAssertEqual(total, 20_000, "sanity: 20 legal moves each time")
+        XCTAssertLessThan(elapsed, 0.100, "1,000 generations took \(Int(elapsed * 1000))ms")
+    }
+
+    /// Phase 1 pass criterion: a full engine turn in under 50 ms.
+    func testEngineTurnLatency() throws {
+        let start = try XCTUnwrap(Chess.FEN.position(from: Chess.FEN.standard))
+        let began = Date()
+        _ = ChessEngine.searchBestMove(in: start, depth: 2)
+        let elapsed = Date().timeIntervalSince(began)
+        XCTAssertLessThan(elapsed, 0.050, "depth-2 search took \(Int(elapsed * 1000))ms")
+    }
+}
+
+// MARK: - Starfield tiling
+
+/// The starfield is two identical copies of one random layout, swapping slots
+/// each cycle. Everything rests on copy B landing exactly where copy A started;
+/// if it does not, the whole field jumps at the handoff and reads as the
+/// animation restarting. That is what these pin down.
+final class StarfieldTilingTests: XCTestCase {
+
+    /// Every drift value the game actually ships.
+    private let drifts: [CGFloat] = [0.00, 0.30, -0.16]
+
+    func testHandoffIsSeamless() {
+        for drift in drifts + [0.15, -0.20] {
+            let tiling = StarfieldTiling(sceneHeight: 700, drift: drift)
+            XCTAssertTrue(tiling.isSeamless,
+                          "drift \(drift): B landed at \(tiling.advanced(tiling.slotB)), "
+                          + "A starts at \(tiling.slotA)")
+        }
+    }
+
+    func testCopiesReturnToTheirOwnSlots() {
+        // If a copy does not return exactly, the tier walks sideways off screen.
+        for drift in drifts {
+            let tiling = StarfieldTiling(sceneHeight: 700, drift: drift)
+            XCTAssertEqual(tiling.rewound(tiling.advanced(tiling.slotA)), tiling.slotA)
+            XCTAssertEqual(tiling.rewound(tiling.advanced(tiling.slotB)), tiling.slotB)
+        }
+    }
+
+    func testNoHorizontalWalkOverManyCycles() {
+        let tiling = StarfieldTiling(sceneHeight: 700, drift: 0.08)
+        var point = tiling.slotA
+        for _ in 0..<500 { point = tiling.rewound(tiling.advanced(point)) }
+        XCTAssertEqual(point, tiling.slotA, "drifted to \(point) after 500 cycles")
+    }
+
+    func testDriftAnglesAreVisibleAndNotParallel() {
+        let mid = StarfieldTiling(sceneHeight: 700, drift: 0.30)
+        let midAngle = atan2(abs(mid.dx), mid.sceneHeight) * 180 / .pi
+        XCTAssertGreaterThan(midAngle, 15.0, "the lean has to actually read on screen")
+        XCTAssertLessThan(midAngle, 25.0, "but stars should still fall, not fly sideways")
+
+        let near = StarfieldTiling(sceneHeight: 700, drift: -0.16)
+        let nearAngle = atan2(abs(near.dx), near.sceneHeight) * 180 / .pi
+        XCTAssertGreaterThan(nearAngle, 7.0)
+        XCTAssertNotEqual(mid.dx < 0, near.dx < 0, "tiers must lean opposite ways")
+        XCTAssertEqual(StarfieldTiling(sceneHeight: 700, drift: 0).dx, 0,
+                       "the distant tier falls straight down as a reference")
+    }
+}
+
+// MARK: - Engine variation
+
+/// The engine once shuffled a single rook between two squares indefinitely in
+/// auto-move play: material-only evaluation scored every quiet move at 0, the
+/// first of those always won the tie, and nothing discouraged revisiting a
+/// position. These pin the three fixes.
+@MainActor
+final class EngineVariationTests: XCTestCase {
+
+    /// Plays `count` engine moves from the opening and returns them as
+    /// "kind from-to" strings.
+    private func autoPlay(_ count: Int) -> [String] {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        var moves: [String] = []
+        for _ in 0..<count {
+            guard let found = ChessEngine.searchBestMove(in: board.currentPosition,
+                                                        depth: 2,
+                                                        avoiding: board.currentHistory),
+                  let outcome = board.applyChessMove(from: found.from, to: found.to)
+            else { break }
+            moves.append("\(outcome.moved.type.rawValue) \(outcome.from)-\(outcome.to)")
+        }
+        return moves
+    }
+
+    func testDoesNotSettleIntoATwoSquareShuffle() {
+        let moves = autoPlay(40)
+        XCTAssertEqual(moves.count, 40, "engine stopped finding moves")
+
+        // The reported symptom: move n identical to move n-2, over and over.
+        let echoes = (2..<moves.count).count { moves[$0] == moves[$0 - 2] }
+        XCTAssertLessThan(echoes, 6, "looks like an A-B-A-B shuffle: \(moves)")
+    }
+
+    func testAutoPlayUsesManyPiecesAndSquares() {
+        let moves = autoPlay(40)
+        XCTAssertGreaterThanOrEqual(Set(moves).count, 20, "too repetitive: \(moves)")
+        let kinds = Set(moves.compactMap { $0.split(separator: " ").first })
+        XCTAssertGreaterThanOrEqual(kinds.count, 3, "only \(kinds) ever moved")
+    }
+
+    func testOpeningVariesBetweenGames() {
+        var openings: Set<String> = []
+        for _ in 0..<16 {
+            let board = GCIBoard()
+            board.setupStandardPosition()
+            if let found = ChessEngine.searchBestMove(in: board.currentPosition, depth: 2,
+                                                     avoiding: board.currentHistory) {
+                openings.insert("\(found.from)-\(found.to)")
+            }
+        }
+        XCTAssertGreaterThanOrEqual(openings.count, 3,
+                                    "every game opens the same way: \(openings)")
+    }
+
+    /// Variation must not cost competence — §25.2 promises the player will not be
+    /// punished by a blunder.
+    func testStillTakesAFreeQueenEveryTime() throws {
+        let position = try XCTUnwrap(
+            Chess.FEN.position(from: "3q3k/8/8/8/8/8/8/3Q3K w - - 0 1"))
+        for _ in 0..<20 {
+            XCTAssertEqual(ChessEngine.searchBestMove(in: position, depth: 2)?.to, "d8")
+        }
+    }
+
+    func testStillDeclinesLosingCaptures() throws {
+        // The d5 pawn is defended by c6, so Qxd5 trades a queen for a pawn.
+        let position = try XCTUnwrap(
+            Chess.FEN.position(from: "7k/8/2p5/3p4/8/8/3Q4/7K w - - 0 1"))
+        for _ in 0..<25 {
+            XCTAssertNotEqual(ChessEngine.searchBestMove(in: position, depth: 2)?.to, "d5")
+        }
+    }
+
+    func testRepetitionPenaltySteersAwayFromASeenBoard() throws {
+        let position = try XCTUnwrap(
+            Chess.FEN.position(from: "7k/8/8/8/8/8/P7/R6K w - - 0 1"))
+        let sideStep = try XCTUnwrap(
+            ChessRules.legalMoves(in: position)
+                .first { $0.from.coordinate == "a1" && $0.to.coordinate == "b1" })
+        let after = ChessRules.applying(sideStep, to: position)
+
+        // Coming back to the original board is available but penalised.
+        let reply = ChessEngine.searchBestMove(in: after, depth: 2,
+                                               avoiding: [position.board])
+        XCTAssertNotNil(reply)
+    }
+}
+
+// MARK: - How To Play footer
+
+@MainActor
+final class HowToPlayNodeTests: XCTestCase {
+
+    private func labels(in node: SKNode) -> [SKLabelNode] {
+        var found: [SKLabelNode] = []
+        var stack = Array(node.children)
+        while let next = stack.popLast() {
+            if let label = next as? SKLabelNode { found.append(label) }
+            stack.append(contentsOf: next.children)
+        }
+        return found
+    }
+
+    func testCopyrightSitsInTheLowerRightWithoutColliding() throws {
+        let screen = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
+        let all = labels(in: screen)
+
+        let copyright = try XCTUnwrap(all.first { $0.text?.contains("Zack Urlocker") == true })
+        XCTAssertEqual(copyright.text, "Copyright (C) 1983-2026 M. Zack Urlocker")
+        XCTAssertEqual(copyright.horizontalAlignmentMode, .right)
+
+        // SKColor.white is a named colour and will not test equal to the
+        // converted instance the label holds, so compare components.
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        copyright.fontColor?.usingColorSpace(.deviceRGB)?
+            .getRed(&r, green: &g, blue: &b, alpha: &a)
+        XCTAssertEqual(r, 1); XCTAssertEqual(g, 1)
+        XCTAssertEqual(b, 1); XCTAssertEqual(a, 1)
+
+        let frame = copyright.calculateAccumulatedFrame()
+        XCTAssertLessThanOrEqual(frame.maxX, 960 - 40, "runs past the right margin")
+        XCTAssertGreaterThan(frame.minX, 0, "runs off the left edge")
+        XCTAssertLessThan(frame.maxY, 70, "should sit below the footer rule")
+
+        // Press Start 2P is wide, so overlap with the neighbouring footer items
+        // is the real risk here.
+        let hint = try XCTUnwrap(all.first { $0.text?.contains("RESUME") == true })
+        XCTAssertGreaterThan(frame.minX, hint.calculateAccumulatedFrame().maxX,
+                             "overlaps the resume hint")
+        for back in screen.children where back.name == "backButton" {
+            XCTAssertFalse(frame.intersects(back.calculateAccumulatedFrame()),
+                           "overlaps the BACK button")
+        }
+    }
+}
+
+// MARK: - Game over
+
+@MainActor
+final class GameOverNodeTests: XCTestCase {
+
+    private func texts(in node: SKNode) -> [String] {
+        var found: [String] = []
+        var stack = Array(node.children)
+        while let next = stack.popLast() {
+            if let label = next as? SKLabelNode, let text = label.text { found.append(text) }
+            stack.append(contentsOf: next.children)
+        }
+        return found
+    }
+
+    func testEveryOutcomeShowsThePromptAndScore() {
+        for outcome in [GameOverNode.Outcome.whiteMated, .blackMated, .stalemate] {
+            let node = GameOverNode(outcome: outcome, score: 1275,
+                                    sceneSize: CGSize(width: 960, height: 700))
+            let labels = texts(in: node)
+            XCTAssertTrue(labels.contains(outcome.headline), "\(outcome) headline missing")
+            XCTAssertTrue(labels.contains { $0.contains("NEW GAME?") }, "\(outcome) prompt missing")
+            XCTAssertTrue(labels.contains { $0.contains("Y / N") }, "\(outcome) Y/N missing")
+            XCTAssertTrue(labels.contains { $0.contains("001275") }, "\(outcome) score missing")
+        }
+    }
+
+    /// Losing and winning must not both read "GAME OVER".
+    func testWinAndLossReadDifferently() {
+        XCTAssertEqual(GameOverNode.Outcome.whiteMated.headline, "GAME OVER")
+        XCTAssertEqual(GameOverNode.Outcome.blackMated.headline, "VICTORY")
+        XCTAssertNotEqual(GameOverNode.Outcome.whiteMated.detail,
+                          GameOverNode.Outcome.blackMated.detail)
+    }
+}
+
+final class MateDetectionTests: XCTestCase {
+
+    /// The engine reports mate for whoever must move, which is what lets one
+    /// check cover both a loss and a win.
+    func testMateIsDetectedForEitherSide() throws {
+        let blackMated = try XCTUnwrap(ChessEngine(fen: "R6k/6pp/8/8/8/8/8/7K b - - 0 1"))
+        XCTAssertTrue(blackMated.isMate)
+        XCTAssertEqual(blackMated.turn, .black, "player win")
+
+        // Mirrored: black rook a1, white king boxed in by its own pawns.
+        let whiteMated = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/6PP/r6K w - - 0 1"))
+        XCTAssertTrue(whiteMated.isMate)
+        XCTAssertEqual(whiteMated.turn, .white, "player loss")
+    }
+}
+
+@MainActor
+final class RestartTests: XCTestCase {
+
+    func testXRestartClearsTheLogAndLeavesRestartFirst() {
+        let scene = GameScene.shared
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+        view.presentScene(scene)
+
+        DiagnosticsLog.shared.clear()
+        for i in 0..<25 { DiagnosticsLog.shared.log(.chess, "noise \(i)") }
+        XCTAssertEqual(DiagnosticsLog.shared.lines.count, 25)
+
+        scene.resetToTitle()
+
+        let lines = DiagnosticsLog.shared.lines
+        XCTAssertFalse(lines.contains { $0.message.hasPrefix("noise") },
+                       "previous game's lines survived the restart")
+        XCTAssertEqual(lines.first?.category, .restart, "RESTART should head the fresh log")
+        XCTAssertEqual(lines.first?.message, "", "RESTART reads as the whole line")
+    }
+
+    func testGameOverAcceptsBothAnswers() {
+        let scene = GameScene.shared
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+        view.presentScene(scene)
+
+        XCTAssertTrue(scene.stateMachine.enter(PlayingState.self))
+        XCTAssertTrue(scene.stateMachine.enter(GameOverState.self))
+        XCTAssertTrue(scene.stateMachine.enter(PlayingState.self), "Y must start a new game")
+        XCTAssertTrue(scene.stateMachine.enter(GameOverState.self))
+        XCTAssertTrue(scene.stateMachine.enter(TitleState.self), "N must return to the title")
+    }
+}
+
+// MARK: - Audio
+
+/// SoundKey maps every event to a filename by hand, and a wrong name fails
+/// silently — the sound simply never plays. Several GDC entries were truncated
+/// versions of the real filenames, which is exactly that failure. These assert
+/// the sounds the game currently triggers really resolve in the bundle.
+@MainActor
+final class AudioAssetTests: XCTestCase {
+
+    /// The keys the chess layer plays today. Extend as later phases wire more.
+    private let wiredKeys: [SoundKey] = [
+        .pieceSelected, .whitePieceMoves, .blackPieceMoves, .pieceHitHeavy,
+        .illegalMove, .checkAlarm, .pawnPromotion, .autoMoveTrigger,
+        .turnTimerWarning, .levelClear, .gameOver, .uiButtonClick,
+    ]
+
+    private var sfxRoot: URL? {
+        Bundle.main.url(forResource: "sfx", withExtension: nil)
+    }
+
+    func testSfxFolderIsBundledWithItsSubdirectories() throws {
+        let root = try XCTUnwrap(sfxRoot, "sfx must be bundled as a folder reference")
+        // Filenames carry a vendor subdirectory, so a flattened copy would break them.
+        var isDirectory: ObjCBool = false
+        XCTAssertTrue(FileManager.default.fileExists(atPath: root.path,
+                                                    isDirectory: &isDirectory))
+        XCTAssertTrue(isDirectory.boolValue)
+    }
+
+    func testEveryWiredSoundResolvesAndLoads() throws {
+        let root = try XCTUnwrap(sfxRoot)
+        for key in wiredKeys {
+            let url = root.appendingPathComponent(key.filename)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path),
+                          "\(key) missing: \(key.filename)")
+            XCTAssertNoThrow(try AVAudioPlayer(contentsOf: url),
+                             "\(key) exists but will not decode")
+        }
+    }
+
+    func testPreloadReportsNoErrors() {
+        DiagnosticsLog.shared.clear()
+        AudioManager.shared.preloadAll()
+        XCTAssertFalse(DiagnosticsLog.shared.lines.contains { $0.category == .error },
+                       "preload logged an error: \(DiagnosticsLog.shared.lines.map(\.message))")
+    }
+
+    /// Playing a key with no bundled file must be a no-op, so later phases can
+    /// reference sounds before their assets land.
+    func testUnbundledKeyIsASilentNoOp() {
+        AudioManager.shared.preloadAll()
+        DiagnosticsLog.shared.clear()
+        AudioManager.shared.play(.fleetHeartbeat)   // generated/, never on disk
+        XCTAssertFalse(DiagnosticsLog.shared.lines.contains { $0.category == .error })
+    }
+}
+
+// MARK: - Check visualisation
+
+final class CheckAttackerTests: XCTestCase {
+
+    private func attackers(_ fen: String, _ side: PieceColor) throws -> [String] {
+        let engine = try XCTUnwrap(ChessEngine(fen: fen))
+        return try XCTUnwrap(engine.checkThreat(against: side)).attackers.map(\.square)
+    }
+
+    func testFindsTheCheckingPieceForEachKind() throws {
+        XCTAssertEqual(try attackers("4r2k/8/8/8/8/8/8/4K3 w - - 0 1", .white), ["e8"], "rook")
+        XCTAssertEqual(try attackers("7k/8/8/8/8/5n2/8/4K3 w - - 0 1", .white), ["f3"], "knight")
+        XCTAssertEqual(try attackers("7k/8/8/b7/8/8/8/4K3 w - - 0 1", .white), ["a5"], "bishop")
+        XCTAssertEqual(try attackers("7k/8/8/8/8/8/3p4/4K3 w - - 0 1", .white), ["d2"], "pawn")
+    }
+
+    func testDoubleCheckReportsBothAttackers() throws {
+        let both = try attackers("4r2k/8/8/8/8/5n2/8/4K3 w - - 0 1", .white)
+        XCTAssertEqual(Set(both), ["e8", "f3"])
+    }
+
+    func testBlackInCheckIsAlsoReported() throws {
+        XCTAssertEqual(try attackers("4k3/8/8/8/8/8/8/4R2K b - - 0 1", .black), ["e1"])
+    }
+
+    func testNoThreatWhenNotInCheck() throws {
+        let quiet = try XCTUnwrap(ChessEngine(fen: Chess.FEN.standard))
+        XCTAssertNil(quiet.checkThreat(against: .white))
+        // A blocked ray is not a check.
+        let blocked = try XCTUnwrap(ChessEngine(fen: "4r2k/8/8/8/8/8/4P3/4K3 w - - 0 1"))
+        XCTAssertNil(blocked.checkThreat(against: .white))
+    }
+
+    func testKnightIsMarkedAsAJump() throws {
+        let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/5n2/8/4K3 w - - 0 1"))
+        XCTAssertEqual(try XCTUnwrap(engine.checkThreat(against: .white)).attackers.first?.kind,
+                       .knight, "a knight's path must render dashed")
+    }
+}
+
+@MainActor
+final class CheckPathNodeTests: XCTestCase {
+
+    private func pathNodes(in board: BoardNode) -> [SKNode] {
+        board.children.filter { $0.name == "checkPath" }
+    }
+
+    func testLineStartsAtTheAttackerAndPointsAtTheKing() throws {
+        let board = BoardNode()
+        board.showCheckPaths([(from: "e8", to: "e1", isJump: false)], color: .magenta)
+
+        let node = try XCTUnwrap(pathNodes(in: board).first)
+        let shapes = node.children.compactMap { $0 as? SKShapeNode }
+        XCTAssertEqual(shapes.count, 3, "line plus a ring at each end")
+
+        let line = try XCTUnwrap(shapes.first)
+        let attacker = try XCTUnwrap(board.center(of: "e8"))
+        let king = try XCTUnwrap(board.center(of: "e1"))
+        XCTAssertEqual(line.position, attacker)
+        XCTAssertEqual(line.zRotation, atan2(king.y - attacker.y, king.x - attacker.x),
+                       accuracy: 0.001)
+        // Grown via xScale so the stroke does not thicken as it draws.
+        XCTAssertLessThan(line.xScale, 0.01)
+        XCTAssertEqual(line.yScale, 1)
+    }
+
+    func testDoubleCheckDrawsTwoPaths() {
+        let board = BoardNode()
+        board.showCheckPaths([(from: "e8", to: "e1", isJump: false),
+                              (from: "f3", to: "e1", isJump: true)], color: .magenta)
+        XCTAssertEqual(pathNodes(in: board).count, 2)
+    }
+
+    func testRepeatedShowsReplaceRatherThanStack() {
+        let board = BoardNode()
+        for _ in 0..<5 {
+            board.showCheckPaths([(from: "e8", to: "e1", isJump: false)], color: .magenta)
+        }
+        XCTAssertEqual(pathNodes(in: board).count, 1)
+        board.clearCheckPaths()
+        XCTAssertTrue(pathNodes(in: board).isEmpty)
+    }
+
+    func testDegenerateInputIsSafe() {
+        let board = BoardNode()
+        board.showCheckPaths([(from: "zz", to: "e1", isJump: false)], color: .magenta)
+        XCTAssertTrue(pathNodes(in: board).isEmpty, "invalid square must be skipped")
+
+        // A zero-length path would divide by zero when computing the angle.
+        let degenerate = CheckPathNode(from: .zero, to: .zero, isJump: false, color: .magenta)
+        XCTAssertTrue(degenerate.children.isEmpty)
+    }
+
+    /// Long enough to read, short enough to be gone before the next move lands.
+    func testDurationIsBounded() {
+        XCTAssertGreaterThan(CheckPathNode.totalDuration, 0.8)
+        XCTAssertLessThan(CheckPathNode.totalDuration, 1.5)
+    }
+}
+
+// MARK: - Beat lifecycle
+
+/// Mirrors GameScene's beat rules — including the self-healing invariant in
+/// `update` — so timer visibility and reset can be tested without SpriteKit.
+@MainActor
+private final class BeatSim {
+    let timer = TurnTimer()
+    let levels = LevelManager()
+    var turn: PieceColor = .white
+    var whiteMoved = false
+    var resolving = false
+    var inCheck = false
+
+    /// The countdown is the player's clock: shown only when White can act.
+    var timerVisible: Bool {
+        timer.isRunning && !whiteMoved && !resolving && turn == .white
+    }
+
+    func beginBeat() {
+        whiteMoved = false
+        timer.start(level: levels.parameters, inCheck: inCheck && turn == .white)
+    }
+
+    /// One frame of the PlayingState branch of `update`.
+    @discardableResult
+    func tick(_ dt: TimeInterval) -> Bool {
+        if !resolving, turn == .white, !timer.isRunning { beginBeat() }
+        return timer.update(deltaTime: dt)
+    }
+
+    func whitePlays() { whiteMoved = true; turn = .black }
+
+    func resolve(interrupted: Bool = false) {
+        resolving = true
+        turn = .white
+        resolving = false
+        if !interrupted { beginBeat() }
+    }
+}
+
+@MainActor
+final class BeatLifecycleTests: XCTestCase {
+
+    func testCountdownOnlyShowsWhileWhiteCanMove() {
+        let sim = BeatSim()
+        sim.beginBeat()
+        XCTAssertTrue(sim.timerVisible, "should show at the start of White's beat")
+
+        sim.whitePlays()
+        XCTAssertFalse(sim.timerVisible, "White has already moved this beat")
+        XCTAssertTrue(sim.timer.isRunning, "the beat still runs — it paces Black")
+
+        sim.resolving = true
+        XCTAssertFalse(sim.timerVisible, "Black is thinking")
+    }
+
+    func testEveryNewBeatResetsToFullDuration() {
+        let sim = BeatSim()
+        sim.beginBeat()
+        while !sim.tick(0.05) {}
+        sim.resolve()
+        XCTAssertTrue(sim.timer.isRunning)
+        XCTAssertEqual(sim.timer.remaining, 5.0)
+        XCTAssertFalse(sim.whiteMoved)
+        XCTAssertTrue(sim.timerVisible)
+    }
+
+    /// `resolveBeat` has early returns — pausing while Black was thinking once
+    /// left no live beat and no way to move. `update` must recover.
+    func testInterruptedResolveRecoversOnTheNextFrame() {
+        let sim = BeatSim()
+        sim.beginBeat()
+        while !sim.tick(0.05) {}
+        sim.resolve(interrupted: true)
+        XCTAssertFalse(sim.timer.isRunning, "the hazard: no beat running")
+
+        sim.tick(0.016)
+        XCTAssertTrue(sim.timer.isRunning, "invariant must restart the beat")
+        XCTAssertTrue(sim.timerVisible)
+        XCTAssertGreaterThan(sim.timer.remaining, 4.9, "a full beat, not a remnant")
+    }
+
+    func testCheckExtensionAppliesOnlyToWhite() {
+        let white = BeatSim()
+        white.inCheck = true
+        white.beginBeat()
+        XCTAssertEqual(white.timer.duration, LevelManager.checkExtension)
+
+        let black = BeatSim()
+        black.inCheck = true
+        black.turn = .black
+        black.beginBeat()
+        XCTAssertEqual(black.timer.duration, 5.0, "Black's beat is never extended")
+    }
+
+    func testDurationDoesNotDriftOverManyBeats() {
+        let sim = BeatSim()
+        sim.beginBeat()
+        var beats = 0
+        for _ in 0..<4000 where sim.tick(0.05) {
+            sim.resolve()
+            beats += 1
+        }
+        XCTAssertGreaterThan(beats, 30)
+        XCTAssertEqual(sim.timer.duration, 5.0)
+        XCTAssertTrue(sim.timer.isRunning)
+    }
+}
+
+// MARK: - King check glow
+
+@MainActor
+final class KingCheckGlowTests: XCTestCase {
+
+    private func king(_ color: PieceColor) -> PieceNode {
+        PieceNode(piece: Piece(type: .king, color: color, square: color == .white ? "e1" : "e8"),
+                  squareSize: BoardNode.squareSize)
+    }
+
+    private func rgb(_ node: PieceNode) -> (CGFloat, CGFloat, CGFloat) {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        node.color.usingColorSpace(.deviceRGB)?.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return (r, g, b)
+    }
+
+    func testGlowAttachesAndDetaches() {
+        let node = king(.white)
+        XCTAssertFalse(node.isShowingCheck)
+        XCTAssertTrue(node.children.isEmpty)
+
+        node.setCheckGlow(true)
+        XCTAssertTrue(node.isShowingCheck)
+        XCTAssertNotNil(node.action(forKey: "checkGlow"), "sprite should pulse red")
+        // Halo sits behind the sprite so the silhouette stays readable.
+        XCTAssertEqual(node.children.compactMap { $0 as? SKShapeNode }.first?.zPosition, -1)
+
+        node.setCheckGlow(false)
+        XCTAssertFalse(node.isShowingCheck)
+        XCTAssertTrue(node.children.isEmpty)
+        XCTAssertNil(node.action(forKey: "checkGlow"))
+    }
+
+    func testRepeatedCallsDoNotStackHalos() {
+        let node = king(.white)
+        for _ in 0..<5 { node.setCheckGlow(true) }
+        XCTAssertEqual(node.children.count, 1)
+        for _ in 0..<5 { node.setCheckGlow(false) }
+        XCTAssertTrue(node.children.isEmpty)
+    }
+
+    /// Clearing must restore the side's tint, not strand the piece red.
+    func testBaseTintIsRestoredForBothSides() {
+        let white = king(.white)
+        white.setCheckGlow(true)
+        white.setCheckGlow(false)
+        let (wr, wg, wb) = rgb(white)
+        XCTAssertLessThan(wr, 0.2); XCTAssertGreaterThan(wg, 0.8); XCTAssertGreaterThan(wb, 0.9)
+        XCTAssertEqual(white.colorBlendFactor, 0.22, accuracy: 0.001)
+
+        let black = king(.black)
+        black.setCheckGlow(true)
+        black.setCheckGlow(false)
+        let (br, bg, _) = rgb(black)
+        XCTAssertGreaterThan(br, 0.9); XCTAssertLessThan(bg, 0.2)
+    }
+
+    func testDamageSwapDoesNotCancelTheGlow() {
+        var piece = Piece(type: .king, color: .white, square: "e1")
+        let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
+        node.setCheckGlow(true)
+        piece.applyDamage(8)                 // 8/16 HP → chipped, texture changes
+        node.refresh(with: piece)
+        XCTAssertTrue(node.isShowingCheck)
+        XCTAssertNotNil(node.action(forKey: "checkGlow"))
+    }
+
+    func testDestructionClearsTheGlow() {
+        let node = king(.white)
+        node.setCheckGlow(true)
+        node.runDestructionAnimation {}
+        XCTAssertFalse(node.isShowingCheck)
+    }
+
+    func testThreatIdentifiesTheCorrectKingSquare() throws {
+        let whiteChecked = try XCTUnwrap(ChessEngine(fen: "4r2k/8/8/8/8/8/8/4K3 w - - 0 1"))
+        XCTAssertEqual(whiteChecked.checkThreat(against: .white)?.kingSquare, "e1")
+        XCTAssertNil(whiteChecked.checkThreat(against: .black))
+
+        let blackChecked = try XCTUnwrap(ChessEngine(fen: "4k3/8/8/8/8/8/8/4R2K b - - 0 1"))
+        XCTAssertEqual(blackChecked.checkThreat(against: .black)?.kingSquare, "e8")
+        XCTAssertNil(blackChecked.checkThreat(against: .white))
+    }
+}
+
+// MARK: - Checkmate reveal
+
+@MainActor
+final class MateRevealTests: XCTestCase {
+
+    /// Detection must not cut straight to the menu: the mating path has to finish
+    /// drawing, with a moment of stillness after it, before the overlay appears.
+    func testRevealOutlastsTheMatingPath() {
+        let checkPath = CheckPathNode.duration(pulses: 2)
+        let matePath = CheckPathNode.duration(pulses: 3)
+        let reveal: TimeInterval = 2.5      // GameScene.gameEndRevealDelay
+
+        XCTAssertGreaterThan(matePath, checkPath, "mate should read harder than a check")
+        XCTAssertLessThan(matePath, reveal, "the path must finish before the menu")
+        XCTAssertGreaterThan(reveal - matePath, 0.2, "leave a beat of stillness")
+        XCTAssertTrue((2.0...3.0).contains(reveal))
+    }
+
+    func testBannerSaysCheckmateAndFitsTheGutter() {
+        let status = GameStatusNode()
+        status.show(.checkmate(.white))
+        status.position = CGPoint(x: 112, y: 116)
+
+        let labels = status.children.compactMap { ($0 as? SKLabelNode)?.text }
+        XCTAssertTrue(labels.contains("CHECKMATE"))
+        XCTAssertTrue(labels.contains("WHITE"), "the side matters")
+
+        // The board's left edge is x = 224; the banner lives in the gutter.
+        let frame = status.calculateAccumulatedFrame()
+        XCTAssertLessThan(frame.maxX, 224)
+        XCTAssertGreaterThan(frame.minX, 0)
+    }
+
+    func testCheckStillReadsCheck() {
+        let status = GameStatusNode()
+        status.show(.check(.white))
+        XCTAssertTrue(status.children.compactMap { ($0 as? SKLabelNode)?.text }.contains("CHECK"))
+    }
+
+    /// The mating piece has to be identifiable, or there is nothing to trace.
+    func testMatingPieceIsIdentified() throws {
+        let mated = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/6PP/r6K w - - 0 1"))
+        XCTAssertTrue(mated.isMate)
+        let threat = try XCTUnwrap(mated.checkThreat(against: .white))
+        XCTAssertEqual(threat.attackers.map(\.square), ["a1"])
+        XCTAssertEqual(threat.kingSquare, "h1")
+    }
+
+    func testKnightMateIsFlaggedAsAJump() throws {
+        let mate = try XCTUnwrap(ChessEngine(fen: "6rk/5Npp/8/8/8/8/8/7K b - - 0 1"))
+        XCTAssertTrue(mate.isMate)
+        let threat = try XCTUnwrap(mate.checkThreat(against: .black))
+        XCTAssertEqual(threat.attackers.first?.kind, .knight, "must render dashed")
+    }
+}
+
+// MARK: - Level progression, test mode, name entry
+
+@MainActor
+final class LevelProgressionTests: XCTestCase {
+
+    func testAdvancingRaisesTheMultiplierAndTightensTheBeat() {
+        let levels = LevelManager()
+        ScoreManager.shared.resetForNewGame()
+        XCTAssertEqual(levels.level, 1)
+        XCTAssertEqual(ScoreManager.shared.multiplier, 1.0)
+
+        levels.advance(); ScoreManager.shared.advanceLevel()
+        XCTAssertEqual(levels.level, 2)
+        XCTAssertEqual(ScoreManager.shared.multiplier, 1.5)
+
+        levels.advance(); ScoreManager.shared.advanceLevel()
+        XCTAssertEqual(levels.parameters.turnTimer, 4.0, "beat tightens at L3")
+        XCTAssertEqual(levels.parameters.blackMovesPerTurn, 2, "multi-move unlocks at L3")
+    }
+
+    /// The checkmate bonus goes through the multiplier like any other points.
+    func testCheckmateBonusScalesWithLevel() {
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(300)
+        XCTAssertEqual(ScoreManager.shared.currentScore, 300)
+        ScoreManager.shared.advanceLevel()
+        ScoreManager.shared.addPoints(300)
+        XCTAssertEqual(ScoreManager.shared.currentScore, 750, "300 + 300×1.5")
+    }
+}
+
+@MainActor
+final class TestModeTests: XCTestCase {
+
+    private var level1: LevelParameters { LevelManager.parameters(for: 1) }
+
+    func testOverrideCollapsesTheBeat() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: false)
+        XCTAssertEqual(timer.duration, 5.0)
+
+        timer.start(level: level1, inCheck: false, override: 1.0)
+        XCTAssertEqual(timer.duration, 1.0)
+    }
+
+    /// Test mode must beat the check extension too, or a checked position would
+    /// stall for 8 seconds in the middle of a fast run.
+    func testOverrideBeatsTheCheckExtension() {
+        let timer = TurnTimer()
+        timer.start(level: level1, inCheck: true, override: 1.0)
+        XCTAssertEqual(timer.duration, 1.0)
+        XCTAssertFalse(timer.isExtended)
+
+        timer.start(level: level1, inCheck: true)
+        XCTAssertEqual(timer.duration, LevelManager.checkExtension)
+        XCTAssertTrue(timer.isExtended)
+    }
+}
+
+@MainActor
+final class HighScoreEntryTests: XCTestCase {
+
+    private func press(_ node: HighScoreEntryNode, _ keyCode: UInt16, _ characters: String) {
+        guard let event = NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: 0, context: nil, characters: characters,
+            charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)
+        else { return XCTFail("could not synthesise a key event") }
+        node.handleKey(event)
+    }
+
+    private func makeEntry() -> HighScoreEntryNode {
+        HighScoreEntryNode(score: 4200, level: 3, sceneSize: CGSize(width: 960, height: 700))
+    }
+
+    func testTypingUppercasesAndDeleteWorks() {
+        let entry = makeEntry()
+        for character in "zack" { press(entry, 0, String(character)) }
+        XCTAssertEqual(entry.enteredName, "ZACK")
+        press(entry, 51, "")
+        XCTAssertEqual(entry.enteredName, "ZAC")
+    }
+
+    func testNameIsCappedAtEightCharacters() {
+        let entry = makeEntry()
+        for character in "zackurlocker" { press(entry, 0, String(character)) }
+        XCTAssertEqual(entry.enteredName.count, HighScoreEntryNode.maxLength)
+        XCTAssertEqual(entry.enteredName, "ZACKURLO")
+    }
+
+    func testDigitsAreAccepted() {
+        let entry = makeEntry()
+        for character in "R2D2" { press(entry, 0, String(character)) }
+        XCTAssertEqual(entry.enteredName, "R2D2")
+    }
+
+    /// Return submits whatever is there — nothing requires filling all 8.
+    func testReturnSubmitsAtAnyLength() {
+        for name in ["Z", "AB", "WOZ", "ZACK", "URLOCK", "ZACKURLO"] {
+            let entry = makeEntry()
+            var submitted: String?
+            entry.onSubmit = { submitted = $0 }
+            for character in name { press(entry, 0, String(character)) }
+            press(entry, 36, "\r")
+            XCTAssertEqual(submitted, name, "\(name.count)-character name should submit")
+        }
+    }
+
+    func testReturnSubmitsAndEmptyFallsBack() {
+        let typed = makeEntry()
+        var result: String?
+        typed.onSubmit = { result = $0 }
+        for character in "woz" { press(typed, 0, String(character)) }
+        press(typed, 36, "\r")
+        XCTAssertEqual(result, "WOZ")
+
+        let blank = makeEntry()
+        var blankResult: String?
+        blank.onSubmit = { blankResult = $0 }
+        press(blank, 36, "\r")
+        XCTAssertEqual(blankResult, "PLAYER", "an empty name still needs a label")
+    }
+}
+
+@MainActor
+final class PieceJuiceTests: XCTestCase {
+
+    func testIdleBobRunsAndDoesNotStack() {
+        let node = PieceNode(piece: Piece(type: .rook, color: .white, square: "a1"),
+                             squareSize: BoardNode.squareSize)
+        node.startIdleBob()
+        XCTAssertNotNil(node.action(forKey: "idleBob"))
+        node.startIdleBob()
+        XCTAssertNotNil(node.action(forKey: "idleBob"), "second call must be a no-op")
+    }
+
+    /// The bob is a relative animation, so it has to yield while an absolute move
+    /// runs or the piece drifts off its square.
+    func testMovePausesTheBobAndEmitsGhosts() throws {
+        let board = BoardNode()
+        let node = PieceNode(piece: Piece(type: .rook, color: .white, square: "a1"),
+                             squareSize: BoardNode.squareSize)
+        node.position = try XCTUnwrap(board.center(of: "a1"))
+        board.addChild(node)
+        node.startIdleBob()
+
+        let before = board.children.count
+        node.animateMove(to: "a4", point: try XCTUnwrap(board.center(of: "a4")))
+
+        XCTAssertNil(node.action(forKey: "idleBob"))
+        XCTAssertGreaterThan(board.children.count, before, "ghost trail should appear")
+        XCTAssertEqual(node.square, "a4")
+    }
+
+    func testLegalMoveMarkersGlow() {
+        let board = BoardNode()
+        board.showLegalMoves(["e4"], captures: ["e5"])
+        var glowing = 0
+        var stack = Array(board.children)
+        while let next = stack.popLast() {
+            if let shape = next as? SKShapeNode, shape.glowWidth > 0 { glowing += 1 }
+            stack.append(contentsOf: next.children)
+        }
+        XCTAssertGreaterThan(glowing, 0)
+    }
+}
+
+// MARK: - Outcomes and the high score table
+
+@MainActor
+final class OutcomePresentationTests: XCTestCase {
+
+    private func texts(in node: SKNode) -> [String] {
+        var found: [String] = []
+        var stack = Array(node.children)
+        while let next = stack.popLast() {
+            if let label = next as? SKLabelNode, let text = label.text { found.append(text) }
+            stack.append(contentsOf: next.children)
+        }
+        return found
+    }
+
+    /// Every checkmate gets acknowledged — a win used to roll silently into the
+    /// next wave, which read as the game restarting itself.
+    func testEveryOutcomeDrawsHeadlineScoreAndPrompt() {
+        let cases: [GameOverNode.Outcome] =
+            [.whiteMated, .blackMated, .stalemate, .waveCleared(next: 2)]
+        for outcome in cases {
+            let node = GameOverNode(outcome: outcome, score: 1234,
+                                    sceneSize: CGSize(width: 960, height: 700))
+            let labels = texts(in: node)
+            XCTAssertTrue(labels.contains(outcome.headline), "\(outcome) headline")
+            XCTAssertTrue(labels.contains { $0.contains("1234") }, "\(outcome) score")
+            XCTAssertTrue(labels.contains(outcome.prompt), "\(outcome) prompt")
+        }
+    }
+
+    func testWaveClearPromptsForTheNextLevel() {
+        XCTAssertTrue(GameOverNode.Outcome.waveCleared(next: 3).prompt.contains("LEVEL 3"))
+        XCTAssertTrue(GameOverNode.Outcome.whiteMated.prompt.contains("Y / N"))
+    }
+
+    func testFavourableOutcomesAreColouredDifferently() {
+        XCTAssertTrue(GameOverNode.Outcome.blackMated.isFavourable)
+        XCTAssertTrue(GameOverNode.Outcome.waveCleared(next: 2).isFavourable)
+        XCTAssertFalse(GameOverNode.Outcome.whiteMated.isFavourable)
+        XCTAssertFalse(GameOverNode.Outcome.stalemate.isFavourable)
+    }
+}
+
+@MainActor
+final class HighScoreTableTests: XCTestCase {
+
+    override func tearDown() async throws {
+        ScoreManager.shared.clearHighScores()
+        ScoreManager.shared.resetForNewGame()
+    }
+
+    /// `isHighScore` stays true while the table has free slots, so the scene must
+    /// gate on "already submitted" or the entry prompt reappears forever.
+    func testIsHighScoreStaysTrueAfterSubmitting() {
+        ScoreManager.shared.clearHighScores()
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(75)
+        XCTAssertTrue(ScoreManager.shared.isHighScore)
+        ScoreManager.shared.submitHighScore(initials: "ZACK")
+        XCTAssertTrue(ScoreManager.shared.isHighScore,
+                      "this is why the prompt needs a once-per-game guard")
+    }
+
+    func testClearWipesTableAndStorage() {
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(500)
+        ScoreManager.shared.submitHighScore(initials: "TEMP")
+        ScoreManager.shared.clearHighScores()
+        XCTAssertTrue(ScoreManager.shared.topHighScores(limit: 20).isEmpty)
+        XCTAssertNil(UserDefaults.standard.data(forKey: "GCI_HighScores"))
+    }
+
+    func testEntriesSortAndKeepFullNames() {
+        ScoreManager.shared.clearHighScores()
+        for (name, score) in [("LOW", 100), ("ZACKURLO", 9000), ("MID", 3000)] {
+            ScoreManager.shared.resetForNewGame()
+            ScoreManager.shared.addPoints(score)
+            ScoreManager.shared.submitHighScore(initials: name)
+        }
+        let top = ScoreManager.shared.topHighScores(limit: 5)
+        XCTAssertEqual(top.map(\.score), [9000, 3000, 100])
+        XCTAssertEqual(top.first?.initials, "ZACKURLO", "8 characters must survive")
+    }
+
+    func testFullTableOnlyAcceptsAGenuineBeat() {
+        ScoreManager.shared.clearHighScores()
+        for i in 0..<10 {
+            ScoreManager.shared.resetForNewGame()
+            ScoreManager.shared.addPoints(1000 + i * 100)
+            ScoreManager.shared.submitHighScore(initials: "P\(i)")
+        }
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(50)
+        XCTAssertFalse(ScoreManager.shared.isHighScore)
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(5000)
+        XCTAssertTrue(ScoreManager.shared.isHighScore)
+    }
+}
+
+/// Mirrors GameScene's game-over path so the prompt loop can be driven directly.
+@MainActor
+private final class OverlaySim {
+    private(set) var promptsShown = 0
+    private(set) var overlaysShown = 0
+    private var hasOfferedHighScore = false
+
+    func newGame() {
+        hasOfferedHighScore = false
+        ScoreManager.shared.resetForNewGame()
+    }
+
+    func showGameOverOverlay() {
+        if !hasOfferedHighScore,
+           ScoreManager.shared.isHighScore,
+           ScoreManager.shared.currentScore > 0 {
+            hasOfferedHighScore = true      // claimed on show, not on submit
+            promptsShown += 1
+            return
+        }
+        overlaysShown += 1
+    }
+
+    func submit(_ name: String) {
+        ScoreManager.shared.submitHighScore(initials: name)
+        showGameOverOverlay()
+    }
+}
+
+@MainActor
+final class HighScorePromptLoopTests: XCTestCase {
+
+    override func setUp() async throws {
+        ScoreManager.shared.clearHighScores()
+        ScoreManager.shared.resetForNewGame()
+    }
+
+    override func tearDown() async throws {
+        ScoreManager.shared.clearHighScores()
+        ScoreManager.shared.resetForNewGame()
+    }
+
+    /// The reported bug: submitting re-showed an empty prompt forever, because
+    /// `isHighScore` is still true once the entry has been added.
+    func testSubmittingDoesNotReopenThePrompt() {
+        let sim = OverlaySim()
+        sim.newGame()
+        ScoreManager.shared.addPoints(2410)
+
+        sim.showGameOverOverlay()
+        XCTAssertEqual(sim.promptsShown, 1)
+
+        sim.submit("ZACK")
+        XCTAssertEqual(sim.promptsShown, 1, "prompt reopened — the loop is back")
+        XCTAssertEqual(sim.overlaysShown, 1)
+    }
+
+    func testRepeatedSubmitsAndReentriesNeverReprompt() {
+        let sim = OverlaySim()
+        sim.newGame()
+        ScoreManager.shared.addPoints(2410)
+        sim.showGameOverOverlay()
+
+        for _ in 0..<10 { sim.submit("ZACK") }
+        for _ in 0..<10 { sim.showGameOverOverlay() }
+        XCTAssertEqual(sim.promptsShown, 1)
+    }
+
+    func testANewGameIsOfferedAgain() {
+        let sim = OverlaySim()
+        sim.newGame()
+        ScoreManager.shared.addPoints(2410)
+        sim.showGameOverOverlay()
+        sim.submit("ZACK")
+
+        sim.newGame()
+        ScoreManager.shared.addPoints(3000)
+        sim.showGameOverOverlay()
+        XCTAssertEqual(sim.promptsShown, 2, "each game gets one offer")
+    }
+
+    /// Returning to the title routes through `resetToTitle`, which used to wipe the
+    /// table — so a name the player had just entered vanished before the title
+    /// screen could display it.
+    func testSubmittedScoreSurvivesReturningToTitle() {
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(2410)
+        ScoreManager.shared.submitHighScore(initials: "ZACK")
+
+        // resetToTitle must leave the table alone.
+        let table = ScoreManager.shared.topHighScores(limit: 5)
+        XCTAssertTrue(table.contains { $0.initials == "ZACK" && $0.score == 2410 },
+                      "the entry was wiped on the way to the title screen")
+    }
+
+    func testScorelessGameIsNeverPrompted() {
+        let sim = OverlaySim()
+        sim.newGame()
+        sim.showGameOverOverlay()
+        XCTAssertEqual(sim.promptsShown, 0)
+        XCTAssertEqual(sim.overlaysShown, 1)
     }
 }
