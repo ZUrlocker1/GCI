@@ -156,6 +156,16 @@ final class ChessEngine {
         )
     }
 
+    /// Hands the move back to `color`, bypassing normal alternation.
+    ///
+    /// GCI lets Black play several chess moves in one turn from Level 3 (§21.1),
+    /// which ordinary chess cannot express. Any en-passant right is dropped: it
+    /// belongs to the move that just happened, not to a fresh one by the same side.
+    func forceTurn(_ color: PieceColor) {
+        position.turn = color
+        position.enPassant = nil
+    }
+
     // MARK: - Search
 
     /// Narrows what the search may consider.
@@ -169,13 +179,22 @@ final class ChessEngine {
         var excludedSources: Set<String>
         /// Destinations already claimed this turn (§25.5, no shared destinations).
         var excludedDestinations: Set<String>
+        /// Forbid capturing the enemy king.
+        ///
+        /// Only needed for Black's extra moves: forcing the turn back can leave
+        /// the opposing king attacked and still on the board, and the king is
+        /// worth 20,000 to the evaluation, so the search would take it every time.
+        /// Chess never allows that — check has to be answered first.
+        var avoidsKingCapture: Bool
 
         init(restrictedTo: String? = nil,
              excludedSources: Set<String> = [],
-             excludedDestinations: Set<String> = []) {
+             excludedDestinations: Set<String> = [],
+             avoidsKingCapture: Bool = false) {
             self.restrictedTo = restrictedTo
             self.excludedSources = excludedSources
             self.excludedDestinations = excludedDestinations
+            self.avoidsKingCapture = avoidsKingCapture
         }
 
         static let none = SearchConstraints()
@@ -208,6 +227,9 @@ final class ChessEngine {
                 !constraints.excludedSources.contains($0.from.coordinate)
                     && !constraints.excludedDestinations.contains($0.to.coordinate)
             }
+        }
+        if constraints.avoidsKingCapture {
+            moves = moves.filter { position.board[$0.to]?.kind != .king }
         }
         guard !moves.isEmpty else { return nil }
 

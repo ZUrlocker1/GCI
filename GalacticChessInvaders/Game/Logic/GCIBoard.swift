@@ -126,10 +126,15 @@ final class GCIBoard {
         }.value
 
         guard let found else {
-            DiagnosticsLog.shared.log(.chess, "Engine found no legal move")
+            // Normal at mate or stalemate; the caller decides what it means.
             return nil
         }
         return applyChessMove(from: found.from, to: found.to, annotation: annotation)
+    }
+
+    /// Hands the move back to `color` so Black can play several moves in one turn.
+    func forceTurn(_ color: PieceColor) {
+        engine.forceTurn(color)
     }
 
     // MARK: - Force placement (fleet descent)

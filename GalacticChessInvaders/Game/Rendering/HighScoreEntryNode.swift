@@ -96,11 +96,17 @@ final class HighScoreEntryNode: SKNode {
             break
         }
 
+        // `characters`, not `charactersIgnoringModifiers`: the latter reports the
+        // unshifted key, so ⇧1 would arrive as "1" instead of "!".
+        //
+        // Accepts anything printable in ASCII — letters, digits, space and
+        // symbols — which is also exactly what Press Start 2P has glyphs for.
         guard enteredName.count < Self.maxLength,
-              let typed = event.charactersIgnoringModifiers?.uppercased(),
+              let typed = event.characters?.uppercased(),
               typed.count == 1,
               let character = typed.first,
-              character.isLetter || character.isNumber || character == " "
+              let scalar = character.unicodeScalars.first,
+              (0x20...0x7E).contains(scalar.value)
         else { return true }
 
         enteredName.append(character)

@@ -1525,10 +1525,31 @@ final class HighScoreEntryTests: XCTestCase {
         XCTAssertEqual(entry.enteredName, "ZACKURLO")
     }
 
-    func testDigitsAreAccepted() {
+    func testDigitsAndSymbolsAreAccepted() {
+        for name in ["R2-D2", "ZACK!", "#1", "*@%", "$100"] {
+            let entry = makeEntry()
+            for character in name { press(entry, 0, String(character)) }
+            XCTAssertEqual(entry.enteredName, name.uppercased())
+        }
+    }
+
+    /// `characters` carries the shifted result; `charactersIgnoringModifiers`
+    /// reports the unshifted key, so it would turn ⇧1 into "1" rather than "!".
+    func testShiftedKeysArriveAsSymbols() {
         let entry = makeEntry()
-        for character in "R2D2" { press(entry, 0, String(character)) }
-        XCTAssertEqual(entry.enteredName, "R2D2")
+        guard let event = NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: 0, context: nil, characters: "!",
+            charactersIgnoringModifiers: "1", isARepeat: false, keyCode: 0)
+        else { return XCTFail("could not synthesise a key event") }
+        entry.handleKey(event)
+        XCTAssertEqual(entry.enteredName, "!")
+    }
+
+    func testNonASCIIIsRejected() {
+        let entry = makeEntry()
+        for character in "åé★" { press(entry, 0, String(character)) }
+        XCTAssertTrue(entry.enteredName.isEmpty)
     }
 
     /// Return submits whatever is there — nothing requires filling all 8.
@@ -1803,5 +1824,106 @@ final class HighScorePromptLoopTests: XCTestCase {
         sim.showGameOverOverlay()
         XCTAssertEqual(sim.promptsShown, 0)
         XCTAssertEqual(sim.overlaysShown, 1)
+    }
+}
+
+// MARK: - Black multi-move
+
+@MainActor
+final class BlackMultiMoveTests: XCTestCase {
+
+    /// Mirrors GameScene.playBlackMoves.
+    private func playBlackMoves(_ board: GCIBoard, count: Int) -> [(from: String, to: String)] {
+        guard board.turn == .black else { return [] }
+        var usedSources: Set<String> = []
+        var usedDestinations: Set<String> = []
+        var played: [(from: String, to: String)] = []
+
+        for index in 0..<count {
+            if index > 0 {
+                guard board.turn == .white, !board.isMate, !board.isStalemate else { break }
+                board.forceTurn(.black)
+            }
+            guard board.turn == .black else { break }
+            guard let found = ChessEngine.searchBestMove(
+                    in: board.currentPosition, depth: 2,
+                    constraints: .init(excludedSources: usedSources,
+                                       excludedDestinations: usedDestinations,
+                                       avoidsKingCapture: index > 0),
+                    avoiding: board.currentHistory),
+                  let outcome = board.applyChessMove(from: found.from, to: found.to)
+            else { break }
+            played.append((outcome.from, outcome.to))
+            usedSources.insert(outcome.from)
+            usedSources.insert(outcome.to)
+            usedDestinations.insert(outcome.to)
+        }
+        if board.turn == .black { board.forceTurn(.white) }
+        return played
+    }
+
+    private func openedGame() -> GCIBoard {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        board.applyChessMove(from: "e2", to: "e4")
+        return board
+    }
+
+    /// Chess hands the turn to White after every move, so the loop used to break
+    /// on its second pass — Black never got more than one move at any level.
+    func testBlackActuallyGetsTheConfiguredNumberOfMoves() {
+        for count in 1...3 {
+            let board = openedGame()
+            let played = playBlackMoves(board, count: count)
+            XCTAssertEqual(played.count, count, "level wanting \(count) moves")
+            XCTAssertEqual(board.turn, .white, "the turn must come back to White")
+        }
+    }
+
+    /// §25.5: distinct source pieces and distinct destinations.
+    func testNoPieceMovesTwiceInOneTurn() {
+        let board = openedGame()
+        let played = playBlackMoves(board, count: 3)
+
+        XCTAssertEqual(Set(played.map(\.from)).count, played.count, "shared source")
+        XCTAssertEqual(Set(played.map(\.to)).count, played.count, "shared destination")
+
+        // A piece that already moved is sitting on its destination, so no later
+        // move may start from there.
+        var landed: Set<String> = []
+        for move in played {
+            XCTAssertFalse(landed.contains(move.from),
+                           "\(move.from)-\(move.to) moves a piece that already moved")
+            landed.insert(move.to)
+        }
+    }
+
+    /// Forcing the turn back can leave the white king attacked and on the board,
+    /// and it is worth 20,000 to the evaluation — the search would take it.
+    func testBlackNeverCapturesTheWhiteKing() {
+        for _ in 0..<25 {
+            let board = GCIBoard()
+            board.setupStandardPosition()
+            for (from, to) in [("f2", "f3"), ("e7", "e5"), ("g2", "g4")] {
+                board.applyChessMove(from: from, to: to)
+            }
+            _ = playBlackMoves(board, count: 3)
+            XCTAssertNotNil(board.allPieces(color: .white).first { $0.type == .king },
+                            "the white king was captured")
+        }
+    }
+
+    func testForcingTheTurnDropsTheEnPassantRight() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        for (from, to) in [("e2", "e4"), ("a7", "a6"), ("e4", "e5"), ("d7", "d5")] {
+            board.applyChessMove(from: from, to: to)
+        }
+        XCTAssertTrue(board.legalDestinations(from: "e5").contains("d6"))
+
+        // The right belongs to the move that just happened, not to a fresh one.
+        board.forceTurn(.black)
+        board.forceTurn(.white)
+        XCTAssertFalse(board.legalDestinations(from: "e5").contains("d6"))
     }
 }

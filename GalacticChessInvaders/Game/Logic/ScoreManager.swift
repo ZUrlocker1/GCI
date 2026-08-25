@@ -51,7 +51,7 @@ final class ScoreManager {
     func advanceLevel() {
         currentLevel += 1
         multiplier = 1.0 + Double(currentLevel - 1) * 0.5
-        DiagnosticsLog.shared.log(.level, "Level \(currentLevel) — multiplier now ×\(multiplier)")
+        // The scene logs the level line, including this multiplier.
     }
 
     func resetForNewGame() {
