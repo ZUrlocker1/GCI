@@ -26,43 +26,47 @@ final class AudioManager {
     // MARK: - Startup
 
     func preloadAll() {
-        for key in SoundKey.allCases {
-            preload(key)
+        guard sfxBaseURL != nil else {
+            DiagnosticsLog.shared.log(.error, "sfx bundle directory not found — no SFX will play")
+            return
         }
+        // Only the sounds the game currently triggers are bundled; the rest arrive
+        // with the phases that use them. Report those as one summary line rather
+        // than dozens of errors, so the log stays readable.
+        var absent = 0
+        for key in SoundKey.allCases where !preload(key) { absent += 1 }
+
         DiagnosticsLog.shared.log(.audio,
-            "Preloaded \(sfxPools.count) SFX pools + \(loopPlayers.count) loop players")
+            "SFX ready: \(sfxPools.count) pools, \(loopPlayers.count) loops"
+            + (absent > 0 ? " (\(absent) not yet bundled)" : ""))
     }
 
-    private func preload(_ key: SoundKey) {
-        guard let base = sfxBaseURL else {
-            DiagnosticsLog.shared.log(.error, "sfx bundle directory not found")
-            return
-        }
+    /// Returns false if the sound is not available to load.
+    @discardableResult
+    private func preload(_ key: SoundKey) -> Bool {
+        guard let base = sfxBaseURL else { return false }
         let url = base.appendingPathComponent(key.filename)
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            // Stubs for generated/ sounds — expected to be absent until created
-            if !key.filename.hasPrefix("generated/") {
-                DiagnosticsLog.shared.log(.error, "SFX missing: \(key.filename)")
-            }
-            return
-        }
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
         if key.loops {
-            guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
+            guard let player = try? AVAudioPlayer(contentsOf: url) else { return false }
             player.numberOfLoops = -1
             player.volume = key.defaultVolume
             player.prepareToPlay()
             loopPlayers[key] = player
-        } else {
-            var pool: [AVAudioPlayer] = []
-            for _ in 0..<poolSize {
-                if let player = try? AVAudioPlayer(contentsOf: url) {
-                    player.volume = key.defaultVolume
-                    player.prepareToPlay()
-                    pool.append(player)
-                }
-            }
-            if !pool.isEmpty { sfxPools[key] = pool }
+            return true
         }
+
+        var pool: [AVAudioPlayer] = []
+        for _ in 0..<poolSize {
+            if let player = try? AVAudioPlayer(contentsOf: url) {
+                player.volume = key.defaultVolume
+                player.prepareToPlay()
+                pool.append(player)
+            }
+        }
+        guard !pool.isEmpty else { return false }
+        sfxPools[key] = pool
+        return true
     }
 
     // MARK: - Playback
@@ -104,6 +108,14 @@ final class AudioManager {
         player.play()
         musicPlayer = player
         DiagnosticsLog.shared.log(.audio, "Music → \(trackName)")
+    }
+
+    func pauseMusic() {
+        musicPlayer?.pause()
+    }
+
+    func resumeMusic() {
+        musicPlayer?.play()
     }
 
     func stopMusic() {
