@@ -2001,3 +2001,94 @@ final class DrawRuleTests: XCTestCase {
                           "the two draws should say why")
     }
 }
+
+/// Regression: a "restore the turn to White" line at the end of playBlackMoves
+/// masked Black's checkmate. makeEngineMove returns nil when Black is mated, and
+/// the turn has to stay with Black for endGameIfDecided to evaluate the right
+/// side. Flipping it meant isMate was checked against White, came back false, and
+/// the game carried on with White moving alone forever.
+@MainActor
+final class BlackCheckmateDetectionTests: XCTestCase {
+
+    /// Mirrors playBlackMoves.
+    private func playBlackMoves(_ board: GCIBoard, count: Int) -> Int {
+        guard board.turn == .black else { return 0 }
+        var usedSources: Set<String> = []
+        var usedDestinations: Set<String> = []
+        var played = 0
+
+        for index in 0..<count {
+            if index > 0 {
+                guard board.turn == .white, !board.isMate, !board.isStalemate else { break }
+                board.forceTurn(.black)
+            }
+            guard board.turn == .black else { break }
+            guard let found = ChessEngine.searchBestMove(
+                    in: board.currentPosition, depth: 2,
+                    constraints: .init(excludedSources: usedSources,
+                                       excludedDestinations: usedDestinations,
+                                       avoidsKingCapture: index > 0),
+                    avoiding: board.currentHistory),
+                  let outcome = board.applyChessMove(from: found.from, to: found.to)
+            else {
+                if index > 0 { board.forceTurn(.white) }
+                break
+            }
+            played += 1
+            usedSources.insert(outcome.from)
+            usedSources.insert(outcome.to)
+            usedDestinations.insert(outcome.to)
+        }
+        return played
+    }
+
+    /// Scholar's mate, so Black is genuinely mated with White to have moved last.
+    private func matedPosition() -> GCIBoard {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        for (from, to) in [("e2", "e4"), ("e7", "e5"), ("f1", "c4"), ("b8", "c6"),
+                           ("d1", "h5"), ("g8", "f6"), ("h5", "f7")] {
+            board.applyChessMove(from: from, to: to)
+        }
+        return board
+    }
+
+    func testTurnStaysWithBlackWhenBlackIsMated() {
+        for count in 1...3 {
+            let board = matedPosition()
+            XCTAssertTrue(board.isMate)
+            XCTAssertEqual(board.turn, .black)
+
+            XCTAssertEqual(playBlackMoves(board, count: count), 0, "a mated side cannot move")
+            XCTAssertEqual(board.turn, .black,
+                           "flipping the turn here hides the mate from endGameIfDecided")
+            XCTAssertTrue(board.isMate, "mate must still be visible afterwards")
+        }
+    }
+
+    /// The symptom that reached playtest: White moving several times in a row.
+    func testGamesNeverDegenerateIntoWhiteMovingAlone() {
+        for count in 1...3 {
+            for _ in 0..<8 {
+                let board = GCIBoard()
+                board.setupStandardPosition()
+                var whiteOnlyStreak = 0
+                var concluded = false
+
+                for _ in 0..<400 {
+                    if board.isMate || board.isStalemate || board.isDrawn { concluded = true; break }
+                    guard let move = ChessEngine.searchBestMove(in: board.currentPosition, depth: 2,
+                                                               avoiding: board.currentHistory),
+                          board.applyChessMove(from: move.from, to: move.to) != nil else { break }
+                    if board.isMate || board.isStalemate || board.isDrawn { concluded = true; break }
+
+                    whiteOnlyStreak = playBlackMoves(board, count: count) == 0
+                        ? whiteOnlyStreak + 1 : 0
+                    XCTAssertLessThan(whiteOnlyStreak, 3,
+                                      "White moved three times running — Black is stuck")
+                }
+                XCTAssertTrue(concluded, "game never reached a conclusion")
+            }
+        }
+    }
+}
