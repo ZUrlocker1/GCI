@@ -22,6 +22,7 @@ final class LaserNode: SKSpriteNode {
 
     private static let width: CGFloat = 4
     private static let flightKey = "fly"
+    private static let beamName = "kingBeam"
 
     init(owner: ProjectileState.Owner) {
         self.owner = owner
@@ -108,10 +109,35 @@ final class LaserNode: SKSpriteNode {
     /// damage are the caller's.
     func setHeavy(_ heavy: Bool) {
         let baseHeight: CGFloat = owner == .player ? 18 : 14
-        size = heavy ? CGSize(width: Self.width * 2.5, height: baseHeight * 2.2)
+        // Only slightly bigger than an ordinary bolt. At 2.5x width it read as
+        // a blocky rectangle rather than a projectile — the beam below is what
+        // now carries the "this is the king's weapon" signal.
+        size = heavy ? CGSize(width: Self.width * 1.3, height: baseHeight * 1.4)
                      : CGSize(width: Self.width, height: baseHeight)
         color = heavy ? .white
                       : (owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight)
+
+        childNode(withName: Self.beamName)?.removeFromParent()
+        if heavy {
+            // A long, thin light-red beam behind the head, so the shot reads as
+            // a lance rather than a brick. Drawn as a child so the head keeps
+            // its own crisp shape and the physics body stays small.
+            let beam = SKSpriteNode(texture: Self.solidTexture,
+                                    color: NeonPalette.kingBeamRed,
+                                    size: CGSize(width: Self.width * 0.9,
+                                                 height: baseHeight * 5))
+            beam.name = Self.beamName
+            beam.colorBlendFactor = 1.0
+            beam.alpha = 0.75
+            beam.zPosition = -1
+            // Trails upward behind a downward-travelling enemy shot.
+            beam.position = CGPoint(x: 0, y: beam.size.height / 2)
+            addChild(beam)
+            beam.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.45, duration: 0.07),
+                .fadeAlpha(to: 0.85, duration: 0.07),
+            ])))
+        }
         // The body must follow, or a heavy round keeps a thin bolt's hitbox.
         let body = SKPhysicsBody(rectangleOf: size)
         body.isDynamic = true
@@ -132,6 +158,7 @@ final class LaserNode: SKSpriteNode {
         state = nil
         isHidden = true
         removeAction(forKey: Self.flightKey)
+        childNode(withName: Self.beamName)?.removeFromParent()
         // Stop testing for contacts rather than clearing `isDynamic` — the body
         // has to stay dynamic to ever generate a contact again when re-fired.
         physicsBody?.contactTestBitMask = PhysicsCategory.none

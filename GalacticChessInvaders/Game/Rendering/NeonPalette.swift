@@ -24,6 +24,10 @@ enum NeonPalette {
     static let starBlueDeep  = SKColor(red: 0.20, green: 0.34, blue: 0.85, alpha: 1)
     static let starBlueLight = SKColor(red: 0.60, green: 0.80, blue: 1.00, alpha: 1)
 
+    /// The activated king's beam. Light red so it reads as the king's own
+    /// weapon rather than ordinary fleet fire, without going white-hot.
+    static let kingBeamRed = SKColor(red: 1.00, green: 0.42, blue: 0.42, alpha: 1)
+
     /// General UI chrome — HUD text, menu highlights, headings.
     static let orange = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
 

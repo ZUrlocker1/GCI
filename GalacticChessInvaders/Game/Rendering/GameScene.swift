@@ -1685,7 +1685,7 @@ class GameScene: SKScene {
             // rather than as damage — which is also literally true, since the
             // bonus HP is being spent and the sprite has not eroded yet.
             if type == .king, board.blackKingShieldIsUp() {
-                node.flashDeflection()
+                node.flareForcefield()
                 AudioManager.shared.play(.shieldAbsorbsHit)
             } else {
                 AudioManager.shared.play(.pieceHitLight)
