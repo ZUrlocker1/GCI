@@ -9,8 +9,7 @@ Ten levels play end to end. Two things are outstanding:
 
 - **Level 9** shows an ARMORED PAWNS banner and delivers nothing. The mechanic
   hangs off pawn regeneration, which is not built
-- **Phase 3.3** — destruction currently plays a sound and removes the sprite.
-  No explosion, no score pop-up, no shake
+- **Raiders (6.x)** and **music (5)** are the next unbuilt systems
 
 | Phase | Title | |
 |---|---|---|
@@ -20,7 +19,7 @@ Ten levels play end to end. Two things are outstanding:
 | 2.2 | Playfield: Recharged visual treatment | ✅ |
 | 3.1 | Arcade layer: fleet movement | ✅ |
 | 3.2 | Arcade layer: shooting & collision | ✅ |
-| 3.3 | Arcade layer: damage states & juice | ⬜ |
+| 3.3 | Arcade layer: damage states & juice | ✅ |
 | 4 | Basic sound effects | 🟡 |
 | 5 | Background music + settings | ⬜ |
 | 6.1 | Raiders: scout & basic escort | ⬜ |
@@ -360,14 +359,32 @@ standalone runtime harnesses for every pure Logic path, and geometry rendered to
 PNG where a shape was in question. There is no GUI automation for a native macOS
 app in this environment, so a firing/hit/lose/win playtest is the real next step.
 
-## Phase 3.3 — Damage States & Juice ⬜
+## Phase 3.3 — Damage States & Juice ✅
 
-- [ ] Smoke trail at ≤50% HP, sprite flicker at ≤25%
-- [ ] Explosion on destruction (placeholder burst; per-piece art in Phase 8)
-- [ ] Score pop-ups floating from destroyed targets, via a **`ScorePopPool`** of 20
-- [ ] Screen shake per §24.1 intensities; hit freeze on high-value kills
-- [ ] Arcade SFX — the keys are already mapped in `SoundKey`, they just need
-      bundling and wiring (see the Phase 4 note on bundle size)
+`Juice.swift` holds §24's whole table — shake intensities and decay, freeze
+lengths, pop timings — as pure data, so "how hard does a queen shake the board"
+is answerable and tested in one place rather than scattered through the scene.
+
+- [x] **Explosion on destruction** — `ExplosionPool`, 8 pre-built bursts: an
+      expanding ring plus 8 shards in the target's own glow colour, riding the
+      bloom already on the parent. Not a particle system and not grey smoke,
+      which reads as mud against neon on black. Scaled 2.4× for a king, which
+      also gets §24.8's white flash
+- [x] **Score pops** — `ScorePopPool`, 20 pooled labels; +N rises 30pt over
+      0.8s in the target's colour. Shows `ScoreManager.scaled`, the same number
+      the total moves by, so the pop can never disagree with the HUD
+- [x] **Screen shake** (§24.1) — applied to `bloomNode`, not a camera: a camera
+      also changes how a mouse point maps into the scene, and click-to-select
+      depends on that. It leaves the starfield still, which reads as the board
+      being hit rather than the universe wobbling. Exponential decay, and a
+      bigger event replaces a running one rather than adding to it
+- [x] **Hit freeze** (§24.2) — 4 frames for a king, 2 for a queen, none below.
+      `bloomNode.isPaused` stops the playfield while the scene's own `update`
+      keeps running to time it; the explosion lands *after* the pause
+- [x] **Venting at ≤50% HP** — drifting embers in the piece's glow colour,
+      one every 0.28s, self-removing. Deviates from §20's "smoke": grey is mud
+      here. Flicker at Critical was already in place from 2.2
+- [x] Arcade SFX were bundled and wired during 3.2
 
 Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
 
