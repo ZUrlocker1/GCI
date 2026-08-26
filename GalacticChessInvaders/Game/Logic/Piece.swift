@@ -8,7 +8,7 @@ enum PieceType: String, CaseIterable {
 
     var maxHP: Int {
         switch self {
-        case .pawn:   return 2
+        case .pawn:   return 3
         case .knight: return 6
         case .bishop: return 6
         case .rook:   return 8
@@ -116,6 +116,10 @@ struct Piece {
         let taken = type.maxHP - hp
         switch type {
         case .pawn:
+            // 3 HP so a 2-damage laser needs two shots (playtest: one-shot
+            // pawns read as inconsistent against every other piece). Two
+            // stages so the second shot is always visibly earned.
+            if taken >= 2 { return .cracked }
             return taken >= 1 ? .chipped : .full
         case .knight, .bishop:
             if taken >= 5 { return .critical }

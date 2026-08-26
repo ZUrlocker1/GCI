@@ -120,14 +120,18 @@ extension SoundKey {
         // gdc-bundle files that are 2.5-15.5 MB each — a 15 MB bishop death is
         // not a reasonable thing to ship, and these are both smaller and more
         // consistent with each other.
-        case .pawnDestroyed:            return "kenney-sci-fi/explosionCrunch_000.caf"
+        case .pawnDestroyed:            return "kenney-sci-fi/explosionCrunch_002.caf"
         case .knightDestroyed:          return "kenney-sci-fi/explosionCrunch_002.caf"
         case .bishopDestroyed:          return "kenney-sci-fi/explosionCrunch_001.caf"
         case .rookDestroyed:            return "kenney-sci-fi/explosionCrunch_003.caf"
         case .queenDestroyed:           return "kenney-sci-fi/explosionCrunch_003.caf"
         case .kingDestroyed:            return "kenney-sci-fi/explosionCrunch_004.caf"
-        // Hits
-        case .pieceHitLight:            return "kenney-sci-fi/impactMetal_001.caf"
+        // Hits — a non-fatal hit uses the *smallest* explosion rather than a
+        // metal tick. Measured, the tick landed at effective RMS 0.067 against
+        // the player's own laser at 0.119, so every hit was masked by the shot
+        // that caused it: kills were audible (0.10-0.16) and everything else
+        // sounded like nothing happened.
+        case .pieceHitLight:            return "kenney-sci-fi/explosionCrunch_000.caf"
         case .pieceHitHeavy:            return "kenney-sci-fi/impactMetal_004.caf"
         // Critical crackle
         case .criticalCrackleHigh:      return "kenney-digital/zap1.caf"
@@ -137,7 +141,7 @@ extension SoundKey {
         // Fleet
         case .invaderLaserFire:         return "kenney-sci-fi/laserSmall_001.caf"
         case .invaderHitsShip:          return "kenney-sci-fi/explosionCrunch_001.caf"
-        case .invaderHitsPiece:         return "kenney-sci-fi/impactMetal_001.caf"
+        case .invaderHitsPiece:         return "kenney-sci-fi/explosionCrunch_000.caf"
         case .fleetWallBounce:          return "kenney-digital/lowDown.caf"
         case .fleetRankDrop:            return "gdc-bundle/DSGNBass_Bass Drop & Downer Fast 12_344 Audio_Bass Drops & Downers Vol 2.caf"
         case .fleetHeartbeat:           return "generated/fleet-heartbeat.caf"
@@ -196,7 +200,16 @@ extension SoundKey {
         case .fleetHeartbeat:                       return 0.55
         case .criticalCrackleHigh, .criticalCrackleMid,
              .criticalCrackleLow, .criticalCrackleEerie: return 0.25
-        case .kingDestroyed, .bombShockwave:        return 1.0
+        // Destruction is rare and should always read over the hit that caused
+        // it, so the whole family runs at full balance and the mixer's ceiling
+        // does the limiting. Measured effective RMS lands at 0.10-0.17 against
+        // a 0.10 hit and a 0.08 laser.
+        case .pawnDestroyed, .knightDestroyed, .bishopDestroyed,
+             .rookDestroyed, .queenDestroyed, .kingDestroyed,
+             .playerShipDestroyed, .bombShockwave:  return 1.0
+        // Every hit, fatal or not. Sits above the laser so it is never masked
+        // by the shot that caused it, and below destruction.
+        case .pieceHitLight, .invaderHitsPiece:     return 0.62
         case .pieceSelected, .whitePieceMoves,
              .blackPieceMoves:                      return 0.5
         // These two repeat — the countdown twice a beat, the alarm on every
@@ -207,8 +220,12 @@ extension SoundKey {
         // Fired several times a second, so the same reasoning applies twice
         // over: at the default 0.8 it sat level with the music and dominated
         // the mix purely through repetition.
-        case .playerLaserFire:                      return 0.34
-        case .invaderLaserFire:                     return 0.40
+        case .playerLaserFire:                      return 0.24
+        // Not a repetition problem — laserSmall_001 is simply a quiet file
+        // (RMS 0.081 against the player laser's 0.425), and at a matching
+        // balance it vanished. Full balance still lands under the player's own
+        // shot, which is the right order for a threat cue you must not miss.
+        case .invaderLaserFire:                     return 1.0
         default:                                    return 0.8
         }
     }
