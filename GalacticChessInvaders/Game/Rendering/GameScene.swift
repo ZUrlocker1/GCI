@@ -53,9 +53,16 @@ class GameScene: SKScene {
     /// "if the level ends while a regeneration timer is running, it is
     /// cancelled."
     private var regeneration = RegenerationQueue()
-    /// Squares whose pawn is still beaming in. It is on the board and in the
-    /// engine from the first frame — a white piece must not be able to move
-    /// onto the square — but it cannot be shot, so it must not shoot either.
+    /// Squares whose pawn is still beaming in, for the 1.8s that takes.
+    ///
+    /// It is on the board and in the engine from the first frame, because a
+    /// white piece must not be able to move onto the square — but §23.9 has it
+    /// "fires" only once materialised, and a shooter that cannot be shot back
+    /// at is the definition of unfair.
+    ///
+    /// This is the *only* thing that stops a regenerated pawn firing. Armor
+    /// does not: an armored pawn is a gunner like any other, and taking fire
+    /// and returning it are separate questions.
     private var materialising: Set<String> = []
     private var explosions: ExplosionPool?
     private var shatters: ShatterPool?
