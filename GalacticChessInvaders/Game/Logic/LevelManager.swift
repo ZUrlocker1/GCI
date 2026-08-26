@@ -76,8 +76,9 @@ final class LevelManager {
         // shortened to fit the 22-character limit.
         case 7:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
         case 8:  return ("CROSSFIRE",       "SHOTS COME IN ANGLED")
-        case 10: return ("FULL MARCH",      "THREE RANKS ADVANCE")
         case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
+        // The last level with an identity of its own; 11+ only escalates.
+        case 10: return ("FULL MARCH",     "THREE RANKS ADVANCE")
         default: return ("LEVEL \(level)",  "NO LET UP")
         }
     }
