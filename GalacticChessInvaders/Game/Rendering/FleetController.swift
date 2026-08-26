@@ -121,7 +121,7 @@ final class FleetController {
     func release(square: String) -> SKNode? {
         guard let node = members[square] else { return nil }
         release(node)
-        DiagnosticsLog.shared.log(.fleet, "\(square) left the formation")
+        DiagnosticsLog.shared.log(.fleet, "\(square) leaves")
         return node
     }
 
@@ -171,7 +171,7 @@ final class FleetController {
     func rekey(from: String, to square: String) -> Bool {
         guard let node = members.removeValue(forKey: from) else { return false }
         members[square] = node
-        DiagnosticsLog.shared.log(.fleet, "\(from) stays in formation at \(square)")
+        DiagnosticsLog.shared.log(.fleet, "\(from)-\(square) in formation")
         return true
     }
 
@@ -250,7 +250,7 @@ final class FleetController {
         if abs(speed - lastLoggedSpeed) > 0.5 {
             lastLoggedSpeed = speed
             DiagnosticsLog.shared.log(.fleet,
-                "sweep \(Int(speed))px/s (\(pieceCount) pieces)")
+                "sweep \(Int(speed))px/s, \(pieceCount) pieces")
         }
 
         // Stepped rather than smooth: the formation jumps an eighth of the sweep
@@ -302,7 +302,7 @@ final class FleetController {
         let wasHolding = !schedule.isSweeping
         let step = schedule.registerBeat()
         if wasHolding, schedule.isSweeping {
-            DiagnosticsLog.shared.log(.fleet, "fleet begins its sweep")
+            DiagnosticsLog.shared.log(.fleet, "sweep begins")
             beginLeg()
         }
         switch step {
@@ -310,7 +310,7 @@ final class FleetController {
             break
         case .halfDrop:
             drop(ratio: FleetRules.firstDropRatio) {
-                DiagnosticsLog.shared.log(.fleet, "leaning down — ranks unchanged")
+                DiagnosticsLog.shared.log(.fleet, "half-drop")
             }
         case .fullRank:
             drop(ratio: FleetRules.secondDropRatio) { [weak self] in
@@ -395,7 +395,7 @@ final class FleetController {
         // Undoes the two half-drops now that the pieces themselves have moved
         // down a rank in local space, so the net screen position is unchanged.
         fleetNode.position.y += squareSize
-        DiagnosticsLog.shared.log(.fleet, "logical rank descended")
+        DiagnosticsLog.shared.log(.fleet, "rank descended")
 
         // Crushes first: the victim is still keyed at that square, and the black
         // piece is about to be re-keyed onto it. Reversing these destroys the

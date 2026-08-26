@@ -54,7 +54,7 @@ final class ScoreManager {
         // truncating quietly paid 37 on every scaled capture.
         let points = scaled(base)
         currentScore += points
-        DiagnosticsLog.shared.log(.score, "\(source.isEmpty ? "" : "\(source): ")+\(points) pts (×\(multiplier)) → \(currentScore)")
+        DiagnosticsLog.shared.log(.score, "\(source.isEmpty ? "" : "\(source) ")+\(points) (×\(multiplier)) → \(currentScore)")
     }
 
     func advanceLevel() {

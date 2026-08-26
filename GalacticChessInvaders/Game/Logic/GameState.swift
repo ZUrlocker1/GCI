@@ -57,7 +57,9 @@ class PlayingState: GCIState {
             guard !isResumingFromPause else { return }
             gameScene?.showBoard()
             gameScene?.showHUD()
-            DiagnosticsLog.shared.log(.level, "Level 1 started")
+            // The level line itself is the scene's — one shape for every level,
+            // where this used to print a different one for the first.
+            gameScene?.logLevel()
         }
     }
 
