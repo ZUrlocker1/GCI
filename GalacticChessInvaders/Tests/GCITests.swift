@@ -3081,24 +3081,44 @@ final class LaserPhysicsTests: XCTestCase {
 @MainActor
 final class JuiceTests: XCTestCase {
 
-    /// §24.1's table. Only the queen and king shake on a kill — everything else
-    /// is silent on purpose, or a wave of pawn kills rattles the board
-    /// continuously and the two that matter stop meaning anything.
-    func testOnlyTheQueenAndKingShakeTheBoard() {
+    /// §24.1's table, plus the officers. Taken literally the doc lists only the
+    /// queen and king, and each dies at most once a wave — a player could clear
+    /// a whole level and never see the board move, which is what happened.
+    /// Pawns stay silent: they die constantly, and always shaking is never
+    /// shaking.
+    func testShakeScalesWithWhatWasDestroyed() {
         XCTAssertEqual(Juice.shake(forDestroying: .king), Juice.heavy)
         XCTAssertEqual(Juice.shake(forDestroying: .queen), Juice.light)
-        for type in [PieceType.pawn, .knight, .bishop, .rook] {
-            XCTAssertEqual(Juice.shake(forDestroying: type), .none, "\(type)")
+        for type in [PieceType.knight, .bishop, .rook] {
+            XCTAssertEqual(Juice.shake(forDestroying: type), Juice.small, "\(type)")
         }
+        XCTAssertEqual(Juice.shake(forDestroying: .pawn), .none,
+                       "pawns die constantly; always shaking is never shaking")
         // §24.1's durations, verbatim.
         XCTAssertEqual(Juice.shake(forDestroying: .king).duration, 0.6)
         XCTAssertEqual(Juice.shake(forDestroying: .queen).duration, 0.2)
         XCTAssertEqual(Juice.shipDestroyed.duration, 0.4)
         XCTAssertEqual(Juice.laserHit.duration, 0.05)
         // Ordered, so "heavy" is always felt as more than "light".
-        XCTAssertLessThan(Juice.micro.amplitude, Juice.light.amplitude)
+        XCTAssertLessThan(Juice.micro.amplitude, Juice.small.amplitude)
+        XCTAssertLessThan(Juice.small.amplitude, Juice.light.amplitude)
         XCTAssertLessThan(Juice.light.amplitude, Juice.medium.amplitude)
         XCTAssertLessThan(Juice.medium.amplitude, Juice.heavy.amplitude)
+    }
+
+    /// Every tier has to be visible at all. The first pass was measured after
+    /// the fact at 1.5pt over three frames for a laser hit — below anyone's
+    /// threshold, and the reason the feature read as unimplemented.
+    func testEveryShakeIsAboveThePerceptibleFloor() {
+        for (name, shake) in [("micro", Juice.micro), ("small", Juice.small),
+                              ("light", Juice.light), ("medium", Juice.medium),
+                              ("heavy", Juice.heavy)] {
+            XCTAssertGreaterThanOrEqual(shake.amplitude, 3, name)
+            let frames = shake.duration / Juice.frameDuration
+            XCTAssertGreaterThanOrEqual(frames, 5, "\(name) lasts \(frames) frames")
+        }
+        // And still well inside "punchy, not nauseating": a quarter of a square.
+        XCTAssertLessThanOrEqual(Juice.heavy.amplitude, BoardNode.squareSize / 4)
     }
 
     /// "Punchy, not nauseating" (§24.1): the shake has to be nearly gone well
