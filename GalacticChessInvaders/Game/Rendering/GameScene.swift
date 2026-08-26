@@ -1898,6 +1898,29 @@ class GameScene: SKScene {
         let heading: CGVector
     }
 
+    /// §8.4's "when the spaceship is hit it explodes", and §24.1's medium
+    /// 0.4s shake for it — both specified from the start, neither ever built:
+    /// losing a life used to be a sound, a hidden sprite and a HUD icon going
+    /// out. It is the single worst thing that can happen to the player and it
+    /// was the quietest event on screen.
+    ///
+    /// Glass in two opposed sprays rather than one, because the ship is not
+    /// being shot *through* — it is coming apart, and a directional spray would
+    /// claim a direction the event does not have.
+    private func blowUpSpaceship(final: Bool) {
+        guard let ship else { return }
+        let at = bloomPosition(of: ship)
+        explosions?.burst(at: at, color: NeonPalette.cyan, scale: final ? 2.6 : 1.8)
+        shatters?.shatter(at: at, color: NeonPalette.cyan,
+                          along: CGVector(dx: 0, dy: 1), scale: 1.8)
+        shatters?.shatter(at: at, color: .white,
+                          along: CGVector(dx: 0, dy: -1), scale: 1.4)
+        // The run ending earns more than another life lost: the heavy shake and
+        // the white flash are otherwise reserved for a king dying.
+        startShake(final ? Juice.heavy : Juice.shipDestroyed)
+        if final { flashScreen() }
+    }
+
     /// Black shot your shot out of the air.
     ///
     /// Both rounds die, and the collision gets the biggest glass in the game:
@@ -2162,7 +2185,10 @@ class GameScene: SKScene {
         refreshHUD()
         ship?.direction = 0
 
-        guard shipState.lives > 0 else {
+        let lastLife = shipState.lives == 0
+        blowUpSpaceship(final: lastLife)
+
+        guard !lastLife else {
             AudioManager.shared.play(.playerShipDestroyed)
             loseGame(outcome: .livesDepleted)
             return

@@ -415,6 +415,13 @@ is answerable and tested in one place rather than scattered through the scene.
       otherwise starve the pool for the kills that matter. The heading is
       captured at the contact — `deactivate` clears the round's rotation, and
       every call site deactivates before the handler runs
+- [x] **The spaceship explodes when it is hit** — §8.4 and §24.1's medium 0.4s
+      shake, both specified from the start and never built: losing a life was a
+      sound, a hidden sprite and a HUD icon going out, which made the worst
+      thing that can happen to the player the quietest event on screen. Glass in
+      two opposed sprays, since the ship is coming apart rather than being shot
+      through. The last life gets the heavy shake and the white flash otherwise
+      reserved for a king
 - [x] **Venting at ≤50% HP** — drifting embers in the piece's glow colour,
       one every 0.28s, self-removing. Deviates from §20's "smoke": grey is mud
       here. Flicker at Critical was already in place from 2.2
