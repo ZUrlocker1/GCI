@@ -327,13 +327,27 @@ Several rounds of tuning and fixes on top of the initial build. In brief:
       outside a file stops being cover. King Activated became Level 7 only at
       the same time, so the forcefield and the king's weapon read as one wave's
       character instead of a permanent buff on the game's most important target
-- [x] **Level 10 FULL MARCH** — the last escalation with its own identity: the
-      marching band deepens to the fleet's back *three* ranks and the sweep
-      widens again to 1.75 squares. 1.75 rather than 2.0 deliberately — at
-      exactly 2.0 the amplitude is one whole file, so a piece at the extreme
-      sits dead centre on its neighbour's square and reads as being on that
-      square rather than between two. Level 11+ keeps all of it and escalates
-      only by number
+- [x] **Level 10 BLITZ! is the last wave, and the game now has an ending.**
+      Named for both the chess variation and the Cray Blitz that took the 1983
+      world computer championship. It is the one level that escalates *within*
+      itself: the sweep opens at Level 6's 1.5 squares and grows a tenth of a
+      square every fourth lap (1.6, 1.7, 1.8 …), the march quickens 6%
+      compounding every sixth lap, and the beat clock drops to 3s. Counted in
+      laps rather than seconds so the player can see the cause, and it
+      self-damps — every widening makes the next lap longer. Measured: ~1.8
+      minutes in the sweep is 3 squares wide and the march is at its 1.75x
+      ceiling. Both ceilings are safety guards, not design limits: 2.75
+      amplitude keeps the outermost piece ~16pt inside the scene edge and takes
+      160 laps (~5 min in one wave) to reach. The formation also marches three
+      ranks deep from here. The intent is to wreck the chess game on purpose —
+      at a 3-second clock there is no time to plan a position, and the last wave
+      is a shoot-em-up with a board still underneath it
+- [x] Clearing Level 10 **wins the run** (`GameOverNode.Outcome.runCompleted`,
+      `LevelManager.finalLevel`) rather than rolling into a generically-harder
+      Level 11. §10.1's "no ceiling" left the game with no ending at all. An
+      intermediate wave clear now reads WAVE CLEAR and the run's end reads YOU
+      WIN — sharing one headline made the ending invisible. `V` refuses to skip
+      past the last level rather than building an eleventh that has no design
 - [x] Tuning: ship 294 px/s, laser 520 px/s, base sweep 0.9 of a square, audio mixed
       as a deliberate ladder (laser under hit under destruction), Black's
       projectiles lightened 50% so they read as glowing

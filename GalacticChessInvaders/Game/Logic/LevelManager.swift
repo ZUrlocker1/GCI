@@ -32,6 +32,9 @@ struct LevelParameters {
     /// Diagonal invader fire (§21.3), from Level 8 onward. Once it arrives it
     /// stays: standing outside a file stops being enough cover.
     var diagonalShots: Bool { level >= 8 }
+    /// Level 10 "Blitz": the sweep widens and quickens as the wave runs, and
+    /// the beat clock is cut to 3s (`FleetRules.blitz*`).
+    var blitz: Bool { level >= 10 }
     /// How many of the fleet's rear ranks march. Widens at Level 10, so more of
     /// Black's board keeps moving — and keeps being shootable.
     var formationRanks: Int {
@@ -48,6 +51,12 @@ final class LevelManager {
     private(set) var level: Int = 1
 
     var parameters: LevelParameters { Self.parameters(for: level) }
+
+    /// The last wave. Clearing it wins the run outright rather than rolling into
+    /// another generically-harder level — §10.1's "no ceiling" gave the game no
+    /// ending at all, and Level 10 (Blitz) is built to be one.
+    nonisolated static let finalLevel = 10
+    var isFinalLevel: Bool { level >= Self.finalLevel }
 
     func reset() { level = 1 }
 
@@ -77,8 +86,9 @@ final class LevelManager {
         case 7:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
         case 8:  return ("CROSSFIRE",       "SHOTS COME IN ANGLED")
         case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
-        // The last level with an identity of its own; 11+ only escalates.
-        case 10: return ("FULL MARCH",     "THREE RANKS ADVANCE")
+        // The last wave. Named for both the chess variation and the Cray
+        // Blitz that won the 1983 world computer championship.
+        case 10: return ("BLITZ!",         "3-SECOND CLOCK · THE FLEET RUNS WILD")
         default: return ("LEVEL \(level)",  "NO LET UP")
         }
     }
@@ -123,7 +133,8 @@ final class LevelManager {
                                    sweepAmplitudeRatio: FleetRules.baseSweepAmplitudeRatio)
         default:
             // 6+: fleet +15/level, projectile +10%/level compounding from L5,
-            // moves and shots capped at 3, timer floored at 4s, raiders at 6s.
+            // moves and shots capped at 3, timer floored at 4s (3s at Blitz),
+            // raiders at 6s.
             let over = clamped - 5
             let projectile = 253.0 * pow(1.1, Double(over))
             return LevelParameters(
@@ -132,14 +143,16 @@ final class LevelManager {
                 blackMovesPerTurn: 3,
                 shotsPerTurn: 3...3,
                 projectileSpeed: CGFloat(projectile),
-                turnTimer: 4,
+                // Blitz cuts the clock to 3s. There is barely time to think
+                // about chess, which is the intent: the last wave is a
+                // shoot-em-up with a chess board still underneath it.
+                turnTimer: clamped >= 10 ? 3 : 4,
                 regenSlots: 4 + over,
                 raiderInterval: max(6, 8 - TimeInterval(over)),
                 isAggressive: true,
-                // Wide from Level 6, wider again from Level 10.
-                sweepAmplitudeRatio: clamped >= 10
-                    ? FleetRules.widestSweepAmplitudeRatio
-                    : FleetRules.wideSweepAmplitudeRatio
+                // Wide from Level 6. Blitz starts here too and grows from it
+                // lap by lap, so this stays the *opening* width at Level 10.
+                sweepAmplitudeRatio: FleetRules.wideSweepAmplitudeRatio
             )
         }
     }

@@ -27,11 +27,21 @@ final class FleetController {
     private unowned let board: GCIBoard
     private let squareSize: CGFloat
     /// Half the total sweep width. Read from the level rather than fixed —
-    /// Level 6 widens it deliberately (`FleetRules.wideSweepAmplitudeRatio`).
+    /// Level 6 widens it deliberately (`FleetRules.wideSweepAmplitudeRatio`),
+    /// and Blitz grows it lap by lap on top of that.
     private var amplitude: CGFloat {
-        FleetRules.sweepAmplitude(squareSize: squareSize,
-                                  ratio: levelParameters.sweepAmplitudeRatio)
+        FleetRules.sweepAmplitude(squareSize: squareSize, ratio: amplitudeRatio)
     }
+
+    private var amplitudeRatio: CGFloat {
+        levelParameters.blitz
+            ? FleetRules.blitzAmplitudeRatio(leftEdgeArrivals: leftEdgeArrivals)
+            : levelParameters.sweepAmplitudeRatio
+    }
+
+    /// Laps completed at the left edge. Blitz escalates off this count, so it
+    /// only matters there — but it is cheap and honest to keep for every level.
+    private var leftEdgeArrivals = 0
 
     /// Squares the fleet still owns. Descent walks these rather than every black
     /// piece: a piece that has played a chess move has left the formation and is
@@ -177,6 +187,7 @@ final class FleetController {
         fleetNode.position = .zero
         schedule.reset()
         direction = 1
+        leftEdgeArrivals = 0
         lastLoggedSpeed = 0
     }
 
@@ -199,8 +210,11 @@ final class FleetController {
         guard isRunning, pieceCount > 0 else { return }
 
         let target = direction > 0 ? amplitude : -amplitude
-        let speed = FleetRules.sweepSpeed(level: levelParameters,
+        var speed = FleetRules.sweepSpeed(level: levelParameters,
                                           piecesRemaining: pieceCount)
+        if levelParameters.blitz {
+            speed *= FleetRules.blitzSpeedScale(leftEdgeArrivals: leftEdgeArrivals)
+        }
         guard speed > 0 else { return }
 
         if abs(speed - lastLoggedSpeed) > 0.5 {
@@ -222,10 +236,31 @@ final class FleetController {
             // Land exactly on the amplitude: eight divisions of a float would
             // otherwise let the fleet creep off true over a long level.
             self.fleetNode.position.x = target
+            if self.direction < 0 { self.registerLeftEdgeArrival() }
             self.direction *= -1
             self.beginLeg()
         }
         fleetNode.run(.sequence([.repeat(step, count: steps), turn]), withKey: Self.sweepKey)
+    }
+
+    /// Blitz's escalation, driven by laps rather than by the clock so the
+    /// player can see what is causing it. Logged only on the beats where
+    /// something actually changes — a lap is barely a second and per-lap lines
+    /// would bury the rest of the diagnostics pane.
+    private func registerLeftEdgeArrival() {
+        leftEdgeArrivals += 1
+        guard levelParameters.blitz else { return }
+        if leftEdgeArrivals % FleetRules.blitzWidenEveryArrivals == 0 {
+            let squares = amplitudeRatio * 2
+            DiagnosticsLog.shared.log(.fleet,
+                "BLITZ: sweep \(String(format: "%.1f", squares)) squares "
+                + "(lap \(leftEdgeArrivals))")
+        }
+        if leftEdgeArrivals % FleetRules.blitzSpeedUpEveryArrivals == 0 {
+            let scale = FleetRules.blitzSpeedScale(leftEdgeArrivals: leftEdgeArrivals)
+            DiagnosticsLog.shared.log(.fleet,
+                "BLITZ: march ×\(String(format: "%.2f", scale))")
+        }
     }
 
     // MARK: - Beat-paced descent
