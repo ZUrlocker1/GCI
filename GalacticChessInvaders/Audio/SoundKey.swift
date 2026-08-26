@@ -77,7 +77,8 @@ enum SoundKey: String, CaseIterable {
 
     // ── Armored pawn ──────────────────────────────────────────────────────────
     case armorRicochet          // DSGNErie_NoiseBoxHit_10.wav (gdc-bundle)
-    case armorBreaks            // — generate with jsfxr (brittle high shatter)
+    case armorBreaks            // zapThreeToneDown.ogg      (kenney-digital) — stand-in
+    case pieceRegenerates       // forceField_000.ogg        (kenney-sci-fi) — stand-in
 
     // ── Game events ──────────────────────────────────────────────────────────
     case levelClear             // Interface Arp Reveal Down Long.wav (gdc-bundle)
@@ -171,7 +172,12 @@ extension SoundKey {
         case .shieldShatters:           return "kenney-sci-fi/forceField_004.caf"
         // Armored pawn
         case .armorRicochet:            return "gdc-bundle/DSGNErie_NoiseBoxHit_10_InMotionAudio_SinisterTextures4.caf"
-        case .armorBreaks:              return "generated/armor-break.caf"
+        // §23.9 asks for a synthesised transporter shimmer and §10.1 for a
+        // brittle shatter, neither of which exists yet. These two stand in:
+        // forceField_000 has the right sustained-shimmer character, and
+        // zapThreeToneDown falls the way breaking armor should.
+        case .armorBreaks:              return "kenney-digital/zapThreeToneDown.caf"
+        case .pieceRegenerates:         return "kenney-sci-fi/forceField_000.caf"
         // Game events
         case .levelClear:               return "gdc-bundle/Interface Arp Reveal Down Long.caf"
         case .gameOver:                 return "gdc-bundle/DSGNBass_Bass Drop & Downer Slow 10_344 Audio_Bass Drops & Downers.caf"
@@ -204,6 +210,8 @@ extension SoundKey {
     var defaultVolume: Float {
         switch self {
         case .ambientSpaceLoop:                     return 0.12
+        // §23.9 puts the transporter at ~60% of master: present, not dominant.
+        case .pieceRegenerates:                     return 0.6
         case .fleetHeartbeat:                       return 0.55
         case .criticalCrackleHigh, .criticalCrackleMid,
              .criticalCrackleLow, .criticalCrackleEerie: return 0.25

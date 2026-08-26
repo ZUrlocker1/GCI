@@ -5,11 +5,8 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 
 ✅ done · 🟡 partial · ⬜ not started
 
-Ten levels play end to end. Two things are outstanding:
-
-- **Level 9** shows an ARMORED PAWNS banner and delivers nothing. The mechanic
-  hangs off pawn regeneration, which is not built
-- **Raiders (6.x)** and **music (5)** are the next unbuilt systems
+Ten levels play end to end, each with a mechanic of its own. **Raiders (6.x)**
+and **music (5)** are the next unbuilt systems.
 
 | Phase | Title | |
 |---|---|---|
@@ -265,7 +262,7 @@ left the game with no ending at all.
 | 6 | WIDE ORBIT | Sweep widens to 1.5 squares |
 | 7 | CROSSFIRE | Bishops fire diagonals on their own cadence |
 | 8 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
-| 9 | ARMORED PAWNS | **Banner only — needs pawn regeneration (§6.x)** |
+| 9 | ARMORED PAWNS | Half of every regenerated pawn arrives immune to lasers for three White moves |
 | 10 | BLITZ! | 3s clock, three marching ranks, and a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th |
 
 Escalations persist except where a level's identity depends on not persisting:
@@ -318,6 +315,34 @@ of the piece was, and a test pins that invariant against a re-export. The
 surviving side is the one the shot missed, taken from the contact point and
 fixed by the first hit; a centre hit tosses a coin. The hitbox is compound, so
 the wedge is hittable without also covering the gap between it and the top.
+
+### Regeneration and armored pawns (§23.9, §10.1)
+
+One system: armor arrives *only* through regeneration, so Level 9's banner is a
+promise Level 4's regeneration has to be built to keep.
+
+- **Regeneration** from Level 4: ten seconds after a black piece dies, a pawn
+  takes its place, capped by the level's slot count (2 at Level 4, rising to 9).
+  A slot is spent when the timer is *set*, not when it lands, or a two-slot wave
+  could queue twenty at once. A level ending cancels everything pending, which
+  falls out of the queue living on the scene rather than needing its own rule.
+  The king never regenerates
+- **Transporter beam-in**, 1.8s: a column of flecks with the sprite assembling
+  out of it, then one white frame. The pawn has no hitbox until it finishes —
+  §23.9's "the shimmering column is the warning" is the entire UI for that
+  state. Green-white normally, blue-white in defensive mode
+- **Defensive mode**: once the black king is Cracked or worse, pawns stop
+  scattering along the rear rank and materialise directly in front of him.
+  §23.9's rook and bishop defensive spawns are not built
+- **Armored pawns** (Level 9): half of every regenerated pawn arrives silver and
+  immune to laser fire for three White moves. A hit ricochets — orange sparks,
+  a metallic clunk, the outline flares — and does nothing. Only a chess capture
+  removes it, which is the point of the level: it asks the player to solve
+  something with the board rather than the trigger. Armor expires with a crack
+  and a shatter, and the pawn underneath is ordinary
+- A regenerated pawn is worth 15 rather than 25 (§9), and `ChessEngine.forceAdd`
+  keeps the engine's own board in step — without it the search moves other
+  pieces straight through the new pawn, the same class of bug as `forcePlace`
 
 ### Playtest fixes
 

@@ -13,6 +13,10 @@ enum CollisionOutcome {
     /// A white piece was hit — friendly fire from the player, or an invader
     /// shot it blocked. Never scores either way.
     case whitePieceHit(square: String, destroyed: Bool)
+    /// The laser struck an armored pawn and did nothing (§10.1). Not a miss —
+    /// the player hit exactly what they aimed at, and needs to be told that
+    /// the answer is "not with that".
+    case ricochet(square: String)
 }
 
 @MainActor
@@ -26,10 +30,14 @@ enum CollisionResolver {
     /// standing — killing it there is both a kill and a checkmate.
     static func playerLaserHitBlackPiece(at square: String, board: GCIBoard) -> CollisionOutcome? {
         guard let piece = board.piece(at: square), piece.color == .black else { return nil }
+        // §10.1: armor is absolute while it lasts. Only a chess capture
+        // removes the pawn, which is the whole point — the level asks the
+        // player to solve something with the board instead of the trigger.
+        guard !piece.isArmored else { return .ricochet(square: square) }
         let wasAlreadyCheckmated = piece.type == .king && board.turn == .black && board.isMate
         let destroyed = board.applyDamage(ProjectileState.playerLaserDamage, at: square)
         return .blackPieceHit(square: square, type: piece.type, destroyed: destroyed,
-                              points: destroyed ? piece.type.pointValue : 0,
+                              points: destroyed ? piece.shootValue : 0,
                               doubleCheckmateBonus: destroyed && wasAlreadyCheckmated)
     }
 

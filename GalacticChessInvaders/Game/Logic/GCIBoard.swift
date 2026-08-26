@@ -192,6 +192,45 @@ final class GCIBoard {
         return crush
     }
 
+    // MARK: - Regeneration (§23.9)
+
+    /// Materialises a fresh black pawn on `square`, outside chess legality —
+    /// the same door `forcePlace` uses for descent, and for the same reason:
+    /// nothing about this is a chess move.
+    ///
+    /// Returns the piece so the caller can build its node, or nil if the square
+    /// turned out to be taken between the decision and the arrival.
+    @discardableResult
+    func regeneratePawn(at square: String, armored: Bool) -> Piece? {
+        guard pieces[square] == nil else { return nil }
+        var pawn = Piece(type: .pawn, color: .black, square: square)
+        pawn.isRegenerated = true
+        pawn.armorTurns = armored ? Regeneration.armorTurns : 0
+        pieces[square] = pawn
+        engine.forceAdd(pawn.type, color: .black, at: square)
+        DiagnosticsLog.shared.log(.fleet,
+            "regenerated \(armored ? "ARMORED " : "")pawn at \(square)")
+        return pawn
+    }
+
+    /// §10.1: armor is counted in White's moves, so this runs once per beat
+    /// that White completes. Returns the squares whose armor just ran out, so
+    /// the scene can crack and shatter it.
+    @discardableResult
+    func tickArmor() -> [String] {
+        var expired: [String] = []
+        for (square, piece) in pieces where piece.isArmored {
+            var updated = piece
+            updated.armorTurns -= 1
+            pieces[square] = updated
+            if !updated.isArmored {
+                expired.append(square)
+                DiagnosticsLog.shared.log(.fleet, "armor spent at \(square)")
+            }
+        }
+        return expired
+    }
+
     // MARK: - Damage
 
     /// Apply damage to the piece at `square`. Returns true if it was destroyed.

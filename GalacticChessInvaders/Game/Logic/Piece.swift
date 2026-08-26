@@ -95,6 +95,14 @@ struct Piece {
     var hp: Int
     var logicalSquare: String   // algebraic notation e.g. "e7"
 
+    /// This pawn came back through regeneration (§23.9): dimmer glow, and
+    /// worth less than one off the starting board.
+    var isRegenerated = false
+    /// Chess turns of armor left (§10.1's Armored Pawns). Laser fire does
+    /// nothing while this is above zero; a chess capture works as always.
+    var armorTurns = 0
+    var isArmored: Bool { armorTurns > 0 }
+
     init(type: PieceType, color: PieceColor, square: String) {
         self.type = type
         self.color = color
@@ -143,6 +151,13 @@ struct Piece {
     /// The full atlas texture name for this piece's current damage state
     var textureName: String {
         "chess-\(color.atlasPrefix)-\(type.atlasName)\(damageState.textureSuffix)"
+    }
+
+    /// What shooting this piece is worth. A regenerated pawn pays less: the
+    /// armor window was the hard part, and it came back once already (§9).
+    var shootValue: Int {
+        isRegenerated && type == .pawn
+            ? Regeneration.regeneratedPawnValue : type.pointValue
     }
 
     /// The undamaged art for this piece, whatever state it is in — the source

@@ -235,6 +235,15 @@ final class ChessEngine {
         position.board[square] = nil
     }
 
+    /// Puts a piece on an empty square from outside the rules — regeneration
+    /// (§23.9). The mirror of `forceRemove`, and it exists for the same reason:
+    /// a regenerated pawn the engine cannot see is a pawn the search will
+    /// happily move another piece through.
+    func forceAdd(_ type: PieceType, color: PieceColor, at square: String) {
+        guard position.board[square] == nil else { return }
+        position.board[square] = Chess.Piece(kind: type, color: color)
+    }
+
     // MARK: - Search
 
     /// Narrows what the search may consider.

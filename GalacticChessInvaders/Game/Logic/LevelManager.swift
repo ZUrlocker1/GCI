@@ -37,6 +37,9 @@ struct LevelParameters {
     /// Level 10 "Blitz": the sweep widens and quickens as the wave runs, and
     /// the beat clock is cut to 3s (`FleetRules.blitz*`).
     var blitz: Bool { level >= 10 }
+    /// §10.1 Armored Pawns, Level 9 onward: half of every regenerated pawn
+    /// arrives immune to laser fire for three chess turns.
+    var armoredPawns: Bool { level >= 9 }
     /// How many of the fleet's rear ranks march. Widens at Level 10, so more of
     /// Black's board keeps moving — and keeps being shootable.
     var formationRanks: Int {
@@ -89,7 +92,7 @@ final class LevelManager {
         // names verbatim; only the order moved.
         case 7:  return ("CROSSFIRE",       "BISHOPS FIRE ON THE DIAGONAL")
         case 8:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
-        case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
+        case 9:  return ("ARMORED PAWNS",  "REGENERATED PAWNS SHRUG OFF LASERS")
         // The last wave. Named for both the chess variation and the Cray
         // Blitz that won the 1983 world computer championship.
         case 10: return ("BLITZ!",         "3-SECOND CLOCK · THE FLEET RUNS WILD")

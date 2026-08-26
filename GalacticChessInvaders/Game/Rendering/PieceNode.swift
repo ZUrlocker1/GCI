@@ -14,8 +14,12 @@ final class PieceNode: SKSpriteNode {
     private static let danger  = SKColor(red: 1.00, green: 0.16, blue: 0.10, alpha: 1)
     private static let flickerKey = "criticalFlicker"
     private static let checkGlowKey = "checkGlow"
+    private static let armorKey = "armor"
     private static let chargeGlowName = "gunnerCharge"
     private static let ventName = "vent"
+    private static let beamName = "beamIn"
+    /// §10.1's "heavy silver metallic outline".
+    private static let armorSilver = SKColor(red: 0.75, green: 0.78, blue: 0.82, alpha: 1)
     private static let bobKey = "idleBob"
     /// Small enough to read as breathing rather than hovering.
     private static let bobAmplitude: CGFloat = 2.0
@@ -378,6 +382,108 @@ final class PieceNode: SKSpriteNode {
             .wait(forDuration: 0.09),
             .run { ring.lineWidth = 0.8; ring.glowWidth = 2.5; ring.strokeColor = NeonPalette.cyan },
         ]), withKey: "flare")
+    }
+
+    // MARK: - Armored pawns (§10.1)
+
+    /// Dresses this pawn as armored, or strips the armor off.
+    ///
+    /// The sprite is already an outline, so recolouring it silver *is* §10.1's
+    /// "heavy silver metallic outline" — no second shape, and it survives the
+    /// damage-state swaps and the wedge for free, since both read `color`.
+    /// A slow sheen keeps it from looking like a piece that has simply been
+    /// tinted the wrong colour.
+    func setArmored(_ armored: Bool) {
+        removeAction(forKey: Self.armorKey)
+        guard armored else {
+            color = baseColor
+            colorBlendFactor = Self.baseBlend
+            return
+        }
+        colorBlendFactor = 1
+        color = Self.armorSilver
+        run(.repeatForever(.sequence([
+            .colorize(with: .white, colorBlendFactor: 1, duration: 0.9),
+            .colorize(with: Self.armorSilver, colorBlendFactor: 1, duration: 0.9),
+        ])), withKey: Self.armorKey)
+    }
+
+    /// A laser bounced off (§10.1). Yellow spark at the point of impact, one
+    /// white frame, and the outline flares — the armor visibly takes it, so a
+    /// no-damage hit cannot be mistaken for a miss.
+    func flashArmorHit() {
+        removeAction(forKey: Self.armorKey)
+        run(.sequence([
+            .colorize(with: .white, colorBlendFactor: 1, duration: 0),
+            .wait(forDuration: 0.05),
+            .colorize(with: Self.armorSilver, colorBlendFactor: 1, duration: 0.12),
+            .run { [weak self] in self?.setArmored(true) },
+        ]))
+    }
+
+    /// §10.1's expiry: a hairline crack over half a second, then the silver
+    /// shatters away and the ordinary pawn is underneath.
+    func crackArmorAway(completion: @escaping () -> Void) {
+        removeAction(forKey: Self.armorKey)
+        run(.sequence([
+            // The crack: the sheen breaks into a stutter before it goes.
+            .repeat(.sequence([
+                .colorize(with: .white, colorBlendFactor: 1, duration: 0.04),
+                .colorize(with: Self.armorSilver, colorBlendFactor: 1, duration: 0.08),
+            ]), count: 4),
+            .run { [weak self] in
+                self?.setArmored(false)
+                completion()
+            },
+        ]))
+    }
+
+    // MARK: - Transporter beam-in (§23.9)
+
+    /// Materialises this piece out of a column of shimmer.
+    ///
+    /// Nothing about the piece is real until it finishes: the caller withholds
+    /// the physics body, so lasers pass straight through, and §23.9's "the
+    /// shimmering column is the warning" is the whole UI for that state.
+    func beamIn(duration: TimeInterval, tint: SKColor,
+                completion: @escaping () -> Void) {
+        alpha = 0
+        let column = SKNode()
+        column.name = Self.beamName
+        column.zPosition = 1
+        addChild(column)
+
+        // Flecks rather than a particle system: ~20Hz of short-lived dots
+        // inside the piece's own box, which is what §23.9 describes and what
+        // the rest of the board's vocabulary is built from.
+        let spawn = SKAction.run { [weak self, weak column] in
+            guard let self, let column else { return }
+            let fleck = SKSpriteNode(texture: Self.emberTexture, color: tint,
+                                     size: CGSize(width: 2.5, height: 2.5))
+            fleck.colorBlendFactor = 1
+            fleck.position = CGPoint(
+                x: .random(in: -self.size.width * 0.3...self.size.width * 0.3),
+                y: .random(in: -self.size.height / 2...self.size.height / 2))
+            column.addChild(fleck)
+            fleck.run(.sequence([.fadeOut(withDuration: 0.16), .removeFromParent()]))
+        }
+        column.run(.repeatForever(.sequence([spawn, .wait(forDuration: 0.05)])))
+
+        run(.sequence([
+            .fadeAlpha(to: 1, duration: duration),
+            // One white frame as it resolves, then the shimmer cuts out at once.
+            .run { [weak self] in
+                guard let self else { return }
+                self.childNode(withName: Self.beamName)?.removeFromParent()
+                self.run(.sequence([
+                    .colorize(with: .white, colorBlendFactor: 1, duration: 0),
+                    .wait(forDuration: Juice.frameDuration),
+                    .colorize(with: self.baseColor,
+                              colorBlendFactor: Self.baseBlend, duration: 0.1),
+                ]))
+                completion()
+            },
+        ]))
     }
 
     /// Embers drifting off a piece below half HP (§20 Phase 3.3's smoke trail).

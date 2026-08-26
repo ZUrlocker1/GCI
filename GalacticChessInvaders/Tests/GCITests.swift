@@ -3079,6 +3079,153 @@ final class LaserPhysicsTests: XCTestCase {
 }
 
 @MainActor
+final class RegenerationTests: XCTestCase {
+
+    private func level(_ n: Int) -> LevelParameters { LevelManager.parameters(for: n) }
+
+    /// §23.9: from Level 4, and never past the level's slot cap. Slots are
+    /// spent when a regeneration is *queued* — counting on arrival would let a
+    /// two-slot wave queue twenty at once and pay them all out.
+    func testRegenerationRespectsTheLevelSlotCap() {
+        XCTAssertEqual(level(3).regenSlots, 0, "nothing regenerates before Level 4")
+        XCTAssertFalse(Regeneration.schedules(destroyed: .pawn, color: .black,
+                                              level: level(3), slotsUsed: 0))
+        XCTAssertTrue(Regeneration.schedules(destroyed: .rook, color: .black,
+                                             level: level(4), slotsUsed: 0))
+        XCTAssertTrue(Regeneration.schedules(destroyed: .pawn, color: .black,
+                                             level: level(4), slotsUsed: 1))
+        XCTAssertFalse(Regeneration.schedules(destroyed: .pawn, color: .black,
+                                              level: level(4), slotsUsed: 2),
+                       "Level 4's cap is 2")
+    }
+
+    /// The king never comes back, and White never regenerates at all.
+    func testTheKingNeverRegenerates() {
+        XCTAssertFalse(Regeneration.schedules(destroyed: .king, color: .black,
+                                              level: level(9), slotsUsed: 0))
+        XCTAssertFalse(Regeneration.schedules(destroyed: .pawn, color: .white,
+                                              level: level(9), slotsUsed: 0))
+    }
+
+    func testQueueSpendsASlotPerScheduleAndFiresOnTime() {
+        var queue = RegenerationQueue()
+        queue.schedule()
+        queue.schedule()
+        XCTAssertEqual(queue.slotsUsed, 2)
+        XCTAssertEqual(queue.tick(Regeneration.delay - 1), 0, "not yet")
+        XCTAssertEqual(queue.tick(2), 2, "both due in the same frame")
+        XCTAssertEqual(queue.waiting, 0)
+        XCTAssertEqual(queue.tick(100), 0, "and they only fire once")
+        // §23.9: a level ending cancels everything pending.
+        queue.schedule()
+        queue.reset()
+        XCTAssertEqual(queue.waiting, 0)
+        XCTAssertEqual(queue.slotsUsed, 0)
+    }
+
+    /// Standard spawns scatter along the fleet's rear rank; a badly hurt king
+    /// pulls them in front of him instead (§23.9's defensive mode).
+    func testDefensiveSpawnShieldsTheKing() {
+        XCTAssertFalse(Regeneration.isDefensive(kingDamage: .full))
+        XCTAssertFalse(Regeneration.isDefensive(kingDamage: .chipped))
+        XCTAssertTrue(Regeneration.isDefensive(kingDamage: .cracked))
+        XCTAssertTrue(Regeneration.isDefensive(kingDamage: .critical))
+
+        XCTAssertEqual(Regeneration.spawnSquare(defensive: true, kingSquare: "e6",
+                                                rearRank: 7, occupied: []), "e5")
+        // Blocked in front: fall back to a free file on the rear rank.
+        let blocked = Regeneration.spawnSquare(defensive: true, kingSquare: "e6",
+                                               rearRank: 7, occupied: ["e5"])
+        XCTAssertNotEqual(blocked, "e5")
+        XCTAssertEqual(blocked?.last, "7")
+        // Standard: always the rear rank, never an occupied square.
+        let taken = Set("abcdefg".map { "\($0)7" })
+        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                                rearRank: 7, occupied: taken), "h7")
+        XCTAssertNil(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                              rearRank: 7,
+                                              occupied: taken.union(["h7"])),
+                     "a full rank means nothing arrives")
+    }
+
+    /// §10.1: armor is Level 9 onward, and only ever on a regenerated pawn.
+    func testArmorIsLevelNineOnward() {
+        for n in 1...8 { XCTAssertFalse(level(n).armoredPawns, "level \(n)") }
+        for n in 9...12 { XCTAssertTrue(level(n).armoredPawns, "level \(n)") }
+        // Roughly half, per §10.1 — measured over enough draws to be sure it
+        // is a coin and not a constant.
+        var armored = 0
+        for _ in 0..<4000 where Regeneration.arrivesArmored(level: level(9)) { armored += 1 }
+        XCTAssertGreaterThan(armored, 1700)
+        XCTAssertLessThan(armored, 2300)
+        // And never before Level 9, however many times it is asked.
+        for _ in 0..<200 {
+            XCTAssertFalse(Regeneration.arrivesArmored(level: level(8)))
+        }
+    }
+
+    /// Armor stops laser fire dead and expires on White's moves; a chess
+    /// capture is unaffected throughout.
+    func testArmorBlocksLasersForThreeWhiteTurns() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        // A clear square on the rear rank — the standard position fills 7 and 8.
+        guard let pawn = board.regeneratePawn(at: "d5", armored: true) else {
+            return XCTFail("regeneration refused an empty square")
+        }
+        XCTAssertTrue(pawn.isArmored)
+        XCTAssertTrue(pawn.isRegenerated)
+
+        for turn in 1...Regeneration.armorTurns {
+            let outcome = CollisionResolver.playerLaserHitBlackPiece(at: "d5", board: board)
+            guard case .ricochet = outcome else {
+                return XCTFail("turn \(turn): armor let a laser through")
+            }
+            XCTAssertEqual(board.piece(at: "d5")?.hp, PieceType.pawn.maxHP,
+                           "turn \(turn): no damage may land")
+            board.tickArmor()
+        }
+        XCTAssertFalse(board.piece(at: "d5")?.isArmored ?? true, "three turns and it is spent")
+
+        // Now it takes damage like any pawn — and pays the reduced rate.
+        guard case .blackPieceHit(_, _, _, let points, _) =
+                CollisionResolver.playerLaserHitBlackPiece(at: "d5", board: board) else {
+            return XCTFail("armor did not expire")
+        }
+        XCTAssertLessThan(board.piece(at: "d5")?.hp ?? 99, PieceType.pawn.maxHP)
+        XCTAssertEqual(points, 0, "not destroyed by one shot")
+        board.applyDamage(PieceType.pawn.maxHP, at: "d5")
+        XCTAssertNil(board.piece(at: "d5"))
+    }
+
+    /// §9: a pawn that came back is worth less than one off the starting board.
+    func testARegeneratedPawnScoresLess() {
+        var fresh = Piece(type: .pawn, color: .black, square: "a7")
+        XCTAssertEqual(fresh.shootValue, PieceType.pawn.pointValue)
+        fresh.isRegenerated = true
+        XCTAssertEqual(fresh.shootValue, Regeneration.regeneratedPawnValue)
+        XCTAssertLessThan(fresh.shootValue, PieceType.pawn.pointValue)
+        // Only pawns regenerate, so nothing else is discounted.
+        var rook = Piece(type: .rook, color: .black, square: "a8")
+        rook.isRegenerated = true
+        XCTAssertEqual(rook.shootValue, PieceType.rook.pointValue)
+    }
+
+    /// The engine has to see a regenerated pawn, or its search will move other
+    /// pieces straight through it — the same class of bug as `forcePlace`.
+    func testTheChessEngineSeesARegeneratedPawn() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        board.regeneratePawn(at: "d5", armored: false)
+        XCTAssertEqual(board.currentPosition.board["d5"]?.kind, .pawn)
+        XCTAssertEqual(board.currentPosition.board["d5"]?.color, .black)
+        // And an occupied square refuses rather than overwriting.
+        XCTAssertNil(board.regeneratePawn(at: "d5", armored: false))
+        XCTAssertNil(board.regeneratePawn(at: "e7", armored: false))
+    }
+}
+
+@MainActor
 final class JuiceTests: XCTestCase {
 
     /// Three events shake the board and nothing else does. The scarcity is the
