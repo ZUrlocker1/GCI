@@ -104,7 +104,7 @@ final class BoardNode: SKNode {
             lines.addLine(to: CGPoint(x: Self.boardSize, y: offset))
         }
         let grid = SKShapeNode(path: lines)
-        grid.strokeColor = Self.cyan.withAlphaComponent(0.13)
+        grid.strokeColor = Self.cyan.withAlphaComponent(0.182)
         grid.lineWidth = 1
         grid.zPosition = -1
         addChild(grid)
@@ -116,7 +116,7 @@ final class BoardNode: SKNode {
                                                 width: Self.boardSize,
                                                 height: Self.squareSize * 2))
             zone.strokeColor = .clear
-            zone.fillColor = Self.cyan.withAlphaComponent(0.052)
+            zone.fillColor = Self.cyan.withAlphaComponent(0.0728)
             zone.zPosition = -2
             addChild(zone)
         }

@@ -244,6 +244,12 @@ final class FleetController {
     /// The parent is raised by a full rank at the same time, because the pieces
     /// themselves have just moved down by one in local space — without this the
     /// fleet would appear to fall two ranks.
+    /// Test-only synchronous entry point, reachable via `@testable import`. The
+    /// real path runs `applyFullRankDescent` as the completion of a timed drop
+    /// `SKAction`; tests need to trigger the same board/position mutation
+    /// without waiting on a run loop.
+    func applyFullRankDescentForTesting() { applyFullRankDescent() }
+
     private func applyFullRankDescent() {
         var breached: [String] = []
         var crushes: [CrushEvent] = []
@@ -259,10 +265,24 @@ final class FleetController {
                 continue
             }
             if let crush = board.forcePlace(piece, at: next) { crushes.append(crush) }
-            if let node = members.removeValue(forKey: square) { members[next] = node }
+            if let node = members.removeValue(forKey: square) {
+                // The node's *local* position is supposed to always equal its
+                // logical square's centre (see the header comment) — but a rank
+                // descent had only ever adjusted the parent, never the child.
+                // The two cancelled out on screen for exactly one rank, then the
+                // next descent compounded the error: the piece would appear to
+                // jump up a full square the instant the rank completed, right
+                // before the next drop pulled it back down. Moving the node here
+                // by the same amount the parent is about to be moved back keeps
+                // the screen position continuous across the transition.
+                node.position.y -= squareSize
+                members[next] = node
+            }
             moved.append((square, next))
         }
 
+        // Undoes the two half-drops now that the pieces themselves have moved
+        // down a rank in local space, so the net screen position is unchanged.
         fleetNode.position.y += squareSize
         DiagnosticsLog.shared.log(.fleet, "logical rank descended")
 

@@ -298,3 +298,10 @@ Not started.
 - The XCTest suite has never been *run* as tests; every assertion in it was first
   executed as a standalone harness. `⌘U` in Xcode is untried
 - Nothing has been visually or audibly verified here
+- **`typecheck.sh`'s `-typecheck` mode can silently miss real errors** when
+  `swift-plugin-server` fails to expand `@Observable` (`DiagnosticsLog`,
+  `ScoreManager`) — observed to suppress unrelated diagnostics for the rest of
+  the module, so a genuinely broken reference reported "no errors" three runs
+  in a row. `typecheck.sh` now detects the plugin failure and fails the whole
+  run rather than filtering it out; a clean run is only trustworthy when it
+  actually says so. A real build remains the authority regardless
