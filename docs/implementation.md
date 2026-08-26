@@ -181,8 +181,29 @@ Get the black fleet sweeping and descending alongside the chess game. No shootin
 - [x] Crush events, emitted **before** the descent re-key: the victim is still
       keyed at that square, and reversing the order destroys the arriving piece
 - [x] Fleet log lines: sweep, half-drop, logical descent, breach
-- [ ] Not verified on screen — sweep speed, drop timing and formation spacing
-      have never been seen running
+- [x] Playtested, then reworked (see below)
+
+### 3.1 rework after playtest
+
+The first build was unplayable: the fleet drifted three files off true and fell a
+rank every few seconds. Two rules came out of it, both now pinned by tests.
+
+- [x] **Sweep never exceeds ±0.4 of a square** (`FleetRules.sweepAmplitudeRatio`).
+      Past half a square a piece straddles a file boundary and its square stops
+      being readable, which makes the chess half unplayable
+- [x] **Descent is paced by the chess beat, not wall bounces.** Tying it to
+      bounces coupled difficulty to sweep width — narrowing the shuffle for
+      readability would have silently made the fleet fall faster
+- [x] Level 1: nothing descends for 6 beats, then half a rank every 4 (a full
+      rank every 8). `descentSchedule(for:)` tightens this with level, floored so
+      a rank never costs fewer than 4 beats
+- [x] Check and mate lines resolve endpoints through the fleet's drawn position,
+      not the logical square
+- [x] Checkmate snap: the fleet eases onto its true squares over 0.32s and the
+      mating line is redrawn, so the reveal shows the position the engine sees
+- [x] Capture tethers: a hairline from a threatened fleet piece to its square,
+      shown only while a white piece is selected
+- [x] I / ? open the Info screen from the title screen, not just during play
 
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 

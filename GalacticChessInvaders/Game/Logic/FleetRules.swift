@@ -3,14 +3,21 @@
 // No SpriteKit — the controller owns the animation, this owns the decisions.
 //
 // The central idea is that visual position and logical chess position are
-// deliberately separated. The fleet slides and drops continuously on screen, but
-// the chess engine only ever sees whole-rank descents:
+// deliberately separated — but only ever by less than one square. The fleet
+// shuffles and drops on screen while the chess engine sees whole-rank descents:
 //
-//   wall bounce 1 → half-drop, board untouched
-//   wall bounce 2 → half-drop, and *now* every black piece descends one rank
+//   descent beat 1 → half-drop, board untouched
+//   descent beat 2 → half-drop, and *now* every black piece descends one rank
 //
-// So the engine always evaluates a legal-looking position, while the fleet
-// visually occupies the space between ranks.
+// Two constraints keep that separation readable, and both were learned the hard
+// way in playtest:
+//
+//  * The lateral sweep never exceeds ±0.4 of a square, so every piece stays over
+//    its own file. Drift past that and the player can no longer look at a piece
+//    and say which square it is on, which makes the chess half unplayable.
+//  * Descent is paced by the chess beat, not by wall bounces. Tying it to bounces
+//    couples difficulty to sweep width: narrowing the shuffle for readability
+//    would silently make the fleet fall faster.
 
 import Foundation
 
@@ -18,21 +25,63 @@ enum FleetRules {
 
     // MARK: - Descent
 
-    /// Counts wall bounces so that every second one completes a full rank.
-    struct DescentCounter {
-        /// 0 when the fleet sits on a rank, 1 when it is halfway between.
-        private(set) var halfDrops = 0
+    /// What a chess beat does to the fleet's height.
+    enum DescentStep: Equatable {
+        case none
+        /// Visual only — the board is untouched (§5.1).
+        case halfDrop
+        /// The second half-drop of the pair: every black piece descends a rank.
+        case fullRank
+    }
 
-        /// Records a wall bounce. Returns true when the fleet has now fallen a
-        /// full rank and the board must be updated.
-        mutating func registerBounce() -> Bool {
-            halfDrops += 1
-            guard halfDrops >= 2 else { return false }
-            halfDrops = 0
-            return true
+    /// Paces descent on chess beats rather than wall bounces, so sweep width and
+    /// speed are free to be tuned for looks without changing difficulty.
+    struct DescentSchedule {
+        /// Beats of quiet at the start of a level before anything descends. The
+        /// player needs a stretch of board to learn the position before the
+        /// arcade layer starts taking squares away.
+        let graceBeats: Int
+        /// Beats between half-drops. Two half-drops make a rank, so a rank costs
+        /// twice this.
+        let beatsPerHalfDrop: Int
+
+        private var beats = 0
+        private var halfDrops = 0
+
+        init(graceBeats: Int, beatsPerHalfDrop: Int) {
+            self.graceBeats = graceBeats
+            self.beatsPerHalfDrop = max(1, beatsPerHalfDrop)
         }
 
-        mutating func reset() { halfDrops = 0 }
+        /// Call once per resolved chess beat.
+        mutating func registerBeat() -> DescentStep {
+            beats += 1
+            guard beats >= graceBeats,
+                  (beats - graceBeats) % beatsPerHalfDrop == 0 else { return .none }
+            halfDrops += 1
+            return halfDrops.isMultiple(of: 2) ? .fullRank : .halfDrop
+        }
+
+        mutating func reset() { beats = 0; halfDrops = 0 }
+    }
+
+    /// Descent pacing for a level. Later levels close the distance faster, but
+    /// never so fast that a rank costs fewer than four beats.
+    static func descentSchedule(for level: Int) -> DescentSchedule {
+        DescentSchedule(graceBeats: Swift.max(2, 7 - level),
+                        beatsPerHalfDrop: Swift.max(2, 4 - (level - 1) / 2))
+    }
+
+    // MARK: - Sweep width
+
+    /// How far the fleet may drift from true, as a fraction of a square.
+    ///
+    /// Must stay below 0.5: at exactly half a square a piece sits on the boundary
+    /// between two files and its square becomes genuinely ambiguous.
+    static let sweepAmplitudeRatio: CGFloat = 0.4
+
+    static func sweepAmplitude(squareSize: CGFloat) -> CGFloat {
+        squareSize * sweepAmplitudeRatio
     }
 
     /// The square one rank toward White, or nil if already on rank 1.

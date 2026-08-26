@@ -20,17 +20,21 @@ final class InputHandler {
     func handleKeyDown(_ event: NSEvent, inTitleScreen: Bool = false) {
         guard !event.isARepeat else { return }
 
-        // In the title screen any key starts the game
-        if inTitleScreen {
-            dispatch(.confirmStart)
-            return
-        }
-
         // I · ⌘I · ? open How To Play (§9). Matched on characters rather than
         // key code so "?" works regardless of keyboard layout.
+        //
+        // Tested before the title screen's any-key-starts rule, or the one place
+        // a new player most wants the instructions is the one place they cannot
+        // reach them.
         if isInfoShortcut(event) {
             DiagnosticsLog.shared.log(.input, "Info shortcut → showInfo")
             dispatch(.showInfo)
+            return
+        }
+
+        // In the title screen any other key starts the game
+        if inTitleScreen {
+            dispatch(.confirmStart)
             return
         }
 
