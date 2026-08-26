@@ -1111,11 +1111,23 @@ class GameScene: SKScene {
         }
 
         guard let node = pieceNodes.removeValue(forKey: outcome.from) else { return }
-        // A black piece that plays chess stops being an invader (§5.1 rework):
-        // it leaves the formation and stands on its square. Two populations that
-        // read differently — things that march, and things that sit — are far
-        // easier to follow than one hybrid one.
-        detachFromFleet(node, at: outcome.from)
+        // A black piece that plays chess normally stops being an invader (§5.1
+        // rework): it leaves the formation and stands on its square, so the two
+        // populations read differently — things that march, and things that sit.
+        //
+        // The exception is a piece shuffling around Black's own two home ranks.
+        // A parked black piece usually sits directly behind one of White's pawns
+        // and is then nearly unshootable, so staying in the formation keeps it
+        // moving and keeps it a target.
+        if outcome.moved.color == .black,
+           FleetRules.staysInFormation(afterMovingTo: outcome.to),
+           let fleet, fleet.contains(node),
+           fleet.rekey(from: outcome.from, to: outcome.to) {
+            // Stays parented to the fleet; `animateMove` below still targets the
+            // logical square centre, which is what a member's local position is.
+        } else {
+            detachFromFleet(node, at: outcome.from)
+        }
         node.refresh(with: outcome.moved)
         node.animateMove(to: outcome.to, point: point)
         pieceNodes[outcome.to] = node

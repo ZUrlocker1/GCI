@@ -116,6 +116,30 @@ enum FleetRules {
                                beatsPerHalfDrop: Swift.max(2, 4 - (level - 1) / 2))
     }
 
+    // MARK: - Formation membership after a chess move
+
+    /// The rearmost rank a black piece can move to and still march with the
+    /// fleet. Ranks 7-8 are Black's own two starting rows.
+    static let formationRearRank = 7
+
+    /// Does a black piece that just played a chess move stay in the formation?
+    ///
+    /// A piece that leaves the fleet stops sweeping, and a stationary black
+    /// piece is usually parked directly behind one of White's own pawns — which
+    /// makes it very hard to shoot, since a laser is consumed by the first thing
+    /// it touches. Shuffling around its home ranks therefore keeps a piece in
+    /// the formation; genuinely advancing (rank 6 or beyond) still detaches it.
+    ///
+    /// Note this reads the *destination* rank absolutely, not relative to the
+    /// formation. Once the fleet has descended past rank 7 nothing can satisfy
+    /// it any more, so the rule quietly decays back to "any chess move
+    /// detaches" as a level wears on. That may want revisiting if the effect
+    /// should persist — it would mean tracking the formation's own front rank.
+    static func staysInFormation(afterMovingTo square: String) -> Bool {
+        guard let rank = Int(String(square.last ?? "0")) else { return false }
+        return rank >= formationRearRank
+    }
+
     // MARK: - Sweep width
 
     /// How far the fleet may drift from true, as a fraction of a square.

@@ -2358,6 +2358,35 @@ final class FleetRulesTests: XCTestCase {
         }
     }
 
+    // MARK: - Formation membership after a chess move
+
+    /// A black piece shuffling around its own two home ranks keeps marching; one
+    /// that genuinely advances drops out of the formation. A parked black piece
+    /// tends to sit right behind a white pawn, where it is nearly unshootable.
+    func testHomeRankMovesKeepAPieceInTheFormation() {
+        for square in ["a8", "e8", "h8", "a7", "e7", "h7"] {
+            XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: square),
+                          "\(square) is a home rank")
+        }
+        for square in ["a6", "e6", "d5", "c4", "b3", "h2", "e1"] {
+            XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: square),
+                           "\(square) is an advance")
+        }
+    }
+
+    func testFormationRankBoundaryIsRankSeven() {
+        XCTAssertEqual(FleetRules.formationRearRank, 7)
+        XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: "d7"))
+        XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d6"),
+                       "rank 6 is the third row — the first that detaches")
+    }
+
+    func testMalformedSquareDoesNotKeepAPieceInFormation() {
+        for square in ["", "zz", "e", "e9x"] {
+            XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: square))
+        }
+    }
+
     /// The readability invariant: a piece that drifts half a square sits on a
     /// file boundary and its square becomes genuinely ambiguous.
     func testSweepStaysWithinTheOwnFile() {
@@ -2545,6 +2574,32 @@ final class FleetControllerTests: XCTestCase {
         XCTAssertEqual(fleet.pieceCount, 15)
         XCTAssertNil(fleet.release(square: "e7"), "releasing twice is a no-op")
         XCTAssertNil(fleet.release(square: "e2"), "white was never in the formation")
+    }
+
+    /// Re-keying keeps the node parented to the fleet so it carries on sweeping;
+    /// releasing hands it back. The two must not be confused — a re-keyed piece
+    /// that lost its parent would stop moving while still counted as a member.
+    func testRekeyKeepsThePieceMarchingAndReleaseDoesNot() throws {
+        let (fleet, board, _) = makeFleet()
+        let geometry = BoardNode()
+        for piece in board.allPieces(color: .black) {
+            if let centre = geometry.center(of: piece.logicalSquare) {
+                fleet.adopt(PieceNode(piece: piece, squareSize: BoardNode.squareSize),
+                            square: piece.logicalSquare, atLogicalCentre: centre)
+            }
+        }
+        XCTAssertEqual(fleet.pieceCount, 16)
+
+        // e8 -> d8: still a home rank, so it stays in the formation.
+        XCTAssertTrue(fleet.rekey(from: "e8", to: "d8"))
+        XCTAssertEqual(fleet.pieceCount, 16, "re-keying must not drop a member")
+        XCTAssertFalse(fleet.rekey(from: "e8", to: "c8"),
+                       "the old square is no longer a member")
+
+        // Releasing genuinely removes it.
+        let released = try XCTUnwrap(fleet.release(square: "d8"))
+        XCTAssertNil(released.parent)
+        XCTAssertEqual(fleet.pieceCount, 15)
     }
 
     func testResetEmptiesTheFormation() {
