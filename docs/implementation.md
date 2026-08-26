@@ -206,6 +206,26 @@ rank every few seconds. Two rules came out of it, both now pinned by tests.
       shown only while a white piece is selected
 - [x] I / ? open the Info screen from the title screen, not just during play
 
+### 3.1 second readability pass
+
+- [x] **Uneven half-drops, 0.3 then 0.7.** An even split parked the fleet on a
+      rank boundary for several beats — the exact ambiguity the sweep cap exists
+      to prevent on the other axis. At 0.3 a piece reads as leaning off its rank
+- [x] **A fixed grid** (`BoardNode.showsGrid`). §12.3 banned one because the
+      fleet slid past the board's edges; capping the sweep below one file
+      retired that reason. It never animates — being the one stationary thing on
+      screen is the whole job. One shape node, one draw call
+- [x] **Stepped sweep** — eight jumps per leg instead of a smooth slide, sized
+      from the same points-per-second, so the fleet marches rather than drifts
+- [x] **Descent telegraph** — the formation dips twice on the beat before a drop
+      (`FleetRules.telegraphsDescent`, one flag and one call site to remove)
+- [x] **Chess moves leave the formation.** A black piece that plays chess is
+      re-parented onto the board and stops being swept or dropped. Descent walks
+      fleet membership rather than colour. Two populations that read differently
+      — things that march, things that sit — beat one hybrid one, and engaging
+      Black on the board now defuses arcade pressure instead of stacking with it
+- [x] Fixed `GCIBoard.forcePlace` silently overwriting a same-colour occupant
+
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 
 ## Phase 3.2 — Shooting & Collision ⬜

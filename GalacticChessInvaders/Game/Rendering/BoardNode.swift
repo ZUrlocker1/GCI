@@ -68,12 +68,16 @@ final class BoardNode: SKNode {
     /// pool means selecting a piece never allocates during play (§18).
     private var markerPool: [Marker] = []
 
+    /// §12.3 ruled out a grid because the fleet slid beyond the board's edges, so
+    /// any lattice would have contradicted where the pieces were. That stopped
+    /// being true once the sweep was capped below one file — nothing ever leaves
+    /// its square now, and without a lattice the eye has nothing to measure the
+    /// remaining offset against. Set false to go back to open space.
+    static let showsGrid = true
+
     override init() {
         super.init()
-        // No squares, grid or coordinate labels: the black fleet slides
-        // horizontally between squares like Space Invaders, so a drawn grid
-        // would constantly disagree with where the pieces actually are.
-        // This node is pure coordinate mapping plus interaction feedback.
+        if Self.showsGrid { buildGrid() }
         buildSelection()
         markers.zPosition = 2
         addChild(markers)
@@ -82,6 +86,41 @@ final class BoardNode: SKNode {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    // MARK: - Grid
+
+    /// A fixed lattice. It never moves, scrolls or pulses — its entire job is to
+    /// be the one thing on screen that is stationary, so a marching fleet can be
+    /// read against it. Anything that animated here would defeat the purpose.
+    ///
+    /// One shape node for all 18 lines, so this is a single draw call.
+    private func buildGrid() {
+        let lines = CGMutablePath()
+        for index in 0...8 {
+            let offset = CGFloat(index) * Self.squareSize
+            lines.move(to: CGPoint(x: offset, y: 0))
+            lines.addLine(to: CGPoint(x: offset, y: Self.boardSize))
+            lines.move(to: CGPoint(x: 0, y: offset))
+            lines.addLine(to: CGPoint(x: Self.boardSize, y: offset))
+        }
+        let grid = SKShapeNode(path: lines)
+        grid.strokeColor = Self.cyan.withAlphaComponent(0.10)
+        grid.lineWidth = 1
+        grid.zPosition = -1
+        addChild(grid)
+
+        // The deployment zones §12.3 already allows: a touch more light at the
+        // two ends, so the board reads as having a near side and a far side.
+        for band in [CGFloat(0), Self.boardSize - Self.squareSize * 2] {
+            let zone = SKShapeNode(rect: CGRect(x: 0, y: band,
+                                                width: Self.boardSize,
+                                                height: Self.squareSize * 2))
+            zone.strokeColor = .clear
+            zone.fillColor = Self.cyan.withAlphaComponent(0.04)
+            zone.zPosition = -2
+            addChild(zone)
+        }
+    }
 
     // MARK: - Square ↔ point mapping
 

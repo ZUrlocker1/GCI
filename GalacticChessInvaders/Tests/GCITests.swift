@@ -2285,6 +2285,25 @@ final class FleetRulesTests: XCTestCase {
                           "total sweep must stay under one file width")
     }
 
+    /// The same argument, on the other axis: an even 0.5/0.5 split would park the
+    /// fleet on a rank boundary, where a piece belongs to neither rank.
+    func testTheRestingDropLeavesAPieceOnItsOwnRank() {
+        XCTAssertLessThan(FleetRules.firstDropRatio, 0.5)
+        XCTAssertEqual(FleetRules.firstDropRatio + FleetRules.secondDropRatio, 1,
+                       accuracy: 0.0001, "the pair must still total exactly one rank")
+    }
+
+    /// The drop has to be announced a beat early, or it reads as a random lurch.
+    func testDescentIsTelegraphedOneBeatAhead() {
+        var schedule = FleetRules.DescentSchedule(graceBeats: 3, beatsPerHalfDrop: 3)
+        XCTAssertFalse(FleetRules.descendsAfter(schedule), "beat 1 is quiet")
+        _ = schedule.registerBeat()
+        XCTAssertFalse(FleetRules.descendsAfter(schedule))
+        _ = schedule.registerBeat()
+        XCTAssertTrue(FleetRules.descendsAfter(schedule), "beat 3 drops, so warn on 2")
+        XCTAssertNotEqual(schedule.registerBeat(), .none, "and it actually does")
+    }
+
     func testDescendingASquare() {
         XCTAssertEqual(FleetRules.descended("e5"), "e4")
         XCTAssertEqual(FleetRules.descended("a2"), "a1")
@@ -2348,7 +2367,8 @@ final class FleetControllerTests: XCTestCase {
         let geometry = BoardNode()
         for piece in board.allPieces(color: .black) {
             let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
-            fleet.adopt(node, atLogicalCentre: try XCTUnwrap(geometry.center(of: piece.logicalSquare)))
+            fleet.adopt(node, square: piece.logicalSquare,
+                        atLogicalCentre: try XCTUnwrap(geometry.center(of: piece.logicalSquare)))
         }
         XCTAssertEqual(fleet.pieceCount, 16)
         XCTAssertEqual(parent.children.count, 1, "the fleet is a single node")
@@ -2363,7 +2383,7 @@ final class FleetControllerTests: XCTestCase {
         let centre = try XCTUnwrap(geometry.center(of: "a7"))
         let node = PieceNode(piece: Piece(type: .pawn, color: .black, square: "a7"),
                              squareSize: BoardNode.squareSize)
-        fleet.adopt(node, atLogicalCentre: centre)
+        fleet.adopt(node, square: "a7", atLogicalCentre: centre)
         XCTAssertEqual(node.position, centre)
     }
 
@@ -2379,12 +2399,32 @@ final class FleetControllerTests: XCTestCase {
         for piece in board.allPieces(color: .black) {
             if let centre = geometry.center(of: piece.logicalSquare) {
                 fleet.adopt(PieceNode(piece: piece, squareSize: BoardNode.squareSize),
-                            atLogicalCentre: centre)
+                            square: piece.logicalSquare, atLogicalCentre: centre)
             }
         }
         XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.8, accuracy: 0.001,
                        "a full formation shuffles exactly as far as a lone piece")
         XCTAssertFalse(fleet.isOffTruePosition, "a fresh fleet starts on its squares")
+    }
+
+    /// A black piece that plays chess stops being an invader: it leaves the
+    /// formation, keeps its node, and is no longer swept or dropped.
+    func testAPieceThatPlaysChessLeavesTheFormation() throws {
+        let (fleet, board, _) = makeFleet()
+        let geometry = BoardNode()
+        for piece in board.allPieces(color: .black) {
+            if let centre = geometry.center(of: piece.logicalSquare) {
+                fleet.adopt(PieceNode(piece: piece, squareSize: BoardNode.squareSize),
+                            square: piece.logicalSquare, atLogicalCentre: centre)
+            }
+        }
+        XCTAssertEqual(fleet.pieceCount, 16)
+
+        let released = try XCTUnwrap(fleet.release(square: "e7"))
+        XCTAssertNil(released.parent, "handed back for the caller to re-parent")
+        XCTAssertEqual(fleet.pieceCount, 15)
+        XCTAssertNil(fleet.release(square: "e7"), "releasing twice is a no-op")
+        XCTAssertNil(fleet.release(square: "e2"), "white was never in the formation")
     }
 
     func testResetEmptiesTheFormation() {
@@ -2393,7 +2433,7 @@ final class FleetControllerTests: XCTestCase {
         for piece in board.allPieces(color: .black) {
             if let centre = geometry.center(of: piece.logicalSquare) {
                 fleet.adopt(PieceNode(piece: piece, squareSize: BoardNode.squareSize),
-                            atLogicalCentre: centre)
+                            square: piece.logicalSquare, atLogicalCentre: centre)
             }
         }
         fleet.reset()

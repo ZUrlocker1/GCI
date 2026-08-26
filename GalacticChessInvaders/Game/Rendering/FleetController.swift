@@ -31,6 +31,10 @@ final class FleetController {
     /// past half a square stops being readable as belonging to its file.
     private let amplitude: CGFloat
 
+    /// Squares the fleet still owns. Descent walks these rather than every black
+    /// piece: a piece that has played a chess move has left the formation and is
+    /// no longer swept or dropped.
+    private var members: [String: SKNode] = [:]
     private var schedule: FleetRules.DescentSchedule
     private var direction: CGFloat = 1        // +1 right, -1 left
     private var isRunning = false
@@ -45,6 +49,7 @@ final class FleetController {
     var onRankDescended: DescentHandler?
 
     private static let sweepKey = "fleetSweep"
+    private static let telegraphKey = "fleetTelegraph"
     private static let halfDropDuration: TimeInterval = 0.18
 
     init(board: GCIBoard, parent: SKNode, squareSize: CGFloat, level: LevelParameters) {
@@ -61,10 +66,29 @@ final class FleetController {
 
     /// Black pieces are re-parented here; their local position is the logical
     /// square centre, never the on-screen position.
-    func adopt(_ node: SKNode, atLogicalCentre centre: CGPoint) {
+    func adopt(_ node: SKNode, square: String, atLogicalCentre centre: CGPoint) {
         node.removeFromParent()
         node.position = centre
+        node.alpha = 1
         fleetNode.addChild(node)
+        members[square] = node
+    }
+
+    /// A piece that has played chess is no longer an invader: it stops sweeping
+    /// and descending, and stands on its square like an ordinary chess piece.
+    /// Returns the node so the caller can re-parent it onto the board.
+    ///
+    /// This is what keeps the two populations legible — things that move are the
+    /// formation, things that stand still are chess — and it means engaging Black
+    /// on the board defuses the arcade pressure rather than just stacking with it.
+    @discardableResult
+    func release(square: String) -> SKNode? {
+        guard let node = members.removeValue(forKey: square) else { return nil }
+        node.removeAllActions()
+        node.alpha = 1
+        node.removeFromParent()
+        DiagnosticsLog.shared.log(.fleet, "\(square) left the formation")
+        return node
     }
 
     func contains(_ node: SKNode) -> Bool { node.parent === fleetNode }
@@ -102,6 +126,8 @@ final class FleetController {
 
     func reset() {
         stop()
+        members.removeAll()
+        fleetNode.alpha = 1
         fleetNode.removeAllChildren()
         fleetNode.position = .zero
         schedule.reset()
@@ -115,6 +141,7 @@ final class FleetController {
     func snapToTruePosition(duration: TimeInterval = 0.3) {
         isRunning = false
         fleetNode.removeAllActions()
+        fleetNode.alpha = 1
         let settle = SKAction.move(to: .zero, duration: duration)
         settle.timingMode = .easeOut
         fleetNode.run(settle)
@@ -127,7 +154,6 @@ final class FleetController {
         guard isRunning, pieceCount > 0 else { return }
 
         let target = direction > 0 ? amplitude : -amplitude
-        let distance = abs(target - fleetNode.position.x)
         let speed = FleetRules.sweepSpeed(level: levelParameters,
                                           piecesRemaining: pieceCount)
         guard speed > 0 else { return }
@@ -138,13 +164,23 @@ final class FleetController {
                 "sweep \(Int(speed))px/s (\(pieceCount) pieces)")
         }
 
-        let slide = SKAction.moveTo(x: target, duration: TimeInterval(distance / speed))
+        // Stepped rather than smooth: the formation jumps an eighth of the sweep
+        // and holds, so it marches instead of drifting. Overall pace is unchanged
+        // — the hold is sized from the same points-per-second.
+        let steps = FleetRules.sweepSteps
+        let delta = (target - fleetNode.position.x) / CGFloat(steps)
+        let hold = TimeInterval(abs(delta) / speed)
+        let step = SKAction.sequence([.moveBy(x: delta, y: 0, duration: 0),
+                                      .wait(forDuration: hold)])
         let turn = SKAction.run { [weak self] in
             guard let self else { return }
+            // Land exactly on the amplitude: eight divisions of a float would
+            // otherwise let the fleet creep off true over a long level.
+            self.fleetNode.position.x = target
             self.direction *= -1
             self.beginLeg()
         }
-        fleetNode.run(.sequence([slide, turn]), withKey: Self.sweepKey)
+        fleetNode.run(.sequence([.repeat(step, count: steps), turn]), withKey: Self.sweepKey)
     }
 
     // MARK: - Beat-paced descent
@@ -161,19 +197,43 @@ final class FleetController {
         }
         switch step {
         case .none:
-            return
+            break
         case .halfDrop:
-            dropHalfRank { DiagnosticsLog.shared.log(.fleet, "half-drop 1/2 — ranks unchanged") }
+            drop(ratio: FleetRules.firstDropRatio) {
+                DiagnosticsLog.shared.log(.fleet, "leaning down — ranks unchanged")
+            }
         case .fullRank:
-            dropHalfRank { [weak self] in self?.applyFullRankDescent() }
+            drop(ratio: FleetRules.secondDropRatio) { [weak self] in
+                self?.applyFullRankDescent()
+            }
+        }
+
+        if FleetRules.telegraphsDescent, FleetRules.descendsAfter(schedule) {
+            runDescentTelegraph()
         }
     }
 
-    /// The drop rides on the fleet parent alongside the sweep, so the shuffle
-    /// keeps running underneath it rather than stuttering to a halt.
-    private func dropHalfRank(then completion: @escaping () -> Void) {
-        let drop = SKAction.moveBy(x: 0, y: -squareSize / 2, duration: Self.halfDropDuration)
-        fleetNode.run(drop, completion: completion)
+    /// The drop rides on the fleet parent alongside the sweep, so the march keeps
+    /// running underneath it rather than stuttering to a halt.
+    ///
+    /// The two drops are uneven — see FleetRules.firstDropRatio.
+    private func drop(ratio: CGFloat, then completion: @escaping () -> Void) {
+        let action = SKAction.moveBy(x: 0, y: -squareSize * ratio,
+                                     duration: Self.halfDropDuration)
+        fleetNode.run(action, completion: completion)
+    }
+
+    /// Announces next beat's drop with two dips of the whole formation. Alpha
+    /// rather than scale or position, so it cannot be mistaken for the drop
+    /// itself and cannot desync the sweep.
+    ///
+    /// Delete this method and its one call site to remove the telegraph.
+    private func runDescentTelegraph() {
+        fleetNode.removeAction(forKey: Self.telegraphKey)
+        let pulse = SKAction.sequence([.fadeAlpha(to: 0.45, duration: 0.12),
+                                       .fadeAlpha(to: 1.0, duration: 0.12)])
+        fleetNode.run(.repeat(pulse, count: 2), withKey: Self.telegraphKey)
+        DiagnosticsLog.shared.log(.fleet, "descent next beat")
     }
 
     // MARK: - Logical descent
@@ -185,20 +245,21 @@ final class FleetController {
     /// themselves have just moved down by one in local space — without this the
     /// fleet would appear to fall two ranks.
     private func applyFullRankDescent() {
-        let squares = FleetRules.descentOrder(
-            board.allPieces(color: .black).map(\.logicalSquare))
-
         var breached: [String] = []
         var crushes: [CrushEvent] = []
         var moved: [(from: String, to: String)] = []
 
-        for square in squares {
-            guard let piece = board.piece(at: square) else { continue }
+        for square in FleetRules.descentOrder(Array(members.keys)) {
+            guard let piece = board.piece(at: square) else {
+                members[square] = nil          // destroyed since the last descent
+                continue
+            }
             guard let next = FleetRules.descended(square) else {
                 breached.append(square)
                 continue
             }
             if let crush = board.forcePlace(piece, at: next) { crushes.append(crush) }
+            if let node = members.removeValue(forKey: square) { members[next] = node }
             moved.append((square, next))
         }
 

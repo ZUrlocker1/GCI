@@ -609,6 +609,7 @@ class GameScene: SKScene {
     /// HP check and no points, because the fleet took it rather than the player.
     private func applyCrush(_ crush: CrushEvent) {
         if let victim = pieceNodes.removeValue(forKey: crush.atSquare) {
+            detachFromFleet(victim, at: crush.atSquare)
             victim.runDestructionAnimation {}
         }
         AudioManager.shared.play(.pieceHitHeavy)
@@ -871,7 +872,7 @@ class GameScene: SKScene {
         // Black pieces belong to the fleet so one action sweeps them all; their
         // local position stays the logical square centre.
         if piece.color == .black, let fleet {
-            fleet.adopt(node, atLogicalCentre: point)
+            fleet.adopt(node, square: piece.logicalSquare, atLogicalCentre: point)
         } else {
             boardNode.addChild(node)
         }
@@ -881,6 +882,18 @@ class GameScene: SKScene {
     }
 
     // MARK: - Chess Interaction
+
+    /// Lifts a node out of the formation onto the board, keeping it exactly where
+    /// it was drawn. Used both when a black piece plays chess — it stops being an
+    /// invader — and when one dies, so the explosion does not ride the march.
+    /// A no-op for pieces the fleet does not own.
+    private func detachFromFleet(_ node: PieceNode, at square: String) {
+        guard let boardNode, let fleet, fleet.contains(node) else { return }
+        let drawn = fleet.screenPosition(of: node)
+        fleet.release(square: square)
+        node.position = drawn
+        boardNode.addChild(node)
+    }
 
     /// Where the piece on `square` is actually drawn, in board coordinates.
     /// White pieces sit on their square; fleet pieces carry the sweep offset.
@@ -966,6 +979,7 @@ class GameScene: SKScene {
         // Use the captured square, not the destination — en passant differs.
         if let capturedSquare = outcome.capturedSquare,
            let victim = pieceNodes.removeValue(forKey: capturedSquare) {
+            detachFromFleet(victim, at: capturedSquare)
             victim.runDestructionAnimation {}
         }
 
@@ -986,6 +1000,11 @@ class GameScene: SKScene {
         }
 
         guard let node = pieceNodes.removeValue(forKey: outcome.from) else { return }
+        // A black piece that plays chess stops being an invader (§5.1 rework):
+        // it leaves the formation and stands on its square. Two populations that
+        // read differently — things that march, and things that sit — are far
+        // easier to follow than one hybrid one.
+        detachFromFleet(node, at: outcome.from)
         node.refresh(with: outcome.moved)
         node.animateMove(to: outcome.to, point: point)
         pieceNodes[outcome.to] = node

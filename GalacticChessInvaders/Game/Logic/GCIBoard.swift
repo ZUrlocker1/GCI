@@ -147,7 +147,11 @@ final class GCIBoard {
     func forcePlace(_ piece: Piece, at square: String) -> CrushEvent? {
         var crush: CrushEvent? = nil
 
-        if let occupant = pieces[square], occupant.color != piece.color {
+        // Any occupant, not just an enemy one. Restricting this to opposite
+        // colours meant a descending piece landing on a stalled friendly one
+        // silently overwrote it: the board lost a piece, no event fired, and the
+        // scene kept a node for something that no longer existed.
+        if let occupant = pieces[square] {
             crush = CrushEvent(crushedPiece: occupant, atSquare: square)
             DiagnosticsLog.shared.log(.fleet, "CRUSH: \(occupant.color) \(occupant.type) at \(square) crushed by \(piece.type)")
         }
