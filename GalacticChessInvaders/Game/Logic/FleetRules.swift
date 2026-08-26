@@ -162,6 +162,14 @@ enum FleetRules {
 
     /// The king's own weapon: faster and heavier than ordinary fleet fire.
     static let kingShotSpeedMultiplier: CGFloat = 1.6
+
+    /// An angled king round travels 30% faster again.
+    ///
+    /// Only the angled one. A lean makes the path to the player longer — at 31°
+    /// off vertical it is 17% further — so at a shared speed the angled shot
+    /// simply arrives later and reads as the weaker of the two. This puts them
+    /// back on equal footing and then some.
+    static let kingAngledShotBoost: CGFloat = 1.3
     static let kingShotDamage = 2
 
     /// How often the activated king fires, in beats. It shoots on its own

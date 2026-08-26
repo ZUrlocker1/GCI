@@ -288,7 +288,10 @@ King Activated and Crossfire are their own waves (Blitz carries Crossfire again)
   falls straight, so the shooter has slid out from behind it by the time the
   eye arrives
 - **Angled fire aims.** Bishops lean toward one of White's actual pieces
-  (17°–45°), the king more gently (9°–31°, on 45% of its rounds). A fixed 45°
+  (17°–45°) at §21.3's fixed 160 px/s; the king leans more gently (9°–31°, on
+  45% of its rounds) at its own speed, 30% above its straight round — a lean
+  makes the path longer, so at a shared speed the angled shot just arrives
+  later and reads as the weaker of the two. A fixed 45°
   from the back rank crosses seven files before reaching White: measured, a
   third of shooter positions threw the round off the board, now 4%
 - **Formation membership goes both ways.** `adopt` used to run only at board

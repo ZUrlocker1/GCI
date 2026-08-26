@@ -1657,10 +1657,13 @@ class GameScene: SKScene {
             // the fleet keeps sweeping while a shot falls straight, so by the
             // time the eye found the missile the king had already slid out
             // from behind it and the shot read as coming from off to one side.
+            let lean = kingLean(from: king.logicalSquare)
+            let speed = level.projectileSpeed * FleetRules.kingShotSpeedMultiplier
+                * (lean == 0 ? 1 : FleetRules.kingAngledShotBoost)
             scheduleInvaderShot(
                 from: king.logicalSquare, after: 0,
-                speed: level.projectileSpeed * FleetRules.kingShotSpeedMultiplier,
-                lean: kingLean(from: king.logicalSquare),
+                speed: speed,
+                lean: lean,
                 sound: .kingLaserFire,
                 damage: FleetRules.kingShotDamage,
                 heavy: true,
@@ -1815,10 +1818,12 @@ class GameScene: SKScene {
         // Set the dressing before firing: `setHeavy` rebuilds the physics body,
         // which would otherwise wipe the live contact mask `fire` just set.
         laser.setHeavy(heavy)
-        // A diagonal keeps §21.3's fixed 160 px/s whatever the level's
-        // straight-down speed is — the threat is the angle, not extra pace.
-        laser.fire(from: origin, damage: damage,
-                   speed: lean == 0 ? speed : FleetRules.diagonalShotSpeed,
+        // The caller owns the speed. This used to force *every* leaning round
+        // to §21.3's 160 px/s, which was right when only bishops leaned — but
+        // the king leans now too, and the override silently threw away its
+        // weapon's speed and made its angled shot the slowest thing on screen.
+        // The bishops pass `diagonalShotSpeed` themselves.
+        laser.fire(from: origin, damage: damage, speed: speed,
                    travelDistance: origin.y, lean: lean)
         flashMuzzle(at: square)
         AudioManager.shared.play(sound)
