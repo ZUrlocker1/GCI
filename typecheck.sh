@@ -41,7 +41,15 @@ fi
 # the run still reported clean. Once the plugin fails, the compiler appears to
 # stop surfacing at least some real diagnostics for the rest of the module, so
 # this state can no longer be filtered past — it has to fail the whole run.
-PLUGIN_SERVER_FLAKY=0
+#
+# A shell variable can't carry this: run_pass's output is captured via
+# $(...), which forks a subshell, so a plain `PLUGIN_SERVER_FLAKY=1` set inside
+# it vanishes the moment the function returns and the caller never sees it.
+# (This is exactly what happened the first time this guard was written — it
+# silently never fired.) A flag file survives the subshell boundary.
+mkdir -p .build/tc
+FLAKY_MARKER="$(mktemp .build/tc/flaky.XXXXXX)"
+trap 'rm -f "$FLAKY_MARKER"' EXIT
 
 run_pass() {
   local label="$1"; shift
@@ -56,7 +64,7 @@ run_pass() {
     "$@" 2>&1 || true)
 
   if echo "$output" | grep -q "swift-plugin-server\|malformed response"; then
-    PLUGIN_SERVER_FLAKY=1
+    echo 1 > "$FLAKY_MARKER"
   fi
 
   echo "$output" \
@@ -84,7 +92,7 @@ if [ -n "$TESTS" ]; then
   FILTERED="$FILTERED$TEST_OUT"
 fi
 
-if [ "$PLUGIN_SERVER_FLAKY" -eq 1 ]; then
+if [ -s "$FLAKY_MARKER" ]; then
   echo "✗ swift-plugin-server failed to expand a macro (@Observable) during this"
   echo "  run. That has been observed to silently suppress OTHER, unrelated"
   echo "  diagnostics for the rest of the module — a broken reference can pass"

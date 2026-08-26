@@ -16,7 +16,8 @@ final class HighScoreEntryNode: SKNode {
     private static let orange = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
     private static let font   = "PressStart2P-Regular"
 
-    /// Called with the trimmed name once Return is pressed.
+    /// Called with the trimmed name once Return is pressed, or with an empty
+    /// string if the player cancels with Escape.
     var onSubmit: ((String) -> Void)?
 
     private(set) var enteredName = ""
@@ -91,6 +92,9 @@ final class HighScoreEntryNode: SKNode {
             return true
         case 51:                                       // Delete
             if !enteredName.isEmpty { enteredName.removeLast(); refresh() }
+            return true
+        case 53:                                       // Escape — record the entry with a blank name
+            onSubmit?("")
             return true
         default:
             break
