@@ -3282,6 +3282,21 @@ final class RegenerationTests: XCTestCase {
         XCTAssertFalse(node.physicsBody?.isDynamic ?? true, "pieces stay static")
     }
 
+    /// Armor is about taking fire, not returning it. An armored pawn is a
+    /// gunner like any other — nothing in the firing path looks at armor, and
+    /// nothing should start.
+    func testArmorDoesNotStopAPawnShooting() {
+        let armored = FleetFiring.Candidate(square: "c7", type: .pawn)
+        let plain = FleetFiring.Candidate(square: "d7", type: .pawn)
+        let gunners = FleetFiring.gunners(from: [armored, plain,
+                                                 .init(square: "e8", type: .king)])
+        XCTAssertEqual(Set(gunners.map(\.square)), ["c7", "d7"],
+                       "a regenerated or armored pawn is still a pawn")
+        // The firing decision is made from square and type alone — there is no
+        // route by which armor could reach it.
+        XCTAssertEqual(FleetFiring.Candidate(square: "c7", type: .pawn), armored)
+    }
+
     /// §9: a pawn that came back is worth less than one off the starting board.
     func testARegeneratedPawnScoresLess() {
         var fresh = Piece(type: .pawn, color: .black, square: "a7")
