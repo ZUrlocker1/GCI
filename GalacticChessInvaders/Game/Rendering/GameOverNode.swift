@@ -22,12 +22,16 @@ final class GameOverNode: SKNode {
         /// or the player's laser (§25.2: all four are the same win). The run
         /// continues into the next wave.
         case waveCleared(next: Int)
+        /// The last wave (`LevelManager.finalLevel`) has fallen — the run is
+        /// won outright, not continued.
+        case runCompleted
 
         /// Speaks to the player, not the game model: "wave clear" is an internal
         /// notion and does not tell someone they just won.
         var headline: String {
             switch self {
-            case .waveCleared: return "YOU WIN"
+            case .runCompleted: return "YOU WIN"
+            case .waveCleared: return "WAVE CLEAR"
             case .stalemate, .drawnByRepetition, .drawnByMoveLimit: return "DRAW"
             case .whiteMated, .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed:
                 return "GAME OVER"
@@ -38,6 +42,7 @@ final class GameOverNode: SKNode {
             switch self {
             case .whiteMated:            return "WHITE CHECKMATED"
             case .waveCleared:           return "BLACK KING DEFEATED"
+            case .runCompleted:          return "ALL \(LevelManager.finalLevel) WAVES CLEARED"
             case .stalemate:             return "NO LEGAL MOVES"
             case .drawnByRepetition:     return "SAME POSITION THREE TIMES"
             case .drawnByMoveLimit:      return "\(ChessEngine.quietMoveLimit) MOVES, NO CAPTURE"
@@ -57,7 +62,7 @@ final class GameOverNode: SKNode {
         /// Good news for the player gets the friendly colour.
         var isFavourable: Bool {
             switch self {
-            case .waveCleared: return true
+            case .waveCleared, .runCompleted: return true
             case .whiteMated, .stalemate, .drawnByRepetition, .drawnByMoveLimit,
                  .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed:
                 return false

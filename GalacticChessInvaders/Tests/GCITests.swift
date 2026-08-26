@@ -726,13 +726,14 @@ final class LevelManagerTests: XCTestCase {
     }
 
     func testHighLevelsRespectCapsAndFloors() {
-        let ten = LevelManager.parameters(for: 10)
-        XCTAssertEqual(ten.blackMovesPerTurn, 3, "capped at 3")
-        XCTAssertEqual(ten.shotsPerTurn, 3...3, "capped at 3")
-        XCTAssertEqual(ten.turnTimer, 4, "floored at 4s")
-        XCTAssertEqual(ten.raiderInterval, 6, "floored at 6s")
-        XCTAssertEqual(ten.fleetSpeed, 110 + 75, "+15 per level past 5")
-        XCTAssertGreaterThan(ten.projectileSpeed, LevelManager.parameters(for: 5).projectileSpeed)
+        let nine = LevelManager.parameters(for: 9)
+        XCTAssertEqual(nine.blackMovesPerTurn, 3, "capped at 3")
+        XCTAssertEqual(nine.shotsPerTurn, 3...3, "capped at 3")
+        XCTAssertEqual(nine.turnTimer, 4, "floored at 4s — Blitz alone goes to 3")
+        XCTAssertEqual(nine.raiderInterval, 6, "floored at 6s")
+        XCTAssertEqual(nine.fleetSpeed, 110 + 60, "+15 per level past 5")
+        XCTAssertGreaterThan(nine.projectileSpeed,
+                             LevelManager.parameters(for: 5).projectileSpeed)
     }
 
     func testLevelZeroClampsToOne() {
@@ -1046,12 +1047,16 @@ final class GameOverNodeTests: XCTestCase {
         }
     }
 
-    /// Losing and winning must not both read "GAME OVER".
+    /// Losing and winning must not both read "GAME OVER" — and clearing a wave
+    /// must not read the same as finishing the run, or the ending is invisible.
     func testWinAndLossReadDifferently() {
         XCTAssertEqual(GameOverNode.Outcome.whiteMated.headline, "GAME OVER")
-        XCTAssertEqual(GameOverNode.Outcome.waveCleared(next: 2).headline, "YOU WIN")
+        XCTAssertEqual(GameOverNode.Outcome.waveCleared(next: 2).headline, "WAVE CLEAR")
+        XCTAssertEqual(GameOverNode.Outcome.runCompleted.headline, "YOU WIN")
         XCTAssertNotEqual(GameOverNode.Outcome.whiteMated.detail,
                           GameOverNode.Outcome.waveCleared(next: 2).detail)
+        XCTAssertNotEqual(GameOverNode.Outcome.waveCleared(next: 2).detail,
+                          GameOverNode.Outcome.runCompleted.detail)
     }
 }
 
@@ -1732,7 +1737,7 @@ final class OutcomePresentationTests: XCTestCase {
     /// next wave, which read as the game restarting itself.
     func testEveryOutcomeDrawsHeadlineScoreAndPrompt() {
         let cases: [GameOverNode.Outcome] =
-            [.whiteMated, .stalemate, .waveCleared(next: 2),
+            [.whiteMated, .stalemate, .waveCleared(next: 2), .runCompleted,
              .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed]
         for outcome in cases {
             let node = GameOverNode(outcome: outcome, score: 1234,
@@ -2422,22 +2427,85 @@ final class FleetRulesTests: XCTestCase {
         }
     }
 
-    /// 1.75 squares end to end, not 2.0 — at exactly 2.0 the amplitude is one
-    /// whole file, so a piece at the extreme sits dead centre on its
-    /// neighbour's square and reads as being on that square.
-    func testWidestSweepStaysOffTheGrid() {
-        XCTAssertEqual(FleetRules.widestSweepAmplitudeRatio, 0.875)
-        XCTAssertGreaterThan(FleetRules.widestSweepAmplitudeRatio,
-                             FleetRules.wideSweepAmplitudeRatio)
-        XCTAssertNotEqual(FleetRules.widestSweepAmplitudeRatio, 1.0,
-                          "a full-file offset reads as a different square")
-        XCTAssertEqual(LevelManager.parameters(for: 9).sweepAmplitudeRatio,
-                       FleetRules.wideSweepAmplitudeRatio)
-        for level in [10, 12, 20] {
-            XCTAssertEqual(LevelManager.parameters(for: level).sweepAmplitudeRatio,
-                           FleetRules.widestSweepAmplitudeRatio,
-                           "level \(level) sweeps 1.75 squares")
+    // MARK: - Blitz (Level 10)
+
+    /// Blitz opens at Level 6's width and grows a tenth of a square every
+    /// fourth lap: 1.5, 1.6, 1.7 … The count is laps, not time.
+    func testBlitzWidensEveryFourthLap() {
+        XCTAssertEqual(FleetRules.blitzWidenEveryArrivals, 4)
+        // Ratios are half the end-to-end width, so a tenth of a square is 0.05.
+        XCTAssertEqual(FleetRules.blitzAmplitudeRatio(leftEdgeArrivals: 0),
+                       FleetRules.wideSweepAmplitudeRatio, "opens at 1.5 squares")
+        XCTAssertEqual(FleetRules.blitzAmplitudeRatio(leftEdgeArrivals: 3),
+                       FleetRules.wideSweepAmplitudeRatio, "not yet — third lap")
+        for (laps, squares) in [(4, 1.6), (8, 1.7), (12, 1.8), (40, 2.5)] {
+            let width = FleetRules.blitzAmplitudeRatio(leftEdgeArrivals: laps) * 2
+            XCTAssertEqual(width, CGFloat(squares), accuracy: 0.0001,
+                           "lap \(laps) sweeps \(squares) squares")
         }
+    }
+
+    func testBlitzQuickensEverySixthLap() {
+        XCTAssertEqual(FleetRules.blitzSpeedUpEveryArrivals, 6)
+        XCTAssertEqual(FleetRules.blitzSpeedScale(leftEdgeArrivals: 0), 1)
+        XCTAssertEqual(FleetRules.blitzSpeedScale(leftEdgeArrivals: 5), 1,
+                       "not yet — fifth lap")
+        XCTAssertEqual(FleetRules.blitzSpeedScale(leftEdgeArrivals: 6),
+                       1 + FleetRules.blitzSpeedStep, accuracy: 0.0001)
+        // Compounding, not linear.
+        XCTAssertEqual(FleetRules.blitzSpeedScale(leftEdgeArrivals: 18),
+                       pow(1 + FleetRules.blitzSpeedStep, 3), accuracy: 0.0001)
+    }
+
+    /// The ceilings are there so the fleet cannot leave the screen or stop
+    /// reading as steps — not as design limits. Both take far longer to reach
+    /// than a wave lasts.
+    func testBlitzCeilingsKeepTheFleetOnScreen() {
+        XCTAssertEqual(FleetRules.blitzAmplitudeRatio(leftEdgeArrivals: 100_000),
+                       FleetRules.blitzMaxAmplitudeRatio)
+        XCTAssertEqual(FleetRules.blitzSpeedScale(leftEdgeArrivals: 100_000),
+                       FleetRules.blitzMaxSpeedScale)
+        // 960pt scene, 512pt board centred: 224pt of margin each side.
+        let margin = (960 - BoardNode.boardSize) / 2
+        let amplitude = FleetRules.sweepAmplitude(
+            squareSize: BoardNode.squareSize,
+            ratio: FleetRules.blitzMaxAmplitudeRatio)
+        XCTAssertLessThan(amplitude + BoardNode.squareSize / 2, margin,
+                          "the outermost piece must stay on screen")
+        // And it is a guard, not a wall the player will hit.
+        let laps = FleetRules.blitzWidenEveryArrivals
+            * Int((FleetRules.blitzMaxAmplitudeRatio
+                   - FleetRules.wideSweepAmplitudeRatio)
+                  / FleetRules.blitzWidenStepRatio)
+        XCTAssertGreaterThan(laps, 150, "unreachable within a wave")
+    }
+
+    /// Level 10 is Blitz: 3-second clock, and the *opening* width is still
+    /// Level 6's, because the growth happens within the level.
+    func testBlitzIsLevelTenOnly() {
+        XCTAssertFalse(LevelManager.parameters(for: 9).blitz)
+        XCTAssertTrue(LevelManager.parameters(for: 10).blitz)
+        XCTAssertEqual(LevelManager.parameters(for: 10).turnTimer, 3)
+        XCTAssertEqual(LevelManager.parameters(for: 9).turnTimer, 4)
+        XCTAssertEqual(LevelManager.parameters(for: 10).sweepAmplitudeRatio,
+                       FleetRules.wideSweepAmplitudeRatio)
+        XCTAssertEqual(LevelManager.announcement(for: 10)?.title, "BLITZ!")
+    }
+
+    /// Clearing the last wave wins the run rather than rolling into an
+    /// eleventh level that has no design.
+    func testFinalLevelEndsTheRun() {
+        XCTAssertEqual(LevelManager.finalLevel, 10)
+        let levels = LevelManager()
+        XCTAssertFalse(levels.isFinalLevel)
+        for _ in 1..<LevelManager.finalLevel { levels.advance() }
+        XCTAssertEqual(levels.level, 10)
+        XCTAssertTrue(levels.isFinalLevel)
+        XCTAssertEqual(GameOverNode.Outcome.runCompleted.headline, "YOU WIN")
+        XCTAssertTrue(GameOverNode.Outcome.runCompleted.isFavourable)
+        XCTAssertTrue(GameOverNode.Outcome.runCompleted.detail.contains("10 WAVES"))
+        XCTAssertTrue(GameOverNode.Outcome.runCompleted.prompt.contains("NEW GAME"),
+                      "the run is over, so there is no LEVEL 11 to continue to")
     }
 
     func testMalformedSquareDoesNotKeepAPieceInFormation() {

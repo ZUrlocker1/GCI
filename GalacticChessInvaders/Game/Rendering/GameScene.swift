@@ -468,6 +468,14 @@ class GameScene: SKScene {
     /// level, not a way to farm one.
     private func skipLevel() {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
+        // Level 10 is the last one, so there is nothing to skip to. Say so
+        // rather than silently building an eleventh level that has no design.
+        guard !levels.isFinalLevel else {
+            DiagnosticsLog.shared.log(.auto,
+                "SKIP LEVEL refused — \(LevelManager.finalLevel) is the last")
+            flashGutterNotice("LAST LEVEL")
+            return
+        }
         DiagnosticsLog.shared.log(.auto, "SKIP LEVEL → \(levels.level + 1)")
         // buildPlayfield tears the board down and back up, so the notice has to
         // be raised afterwards or it is removed with everything else. The
@@ -959,9 +967,18 @@ class GameScene: SKScene {
     }
 
     /// A win deserves acknowledgement rather than rolling silently into the next
-    /// wave. Any key continues.
+    /// wave. Any key continues — unless that was the last wave, in which case
+    /// the run is over and won, and the normal game-over flow takes it (final
+    /// score, the high-score table, NEW GAME?).
     private func showWaveClearOverlay() {
         guard gameOverNode == nil else { return }
+        if levels.isFinalLevel {
+            outcome = .runCompleted
+            DiagnosticsLog.shared.log(.level,
+                "RUN COMPLETE — all \(LevelManager.finalLevel) waves cleared")
+            stateMachine.enter(GameOverState.self)
+            return
+        }
         outcome = .waveCleared(next: levels.level + 1)
         let overlay = GameOverNode(outcome: outcome,
                                    score: ScoreManager.shared.currentScore,

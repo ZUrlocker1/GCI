@@ -213,17 +213,54 @@ enum FleetRules {
     /// limits. Levels 1-5 keep the readable width.
     static let wideSweepAmplitudeRatio: CGFloat = 0.75
 
-    /// Level 10's sweep: 1.75 squares end to end, not 2.0.
-    ///
-    /// 2.0 would put the amplitude at exactly one file, which is the single
-    /// worst width available — a piece at the extreme would sit dead centre on
-    /// its neighbour's square, reading as a confident answer to the wrong
-    /// question rather than as something in between. 0.875 of a file stays
-    /// visibly off-grid.
-    static let widestSweepAmplitudeRatio: CGFloat = 0.875
-
     static func sweepAmplitude(squareSize: CGFloat, ratio: CGFloat) -> CGFloat {
         squareSize * ratio
+    }
+
+    // MARK: - Blitz (Level 10)
+
+    /// Level 10 does not hold a width at all: the sweep starts where Level 6
+    /// left it (1.5 squares) and grows a tenth of a square every fourth time
+    /// the fleet reaches the left edge, with the march speeding up every sixth.
+    /// Nothing else in the game escalates *within* a level, which is the point
+    /// — the last wave stops being a chess position under pressure and becomes
+    /// a shooting gallery that is coming apart.
+    ///
+    /// Counted on left-edge arrivals rather than on time so the escalation is
+    /// tied to something the player can see happening. It is self-damping:
+    /// every widening makes the next lap longer, so arrivals come further apart
+    /// as the sweep grows.
+    static let blitzWidenEveryArrivals = 4
+    static let blitzSpeedUpEveryArrivals = 6
+    /// A tenth of a square *end to end*, so half that in amplitude.
+    static let blitzWidenStepRatio: CGFloat = 0.05
+    /// 6% per step, compounding. Small enough that no single step is the moment
+    /// the level got unfair, and the sweep is lengthening at the same time.
+    static let blitzSpeedStep: CGFloat = 0.06
+
+    /// Ceilings are safety limits, not design ones.
+    ///
+    /// The board is 512pt centred in a 960pt scene, so there are 224pt of margin
+    /// either side. At ratio 2.75 the amplitude is 176pt and the outermost piece
+    /// still has ~16pt of screen left; measured, not guessed — see
+    /// `testBlitzCeilingsKeepTheFleetOnScreen`. Reaching it takes 160 left-edge
+    /// arrivals, about five minutes in one wave, so within a real game the
+    /// widening reads as unbounded. `blitzMaxSpeedScale` is the same kind of
+    /// guard: past ~1.75x on top of the thinning bonus the march stops reading
+    /// as steps at all.
+    static let blitzMaxAmplitudeRatio: CGFloat = 2.75
+    static let blitzMaxSpeedScale: CGFloat = 1.75
+
+    static func blitzAmplitudeRatio(leftEdgeArrivals: Int) -> CGFloat {
+        let steps = max(0, leftEdgeArrivals) / blitzWidenEveryArrivals
+        return min(blitzMaxAmplitudeRatio,
+                   wideSweepAmplitudeRatio + blitzWidenStepRatio * CGFloat(steps))
+    }
+
+    static func blitzSpeedScale(leftEdgeArrivals: Int) -> CGFloat {
+        let steps = max(0, leftEdgeArrivals) / blitzSpeedUpEveryArrivals
+        return min(blitzMaxSpeedScale,
+                   pow(1 + blitzSpeedStep, CGFloat(steps)))
     }
 
     /// The square one rank toward White, or nil if already on rank 1.
