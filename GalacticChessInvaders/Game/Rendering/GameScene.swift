@@ -41,7 +41,7 @@ class GameScene: SKScene {
     private let turnTimer = TurnTimer()
     private var turnTimerNode: TurnTimerNode?
     private var statusNode: GameStatusNode?
-    private var testModeLabel: SKLabelNode?
+    private var autoModeLabel: SKLabelNode?
     private var fleet: FleetController?
     private var shipState: SpaceshipState?
     private var laserPool: LaserPool?
@@ -98,9 +98,9 @@ class GameScene: SKScene {
     /// scene work, and a plain deadline is both deterministic and testable.
     private var revealRemaining: TimeInterval = 0
     private var pendingReveal: (() -> Void)?
-    /// Hidden test mode: White auto-moves on a short beat so a whole game plays
+    /// Hidden Auto Mode: White auto-moves on a short beat so a whole game plays
     /// out without waiting on the countdown, but slowly enough to follow.
-    private static let testBeatDuration: TimeInterval = 1.0
+    private static let autoBeatDuration: TimeInterval = 1.0
     /// Awarded for checkmating Black (§Scoring), before the level multiplier.
     private static let checkmateBonus = 300
     private static let endBannerName = "endBanner"
@@ -116,7 +116,7 @@ class GameScene: SKScene {
     /// captured, or crushed (§9). Stacks with `checkmateBonus` for the 800-pt
     /// combo when the king dies while a checkmate is also standing.
     private static let kingFallBonus = 500
-    private var isTestMode = false
+    private var isAutoMode = false
 
     // MARK: - Lifecycle
 
@@ -463,15 +463,16 @@ class GameScene: SKScene {
     /// level, not a way to farm one.
     private func skipLevel() {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        DiagnosticsLog.shared.log(.test, "SKIP LEVEL → \(levels.level + 1)")
+        DiagnosticsLog.shared.log(.auto, "SKIP LEVEL → \(levels.level + 1)")
         // buildPlayfield tears the board down and back up, so the notice has to
-        // be raised afterwards or it is removed with everything else. No
-        // mechanic banner either — a skip is a developer shortcut, not a reveal.
-        startNextLevel(announce: false)
+        // be raised afterwards or it is removed with everything else. The
+        // mechanic banner still shows, so a skip is a way to *see* a level's
+        // announcement rather than a way past it.
+        startNextLevel()
         flashGutterNotice("SKIP LEVEL")
     }
 
-    /// A brief label in the gutter slot TEST MODE uses, for developer actions
+    /// A brief label in the gutter slot AUTO MODE uses, for developer actions
     /// that happen once rather than toggling.
     private func flashGutterNotice(_ text: String) {
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
@@ -481,7 +482,7 @@ class GameScene: SKScene {
         label.fontColor = NeonPalette.alertOrange
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
-        // Sits just under the TEST MODE slot so both can show at once.
+        // Sits just under the AUTO MODE slot so both can show at once.
         label.position = CGPoint(x: 112, y: Self.boardBottomY + 30)
         label.zPosition = 12
         bloomNode.addChild(label)
@@ -495,23 +496,23 @@ class GameScene: SKScene {
 
     /// Hidden developer aid: White stops waiting for the player and the beat
     /// collapses to a fraction of a second, so a whole game plays through quickly.
-    private func toggleTestMode() {
-        setTestMode(!isTestMode, retimingBeat: true)
+    private func toggleAutoMode() {
+        setAutoMode(!isAutoMode, retimingBeat: true)
     }
 
     /// Idempotent. `retimingBeat` restarts the beat in flight so a toggle takes
     /// effect immediately; the automatic switch-off at mate skips that, since the
     /// beat is about to stop anyway.
-    private func setTestMode(_ on: Bool, retimingBeat: Bool) {
-        guard on != isTestMode else { return }
-        isTestMode = on
-        testModeLabel?.isHidden = !on
-        DiagnosticsLog.shared.log(.test, on ? "ON" : "OFF")
+    private func setAutoMode(_ on: Bool, retimingBeat: Bool) {
+        guard on != isAutoMode else { return }
+        isAutoMode = on
+        autoModeLabel?.isHidden = !on
+        DiagnosticsLog.shared.log(.auto, on ? "ON" : "OFF")
 
         guard retimingBeat, turnTimer.isRunning, !isEndingGame else { return }
         turnTimer.start(level: levels.parameters,
                         inCheck: board.turn == .white && board.isCheck,
-                        override: on ? Self.testBeatDuration : nil)
+                        override: on ? Self.autoBeatDuration : nil)
     }
 
     /// Straight into a fresh game, skipping the title screen — the Y answer to
@@ -597,19 +598,19 @@ class GameScene: SKScene {
         bloomNode.addChild(status)
         statusNode = status
 
-        let testLabel = SKLabelNode(fontNamed: "PressStart2P-Regular")
-        testLabel.text = "TEST MODE"
-        testLabel.fontSize = 9
-        testLabel.fontColor = NeonPalette.orange
-        testLabel.horizontalAlignmentMode = .center
-        testLabel.verticalAlignmentMode = .center
-        testLabel.position = CGPoint(x: 112, y: Self.boardBottomY + 46)
-        testLabel.isHidden = !isTestMode
-        testLabel.run(.repeatForever(.sequence([
+        let autoLabel = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        autoLabel.text = "AUTO MODE"
+        autoLabel.fontSize = 9
+        autoLabel.fontColor = NeonPalette.orange
+        autoLabel.horizontalAlignmentMode = .center
+        autoLabel.verticalAlignmentMode = .center
+        autoLabel.position = CGPoint(x: 112, y: Self.boardBottomY + 46)
+        autoLabel.isHidden = !isAutoMode
+        autoLabel.run(.repeatForever(.sequence([
             .fadeAlpha(to: 0.4, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
         ])))
-        bloomNode.addChild(testLabel)
-        testModeLabel = testLabel
+        bloomNode.addChild(autoLabel)
+        autoModeLabel = autoLabel
 
         refreshHUD()
         if announceLevel {
@@ -685,8 +686,8 @@ class GameScene: SKScene {
         turnTimerNode = nil
         statusNode?.removeFromParent()
         statusNode = nil
-        testModeLabel?.removeFromParent()
-        testModeLabel = nil
+        autoModeLabel?.removeFromParent()
+        autoModeLabel = nil
         pieceNodes.removeAll()
         selectedSquare = nil
         isEngineThinking = false
@@ -766,7 +767,7 @@ class GameScene: SKScene {
         whiteHasMovedThisBeat = false
         let inCheck = board.turn == .white && board.isCheck
         turnTimer.start(level: levels.parameters, inCheck: inCheck,
-                        override: isTestMode ? Self.testBeatDuration : nil)
+                        override: isAutoMode ? Self.autoBeatDuration : nil)
         turnTimerNode?.refresh(from: turnTimer)
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
@@ -824,7 +825,7 @@ class GameScene: SKScene {
 
         // A test run has served its purpose once the game reaches a conclusion,
         // so it does not silently carry into the next one.
-        setTestMode(false, retimingBeat: false)
+        setAutoMode(false, retimingBeat: false)
 
         if board.isMate, loser == .black {
             winLevel(bonus: Self.checkmateBonus, label: "checkmate")
@@ -864,7 +865,7 @@ class GameScene: SKScene {
     /// instant cannot both try to end the level.
     private func winLevel(bonus: Int, label: String, banner: String? = nil) {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        setTestMode(false, retimingBeat: false)
+        setAutoMode(false, retimingBeat: false)
         if let banner { showEndBanner(banner, color: NeonPalette.cyan) }
         isEndingGame = true
         turnTimer.stop()
@@ -888,7 +889,7 @@ class GameScene: SKScene {
     /// ending flow, generalized for a cause that isn't a chess fact.
     private func loseGame(outcome newOutcome: GameOverNode.Outcome, banner: String? = nil) {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        setTestMode(false, retimingBeat: false)
+        setAutoMode(false, retimingBeat: false)
         outcome = newOutcome
         DiagnosticsLog.shared.log(.white, newOutcome.detail.lowercased())
 
@@ -1711,12 +1712,12 @@ class GameScene: SKScene {
             // The countdown is the player's own clock, so it appears only while
             // White may still move: not while Black is thinking, and not after
             // White has already moved this beat.
-            // In test mode the beat is far too short to read, so the slot shows
-            // TEST MODE instead of a countdown flickering on and off.
+            // In Auto Mode the beat is far too short to read, so the slot shows
+            // AUTO MODE instead of a countdown flickering on and off.
             let awaitingWhite = isAwaitingWhiteMove
-            turnTimerNode?.isHidden = isTestMode || !awaitingWhite
-            testModeLabel?.isHidden = !isTestMode
-            if awaitingWhite, !isTestMode {
+            turnTimerNode?.isHidden = isAutoMode || !awaitingWhite
+            autoModeLabel?.isHidden = !isAutoMode
+            if awaitingWhite, !isAutoMode {
                 tickTimerWarning()
                 turnTimerNode?.refresh(from: turnTimer)
             } else {
@@ -1794,10 +1795,10 @@ class GameScene: SKScene {
             return
         }
 
-        // Hidden test mode: T plays White automatically on a very short beat.
+        // Hidden Auto Mode: A plays White automatically on a very short beat.
         if stateMachine.currentState is PlayingState,
-           event.charactersIgnoringModifiers?.lowercased() == "t" {
-            toggleTestMode()
+           event.charactersIgnoringModifiers?.lowercased() == "a" {
+            toggleAutoMode()
             return
         }
 

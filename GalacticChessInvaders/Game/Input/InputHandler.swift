@@ -93,9 +93,13 @@ final class InputHandler {
 
     private func gameAction(for keyCode: UInt16, isDown: Bool) -> GameAction? {
         switch keyCode {
-        case 123, 0:    // ← arrow, A
+        // Arrow keys only. §8.1 also lists A and D, but A is now the hidden
+        // Auto Mode toggle — and the scene intercepts hotkeys ahead of
+        // movement, so A could not have done both. D was dropped with it rather
+        // than leave the letter bindings lopsided.
+        case 123:       // ← arrow
             return isDown ? .moveLeft : .stopMoving
-        case 124, 2:    // → arrow, D
+        case 124:       // → arrow
             return isDown ? .moveRight : .stopMoving
         case 49:        // Space
             return isDown ? .fireLaser : nil
