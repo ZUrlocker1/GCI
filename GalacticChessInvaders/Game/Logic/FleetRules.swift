@@ -72,6 +72,35 @@ enum FleetRules {
         mutating func reset() { beats = 0; halfDrops = 0 }
     }
 
+    /// Would the *next* beat descend? Used to telegraph the drop a beat ahead,
+    /// so it arrives as an expected event rather than an unannounced lurch.
+    /// In Space Invaders you see the drop coming because the fleet nears a wall;
+    /// ours is paced by an invisible counter, so it has to be announced.
+    static func descendsAfter(_ schedule: DescentSchedule) -> Bool {
+        var lookahead = schedule
+        return lookahead.registerBeat() != .none
+    }
+
+    /// Set false to remove the telegraph entirely — one flag, one call site.
+    static let telegraphsDescent = true
+
+    // MARK: - Drop shape
+
+    /// The two half-drops are deliberately uneven. An even 0.5/0.5 split parks
+    /// the whole fleet on a rank boundary for several beats, which is the exact
+    /// ambiguity `sweepAmplitudeRatio` exists to prevent on the other axis —
+    /// a piece halfway between two ranks belongs to neither. At 0.3 it reads as
+    /// a piece leaning down off its own rank, which is unambiguous.
+    static let firstDropRatio: CGFloat = 0.3
+    static var secondDropRatio: CGFloat { 1 - firstDropRatio }
+
+    // MARK: - Sweep shape
+
+    /// The sweep is stepped, not continuous. Quantised motion reads as a
+    /// formation marching on a rhythm; a smooth slide reads as drifting, and
+    /// leaves a piece at any offset rather than one of a few known ones.
+    static let sweepSteps = 8
+
     /// Descent pacing for a level. Later levels close the distance faster, but
     /// never so fast that a rank costs fewer than four beats.
     static func descentSchedule(for level: Int) -> DescentSchedule {
