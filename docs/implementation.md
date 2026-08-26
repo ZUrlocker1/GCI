@@ -5,6 +5,10 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 
 ✅ done · 🟡 partial · ⬜ not started
 
+Ten levels play end to end; the one hole is **Level 9**, whose banner promises
+armored pawns and delivers nothing — it needs the pawn regeneration system
+(§6.x) that the mechanic hangs off.
+
 | Phase | Title | |
 |---|---|---|
 | 0 | Skeleton — app runs, title screen, music | ✅ |
@@ -19,7 +23,7 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 | 6.1 | Raiders: scout & basic escort | ⬜ |
 | 6.2 | Raiders: flagship, variants, special scouts | ⬜ |
 | 7.1 | Level escalation: chess AI | ⬜ |
-| 7.2 | Level escalation: arcade mechanics | ⬜ |
+| 7.2 | Level escalation: arcade mechanics | 🟡 |
 | 8 | Visual polish | ⬜ |
 | 9 | Mac hardening & App Store release | ⬜ |
 
@@ -164,24 +168,6 @@ guideline, above the 40pt tap target.
 - [x] Piece move ghost trail
 - [x] Reticle glow
 
-## Phase 4 — Sound Effects 🟡
-
-- [x] `AudioManager` — pooled polyphonic playback, preloaded, zero gameplay I/O
-- [x] `SoundKey` — 120 events mapped; GDC filenames repaired (they were truncated
-      and failing silently)
-- [x] Chess set wired: select, move ×2, capture, illegal, check alarm, promotion,
-      auto-move, countdown tick, victory / game-over stings, UI click
-- [x] Mix — effects sit just under the music (loudest 0.66 vs 0.75). They had
-      defaulted to 0.8–1.0, i.e. *over* the track. Tuned via one gain and a
-      ceiling in `AudioManager`, so per-key balance is preserved. The check alarm
-      and countdown tick are mixed further down and the alarm has a 3s cooldown —
-      both repeat, and repetition reads as loudness
-- [ ] Arcade SFX (laser, impacts, destruction, fleet, raiders) — arrive with 3.x
-- [ ] 8 sounds still need generating with jsfxr (marked `generated/` in `SoundKey`)
-- [ ] **Bundle size**: only the 12 wired files are bundled (7.7MB). All 49
-      referenced would be 91MB, dominated by three long uncompressed GDC stems —
-      trim or convert to AAC before ship
-
 ## Phase 3.1 — Fleet Movement ✅
 
 Get the black fleet sweeping and descending alongside the chess game. No shooting.
@@ -261,187 +247,103 @@ The core shoot-em-up loop, and the phase that finally lets a run *end*.
       delivers mate doesn't formally end until it resolves, so the king can
       still be shot while already checkmated
 
-### 3.2 playtest passes
+### The level ladder
 
-Several rounds of tuning and fixes on top of the initial build. In brief:
+Built during 3.2 and now the game's whole shape. Level 10 is the last wave —
+clearing it wins the run (`LevelManager.finalLevel`), where §10.1's "no ceiling"
+left the game with no ending at all.
 
-- [x] **Collision boxes follow the art.** The hitbox was the sprite's full
-      frame, but the damage sprites erode bottom-up — ink fills ~84% of the box
-      intact, ~49% Chipped, ~27% Cracked — so shots died in blank space beneath
-      a damaged piece. `PieceNode` now measures each texture's ink bounds once,
-      caches them, and refits the box on every damage swap. A rectangle over
-      those bounds rather than a texture-derived body: these are neon outlines
-      covering only ~10% of their box, so an alpha body would be hollow and
-      shots would sail through the middle of a healthy piece
-- [x] **Level mechanic banner** (§12.11) — `LevelBannerNode`, shown at the start
-      of every level above 1, sliding in from the left with the beat held until
-      it leaves, so an escalation is announced before it is inflicted. Names in
-      `LevelManager.announcement(for:)`, using the doc's own titles where it
-      gives them; a test pins the 18/22-character layout limits
-- [x] **Invader firing made coherent** — pause now stops in-flight rounds
-      (previously a paused player could still be hit), §5.3's weighting covers
-      *pawns* as well as front rank (a home rook used to outshoot an advanced
-      pawn), §10.1's Level 1 warning shot is implemented, and a volley staggers
-      over 0.18s with a muzzle flare so a shot has a visible source
-- [x] **Damage is visible when it lands.** Hits updated HP and score but not the
-      sprite until the piece happened to move; damage stages also ran a stage
-      behind the doc's §7.1 table on the big pieces
-- [x] Pawns take two laser shots (HP 2 → 3) — one-shot pawns read as
-      inconsistent against every other piece and skipped the damage art
-- [x] Friendly fire on your own king deflects rather than killing it — the ship
-      sits below the back rank, so it is nearly always an accident. Invader fire
-      still kills it
-- [x] A king destroyed outside checkmate now gets a centred banner before the
-      game-over flow, rather than the reveal hold playing out over an unchanged
-      board
-- [x] Rear-rank chess moves keep a black piece in the formation *(experiment)* —
-      a parked black piece sits behind White's own pawns where it is nearly
-      unshootable, so shuffling within the fleet's own back ranks keeps it
-      marching. Measured relative to `FleetController.rearRank`, not to absolute
-      ranks 7–8: the absolute version expired silently after two descents, so
-      the mechanic decayed back to "any chess move detaches" partway through
-      every level
-- [x] **Level 7 King Activated**, as an arcade escalation rather than a chess
-      one: the black king gains a forcefield worth 50% more hits (16 → 24 HP,
-      8 → 12 laser hits, shown as a pulsing shield ring that goes out when the
-      bonus is spent) and its own heavy weapon — 1.6× speed, double damage,
-      fired on its own two-beat cadence with a distinct large-laser sound and a
-      white, wider bolt. Deviates from §10.1, which asks for aggressive King
-      *play* from the engine; that was built and reverted — it measured as
-      invisible in a full position, because the king's move never outscores
-      thirty alternatives until the fleet is nearly cleared, and it read as
-      chess rather than arcade
-- [x] Starfield: the magenta stars are now two blues. Magenta read as dull red
-      specks against black rather than distant suns
-- [x] Two escalations added to the level ladder: Black's fire jumps **+30% at
-      Level 4** (its banner already promised "FASTER, HARDER FIRE" but delivered
-      only +11%), and the fleet's sweep widens to **1.5 squares at Level 6**,
-      renamed WIDE ORBIT. Both persist for every later level. The wide sweep
-      knowingly breaks the sub-half-square readability rule — a piece's centre
-      does cross into the next file — which is the point of the level and is
-      pinned by its own test so it stays deliberate
-- [x] **Level 8 CROSSFIRE** — §21.3's diagonal invader fire, specified in the
-      design doc and never built: 40% of shots leave at 45° in deep purple at
-      160 px/s along the path. The only remaining escalation that changes what
-      the player has to do rather than how fast they must do it — standing
-      outside a file stops being cover. King Activated became Level 7 only at
-      the same time, so the forcefield and the king's weapon read as one wave's
-      character instead of a permanent buff on the game's most important target.
-      Crossfire is Level 8 **and Blitz only** — deviating from §21.3's "from
-      Level 8 onward". A mechanic that never leaves stops being that level's
-      identity, so Level 9 goes back to straight fire and Blitz gets it back
-      along with everything else
-- [x] **Angled rounds are aimed along their own flight path.** They were not:
-      `zRotation` turns a node's own axes and a bolt's length is its y axis, so
-      rotating an angled shot by 45° left a long thin slab travelling
-      *broadside* — verified perpendicular for both leans. On screen it read as
-      a purple paddle sliding sideways. Now `atan2(dx, -dy)` from the real
-      travel vector, which is right for both owners and for a straight shot,
-      and the round is dressed as a missile: longer and narrower (3.4×22 vs
-      4×14), a white nose cone at the leading tip, and a two-stage fading
-      exhaust behind. Pinned by a cross-product test rather than four
-      hand-computed angles
-- [x] **Level 10 BLITZ! is the last wave, and the game now has an ending.**
-      Named for both the chess variation and the Cray Blitz that took the 1983
-      world computer championship. It is the one level that escalates *within*
-      itself: the sweep opens at Level 6's 1.5 squares and grows a tenth of a
-      square every fourth lap (1.6, 1.7, 1.8 …), the march quickens 6%
-      compounding every sixth lap, and the beat clock drops to 3s. Counted in
-      laps rather than seconds so the player can see the cause, and it
-      self-damps — every widening makes the next lap longer. Measured: ~1.8
-      minutes in the sweep is 3 squares wide and the march is at its 1.75x
-      ceiling. Both ceilings are safety guards, not design limits: 2.75
-      amplitude keeps the outermost piece ~16pt inside the scene edge and takes
-      160 laps (~5 min in one wave) to reach. The formation also marches three
-      ranks deep from here. The intent is to wreck the chess game on purpose —
-      at a 3-second clock there is no time to plan a position, and the last wave
-      is a shoot-em-up with a board still underneath it
-- [x] Clearing Level 10 **wins the run** (`GameOverNode.Outcome.runCompleted`,
-      `LevelManager.finalLevel`) rather than rolling into a generically-harder
-      Level 11. §10.1's "no ceiling" left the game with no ending at all. An
-      intermediate wave clear now reads LEVEL CLEARED! and the run's end reads
-      YOU WIN — sharing one headline made the ending invisible. `V` refuses to skip
-      past the last level rather than building an eleventh that has no design
-- [x] Tuning: ship 294 px/s, laser 520 px/s, base sweep 0.9 of a square, audio mixed
-      as a deliberate ladder (laser under hit under destruction), Black's
-      projectiles lightened 50% so they read as glowing
+| L | Banner | Mechanic |
+|---|---|---|
+| 1 | — | Passive. One slow king warning shot at Critical (§10.1) |
+| 2 | FIRE POWER | Pawns fire back |
+| 3 | DOUBLE TROUBLE | Black moves twice |
+| 4 | RELENTLESS | Fire speed +30% |
+| 5 | TRIPLE THREAT | Black moves three times |
+| 6 | WIDE ORBIT | Sweep widens to 1.5 squares |
+| 7 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon |
+| 8 | CROSSFIRE | Bishops fire 45° diagonals on their own cadence |
+| 9 | ARMORED PAWNS | **Banner only — needs pawn regeneration (§6.x)** |
+| 10 | BLITZ! | 3s clock, three marching ranks, and a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th |
 
-**A real bug fixed along the way, same class as `forcePlace`:** `GCIBoard
-.applyDamage` only ever updated the arcade-facing `pieces` dictionary, never
-the chess engine's own board. A laser kill was the first thing to actually
-exercise `applyDamage` in production, so this had been latent since the field
-was written. Fixed with `ChessEngine.forceRemove(at:)`, the same fix shape as
-`forceRelocate`.
+Escalations persist except where a level's identity depends on not persisting:
+King Activated and Crossfire are their own waves (Blitz carries Crossfire again).
 
-**Judgment calls made without an explicit spec answer:**
-- Player laser speed is 400 px/s — the design doc's own §20 Phase 3.2 testing
-  section states this explicitly; it is not a guess
-- Enemy laser origin/travel distance derived from the fleet piece's *drawn*
-  position (sweep offset included), consistent with how check-paths and
-  tethers already resolve a fleet piece's real screen position
-- `.blackMated`, a `GameOverNode.Outcome` case, was already dead — never
-  constructed anywhere, a leftover from before wave-clear existed. Removed
-  while touching this enum for the new win/lose cases
+### Who shoots, and how it is telegraphed
 
-**Playtest #1 found three real defects, all fixed:**
-- **No collisions at all.** Every physics body was created `isDynamic = false`.
-  SpriteKit only evaluates a contact pair when at least one body is dynamic —
-  two static bodies never produce a `didBegin` callback, so lasers passed
-  straight through pieces: no damage, no explosion, no score. The laser is now
-  the dynamic half (gravity off, no collision response, SKAction-driven as
-  before); pieces and the ship stay static. Verified empirically against a real
-  render loop — static/static reports 0 contacts, one dynamic reports the hit —
-  and pinned by `LaserPhysicsTests`
-- **Enemy shots spawned off-target.** They used `drawnPosition`, which is
-  board-local — correct for check paths and tethers, which are `boardNode`
-  children — but lasers live in `bloomNode`, and the board is inset within it.
-  Every fleet shot appeared a board-origin down and to the left. Now converted
-  through `laserOrigin(forFleetSquare:)`
-- **Silent.** Every sound the shooting loop asks for was in the "not yet
-  bundled" set, so the whole arcade layer had no audio. Added
-  `SoundKey.placeholderFilename` — `filename` stays the canonical intended
-  asset, and a stand-in from the 12 bundled files is used only when the real
-  one is absent. The startup log now reports how many keys are on placeholders,
-  so a stopgap is never mistaken for finished sound design
-- **Damage was invisible until a piece moved.** Two causes, both fixed. The hit
-  path called `applyHitFlash()` but never `refresh(with:)`, so a surviving
-  piece kept its full-HP sprite until some *other* event happened to refresh it
-  — in practice only a chess move, which is why damage appeared to "arrive"
-  late. And `damageState` used remaining-HP ratio buckets rather than §7.1's
-  explicit table, which ran a full stage behind on rook, queen and king: a
-  rook's first hit (8→6 HP) still resolved to `.full`. Six of the twenty
-  reachable states disagreed with the doc, every one of them hiding damage.
-  Ruled out rasterization as a cause first — a texture swap inside a
-  `shouldRasterize` effect node does repaint, verified against a real render loop
-- **The sounds were never missing — they were never copied.** `assets/sfx/`
-  holds the full 132-file library, already converted to `.caf`; only 16 files
-  had ever been copied into the bundled `Resources/sfx/`. Copied the 10 the
-  shooting loop needs (+0.8 MB), so lasers, impacts and explosions all play
-  their real assets. A short-lived placeholder-fallback mechanism written before
-  spotting this has been removed — it solved a misdiagnosed problem
-- **Destruction remapped onto the kenney `explosionCrunch` ladder**, which is
-  conveniently graduated by length (0.78 / 1.26 / 1.36 / 1.55 / 1.98s) so a
-  bigger piece gets a longer boom, and `_004` lands exactly on §12's "~2
-  seconds" for the king. Four of these were specced to gdc-bundle files of
-  2.5–15.5 MB each; a 15 MB bishop death is not shippable, and 28 MB for four
-  sounds bought nothing over 0.6 MB of kenney audio. Deviation from §12.12,
-  taken on size
-- Added `SHOOT` diagnostics for both fire paths. Their absence is why the
-  playtest log gave no clue — the shooting loop was completely invisible in it
+- Pawns are the only gunners from Level 2; bishops add diagonals at Crossfire.
+  This replaces §5.3's *weighting* toward pawns — which was real (84% of shots)
+  but invisible, since a probability reads as "anything can shoot". A rule is
+  something a banner can promise and a player can act on
+- Fallbacks: with no pawns left everything remaining takes over, or the fleet
+  goes silent exactly when the player is hunting the king; and at most half the
+  gunners fire per beat, or the charge-up lights the whole rank and says nothing
+- Every shot charges up for 0.35s first — the gunner glows and a tick grows
+  along the line the round will take, so at Crossfire the *angle* is readable
+  before the missile exists
 
-**Not yet done:** visually verified in the running app. Confirmed instead via
-a trustworthy typecheck pass (macro-plugin flakiness ruled out first), a
-standalone runtime harness exercising every pure Logic path (31/31 checks:
-`SpaceshipState`, `CollisionResolver`, `FleetFiring`, the scoring tables), and
-a clean signed build. Launching the app to drive it interactively was denied
-in this environment — there is no GUI automation available here for a native
-macOS app, unlike the iOS simulator tooling. A firing/hit/lose/win playtest
-pass is the next real step before trusting this beyond "it typechecks and the
-logic is right in isolation."
+### Playtest fixes
 
-Unblocks three things that were stuck: the HUD lives display (was hardcoded
-to 3), banking a score without having to lose at chess, and runs ending from
-arcade pressure rather than chess grinding.
+- **No collisions at all** — every physics body was static, and SpriteKit needs
+  one dynamic body in a pair to report a contact. The laser is now the dynamic
+  half. Verified against a real render loop (0 contacts vs 1)
+- **Hitboxes follow the art** — the box was the sprite's full frame, but damage
+  sprites erode bottom-up (ink fills ~84% → ~27% of the box), so shots died in
+  blank space under a damaged piece. `PieceNode` measures and caches ink bounds
+  per texture. A rectangle over those bounds, not an alpha body: these outlines
+  cover ~10% of their box and an alpha body would be hollow
+- **Damage was invisible** — the hit path never called `refresh(with:)`, and
+  `damageState` used HP ratios rather than §7.1's table, running a full stage
+  behind on rook, queen and king. Six of twenty states disagreed with the doc,
+  every one hiding damage
+- **Enemy shots spawned off-target** — they used board-local coordinates, but
+  lasers live in `bloomNode`. Now via `laserOrigin(forFleetSquare:)`
+- **Angled rounds flew broadside** — `zRotation` turns a node's own axes, so a
+  45° rotation left the bolt perpendicular to its own travel; on screen, a
+  purple paddle sliding sideways. Aimed from the travel vector now, and dressed
+  as a missile with a nose and exhaust. Angled rounds also carry a circular
+  hitbox, so the angle cannot change how hard they are to land
+- **A hit that resolved to nothing deleted the round in mid-air** — the shot was
+  deactivated before the board lookup, so a contact with a stale square gave no
+  damage and no explosion. It keeps flying now
+- **Heavy shots landed light** — the resolver hardcoded `enemyShotDamage`, so
+  the king's double-damage round had always done 1
+- **Game kept playing after a win** — `isBeatSuspended` now gates every path
+  that could restart the beat
+- **Two crashes, same cause** — releasing a fleet member by square no-oped on a
+  stale key, leaving the node parented; SpriteKit then trapped on `addChild`.
+  Released by identity now
+- **`applyDamage` never told the chess engine** — same class as `forcePlace`.
+  Latent since the field was written; a laser kill was the first thing to
+  exercise it. Fixed with `ChessEngine.forceRemove(at:)`
+- **The sounds were never missing, only never copied** — `assets/sfx/` had the
+  full converted library; only 16 files had reached `Resources/sfx/`
+
+### Deviations from the design doc
+
+- Level 7 is arcade, not chess. §10.1 asks for aggressive King *play*; that was
+  built and reverted — it measured as invisible in a full position, because the
+  king's move never outscores thirty alternatives until the fleet is nearly
+  cleared, and it read as chess rather than arcade
+- Crossfire is Levels 8 and 10, not "8 onward" (§21.3), and it is the bishops'
+  cadence rather than a 40% roll on a pawn's shot
+- Level 4 fires +30%, not §21.1's +11% — its banner already promised "FASTER,
+  HARDER FIRE"
+- Level 6's wide sweep knowingly breaks the sub-half-square readability rule.
+  That is the level. Pinned by its own test so it stays deliberate
+- Banner limits are 16/38 characters, measured against the real font, not
+  §12.11's nominal 18/22
+- Pawns take two laser hits (HP 2 → 3); one-shot pawns skipped the damage art
+- Friendly fire on your own king deflects rather than killing it
+- Destruction uses the kenney `explosionCrunch` ladder, graduated by length, in
+  place of §12.12's gdc-bundle files (28 MB for four sounds, no better)
+
+### Not yet verified in the running app
+
+Confirmed by a trustworthy typecheck (macro-plugin flakiness ruled out first),
+standalone runtime harnesses for every pure Logic path, and geometry rendered to
+PNG where a shape was in question. There is no GUI automation for a native macOS
+app in this environment, so a firing/hit/lose/win playtest is the real next step.
 
 ## Phase 3.3 — Damage States & Juice ⬜
 
@@ -453,6 +355,24 @@ arcade pressure rather than chess grinding.
       bundling and wiring (see the Phase 4 note on bundle size)
 
 Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
+
+## Phase 4 — Sound Effects 🟡
+
+- [x] `AudioManager` — pooled polyphonic playback, preloaded, zero gameplay I/O
+- [x] `SoundKey` — 120 events mapped; GDC filenames repaired (they were truncated
+      and failing silently)
+- [x] Chess set wired: select, move ×2, capture, illegal, check alarm, promotion,
+      auto-move, countdown tick, victory / game-over stings, UI click
+- [x] Mix — effects sit just under the music (loudest 0.66 vs 0.75). They had
+      defaulted to 0.8–1.0, i.e. *over* the track. Tuned via one gain and a
+      ceiling in `AudioManager`, so per-key balance is preserved. The check alarm
+      and countdown tick are mixed further down and the alarm has a 3s cooldown —
+      both repeat, and repetition reads as loudness
+- [ ] Arcade SFX (laser, impacts, destruction, fleet, raiders) — arrive with 3.x
+- [ ] 8 sounds still need generating with jsfxr (marked `generated/` in `SoundKey`)
+- [ ] **Bundle size**: only the 12 wired files are bundled (7.7MB). All 49
+      referenced would be 91MB, dominated by three long uncompressed GDC stems —
+      trim or convert to AAC before ship
 
 ## Phases 5, 6.x, 7.x, 8, 9 ⬜
 
