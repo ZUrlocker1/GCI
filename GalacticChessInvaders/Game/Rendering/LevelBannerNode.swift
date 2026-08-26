@@ -20,6 +20,10 @@ final class LevelBannerNode: SKNode {
     private static let font = "PressStart2P-Regular"
 
     /// `title` is the mechanic name, `subtitle` the one-line explanation.
+    ///
+    /// Press Start 2P advances one em per character, so `ruleWidth` sets the
+    /// real text limits: 16 characters of title at 26pt, 38 of subtitle at 11pt.
+    /// `LevelAnnouncementTests` enforces those.
     init(title: String, subtitle: String, sceneSize: CGSize) {
         super.init()
         zPosition = 22

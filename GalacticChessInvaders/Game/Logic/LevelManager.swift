@@ -43,15 +43,18 @@ final class LevelManager {
     /// its own first-play hints. Names follow the design doc's own level titles
     /// where it gives them, and describe what actually changes otherwise.
     ///
-    /// §12.11 caps the layout at 18 characters for the title and 22 for the
-    /// subtitle; `LevelAnnouncementTests` holds that line.
+    /// §12.11 nominally caps the layout at 18/22 characters, but that assumes a
+    /// different type size. Measured against the real font at the sizes
+    /// `LevelBannerNode` uses, the 420pt rules fit 16 characters of title at
+    /// 26pt and 38 of subtitle at 11pt — Press Start 2P advances exactly one
+    /// em per character. `LevelAnnouncementTests` holds those measured limits.
     static func announcement(for level: Int) -> (title: String, subtitle: String)? {
         switch max(1, level) {
         case 1:  return nil
         case 2:  return ("FIRE POWER",     "BLACK SHOOTS BACK")
-        case 3:  return ("DOUBLE TROUBLE", "TWO MOVES PER TURN")
+        case 3:  return ("DOUBLE TROUBLE", "BLACK MOVES TWICE EVERY TURN")
         case 4:  return ("RELENTLESS",     "FASTER, HARDER FIRE")
-        case 5:  return ("TRIPLE THREAT",  "THREE MOVES PER TURN")
+        case 5:  return ("TRIPLE THREAT",  "BLACK MOVES THREE TIMES EVERY TURN")
         case 6:  return ("ESCALATION",     "NO CEILING FROM HERE")
         // §10.1 gives these two verbatim; the Armored Pawns subtitle is
         // shortened to fit the 22-character limit.
