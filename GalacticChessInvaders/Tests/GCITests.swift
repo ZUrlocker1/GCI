@@ -3032,13 +3032,51 @@ final class LevelAnnouncementTests: XCTestCase {
 @MainActor
 final class KingActivatedTests: XCTestCase {
 
-    func testActivatesAtLevelSevenAndStays() {
-        for level in 1...6 {
-            XCTAssertFalse(LevelManager.parameters(for: level).kingActivated, "level \(level)")
+    /// Level 7 only. The forcefield and the king's weapon are that wave's
+    /// character; leaving them on forever would permanently buff the single
+    /// most important target in the game.
+    func testActivatesOnLevelSevenOnly() {
+        for level in 1...15 {
+            XCTAssertEqual(LevelManager.parameters(for: level).kingActivated, level == 7,
+                           "level \(level)")
         }
-        for level in 7...15 {
-            XCTAssertTrue(LevelManager.parameters(for: level).kingActivated, "level \(level)")
+    }
+
+    /// Diagonal fire (§21.3) arrives at Level 8 and never leaves.
+    func testDiagonalFireArrivesAtLevelEightAndStays() {
+        for level in 1...7 {
+            XCTAssertFalse(LevelManager.parameters(for: level).diagonalShots, "level \(level)")
         }
+        for level in 8...15 {
+            XCTAssertTrue(LevelManager.parameters(for: level).diagonalShots, "level \(level)")
+        }
+    }
+
+    /// A diagonal is aimed inward from the edge files, or a shot from the a- or
+    /// h-file would leave the board almost immediately.
+    func testDiagonalLeansAwayFromTheEdge() {
+        for file in 0...1 {
+            XCTAssertEqual(FleetRules.diagonalLean(fromFile: file, isDiagonal: true), 1)
+        }
+        for file in 6...7 {
+            XCTAssertEqual(FleetRules.diagonalLean(fromFile: file, isDiagonal: true), -1)
+        }
+        // The middle files can go either way, so both must be reachable.
+        var seen = Set<Int>()
+        for _ in 0..<200 { seen.insert(FleetRules.diagonalLean(fromFile: 4, isDiagonal: true)) }
+        XCTAssertEqual(seen, [-1, 1])
+        XCTAssertEqual(FleetRules.diagonalLean(fromFile: 4, isDiagonal: false), 0,
+                       "a straight shot has no lean")
+    }
+
+    /// §21.3 fixes diagonals at 160 px/s along the path. Since a 45° shot
+    /// travels sqrt(2) further, it must reach the player *later* than a
+    /// straight one, not sooner — the threat is the angle, not the pace.
+    func testDiagonalIsSlowerToArriveThanAStraightShot() {
+        let drop: CGFloat = 400
+        let diagonalTime = (drop * 2.squareRoot()) / FleetRules.diagonalShotSpeed
+        let straightTime = drop / LevelManager.parameters(for: 8).projectileSpeed
+        XCTAssertGreaterThan(diagonalTime, straightTime)
     }
 
     /// The forcefield is worth exactly 50% more laser hits.

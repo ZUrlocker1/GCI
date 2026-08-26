@@ -1550,8 +1550,12 @@ class GameScene: SKScene {
         // event, and staggered ones read as three pieces choosing to shoot.
         for (index, square) in shooters.enumerated() {
             let delay = Double(index) * Self.volleyStagger
+            let lean = FleetRules.diagonalLean(
+                fromFile: Self.fileIndex(of: square),
+                isDiagonal: level.diagonalShots
+                    && Double.random(in: 0..<1) < FleetRules.diagonalShotShare)
             guard delay > 0 else {
-                fireInvaderShot(from: square, speed: level.projectileSpeed)
+                fireInvaderShot(from: square, speed: level.projectileSpeed, lean: lean)
                 continue
             }
             run(.sequence([
@@ -1559,7 +1563,8 @@ class GameScene: SKScene {
                 .run { [weak self] in
                     guard let self, !self.isBeatSuspended,
                           self.stateMachine.currentState is PlayingState else { return }
-                    self.fireInvaderShot(from: square, speed: level.projectileSpeed)
+                    self.fireInvaderShot(from: square, speed: level.projectileSpeed,
+                                         lean: lean)
                 },
             ]))
         }
@@ -1570,6 +1575,7 @@ class GameScene: SKScene {
     private func fireInvaderShot(from square: String, speed: CGFloat,
                                  damage: Int = ProjectileState.enemyShotDamage,
                                  heavy: Bool = false,
+                                 lean: Int = 0,
                                  sound: SoundKey = .invaderLaserFire,
                                  note: String? = nil) {
         guard let laserPool,
@@ -1581,11 +1587,21 @@ class GameScene: SKScene {
         // Set the dressing before firing: `setHeavy` rebuilds the physics body,
         // which would otherwise wipe the live contact mask `fire` just set.
         laser.setHeavy(heavy)
+        // A diagonal keeps §21.3's fixed 160 px/s whatever the level's
+        // straight-down speed is — the threat is the angle, not extra pace.
         laser.fire(from: origin, damage: damage,
-                   speed: speed, travelDistance: origin.y)
+                   speed: lean == 0 ? speed : FleetRules.diagonalShotSpeed,
+                   travelDistance: origin.y, lean: lean)
         flashMuzzle(at: square)
         AudioManager.shared.play(sound)
         DiagnosticsLog.shared.log(.shoot, note ?? "black \(square) fires")
+    }
+
+    /// 0 for the a-file through 7 for the h-file.
+    private static func fileIndex(of square: String) -> Int {
+        guard let first = square.first,
+              let ascii = first.lowercased().unicodeScalars.first?.value else { return 0 }
+        return max(0, min(7, Int(ascii) - Int(UnicodeScalar("a").value)))
     }
 
     private func blackKing() -> Piece? {

@@ -24,9 +24,14 @@ struct LevelParameters {
     /// Half the fleet's lateral sweep, as a fraction of a square. Widens at
     /// Level 6 (see `FleetRules.wideSweepAmplitudeRatio`).
     let sweepAmplitudeRatio: CGFloat
-    /// §10.1 King Activated, from Level 7. The black king gains a forcefield
-    /// and its own heavy weapon; it does not change how the engine moves it.
-    var kingActivated: Bool { level >= 7 }
+    /// §10.1 King Activated — Level 7 *only*. The black king gains a forcefield
+    /// and its own heavy weapon for that wave and reverts afterwards, so the
+    /// level has a character of its own rather than permanently buffing the
+    /// most important target in the game.
+    var kingActivated: Bool { level == 7 }
+    /// Diagonal invader fire (§21.3), from Level 8 onward. Once it arrives it
+    /// stays: standing outside a file stops being enough cover.
+    var diagonalShots: Bool { level >= 8 }
 }
 
 @MainActor
@@ -65,6 +70,7 @@ final class LevelManager {
         // §10.1 gives these two verbatim; the Armored Pawns subtitle is
         // shortened to fit the 22-character limit.
         case 7:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
+        case 8:  return ("CROSSFIRE",       "SHOTS COME IN ANGLED")
         case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
         default: return ("LEVEL \(level)",  "NO LET UP")
         }

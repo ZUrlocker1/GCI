@@ -162,6 +162,28 @@ enum FleetRules {
     /// threat rather than one more pawn.
     static let kingShotInterval = 2
 
+    // MARK: - Diagonal fire (§21.3, Level 8+)
+
+    /// §21.3 fixes diagonal shots at 160 px/s along their path, whatever the
+    /// level's straight-down speed is. They are a different threat, not a
+    /// faster one — the danger is the angle.
+    static let diagonalShotSpeed: CGFloat = 160
+
+    /// Share of a volley that comes in angled once diagonals arrive. A mix is
+    /// the point: all-diagonal is just a different fixed pattern to stand
+    /// outside of, whereas mixed fire means no column is reliably safe.
+    static let diagonalShotShare = 0.4
+
+    /// Which way a diagonal shot leans: -1 left, +1 right, 0 for straight down.
+    /// Aimed away from the board edge when the shooter is near one, so a
+    /// diagonal from the a-file does not immediately fly out of play.
+    static func diagonalLean(fromFile file: Int, isDiagonal: Bool) -> Int {
+        guard isDiagonal else { return 0 }
+        if file <= 1 { return 1 }
+        if file >= 6 { return -1 }
+        return Bool.random() ? 1 : -1
+    }
+
     // MARK: - Sweep width
 
     /// How far the fleet may drift from true, as a fraction of a square.
