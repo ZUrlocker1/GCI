@@ -259,6 +259,29 @@ final class PieceNode: SKSpriteNode {
         ]), withKey: "flare")
     }
 
+    /// This gunner is charging a round. A soft ring that swells under the piece
+    /// for the length of the charge-up, so a shooter is identifiable at a glance
+    /// even where the board is crowded and the little muzzle tick is hard to
+    /// pick out. Self-removing, and it never touches `color` — a piece can be in
+    /// check, damaged and charging all at once.
+    func flareGunner(tint: SKColor, duration: TimeInterval) {
+        let ring = SKShapeNode(circleOfRadius: squareSize * 0.30)
+        ring.strokeColor = tint
+        ring.lineWidth = 2
+        ring.glowWidth = 6
+        ring.fillColor = .clear
+        ring.zPosition = -1          // behind the sprite: a glow, not a badge
+        ring.alpha = 0
+        ring.setScale(0.5)
+        addChild(ring)
+        ring.run(.sequence([
+            .group([.scale(to: 1.15, duration: duration),
+                    .fadeAlpha(to: 0.85, duration: duration * 0.7)]),
+            .fadeOut(withDuration: 0.1),
+            .removeFromParent(),
+        ]))
+    }
+
     /// A shot bounced off. Used when the player's own laser hits their king,
     /// which is refused rather than damaging (§Lose conditions would otherwise
     /// end the run on a stray shot).

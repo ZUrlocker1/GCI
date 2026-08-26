@@ -3217,6 +3217,16 @@ final class LevelAnnouncementTests: XCTestCase {
         // not move differently, it gains a forcefield and its own weapon.
         XCTAssertEqual(LevelManager.announcement(for: 7)?.subtitle, "SHIELDED, AND ARMED")
         XCTAssertEqual(LevelManager.announcement(for: 9)?.title, "ARMORED PAWNS")
+        // The banners now name the piece that shoots, which is the whole point
+        // of arming a type rather than weighting a distribution.
+        XCTAssertEqual(LevelManager.announcement(for: 2)?.subtitle, "PAWNS FIRE BACK")
+        XCTAssertEqual(LevelManager.announcement(for: 8)?.subtitle,
+                       "BISHOPS FIRE ON THE DIAGONAL")
+        // The banners now name the piece that shoots, which is the whole point
+        // of arming a type rather than weighting a distribution.
+        XCTAssertEqual(LevelManager.announcement(for: 2)?.subtitle, "PAWNS FIRE BACK")
+        XCTAssertEqual(LevelManager.announcement(for: 8)?.subtitle,
+                       "BISHOPS FIRE ON THE DIAGONAL")
     }
 
     func testEveryLevelAboveOneHasSomethingToSay() {
