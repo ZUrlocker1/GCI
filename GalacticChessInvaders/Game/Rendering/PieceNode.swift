@@ -438,6 +438,17 @@ final class PieceNode: SKSpriteNode {
         ]))
     }
 
+    /// Gives this piece a hitbox, for a node that was created without one.
+    ///
+    /// Regeneration needs its own door here. It withholds the body for the
+    /// beam-in and then has to restore it, and `refresh(with:)` cannot do that
+    /// job: it rebuilds the body only when the *texture* changes, and a pawn
+    /// arriving at full HP has the same texture it will keep. The regenerated
+    /// pawn was therefore left with `physicsBody == nil` permanently — lasers
+    /// passed straight through it for the rest of the wave, which reads exactly
+    /// like armor that never expires.
+    func becomeSolid() { rebuildPhysicsBody() }
+
     // MARK: - Transporter beam-in (§23.9)
 
     /// Materialises this piece out of a column of shimmer.
