@@ -28,8 +28,8 @@ enum SoundKey: String, CaseIterable {
     case turnTimerWarning       // tone1.ogg                 (kenney-digital) — rapid-fire in code
 
     // ── Piece destruction — one per type ──────────────────────────────────────
-    case pawnDestroyed          // explosionCrunch_000.ogg   (kenney-sci-fi)
-    case knightDestroyed        // explosionCrunch_002.ogg   (kenney-sci-fi)
+    case pawnDestroyed          // explosionCrunch_001.ogg   (kenney-sci-fi)
+    case knightDestroyed        // explosionCrunch_003.ogg   (kenney-sci-fi)
     case bishopDestroyed        // explosionCrunch_001.ogg   (kenney-sci-fi)
     case rookDestroyed          // explosionCrunch_003.ogg   (kenney-sci-fi)
     case queenDestroyed         // explosionCrunch_003.ogg   (kenney-sci-fi)
@@ -113,15 +113,18 @@ extension SoundKey {
         case .pawnPromotion:            return "gdc-bundle/UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.caf"
         case .autoMoveTrigger:          return "kenney-digital/lowDown.caf"
         case .turnTimerWarning:         return "kenney-digital/tone1.caf"
-        // Piece destruction — the kenney explosionCrunch set, which happens to
-        // be a clean ladder by length (0.78s / 1.26s / 1.36s / 1.55s / 1.98s),
-        // so a bigger piece simply gets a longer boom and _004 lands exactly on
+        // Piece destruction — the kenney explosionCrunch set. _002 is unused:
+        // it reads as gunfire rather than a blast, so the ladder runs
+        // 000 / 001 / 003 / 004 (0.78s / 1.36s / 1.55s / 1.98s) and some pieces
+        // share. The gdc alternatives are all 2-17s and 1.6-6.5 MB, which is
+        // not a pawn death.
+        // A bigger piece gets a longer boom, and _004 lands exactly on
         // §12's "~2 seconds" for the king. Four of these were specced to
         // gdc-bundle files that are 2.5-15.5 MB each — a 15 MB bishop death is
         // not a reasonable thing to ship, and these are both smaller and more
         // consistent with each other.
-        case .pawnDestroyed:            return "kenney-sci-fi/explosionCrunch_002.caf"
-        case .knightDestroyed:          return "kenney-sci-fi/explosionCrunch_002.caf"
+        case .pawnDestroyed:            return "kenney-sci-fi/explosionCrunch_001.caf"
+        case .knightDestroyed:          return "kenney-sci-fi/explosionCrunch_003.caf"
         case .bishopDestroyed:          return "kenney-sci-fi/explosionCrunch_001.caf"
         case .rookDestroyed:            return "kenney-sci-fi/explosionCrunch_003.caf"
         case .queenDestroyed:           return "kenney-sci-fi/explosionCrunch_003.caf"

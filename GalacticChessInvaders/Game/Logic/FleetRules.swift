@@ -122,7 +122,11 @@ enum FleetRules {
     ///
     /// Must stay below 0.5: at exactly half a square a piece sits on the boundary
     /// between two files and its square becomes genuinely ambiguous.
-    static let sweepAmplitudeRatio: CGFloat = 0.35
+    /// 0.45 -> a 0.9-square total sweep. Widened from 0.35 to open bigger
+    /// firing lanes past White's own pawns. Still under the 0.5 ceiling above,
+    /// so a piece's centre never leaves its own file and the square it occupies
+    /// stays unambiguous.
+    static let sweepAmplitudeRatio: CGFloat = 0.45
 
     static func sweepAmplitude(squareSize: CGFloat) -> CGFloat {
         squareSize * sweepAmplitudeRatio
