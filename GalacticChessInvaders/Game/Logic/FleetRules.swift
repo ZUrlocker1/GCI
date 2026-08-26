@@ -154,8 +154,15 @@ enum FleetRules {
         }
     }
 
+    /// Applied on top of the §21.2 table. The spec's speeds were written for a
+    /// fleet that crossed the whole board; the sweep is a sub-file march now, and
+    /// at full speed it read as twitchy rather than deliberate. Kept as a scale
+    /// rather than folded into the per-level numbers so the table still matches
+    /// the document it came from.
+    static let sweepSpeedScale: CGFloat = 0.7
+
     /// Points per second for a level, after thinning is taken into account.
     static func sweepSpeed(level: LevelParameters, piecesRemaining: Int) -> CGFloat {
-        level.fleetSpeed * speedMultiplier(piecesRemaining: piecesRemaining)
+        level.fleetSpeed * speedMultiplier(piecesRemaining: piecesRemaining) * sweepSpeedScale
     }
 }
