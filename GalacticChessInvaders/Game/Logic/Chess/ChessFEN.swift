@@ -4,8 +4,10 @@
 //
 // GCI keeps FEN because it makes positions expressible as a one-line string:
 // useful for unit-test fixtures, diagnostics and future save/resume. The
-// half-move and full-move counters are the only fields not represented, since
-// GCI has neither a fifty-move rule nor threefold repetition.
+// half-move and full-move counters are the only fields not represented — GCI
+// does track a quiet-move limit and threefold repetition, but as separate
+// counters on `ChessEngine` (`halfmoveClock`, `positionCounts`), not as part
+// of `Chess.Position` itself, so there is nothing here for FEN to round-trip.
 
 import Foundation
 

@@ -22,8 +22,8 @@ final class BoardNode: SKNode {
     private static let checkPathName = "checkPath"
     private static let tetherName = "fleetTether"
 
-    private static let cyan    = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
-    private static let magenta = SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1)
+    private static let cyan    = NeonPalette.cyan
+    private static let magenta = NeonPalette.magenta
     private static let files   = Array("abcdefgh")
 
     /// A pooled legal-move marker: one node holding both presentations, so

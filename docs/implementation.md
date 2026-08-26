@@ -318,3 +318,48 @@ Not started.
   square; reproduced and pinned with a standalone harness before fixing, since
   `swift-plugin-server` flakiness was actively unreliable at the time. Fixed
   by `ChessEngine.forceRelocate(from:to:)`, called from `forcePlace`
+
+## Full-codebase review
+
+Three parallel agents (logic, rendering, input/audio/app) read every source
+file. Findings, and what was done about each:
+
+- [x] `NeonPalette.swift` — the cyan/magenta/orange constants were copy-pasted
+      verbatim into 8 rendering files plus a handful of inline literals in
+      `GameScene.swift`/`SpaceshipNode.swift`. Now one shared enum; every file
+      keeps its own `private static let cyan = NeonPalette.cyan`-style alias,
+      so no call site changed. Orange turned out to be two *deliberately*
+      distinct shades (UI chrome vs. a hotter title-screen/AUTO-flash accent)
+      — kept both, named `orange` and `alertOrange`, not merged
+- [x] Stale header comments in `ChessRules.swift`, `ChessFEN.swift`,
+      `Chess.swift` claiming castling/en passant are absent and there's no
+      fifty-move/threefold tracking — all three are implemented; the comments
+      were simply never updated when that changed. Corrected
+- [x] `InputHandler.swift` — Escape and P each had their own `case ... : return
+      isDown ? .pause : nil` line; collapsed to one `case 53, 35:`
+- [x] `GCITests.swift` — the FEN-to-`Position` unwrap helper was duplicated
+      verbatim across `ChessRulesTests` and `AutoMoveTests`; moved to a shared
+      `XCTestCase` extension
+- [x] `AudioManager.setVolume(_:for:)` — zero call sites anywhere, removed
+- [ ] `GameOverNode`/`HighScoreEntryNode`/`HowToPlayNode` each have their own
+      `label(...)` builder. Looked like the same boilerplate; on inspection
+      they're not identical (`HowToPlayNode`'s uses baseline vertical
+      alignment and a variable horizontal alignment; `GameOverNode`'s sets a
+      `zPosition` the others don't). Left alone — collapsing them safely would
+      need a more flexible shared signature than the ~20 lines saved justify
+- Confirmed dead but left alone as accurate phase-status markers, not bugs:
+  `LaserNode.swift` (unreferenced, Phase-1+ stub), `SpaceshipNode`'s
+  shield/invincibility API (unreferenced), `GameAction.confirmRestart` /
+  `.returnToMenu` (never constructed), ~40 `SoundKey` cases with no asset yet
+  (already self-reported by `AudioManager.preloadAll`'s own log line),
+  `.fireLaser` (dispatched by Space, no handler yet)
+- Noted, not changed — real but out of scope for a mechanical pass:
+  `GameState.swift` imports SpriteKit and calls into `GameScene` directly,
+  the one Logic-layer file that isn't SpriteKit-free per the architecture
+  rule; `GameScene` writes `DiagnosticsLog.fps`/`.nodeCount` (Rendering
+  writing into Logic state). Both are pre-existing structural choices, not
+  something to "fix" without a design conversation
+- Checked and NOT a bug: `PlayingState.didEnter`'s hardcoded `"Level 1
+  started"` log line. Verified it only ever fires on a fresh game (Title →
+  Playing); leveling up 2+ takes a different path (`GameScene.startNextLevel`)
+  that logs the real level number without re-entering `PlayingState`

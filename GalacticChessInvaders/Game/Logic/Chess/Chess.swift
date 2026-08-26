@@ -249,8 +249,9 @@ enum Chess {
     }
 
     /// A complete position: board, side to move, castling rights and the
-    /// en-passant target square. Move counters are omitted — GCI has no
-    /// fifty-move rule or threefold repetition.
+    /// en-passant target square. Move counters are omitted here — GCI's
+    /// quiet-move limit and threefold-repetition tracking live on
+    /// `ChessEngine` instead, not on the position itself.
     struct Position: Hashable, Sendable {
         var board: Board
         var turn: PieceColor

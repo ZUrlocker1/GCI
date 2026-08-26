@@ -96,9 +96,7 @@ final class InputHandler {
             return isDown ? .moveRight : .stopMoving
         case 49:        // Space
             return isDown ? .fireLaser : nil
-        case 53:        // Escape
-            return isDown ? .pause : nil
-        case 35:        // P
+        case 53, 35:    // Escape, P
             return isDown ? .pause : nil
         case 36, 76:    // Return, numpad Enter
             return isDown ? .confirmStart : nil

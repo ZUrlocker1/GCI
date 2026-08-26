@@ -7,8 +7,8 @@ import SpriteKit
 
 final class PieceNode: SKSpriteNode {
 
-    private static let cyan    = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
-    private static let magenta = SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1)
+    private static let cyan    = NeonPalette.cyan
+    private static let magenta = NeonPalette.magenta
     /// Check warning. Black pieces are already magenta, so hue alone would not
     /// read on a black king — the halo and the pulse carry the signal.
     private static let danger  = SKColor(red: 1.00, green: 0.16, blue: 0.10, alpha: 1)

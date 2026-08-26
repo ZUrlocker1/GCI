@@ -7,6 +7,14 @@ import SpriteKit
 import AVFoundation
 @testable import GalacticChessInvaders
 
+/// A FEN-to-Position shortcut shared by every test class that builds one-off
+/// positions — was duplicated verbatim in ChessRulesTests and AutoMoveTests.
+extension XCTestCase {
+    func position(_ fen: String) throws -> Chess.Position {
+        try XCTUnwrap(Chess.FEN.position(from: fen), "bad FEN: \(fen)")
+    }
+}
+
 @MainActor
 final class PieceTests: XCTestCase {
 
@@ -161,10 +169,6 @@ final class ChessPerftTests: XCTestCase {
 }
 
 final class ChessRulesTests: XCTestCase {
-
-    private func position(_ fen: String) throws -> Chess.Position {
-        try XCTUnwrap(Chess.FEN.position(from: fen), "bad FEN: \(fen)")
-    }
 
     private func destinations(from square: String, in position: Chess.Position) throws -> Set<String> {
         let origin = try XCTUnwrap(Chess.Square(coordinate: square))
@@ -713,10 +717,6 @@ final class LevelManagerTests: XCTestCase {
 // MARK: - Auto-move constraints
 
 final class AutoMoveTests: XCTestCase {
-
-    private func position(_ fen: String) throws -> Chess.Position {
-        try XCTUnwrap(Chess.FEN.position(from: fen))
-    }
 
     func testAutoMoveHonoursTheSelectedPiece() throws {
         // White has a free queen capture on d8, but the player had the a1 rook

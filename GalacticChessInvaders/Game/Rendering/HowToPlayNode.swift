@@ -2,9 +2,9 @@ import SpriteKit
 
 final class HowToPlayNode: SKNode {
 
-    private static let cyan    = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
-    private static let magenta = SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1)
-    private static let orange  = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
+    private static let cyan    = NeonPalette.cyan
+    private static let magenta = NeonPalette.magenta
+    private static let orange  = NeonPalette.orange
     private static let font    = "PressStart2P-Regular"
 
     // Hardcoded layout coordinates derived from 960×700 scene with 36px HUD at top.

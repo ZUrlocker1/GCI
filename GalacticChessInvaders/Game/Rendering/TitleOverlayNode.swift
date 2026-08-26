@@ -13,9 +13,9 @@ import SpriteKit
 final class TitleOverlayNode: SKNode {
 
     private static let titleFont  = "PressStart2P-Regular"
-    private static let cyan    = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
-    private static let magenta = SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1)
-    private static let orange  = SKColor(red: 1.00, green: 0.55, blue: 0.00, alpha: 1)
+    private static let cyan    = NeonPalette.cyan
+    private static let magenta = NeonPalette.magenta
+    private static let orange  = NeonPalette.alertOrange
 
     override init() {
         super.init()
