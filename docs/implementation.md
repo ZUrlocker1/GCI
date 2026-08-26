@@ -294,9 +294,13 @@ Several rounds of tuning and fixes on top of the initial build. In brief:
 - [x] A king destroyed outside checkmate now gets a centred banner before the
       game-over flow, rather than the reveal hold playing out over an unchanged
       board
-- [x] Home-rank chess moves keep a black piece in the formation *(experiment)* —
+- [x] Rear-rank chess moves keep a black piece in the formation *(experiment)* —
       a parked black piece sits behind White's own pawns where it is nearly
-      unshootable, so shuffling within ranks 7–8 keeps it marching
+      unshootable, so shuffling within the fleet's own back ranks keeps it
+      marching. Measured relative to `FleetController.rearRank`, not to absolute
+      ranks 7–8: the absolute version expired silently after two descents, so
+      the mechanic decayed back to "any chess move detaches" partway through
+      every level
 - [x] **Level 7 King Activated**, as an arcade escalation rather than a chess
       one: the black king gains a forcefield worth 50% more hits (16 → 24 HP,
       8 → 12 laser hits, shown as a pulsing shield ring that goes out when the
@@ -316,6 +320,20 @@ Several rounds of tuning and fixes on top of the initial build. In brief:
       knowingly breaks the sub-half-square readability rule — a piece's centre
       does cross into the next file — which is the point of the level and is
       pinned by its own test so it stays deliberate
+- [x] **Level 8 CROSSFIRE** — §21.3's diagonal invader fire, specified in the
+      design doc and never built: 40% of shots leave at 45° in deep purple at
+      160 px/s along the path. The only remaining escalation that changes what
+      the player has to do rather than how fast they must do it — standing
+      outside a file stops being cover. King Activated became Level 7 only at
+      the same time, so the forcefield and the king's weapon read as one wave's
+      character instead of a permanent buff on the game's most important target
+- [x] **Level 10 FULL MARCH** — the last escalation with its own identity: the
+      marching band deepens to the fleet's back *three* ranks and the sweep
+      widens again to 1.75 squares. 1.75 rather than 2.0 deliberately — at
+      exactly 2.0 the amplitude is one whole file, so a piece at the extreme
+      sits dead centre on its neighbour's square and reads as being on that
+      square rather than between two. Level 11+ keeps all of it and escalates
+      only by number
 - [x] Tuning: ship 294 px/s, laser 520 px/s, base sweep 0.9 of a square, audio mixed
       as a deliberate ladder (laser under hit under destruction), Black's
       projectiles lightened 50% so they read as glowing

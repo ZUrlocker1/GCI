@@ -2360,30 +2360,90 @@ final class FleetRulesTests: XCTestCase {
 
     // MARK: - Formation membership after a chess move
 
-    /// A black piece shuffling around its own two home ranks keeps marching; one
-    /// that genuinely advances drops out of the formation. A parked black piece
+    /// A black piece shuffling around the formation's own two rear ranks keeps
+    /// marching; one that genuinely advances drops out. A parked black piece
     /// tends to sit right behind a white pawn, where it is nearly unshootable.
     func testHomeRankMovesKeepAPieceInTheFormation() {
         for square in ["a8", "e8", "h8", "a7", "e7", "h7"] {
-            XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: square),
-                          "\(square) is a home rank")
+            XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: square,
+                                                      formationRearRank: 8),
+                          "\(square) is a rear rank")
         }
         for square in ["a6", "e6", "d5", "c4", "b3", "h2", "e1"] {
-            XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: square),
+            XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: square,
+                                                       formationRearRank: 8),
                            "\(square) is an advance")
         }
     }
 
-    func testFormationRankBoundaryIsRankSeven() {
-        XCTAssertEqual(FleetRules.formationRearRank, 7)
-        XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: "d7"))
-        XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d6"),
+    func testFormationBandIsTwoRanksDeepByDefault() {
+        XCTAssertEqual(FleetRules.formationRanks, 2)
+        XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: "d7",
+                                                  formationRearRank: 8))
+        XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d6",
+                                                   formationRearRank: 8),
                        "rank 6 is the third row — the first that detaches")
+    }
+
+    /// The whole point of measuring from the fleet's own rear rank: the band
+    /// travels down with the formation instead of expiring after two descents.
+    func testFormationBandFollowsTheFleetDown() {
+        // Fleet has descended twice: its rear rank is 6, so 5 and 6 march.
+        XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: "d6",
+                                                  formationRearRank: 6))
+        XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: "d5",
+                                                  formationRearRank: 6))
+        // Rank 7 is now *behind* the fleet, and rank 4 is out in front.
+        XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d7",
+                                                   formationRearRank: 6))
+        XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d4",
+                                                   formationRearRank: 6))
+    }
+
+    /// Level 10's deeper band: three ranks march instead of two.
+    func testDeepFormationAddsAThirdRank() {
+        XCTAssertEqual(FleetRules.deepFormationRanks, 3)
+        let deep = FleetRules.deepFormationRanks
+        for square in ["d8", "d7", "d6"] {
+            XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: square,
+                                                      formationRearRank: 8,
+                                                      ranks: deep),
+                          "\(square) is inside the deep band")
+        }
+        XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d5",
+                                                   formationRearRank: 8,
+                                                   ranks: deep),
+                       "the fourth rank still detaches")
+        XCTAssertEqual(LevelManager.parameters(for: 9).formationRanks,
+                       FleetRules.formationRanks)
+        for level in [10, 12, 20] {
+            XCTAssertEqual(LevelManager.parameters(for: level).formationRanks,
+                           deep, "level \(level) marches three ranks deep")
+        }
+    }
+
+    /// 1.75 squares end to end, not 2.0 — at exactly 2.0 the amplitude is one
+    /// whole file, so a piece at the extreme sits dead centre on its
+    /// neighbour's square and reads as being on that square.
+    func testWidestSweepStaysOffTheGrid() {
+        XCTAssertEqual(FleetRules.widestSweepAmplitudeRatio, 0.875)
+        XCTAssertGreaterThan(FleetRules.widestSweepAmplitudeRatio,
+                             FleetRules.wideSweepAmplitudeRatio)
+        XCTAssertNotEqual(FleetRules.widestSweepAmplitudeRatio, 1.0,
+                          "a full-file offset reads as a different square")
+        XCTAssertEqual(LevelManager.parameters(for: 9).sweepAmplitudeRatio,
+                       FleetRules.wideSweepAmplitudeRatio)
+        for level in [10, 12, 20] {
+            XCTAssertEqual(LevelManager.parameters(for: level).sweepAmplitudeRatio,
+                           FleetRules.widestSweepAmplitudeRatio,
+                           "level \(level) sweeps 1.75 squares")
+        }
     }
 
     func testMalformedSquareDoesNotKeepAPieceInFormation() {
         for square in ["", "zz", "e", "e9x"] {
-            XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: square))
+            XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: square,
+                                                       formationRearRank: 8))
         }
     }
 

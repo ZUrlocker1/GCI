@@ -32,6 +32,11 @@ struct LevelParameters {
     /// Diagonal invader fire (§21.3), from Level 8 onward. Once it arrives it
     /// stays: standing outside a file stops being enough cover.
     var diagonalShots: Bool { level >= 8 }
+    /// How many of the fleet's rear ranks march. Widens at Level 10, so more of
+    /// Black's board keeps moving — and keeps being shootable.
+    var formationRanks: Int {
+        level >= 10 ? FleetRules.deepFormationRanks : FleetRules.formationRanks
+    }
 }
 
 @MainActor
@@ -71,6 +76,7 @@ final class LevelManager {
         // shortened to fit the 22-character limit.
         case 7:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
         case 8:  return ("CROSSFIRE",       "SHOTS COME IN ANGLED")
+        case 10: return ("FULL MARCH",      "THREE RANKS ADVANCE")
         case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
         default: return ("LEVEL \(level)",  "NO LET UP")
         }
@@ -129,8 +135,10 @@ final class LevelManager {
                 regenSlots: 4 + over,
                 raiderInterval: max(6, 8 - TimeInterval(over)),
                 isAggressive: true,
-                // The wide sweep arrives at Level 6 and stays.
-                sweepAmplitudeRatio: FleetRules.wideSweepAmplitudeRatio
+                // Wide from Level 6, wider again from Level 10.
+                sweepAmplitudeRatio: clamped >= 10
+                    ? FleetRules.widestSweepAmplitudeRatio
+                    : FleetRules.wideSweepAmplitudeRatio
             )
         }
     }

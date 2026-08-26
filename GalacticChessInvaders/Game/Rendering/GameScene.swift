@@ -1263,8 +1263,11 @@ class GameScene: SKScene {
         // and is then nearly unshootable, so staying in the formation keeps it
         // moving and keeps it a target.
         if outcome.moved.color == .black,
-           FleetRules.staysInFormation(afterMovingTo: outcome.to),
-           let fleet, fleet.contains(node),
+           let fleet, let rear = fleet.rearRank,
+           FleetRules.staysInFormation(afterMovingTo: outcome.to,
+                                       formationRearRank: rear,
+                                       ranks: levels.parameters.formationRanks),
+           fleet.contains(node),
            fleet.rekey(from: outcome.from, to: outcome.to) {
             // Stays parented to the fleet; `animateMove` below still targets the
             // logical square centre, which is what a member's local position is.
