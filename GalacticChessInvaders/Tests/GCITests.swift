@@ -2226,6 +2226,7 @@ final class FleetRulesTests: XCTestCase {
     /// only catches up on the second drop.
     func testEverySecondDescentCompletesARank() {
         var schedule = FleetRules.DescentSchedule(graceBeats: 0, beatsPerHalfDrop: 1)
+        XCTAssertTrue(schedule.isSweeping, "no hold configured, so it moves at once")
         let pattern = (0..<6).map { _ in schedule.registerBeat() }
         XCTAssertEqual(pattern, [.halfDrop, .fullRank, .halfDrop,
                                  .fullRank, .halfDrop, .fullRank])
@@ -2254,6 +2255,25 @@ final class FleetRulesTests: XCTestCase {
         XCTAssertEqual(FleetRules.descentSchedule(for: 1).graceBeats, 6)
         XCTAssertEqual(FleetRules.descentSchedule(for: 1).beatsPerHalfDrop, 4,
                        "level 1: half a rank every 4 beats, a full rank every 8")
+    }
+
+    /// The fleet holds its opening position outright, so a fresh board reads as
+    /// a chess position before anything starts moving.
+    func testTheFleetHoldsStillBeforeItSweeps() {
+        var schedule = FleetRules.descentSchedule(for: 1)
+        XCTAssertEqual(schedule.sweepBeats, 3)
+        XCTAssertFalse(schedule.isSweeping, "still at level start")
+
+        for _ in 1...2 { _ = schedule.registerBeat() }
+        XCTAssertFalse(schedule.isSweeping, "still holding after 2 beats")
+        _ = schedule.registerBeat()
+        XCTAssertTrue(schedule.isSweeping, "moving from beat 3")
+
+        // Movement always precedes ground being taken.
+        for level in 1...8 {
+            let s = FleetRules.descentSchedule(for: level)
+            XCTAssertLessThan(s.sweepBeats, s.graceBeats, "level \(level)")
+        }
     }
 
     /// The readability invariant: a piece that drifts half a square sits on a
