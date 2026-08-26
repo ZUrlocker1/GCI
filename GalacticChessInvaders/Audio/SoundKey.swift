@@ -47,6 +47,7 @@ enum SoundKey: String, CaseIterable {
 
     // ── Invader fleet ─────────────────────────────────────────────────────────
     case invaderLaserFire       // laserSmall_001.ogg        (kenney-sci-fi)
+    case kingLaserFire          // laserLarge_001.ogg        (kenney-sci-fi) — §10.1 King Activated
     case invaderHitsShip        // explosionCrunch_001.ogg   (kenney-sci-fi)
     case invaderHitsPiece       // impactMetal_001.ogg       (kenney-sci-fi)  — reuse pieceHitLight
     case fleetWallBounce        // lowDown.ogg               (kenney-digital)
@@ -143,6 +144,7 @@ extension SoundKey {
         case .criticalCrackleEerie:     return "gdc-bundle/Psycho Glitched Screechy Tones Noise.caf"
         // Fleet
         case .invaderLaserFire:         return "kenney-sci-fi/laserSmall_001.caf"
+        case .kingLaserFire:            return "kenney-sci-fi/laserLarge_001.caf"
         case .invaderHitsShip:          return "kenney-sci-fi/explosionCrunch_001.caf"
         case .invaderHitsPiece:         return "kenney-sci-fi/explosionCrunch_000.caf"
         case .fleetWallBounce:          return "kenney-digital/lowDown.caf"
@@ -229,6 +231,8 @@ extension SoundKey {
         // balance it vanished. Full balance still lands under the player's own
         // shot, which is the right order for a threat cue you must not miss.
         case .invaderLaserFire:                     return 1.0
+        // The king's own weapon should cut over ordinary fleet fire.
+        case .kingLaserFire:                        return 1.0
         default:                                    return 0.8
         }
     }

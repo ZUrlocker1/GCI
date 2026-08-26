@@ -297,6 +297,18 @@ Several rounds of tuning and fixes on top of the initial build. In brief:
 - [x] Home-rank chess moves keep a black piece in the formation *(experiment)* —
       a parked black piece sits behind White's own pawns where it is nearly
       unshootable, so shuffling within ranks 7–8 keeps it marching
+- [x] **Level 7 King Activated**, as an arcade escalation rather than a chess
+      one: the black king gains a forcefield worth 50% more hits (16 → 24 HP,
+      8 → 12 laser hits, shown as a pulsing shield ring that goes out when the
+      bonus is spent) and its own heavy weapon — 1.6× speed, double damage,
+      fired on its own two-beat cadence with a distinct large-laser sound and a
+      white, wider bolt. Deviates from §10.1, which asks for aggressive King
+      *play* from the engine; that was built and reverted — it measured as
+      invisible in a full position, because the king's move never outscores
+      thirty alternatives until the fleet is nearly cleared, and it read as
+      chess rather than arcade
+- [x] Starfield: the magenta stars are now two blues. Magenta read as dull red
+      specks against black rather than distant suns
 - [x] Two escalations added to the level ladder: Black's fire jumps **+30% at
       Level 4** (its banner already promised "FASTER, HARDER FIRE" but delivered
       only +11%), and the fleet's sweep widens to **1.5 squares at Level 6**,

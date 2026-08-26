@@ -109,6 +109,8 @@ class GameScene: SKScene {
     private static let volleyStagger: TimeInterval = 0.18
     /// The Level 1 warning shot is once per level (§10.1).
     private var hasFiredWarningShot = false
+    /// Beats elapsed this level, for the activated king's firing cadence.
+    private var beatsThisLevel = 0
     /// True while the level's mechanic banner is on screen. The beat waits for
     /// it, so an escalation is announced before it is inflicted (§12.11).
     private var isAnnouncingLevel = false
@@ -224,12 +226,14 @@ class GameScene: SKScene {
         let sceneW = size.width
         let sceneH = size.height
 
-        // Neon palette: mostly white, accent cyan, hint of magenta
+        // Mostly white, accented cyan, with a couple of blues. The magenta
+        // star this replaces read as a dull red speck rather than a distant sun.
         let palette: [SKColor] = [
             .white, .white, .white, .white, .white,
             NeonPalette.cyan,
             NeonPalette.cyan,  // doubled weight
-            NeonPalette.magenta,
+            NeonPalette.starBlueLight,
+            NeonPalette.starBlueDeep,
         ]
 
         // Faster tiers twinkle more snappily.
@@ -557,6 +561,10 @@ class GameScene: SKScene {
     private func buildPlayfield(announceLevel: Bool = true) {
         hideBoard()
         board.setupStandardPosition()
+        // §10.1: from Level 7 the black king carries a forcefield worth 50%
+        // more hits. Applied here so the extra HP is in place before any node
+        // reads it.
+        if levels.parameters.kingActivated { board.applyKingForcefield() }
 
         let node = BoardNode()
         node.position = CGPoint(x: (size.width - BoardNode.boardSize) / 2, y: Self.boardBottomY)
@@ -576,6 +584,7 @@ class GameScene: SKScene {
         }
 
         for piece in board.allPieces() { addPieceNode(piece) }
+        refreshKingForcefield()
         controller.start()
 
         let player = SpaceshipNode()
@@ -672,6 +681,7 @@ class GameScene: SKScene {
             node.removeFromParent()
         }
         hasFiredWarningShot = false
+        beatsThisLevel = 0
         isAnnouncingLevel = false
         laserPool?.deactivateAll()
         laserPool = nil
@@ -1487,6 +1497,21 @@ class GameScene: SKScene {
             return
         }
 
+        // §10.1's activated king fires its own heavy round on its own cadence,
+        // separate from the fleet volley, so it reads as a distinct threat
+        // rather than one more pawn.
+        beatsThisLevel += 1
+        if level.kingActivated,
+           beatsThisLevel % FleetRules.kingShotInterval == 0,
+           let king = blackKing() {
+            fireInvaderShot(from: king.logicalSquare,
+                            speed: level.projectileSpeed * FleetRules.kingShotSpeedMultiplier,
+                            damage: FleetRules.kingShotDamage,
+                            heavy: true,
+                            sound: .kingLaserFire,
+                            note: "black king fires")
+        }
+
         let count = FleetFiring.shotCount(for: level)
         guard count > 0 else { return }
 
@@ -1517,17 +1542,24 @@ class GameScene: SKScene {
 
     /// Spawns one invader round from `square`, if the piece is still there and a
     /// pooled laser is free.
-    private func fireInvaderShot(from square: String, speed: CGFloat, note: String? = nil) {
+    private func fireInvaderShot(from square: String, speed: CGFloat,
+                                 damage: Int = ProjectileState.enemyShotDamage,
+                                 heavy: Bool = false,
+                                 sound: SoundKey = .invaderLaserFire,
+                                 note: String? = nil) {
         guard let laserPool,
               let laser = laserPool.nextAvailable(owner: .enemy),
               // A staggered shot can arrive after its piece has been destroyed.
               board.piece(at: square)?.color == .black,
               let origin = laserOrigin(forFleetSquare: square) else { return }
 
-        laser.fire(from: origin, damage: ProjectileState.enemyShotDamage,
+        // Set the dressing before firing: `setHeavy` rebuilds the physics body,
+        // which would otherwise wipe the live contact mask `fire` just set.
+        laser.setHeavy(heavy)
+        laser.fire(from: origin, damage: damage,
                    speed: speed, travelDistance: origin.y)
         flashMuzzle(at: square)
-        AudioManager.shared.play(.invaderLaserFire)
+        AudioManager.shared.play(sound)
         DiagnosticsLog.shared.log(.shoot, note ?? "black \(square) fires")
     }
 
@@ -1604,6 +1636,15 @@ class GameScene: SKScene {
         }
     }
 
+    /// Shows the shield ring only while the black king still has bonus HP, so
+    /// the ring going out is the moment the king becomes killable.
+    private func refreshKingForcefield() {
+        guard levels.parameters.kingActivated,
+              let king = board.allPieces(color: .black).first(where: { $0.type == .king }),
+              let node = pieceNodes[king.logicalSquare] else { return }
+        node.setForcefield(board.blackKingShieldIsUp())
+    }
+
     /// Re-reads the damaged piece from the board and swaps the node onto its
     /// eroded sprite.
     ///
@@ -1625,7 +1666,16 @@ class GameScene: SKScene {
         if !destroyed {
             showDamage(on: node, at: square)
             node.applyHitFlash()
-            AudioManager.shared.play(.pieceHitLight)
+            // While the king's forcefield still holds, a hit reads as absorbed
+            // rather than as damage — which is also literally true, since the
+            // bonus HP is being spent and the sprite has not eroded yet.
+            if type == .king, board.blackKingShieldIsUp() {
+                node.flashDeflection()
+                AudioManager.shared.play(.shieldAbsorbsHit)
+            } else {
+                AudioManager.shared.play(.pieceHitLight)
+            }
+            refreshKingForcefield()
             return
         }
 

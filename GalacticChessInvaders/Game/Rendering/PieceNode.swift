@@ -221,6 +221,30 @@ final class PieceNode: SKSpriteNode {
         }
     }
 
+    /// A steady shield bubble, for the activated black king's forcefield
+    /// (§10.1). Idempotent, and removed once the shield is spent — so the ring
+    /// vanishing is the cue that the king is now takeable.
+    func setForcefield(_ active: Bool) {
+        let key = "forcefield"
+        if !active {
+            childNode(withName: key)?.removeFromParent()
+            return
+        }
+        guard childNode(withName: key) == nil else { return }
+        let ring = SKShapeNode(circleOfRadius: squareSize * 0.42)
+        ring.name = key
+        ring.strokeColor = NeonPalette.cyan
+        ring.lineWidth = 2
+        ring.glowWidth = 7
+        ring.fillColor = NeonPalette.cyan.withAlphaComponent(0.08)
+        ring.zPosition = -1
+        addChild(ring)
+        ring.run(.repeatForever(.sequence([
+            .group([.fadeAlpha(to: 0.45, duration: 0.7), .scale(to: 1.06, duration: 0.7)]),
+            .group([.fadeAlpha(to: 0.95, duration: 0.7), .scale(to: 1.00, duration: 0.7)]),
+        ])))
+    }
+
     /// A shot bounced off. Used when the player's own laser hits their king,
     /// which is refused rather than damaging (§Lose conditions would otherwise
     /// end the run on a stray shot).

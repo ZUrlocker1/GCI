@@ -103,6 +103,28 @@ final class LaserNode: SKSpriteNode {
         run(.sequence([move, finish]), withKey: Self.flightKey)
     }
 
+    /// Redresses this round as the activated king's heavy shot — wider, longer
+    /// and white-hot — or back to an ordinary bolt. Purely cosmetic; speed and
+    /// damage are the caller's.
+    func setHeavy(_ heavy: Bool) {
+        let baseHeight: CGFloat = owner == .player ? 18 : 14
+        size = heavy ? CGSize(width: Self.width * 2.5, height: baseHeight * 2.2)
+                     : CGSize(width: Self.width, height: baseHeight)
+        color = heavy ? .white
+                      : (owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight)
+        // The body must follow, or a heavy round keeps a thin bolt's hitbox.
+        let body = SKPhysicsBody(rectangleOf: size)
+        body.isDynamic = true
+        body.affectedByGravity = false
+        body.allowsRotation = false
+        body.linearDamping = 0
+        body.usesPreciseCollisionDetection = true
+        body.categoryBitMask = owner == .player ? PhysicsCategory.playerLaser : PhysicsCategory.enemyShot
+        body.contactTestBitMask = isActive ? liveContactMask : PhysicsCategory.none
+        body.collisionBitMask = PhysicsCategory.none
+        physicsBody = body
+    }
+
     /// Stops the flight and returns the node to the pool. Safe to call whether
     /// the laser reached the end of its travel or was consumed by a contact.
     func deactivate() {
