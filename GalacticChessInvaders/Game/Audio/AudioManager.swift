@@ -47,19 +47,39 @@ final class AudioManager {
         // with the phases that use them. Report those as one summary line rather
         // than dozens of errors, so the log stays readable.
         var absent = 0
+        placeholderCount = 0
         for key in SoundKey.allCases where !preload(key) { absent += 1 }
 
         DiagnosticsLog.shared.log(.audio,
             "SFX ready: \(sfxPools.count) pools, \(loopPlayers.count) loops"
+            + (placeholderCount > 0 ? ", \(placeholderCount) on placeholders" : "")
             + (absent > 0 ? " (\(absent) not yet bundled)" : ""))
     }
 
-    /// Returns false if the sound is not available to load.
+    /// How many keys resolved to a stand-in rather than their real asset —
+    /// surfaced in the startup log so a placeholder is never mistaken for the
+    /// finished sound design.
+    private var placeholderCount = 0
+
+    /// Returns false if the sound is not available to load. Falls back to
+    /// `placeholderFilename` when the canonical asset isn't bundled yet, so a
+    /// phase can be heard before its real audio is sourced.
     @discardableResult
     private func preload(_ key: SoundKey) -> Bool {
         guard let base = sfxBaseURL else { return false }
-        let url = base.appendingPathComponent(key.filename)
-        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        let exists: (String) -> Bool = {
+            FileManager.default.fileExists(atPath: base.appendingPathComponent($0).path)
+        }
+        let resolved: String
+        if exists(key.filename) {
+            resolved = key.filename
+        } else if let placeholder = key.placeholderFilename, exists(placeholder) {
+            resolved = placeholder
+            placeholderCount += 1
+        } else {
+            return false
+        }
+        let url = base.appendingPathComponent(resolved)
         if key.loops {
             guard let player = try? AVAudioPlayer(contentsOf: url) else { return false }
             player.numberOfLoops = -1

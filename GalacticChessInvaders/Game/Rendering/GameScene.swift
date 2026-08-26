@@ -1253,6 +1253,7 @@ class GameScene: SKScene {
                   speed: ProjectileState.playerLaserSpeed,
                   travelDistance: size.height - origin.y)
         AudioManager.shared.play(.playerLaserFire)
+        DiagnosticsLog.shared.log(.shoot, "ship fires (\(shipState.activeLasers)/\(shipState.laserCap))")
     }
 
     /// Once per beat, after the position has settled (§5.3): 0–`shotsPerTurn`
@@ -1267,11 +1268,22 @@ class GameScene: SKScene {
         let shooters = FleetFiring.chooseShooters(from: blackSquares, count: count)
         for square in shooters {
             guard let laser = laserPool.nextAvailable(owner: .enemy),
-                  let origin = drawnPosition(of: square) else { continue }
+                  let origin = laserOrigin(forFleetSquare: square) else { continue }
             laser.fire(from: origin, damage: ProjectileState.enemyShotDamage,
                       speed: level.projectileSpeed, travelDistance: origin.y)
             AudioManager.shared.play(.invaderLaserFire)
+            DiagnosticsLog.shared.log(.shoot, "black \(square) fires")
         }
+    }
+
+    /// A fleet piece's firing point, converted into the lasers' own coordinate
+    /// space. `drawnPosition` is board-local — correct for check paths and
+    /// tethers, which are boardNode children — but lasers live in `bloomNode`,
+    /// and the board is inset within it. Skipping this conversion spawned every
+    /// enemy shot a board-origin's worth down and to the left, well off target.
+    private func laserOrigin(forFleetSquare square: String) -> CGPoint? {
+        guard let boardNode, let local = drawnPosition(of: square) else { return nil }
+        return boardNode.convert(local, to: bloomNode)
     }
 
     /// The player's laser touched something. Always consumed on contact,

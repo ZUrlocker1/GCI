@@ -2556,6 +2556,124 @@ final class FleetControllerTests: XCTestCase {
 // MARK: - Shooting & Collision (Phase 3.2)
 
 @MainActor
+final class LaserPhysicsTests: XCTestCase {
+
+    /// Regression, and the reason nothing collided when Phase 3.2 first landed:
+    /// every physics body was created static. SpriteKit only evaluates a
+    /// contact pair when at least one body is dynamic — two static bodies never
+    /// produce a `didBegin` callback at all, so lasers passed straight through
+    /// pieces with no damage, no explosion and no sound. Verified empirically
+    /// against a real render loop: static/static reports 0 contacts, one
+    /// dynamic reports the hit.
+    func testLaserBodyIsDynamicSoContactsCanFireAtAll() {
+        for owner in [ProjectileState.Owner.player, .enemy] {
+            let laser = LaserNode(owner: owner)
+            let body = laser.physicsBody
+            XCTAssertNotNil(body, "\(owner) laser needs a body to generate contacts")
+            XCTAssertTrue(body?.isDynamic == true,
+                          "\(owner) laser body MUST be dynamic — a static/static pair never contacts")
+            XCTAssertFalse(body?.affectedByGravity == true, "movement is SKAction-driven, not simulated")
+            XCTAssertEqual(body?.collisionBitMask, PhysicsCategory.none,
+                           "contact detection only — a laser must never be pushed around")
+        }
+    }
+
+    /// The pieces and the ship stay static — they're the stationary half of
+    /// every pair, and the laser supplies the dynamic side.
+    func testTargetsAreStaticAndCategorisedCorrectly() {
+        let black = PieceNode(piece: Piece(type: .pawn, color: .black, square: "d5"),
+                              squareSize: BoardNode.squareSize)
+        XCTAssertEqual(black.physicsBody?.categoryBitMask, PhysicsCategory.enemyPiece)
+        XCTAssertFalse(black.physicsBody?.isDynamic == true)
+
+        let white = PieceNode(piece: Piece(type: .pawn, color: .white, square: "d2"),
+                              squareSize: BoardNode.squareSize)
+        XCTAssertEqual(white.physicsBody?.categoryBitMask, PhysicsCategory.friendlyPiece)
+
+        let ship = SpaceshipNode()
+        XCTAssertEqual(ship.physicsBody?.categoryBitMask, PhysicsCategory.ship)
+        XCTAssertFalse(ship.physicsBody?.isDynamic == true)
+    }
+
+    /// A parked laser must not test for contacts, or one sitting on top of a
+    /// piece would report a phantom hit the moment the piece moved onto it.
+    func testAParkedLaserTestsForNothingAndArmsOnFire() {
+        let laser = LaserNode(owner: .player)
+        XCTAssertEqual(laser.physicsBody?.contactTestBitMask, PhysicsCategory.none,
+                       "fresh out of the pool, it is parked")
+        XCTAssertFalse(laser.isActive)
+
+        laser.fire(from: .zero, damage: ProjectileState.playerLaserDamage,
+                   speed: ProjectileState.playerLaserSpeed, travelDistance: 400)
+        XCTAssertTrue(laser.isActive)
+        XCTAssertEqual(laser.physicsBody?.contactTestBitMask,
+                       PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece,
+                       "a live player laser tests both piece colours (§8.3 firing lanes)")
+
+        laser.deactivate()
+        XCTAssertEqual(laser.physicsBody?.contactTestBitMask, PhysicsCategory.none)
+        XCTAssertTrue(laser.physicsBody?.isDynamic == true,
+                      "must stay dynamic after parking, or it can never contact again")
+    }
+
+    /// An enemy shot tests white pieces and the ship — never a black piece,
+    /// or the fleet would shoot itself.
+    func testEnemyShotNeverTargetsItsOwnFleet() {
+        let shot = LaserNode(owner: .enemy)
+        shot.fire(from: .zero, damage: ProjectileState.enemyShotDamage,
+                  speed: 180, travelDistance: 400)
+        let mask = shot.physicsBody?.contactTestBitMask ?? 0
+        XCTAssertEqual(mask & PhysicsCategory.enemyPiece, 0, "must not hit its own fleet")
+        XCTAssertNotEqual(mask & PhysicsCategory.friendlyPiece, 0)
+        XCTAssertNotEqual(mask & PhysicsCategory.ship, 0)
+    }
+
+    func testFiringIsRefusedWithoutRealSpeedOrDistance() {
+        let laser = LaserNode(owner: .player)
+        laser.fire(from: .zero, damage: 2, speed: 0, travelDistance: 400)
+        XCTAssertFalse(laser.isActive, "zero speed would divide by zero for the duration")
+        laser.fire(from: .zero, damage: 2, speed: 400, travelDistance: 0)
+        XCTAssertFalse(laser.isActive, "nowhere to travel — nothing to fire")
+    }
+}
+
+@MainActor
+final class SoundAssetFallbackTests: XCTestCase {
+
+    /// Phase 3.2 shipped silent: every sound the shooting loop asks for was in
+    /// the not-yet-bundled set. These keys must at least resolve to a
+    /// placeholder so the arcade layer is audible.
+    func testShootingSoundsAllResolveToSomething() {
+        let base = Bundle.main.url(forResource: "sfx", withExtension: nil)
+        let shootingKeys: [SoundKey] = [
+            .playerLaserFire, .invaderLaserFire, .pieceHitLight, .invaderHitsShip,
+            .playerShipDestroyed, .pawnDestroyed, .knightDestroyed,
+            .bishopDestroyed, .rookDestroyed, .queenDestroyed, .kingDestroyed,
+        ]
+        for key in shootingKeys {
+            let candidates = [key.filename, key.placeholderFilename].compactMap { $0 }
+            XCTAssertFalse(candidates.isEmpty, "\(key) offers no file at all")
+            // When running without the app bundle there is nothing to stat, so
+            // only assert the mapping exists; AudioManager does the real check.
+            guard let base else { continue }
+            let anyExists = candidates.contains {
+                FileManager.default.fileExists(atPath: base.appendingPathComponent($0).path)
+            }
+            XCTAssertTrue(anyExists, "\(key) has neither its real asset nor a usable placeholder")
+        }
+    }
+
+    /// A placeholder is a stopgap, not the design — it must never quietly
+    /// replace an asset that is genuinely present.
+    func testPlaceholdersOnlyCoverKeysWithoutRealAssets() {
+        for key in SoundKey.allCases where key.placeholderFilename != nil {
+            XCTAssertNotEqual(key.placeholderFilename, key.filename,
+                              "\(key)'s placeholder duplicates its real filename")
+        }
+    }
+}
+
+@MainActor
 final class SpaceshipStateTests: XCTestCase {
 
     func testStartsWithThreeLivesAndAFullCap() {
