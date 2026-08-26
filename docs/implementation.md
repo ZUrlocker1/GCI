@@ -183,79 +183,30 @@ Get the black fleet sweeping and descending alongside the chess game. No shootin
 - [x] Crush events, emitted **before** the descent re-key: the victim is still
       keyed at that square, and reversing the order destroys the arriving piece
 - [x] Fleet log lines: sweep, half-drop, logical descent, breach
-- [x] Playtested, then reworked (see below)
+- [x] Playtested and reworked over several rounds — see below
 
-### 3.1 first-playtest bugs
+### Playability: what was tried, what stuck
 
-Two bugs surfaced before the readability rework below even started:
+The first build was unplayable. What got it there, in brief:
 
-- [x] **Sweep was bounded by the board, not the playfield.** A full 16-piece
-      formation is exactly as wide as the eight files, so there was no room to
-      move at all — the fleet travelled a few pixels, hit a wall, and dropped a
-      half-rank every second or two, reaching rank 1 in ~20 seconds. Rebounded
-      to the same lane the ship patrols instead
-- [x] **Pausing didn't pause the fleet.** The chess beat and the ship are gated
-      on `PlayingState` in the update loop, but the fleet advances on
-      `SKAction`s, which keep ticking through a state change regardless.
-      `showPausedOverlay`/`hidePausedOverlay` now call `fleet.setPaused(_:)`
-
-### 3.1 rework after playtest
-
-The first build was unplayable: the fleet drifted three files off true and fell a
-rank every few seconds. Two rules came out of it, both now pinned by tests.
-
-- [x] **Sweep never exceeds ±0.4 of a square** (`FleetRules.sweepAmplitudeRatio`).
-      Past half a square a piece straddles a file boundary and its square stops
-      being readable, which makes the chess half unplayable
-- [x] **Descent is paced by the chess beat, not wall bounces.** Tying it to
-      bounces coupled difficulty to sweep width — narrowing the shuffle for
-      readability would have silently made the fleet fall faster
-- [x] Level 1: the fleet holds completely still for 3 beats, starts sweeping,
-      then descends half a rank every 4 beats from beat 6 (a full rank every 8).
-      `descentSchedule(for:)` tightens all three with level, floored so a rank
-      never costs fewer than 4 beats. Movement always precedes ground being taken
-- [x] Check and mate lines resolve endpoints through the fleet's drawn position,
-      not the logical square
-- [x] Checkmate snap: the fleet eases onto its true squares over 0.32s and the
-      mating line is redrawn, so the reveal shows the position the engine sees
-- [x] Capture tethers: a hairline from a threatened fleet piece to its square,
-      shown only while a white piece is selected
-- [x] I / ? open the Info screen from the title screen, not just during play
-
-### 3.1 second readability pass
-
-- [x] **Uneven half-drops, 0.3 then 0.7.** An even split parked the fleet on a
-      rank boundary for several beats — the exact ambiguity the sweep cap exists
-      to prevent on the other axis. At 0.3 a piece reads as leaning off its rank
-- [x] **A fixed grid** (`BoardNode.showsGrid`). §12.3 banned one because the
-      fleet slid past the board's edges; capping the sweep below one file
-      retired that reason. It never animates — being the one stationary thing on
-      screen is the whole job. One shape node, one draw call
-- [x] **Stepped sweep** — eight jumps per leg instead of a smooth slide, sized
-      from the same points-per-second, so the fleet marches rather than drifts
-- [x] **Descent telegraph** — the formation dips twice on the beat before a drop
-      (`FleetRules.telegraphsDescent`, one flag and one call site to remove)
-- [x] **Chess moves leave the formation.** A black piece that plays chess is
-      re-parented onto the board and stops being swept or dropped. Descent walks
-      fleet membership rather than colour. Two populations that read differently
-      — things that march, things that sit — beat one hybrid one, and engaging
-      Black on the board now defuses arcade pressure instead of stacking with it
-- [x] Fixed `GCIBoard.forcePlace` silently overwriting a same-colour occupant
-- [x] Tuning pass: fleet sweep/step pace ×0.7, grid and deployment-band alpha ×1.3
-
-### 3.1 descent-jump bug, and further tuning
-
-- [x] **Eliminated a "jump up then down" on every rank descent.**
-      `applyFullRankDescent` bumped the fleet *parent's* position by
-      `+squareSize` to undo the two half-drops, but never moved the piece's own
-      *local* position — which is supposed to always equal its logical square's
-      centre. The two cancelled out on screen for exactly one rank, then the
-      error compounded: the piece visibly jumped a full square up the instant a
-      rank landed, right before the next drop pulled it back down. Fixed by
-      moving the child by the same amount the parent is about to be moved back
-- [x] Further tuning, direct user feedback: sweep amplitude ratio 0.4 → 0.35
-      (0.8 → 0.7 of a square total), sweep/step pace ×0.7 → ×0.63 (another 10%
-      slower), grid stroke and deployment-band alpha another ×1.4 brighter
+- Unbounded horizontal sweep let pieces drift off their true file —
+  unreadable. **Constrained the sweep** to well under half a square
+  (`sweepAmplitudeRatio`, 0.35 → 0.7 of a square total).
+- Descent tied to wall bounces coupled difficulty to sweep width. **Decoupled
+  it** — descent now paces off the chess beat instead.
+- An even 0.5/0.5 two-step drop left the fleet parked on a rank boundary —
+  same ambiguity as the horizontal drift, other axis. **Split it unevenly**
+  (0.3 then 0.7) instead.
+- A smooth continuous sweep read as drifting, not marching. **Stepped it** —
+  discrete jumps at the same overall pace.
+- Constraining the sweep retired the original reason for having no grid.
+  **Added a fixed grid** as a stationary reference.
+- **Added a descent telegraph and capture tethers**, purely to help the
+  player track where pieces actually are.
+- **Chess-move pieces now leave the fleet formation** rather than staying a
+  hybrid piece that both marches and plays chess.
+- Speed, amplitude and grid brightness were each tuned twice more after that,
+  directly against user feedback.
 
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 
