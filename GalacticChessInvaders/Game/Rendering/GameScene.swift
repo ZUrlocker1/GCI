@@ -633,11 +633,26 @@ class GameScene: SKScene {
     /// Level 1 starts straight away; anything above it gets its mechanic banner
     /// first, with the board visible behind it and the beat held until it
     /// leaves (§12.11).
+    /// Removes the level banner and cancels its pending timer. Called wherever
+    /// the announcement is cut short — a restart, or a pause landing on top of
+    /// it — so nothing is left half-shown or still counting down.
+    private func dismissLevelBanner() {
+        removeAction(forKey: Self.levelAnnounceKey)
+        enumerateChildNodes(withName: LevelBannerNode.nodeName) { node, _ in
+            node.removeFromParent()
+        }
+        isAnnouncingLevel = false
+    }
+
     private func announceLevelThenBegin() {
         guard let announcement = LevelManager.announcement(for: levels.level) else {
             beginBeat()
             return
         }
+
+        // Skipping levels with `V` can arrive mid-banner, so clear any previous
+        // one rather than stacking illegibly on top of it.
+        dismissLevelBanner()
 
         isAnnouncingLevel = true
         // Nothing should be advancing while the banner explains what is about
@@ -645,12 +660,6 @@ class GameScene: SKScene {
         fleet?.setPaused(true)
         laserPool?.setPaused(true)
         ship?.direction = 0
-
-        // Skipping levels with `V` can arrive mid-banner, so clear any previous
-        // one rather than stacking illegibly on top of it.
-        enumerateChildNodes(withName: LevelBannerNode.nodeName) { node, _ in
-            node.removeFromParent()
-        }
 
         let banner = LevelBannerNode(title: announcement.title,
                                      subtitle: announcement.subtitle,
@@ -686,11 +695,7 @@ class GameScene: SKScene {
 
     func hideBoard() {
         removeEndBanner()
-        // A restart or level change can land mid-announcement.
-        removeAction(forKey: Self.levelAnnounceKey)
-        enumerateChildNodes(withName: LevelBannerNode.nodeName) { node, _ in
-            node.removeFromParent()
-        }
+        dismissLevelBanner()
         for node in bloomNode.children where node.name == Self.gutterNoticeName {
             node.removeAllActions()
             node.removeFromParent()
@@ -1384,6 +1389,11 @@ class GameScene: SKScene {
             .fadeAlpha(to: 0.35, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
         ])))
         bloomNode.addChild(hint)
+
+        // A level banner sits in the same place at a similar size, so the two
+        // overlap into mush. PAUSED wins — the announcement is forfeited, which
+        // is a fair trade for the player having chosen to stop.
+        dismissLevelBanner()
 
         // Both the fleet and in-flight lasers advance on SKActions, so they
         // ignore the update-loop gate and have to be stopped explicitly.
