@@ -140,8 +140,12 @@ class GameScene: SKScene {
         physicsWorld.gravity = .zero
 
         let handler = CollisionHandler()
-        handler.onPlayerLaserHit = { [weak self] laser, node in self?.resolvePlayerLaserHit(laser: laser, node: node) }
-        handler.onEnemyShotHit = { [weak self] shot, node in self?.resolveEnemyShotHit(shot: shot, node: node) }
+        handler.onPlayerLaserHit = { [weak self] laser, node, at in
+            self?.resolvePlayerLaserHit(laser: laser, node: node, at: at)
+        }
+        handler.onEnemyShotHit = { [weak self] shot, node, at in
+            self?.resolveEnemyShotHit(shot: shot, node: node, at: at)
+        }
         physicsWorld.contactDelegate = handler
         collisionHandler = handler
 
@@ -1784,9 +1788,12 @@ class GameScene: SKScene {
 
     /// The player's laser touched something. Always consumed on contact,
     /// whatever it hit — a laser doesn't pass through.
-    private func resolvePlayerLaserHit(laser: LaserNode, node: SKNode) {
+    private func resolvePlayerLaserHit(laser: LaserNode, node: SKNode, at point: CGPoint) {
         laser.deactivate()
         guard let pieceNode = node as? PieceNode else { return }
+        // Before any damage is applied: the side the shot took off is the side
+        // that stops being drawn, so the wedge has to know where it landed.
+        pieceNode.noteHit(atLocalX: pieceNode.convert(point, from: self).x)
 
         if pieceNode.piece.color == .black {
             guard let result = CollisionResolver.playerLaserHitBlackPiece(
@@ -1811,7 +1818,7 @@ class GameScene: SKScene {
 
     /// An invader shot touched something — either the ship, or a white piece
     /// blocking its lane.
-    private func resolveEnemyShotHit(shot: LaserNode, node: SKNode) {
+    private func resolveEnemyShotHit(shot: LaserNode, node: SKNode, at point: CGPoint) {
         // The round's own damage, not a constant. The activated king's heavy
         // shot carries 2 and was landing 1: the resolver hardcoded
         // `enemyShotDamage`, so "double damage" never reached the board.
@@ -1821,6 +1828,7 @@ class GameScene: SKScene {
             shot.deactivate()
             handleShipHit()
         } else if let pieceNode = node as? PieceNode, pieceNode.piece.color == .white {
+            pieceNode.noteHit(atLocalX: pieceNode.convert(point, from: self).x)
             guard let result = CollisionResolver.enemyShotHitWhitePiece(
                 at: pieceNode.square, damage: damage, board: board) else {
                 // The node's square no longer names a piece on the board — it

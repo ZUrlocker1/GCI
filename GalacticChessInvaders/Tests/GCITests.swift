@@ -3003,6 +3003,96 @@ final class LaserPhysicsTests: XCTestCase {
 }
 
 @MainActor
+final class SurvivingWedgeTests: XCTestCase {
+
+    private func damaged(_ type: PieceType, hitAtX x: CGFloat) -> PieceNode {
+        var piece = Piece(type: type, color: .white, square: "d2")
+        let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
+        node.noteHit(atLocalX: x)
+        piece.applyDamage(piece.type.maxHP / 2)
+        node.refresh(with: piece)
+        return node
+    }
+
+    /// The side that survives is the side the shot did *not* take off.
+    func testTheWedgeIsTheSideTheShotMissed() {
+        let node = PieceNode(piece: Piece(type: .queen, color: .white, square: "d1"),
+                             squareSize: BoardNode.squareSize)
+        node.noteHit(atLocalX: -node.size.width / 2)
+        XCTAssertEqual(node.survivingSide, .right, "struck on the left")
+
+        let other = PieceNode(piece: Piece(type: .queen, color: .white, square: "d1"),
+                              squareSize: BoardNode.squareSize)
+        other.noteHit(atLocalX: other.size.width / 2)
+        XCTAssertEqual(other.survivingSide, .left, "struck on the right")
+    }
+
+    /// A clean hit down the middle cannot say which side it took off.
+    func testACentreHitTossesACoin() {
+        var seen = Set<String>()
+        for _ in 0..<200 {
+            let node = PieceNode(piece: Piece(type: .pawn, color: .white, square: "d2"),
+                                 squareSize: BoardNode.squareSize)
+            node.noteHit(atLocalX: 0)
+            seen.insert(node.survivingSide == .left ? "L" : "R")
+        }
+        XCTAssertEqual(seen, ["L", "R"])
+    }
+
+    /// It must not jump sides on a later hit, or a piece would flicker between
+    /// silhouettes as it is worn down.
+    func testTheSideIsFixedByTheFirstHit() {
+        let node = PieceNode(piece: Piece(type: .rook, color: .white, square: "a1"),
+                             squareSize: BoardNode.squareSize)
+        node.noteHit(atLocalX: -node.size.width / 2)
+        node.noteHit(atLocalX: node.size.width / 2)
+        node.noteHit(atLocalX: node.size.width / 2)
+        XCTAssertEqual(node.survivingSide, .right)
+    }
+
+    /// A whole piece shows no wedge; a damaged one does, and the hitbox grows
+    /// to cover it — what the player can see, the player can hit.
+    func testTheWedgeAppearsWithDamageAndCarriesAHitbox() {
+        let whole = PieceNode(piece: Piece(type: .bishop, color: .white, square: "c1"),
+                              squareSize: BoardNode.squareSize)
+        XCTAssertNil(whole.survivingSide)
+        let wholeArea = whole.physicsBody?.area ?? 0
+
+        let hurt = damaged(.bishop, hitAtX: -20)
+        XCTAssertEqual(hurt.survivingSide, .right)
+        XCTAssertGreaterThan(hurt.children.count, whole.children.count,
+                             "the surviving slice is drawn")
+        // The eroded top alone would be a fraction of the whole; with the wedge
+        // it sits between "nothing" and "undamaged".
+        let hurtArea = hurt.physicsBody?.area ?? 0
+        XCTAssertGreaterThan(hurtArea, 0)
+        XCTAssertLessThan(hurtArea, wholeArea, "still visibly less than a whole piece")
+    }
+
+    /// The whole approach rests on this: a slice cut from the full-HP art lands
+    /// exactly where that part of the piece was, because every damage state
+    /// shares one canvas. Re-exported art that broke it would misalign every
+    /// damaged piece on the board, silently.
+    func testEveryDamageStateSharesOneCanvas() {
+        for type in PieceType.allCases {
+            for color in [PieceColor.white, .black] {
+                var piece = Piece(type: type, color: color, square: "d4")
+                let full = SKTexture(imageNamed: piece.fullTextureName).size()
+                XCTAssertGreaterThan(full.width, 0, "\(piece.fullTextureName) missing")
+                for damage in [1, type.maxHP - 1] {
+                    piece = Piece(type: type, color: color, square: "d4")
+                    piece.applyDamage(damage)
+                    let state = SKTexture(imageNamed: piece.textureName).size()
+                    XCTAssertEqual(state.width, full.width, accuracy: 0.5,
+                                   "\(piece.textureName) is a different canvas")
+                    XCTAssertEqual(state.height, full.height, accuracy: 0.5,
+                                   "\(piece.textureName) is a different canvas")
+                }
+            }
+        }
+    }
+}
+
 final class DamageStateTests: XCTestCase {
 
     /// §7.1's table, verbatim, as (piece, damage-taken, expected state). The
