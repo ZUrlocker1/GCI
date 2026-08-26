@@ -125,12 +125,17 @@ final class LaserNode: SKSpriteNode {
         CGVector(dx: sin(zRotation), dy: -cos(zRotation))
     }
 
-    /// §20 Phase 3.2 bitmask spec: player laser tests only pieces (not the
-    /// ship, not enemy shots); enemy shots test only white pieces + ship.
+    /// §20 Phase 3.2's bitmask spec, plus one addition: rounds now test each
+    /// other, so Black's fire can shoot your shot out of the air. The spec
+    /// explicitly excluded that; it is a deliberate departure, and it costs the
+    /// player real shots, because a laser eaten in flight still counted against
+    /// the two-round cap until it cleared.
     private var liveContactMask: UInt32 {
         owner == .player
-            ? (PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece)
-            : (PhysicsCategory.friendlyPiece | PhysicsCategory.ship)
+            ? (PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece
+               | PhysicsCategory.enemyShot)
+            : (PhysicsCategory.friendlyPiece | PhysicsCategory.ship
+               | PhysicsCategory.playerLaser)
     }
 
     @available(*, unavailable)

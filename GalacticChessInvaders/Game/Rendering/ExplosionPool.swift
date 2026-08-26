@@ -40,6 +40,11 @@ final class ExplosionPool {
 /// The spray a *survivable* hit throws off: §24.5's single-frame impact flash,
 /// plus a handful of glass slivers.
 ///
+/// Sized at twice the first attempt, which was too quiet to register against a
+/// board already carrying bloom, a starfield and charge-up glows — every
+/// dimension doubled, plus two more shards and a slightly longer life so the
+/// spray has time to travel the extra distance.
+///
 /// Separate from `ExplosionPool` rather than a smaller mode of it, and pooled
 /// deeper, because these fire on every landed shot — sharing one pool would let
 /// a burst of hits starve the destruction bursts, which are the ones that
@@ -62,9 +67,10 @@ final class ShatterPool {
     /// `along` is the direction the shot was travelling. Glass sprays forward
     /// in a wide cone from there, the way it actually would — a symmetric
     /// starburst reads as an explosion, which is the wrong size of event.
-    func shatter(at position: CGPoint, color: SKColor, along direction: CGVector) {
+    func shatter(at position: CGPoint, color: SKColor, along direction: CGVector,
+                 scale: CGFloat = 1) {
         guard let node = sprays.first(where: { !$0.isBusy }) else { return }
-        node.shatter(at: position, color: color, along: direction)
+        node.shatter(at: position, color: color, along: direction, scale: scale)
     }
 
     func reset() { sprays.forEach { $0.stop() } }
@@ -73,11 +79,11 @@ final class ShatterPool {
 @MainActor
 final class ShatterNode: SKNode {
 
-    fileprivate static let shardCount = 7
-    private static let life: TimeInterval = 0.3
+    fileprivate static let shardCount = 9
+    private static let life: TimeInterval = 0.36
 
     private let flash = SKSpriteNode(texture: ExplosionNode.solidTexture,
-                                     color: .white, size: CGSize(width: 7, height: 7))
+                                     color: .white, size: CGSize(width: 14, height: 14))
     private var shards: [SKSpriteNode] = []
     private(set) var isBusy = false
 
@@ -93,7 +99,7 @@ final class ShatterNode: SKNode {
             // long axis, and it is the long axis catching the light that reads
             // as glass rather than as sparks.
             let shard = SKSpriteNode(texture: ExplosionNode.solidTexture,
-                                     color: .white, size: CGSize(width: 1.4, height: 5))
+                                     color: .white, size: CGSize(width: 2.8, height: 10))
             shard.colorBlendFactor = 1
             addChild(shard)
             return shard
@@ -103,7 +109,8 @@ final class ShatterNode: SKNode {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func shatter(at point: CGPoint, color: SKColor, along direction: CGVector) {
+    func shatter(at point: CGPoint, color: SKColor, along direction: CGVector,
+                 scale: CGFloat = 1) {
         stop()
         position = point
         isHidden = false
@@ -112,7 +119,7 @@ final class ShatterNode: SKNode {
         // §24.5 asks for one frame, no linger. Two frames of fade reads the
         // same and survives a dropped frame.
         flash.alpha = 0.9
-        flash.setScale(1)
+        flash.setScale(scale)
         flash.run(.sequence([.wait(forDuration: Juice.frameDuration),
                              .fadeOut(withDuration: Juice.frameDuration * 2)]))
 
@@ -122,19 +129,19 @@ final class ShatterNode: SKNode {
             // little backscatter, which is what makes it look like something
             // broke rather than something fired.
             let angle = heading + CGFloat.random(in: -1.3...1.3)
-            let distance = CGFloat.random(in: 9...20)
+            let distance = CGFloat.random(in: 18...40) * scale
             shard.color = color
             shard.position = .zero
             shard.zRotation = angle
             shard.alpha = 1
-            shard.setScale(CGFloat.random(in: 0.7...1.3))
+            shard.setScale(CGFloat.random(in: 0.7...1.3) * scale)
             shard.run(.group([
                 .sequence([
                     .move(by: CGVector(dx: cos(angle) * distance,
                                        dy: sin(angle) * distance),
                           duration: Self.life * 0.7),
                     // A short fall at the end: glass does not hang in the air.
-                    .moveBy(x: 0, y: -5, duration: Self.life * 0.3),
+                    .moveBy(x: 0, y: -10, duration: Self.life * 0.3),
                 ]),
                 .rotate(byAngle: CGFloat.random(in: -2.5...2.5), duration: Self.life),
                 .sequence([.wait(forDuration: Self.life * 0.35),
