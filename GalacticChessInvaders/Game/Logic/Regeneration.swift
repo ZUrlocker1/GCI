@@ -56,17 +56,30 @@ enum Regeneration {
     /// Where a regenerated pawn materialises.
     ///
     /// Defensive: the square directly in front of the king, toward White.
-    /// Standard: a random free file on the fleet's rear rank. Returns nil when
-    /// there is nowhere legal, which is a real outcome late in a wave — a full
-    /// rear rank simply means nothing arrives.
+    /// Standard: §23.9's "back of the fleet at a random column position" — but
+    /// searching *forward* from the rear rank rather than only at it.
+    ///
+    /// Only at it does not work. The fleet's rear rank is Black's own back rank
+    /// at level start and it is full, while the player's early kills are pawns
+    /// on the rank in front of it — so the back rank stays occupied through the
+    /// whole opening and every early regeneration found nowhere to go. Walking
+    /// forward one rank at a time keeps the arrival as far back as it can be
+    /// while making "nowhere at all" the genuinely rare case it should be.
+    ///
+    /// `depth` is how far forward to look, which is the marching band: a pawn
+    /// materialising outside the formation would not sweep with it.
     static func spawnSquare(defensive: Bool, kingSquare: String?,
-                            rearRank: Int, occupied: Set<String>) -> String? {
+                            rearRank: Int, depth: Int = FleetRules.formationRanks,
+                            occupied: Set<String>) -> String? {
         if defensive, let kingSquare, let shielded = squareAhead(of: kingSquare),
            !occupied.contains(shielded) {
             return shielded
         }
-        let files = "abcdefgh".map { "\($0)\(rearRank)" }.filter { !occupied.contains($0) }
-        return files.randomElement()
+        for rank in stride(from: rearRank, through: max(1, rearRank - depth + 1), by: -1) {
+            let free = "abcdefgh".map { "\($0)\(rank)" }.filter { !occupied.contains($0) }
+            if let square = free.randomElement() { return square }
+        }
+        return nil
     }
 
     /// One rank toward White, or nil off the board.
@@ -115,6 +128,16 @@ struct RegenerationQueue {
         let due = pending.filter { $0.remaining <= 0 }.count
         pending.removeAll { $0.remaining <= 0 }
         return due
+    }
+
+    /// Hands a slot back when the regeneration it paid for could not land.
+    ///
+    /// The cap is "N pawns come back in a wave" (§23.9), not "N attempts are
+    /// made" — a slot spent on a spawn that found nowhere to go is a pawn the
+    /// player never has to deal with and never sees, silently making the level
+    /// easier than its own table says.
+    mutating func refund() {
+        slotsUsed = max(0, slotsUsed - 1)
     }
 
     mutating func reset() {

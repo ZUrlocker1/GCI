@@ -3155,14 +3155,56 @@ final class RegenerationTests: XCTestCase {
                                                rearRank: 7, occupied: ["e5"])
         XCTAssertNotEqual(blocked, "e5")
         XCTAssertEqual(blocked?.last, "7")
-        // Standard: always the rear rank, never an occupied square.
+        // Standard: the rear rank first, never an occupied square.
         let taken = Set("abcdefg".map { "\($0)7" })
         XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
                                                 rearRank: 7, occupied: taken), "h7")
+    }
+
+    /// The rear rank is Black's own back rank at level start, and it is *full*
+    /// — while the player's early kills are pawns on the rank in front of it,
+    /// which never free a back-rank square. Searching only the rear rank meant
+    /// every regeneration in the opening found nowhere to go.
+    func testSpawnWalksForwardWhenTheRearRankIsFull() {
+        let intact = Set("abcdefgh".map { "\($0)8" })
+            .union("abcdefgh".map { "\($0)7" })
         XCTAssertNil(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
-                                              rearRank: 7,
-                                              occupied: taken.union(["h7"])),
-                     "a full rank means nothing arrives")
+                                              rearRank: 8, depth: 2, occupied: intact),
+                     "a wholly intact fleet genuinely has nowhere")
+
+        // One pawn shot off rank 7: the arrival takes that square, not nothing.
+        var opened = intact
+        opened.remove("c7")
+        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                                rearRank: 8, depth: 2, occupied: opened),
+                       "c7")
+        // The rear rank still wins when it has room.
+        opened.remove("a8")
+        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                                rearRank: 8, depth: 2, occupied: opened),
+                       "a8", "as far back as possible")
+        // And it never looks outside the marching band.
+        let onlyRank6Free = Set("abcdefgh".map { "\($0)8" })
+            .union("abcdefgh".map { "\($0)7" })
+        XCTAssertNil(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                              rearRank: 8, depth: 2,
+                                              occupied: onlyRank6Free),
+                     "rank 6 is outside a 2-rank band")
+    }
+
+    /// The cap counts pawns that arrive, not attempts that were made — a slot
+    /// spent on a spawn with nowhere to go is a pawn the player never sees,
+    /// quietly making the level easier than its own table says.
+    func testAFailedSpawnGivesTheSlotBack() {
+        var queue = RegenerationQueue()
+        queue.schedule(after: 1)
+        queue.schedule(after: 1)
+        XCTAssertEqual(queue.slotsUsed, 2)
+        queue.refund()
+        XCTAssertEqual(queue.slotsUsed, 1)
+        queue.refund()
+        queue.refund()
+        XCTAssertEqual(queue.slotsUsed, 0, "and it never goes negative")
     }
 
     /// §10.1: armor is Level 9 onward, and only ever on a regenerated pawn.
