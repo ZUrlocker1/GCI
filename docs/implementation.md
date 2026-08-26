@@ -45,6 +45,8 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
       app had no bundle identity, so `UserDefaults` silently used a process-name
       domain (this is what made high scores look broken), and App Store submission
       would have been rejected
+- [x] Escape while entering a high-score name records the entry with a blank
+      name rather than trapping the player in the prompt or discarding the score
 - [ ] **60fps / draw count / music looping never actually measured**
 
 Deviations
