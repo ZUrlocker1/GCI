@@ -47,6 +47,22 @@ class GameScene: SKScene {
     private var laserPool: LaserPool?
     private var collisionHandler: CollisionHandler?
     private var gameOverNode: GameOverNode?
+    private var scorePops: ScorePopPool?
+    private var explosions: ExplosionPool?
+
+    /// §24.1's shake, applied to `bloomNode` rather than to a camera.
+    ///
+    /// A camera would also change how a mouse point maps into the scene, and
+    /// click-to-select depends on that mapping — shaking the playfield node
+    /// keeps input untouched. It also leaves the starfield still, which reads
+    /// as the board being hit rather than the universe wobbling.
+    private var shake: Juice.Shake = .none
+    private var shakeElapsed: TimeInterval = 0
+
+    /// §24.2's hit freeze. The scene's own `update` keeps running so it can
+    /// time itself; everything under `bloomNode` is what actually stops.
+    private var freezeRemaining: TimeInterval = 0
+    private var afterFreeze: (() -> Void)?
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
     /// slots, so without this the prompt reappeared immediately after submitting
@@ -606,6 +622,8 @@ class GameScene: SKScene {
         ship = player
 
         laserPool = LaserPool(parent: bloomNode)
+        scorePops = ScorePopPool(parent: bloomNode)
+        explosions = ExplosionPool(parent: bloomNode)
 
         // Countdown lives in the gutter left of the board (§19), with the
         // check/mate banner directly beneath it.
@@ -706,6 +724,14 @@ class GameScene: SKScene {
     }
 
     func hideBoard() {
+        scorePops?.reset()
+        explosions?.reset()
+        shake = .none
+        shakeElapsed = 0
+        freezeRemaining = 0
+        afterFreeze = nil
+        bloomNode.isPaused = false
+        bloomNode.position = .zero
         removeEndBanner()
         dismissLevelBanner()
         for node in bloomNode.children where node.name == Self.gutterNoticeName {
@@ -1275,6 +1301,12 @@ class GameScene: SKScene {
         // reward the player. Chess captures score at the lower of the two
         // tables (§9) — pointValue is the higher, shoot-to-kill rate.
         if let captured = outcome.captured, captured.color == .black {
+            if let node = pieceNodes[outcome.capturedSquare ?? outcome.to] {
+                scorePops?.pop(ScoreManager.shared.scaled(captured.type.chessCaptureValue),
+                               at: bloomPosition(of: node),
+                               color: captured.color == .white
+                                   ? NeonPalette.cyan : NeonPalette.magenta)
+            }
             ScoreManager.shared.addPoints(captured.type.chessCaptureValue,
                                           source: captured.type.rawValue)
             refreshHUD()
@@ -1760,6 +1792,82 @@ class GameScene: SKScene {
     /// A brief flare on the piece that just fired, so the player can see where a
     /// round came from. Without it a shot simply appears mid-board and the fleet
     /// gives no clue which piece is shooting at them.
+    // MARK: - Juice (§24)
+
+    /// Starts a shake, or replaces a weaker one already running. Never adds:
+    /// a queen dying inside a king's shake must not double the amplitude, and
+    /// the bigger event is the one the player should feel.
+    private func startShake(_ next: Juice.Shake) {
+        guard !next.isSilent else { return }
+        let remaining = Juice.amplitude(shake, elapsed: shakeElapsed)
+        guard next.amplitude >= remaining else { return }
+        shake = next
+        shakeElapsed = 0
+    }
+
+    private func advanceShake(_ dt: TimeInterval) {
+        guard !shake.isSilent else { return }
+        shakeElapsed += dt
+        let amplitude = Juice.amplitude(shake, elapsed: shakeElapsed)
+        guard amplitude > 0.05 else {
+            shake = .none
+            bloomNode.position = .zero      // always land back on true centre
+            return
+        }
+        bloomNode.position = CGPoint(x: .random(in: -amplitude...amplitude),
+                                     y: .random(in: -amplitude...amplitude))
+    }
+
+    /// §24.2: hold everything for a few frames, then run `then` — the explosion
+    /// lands *after* the pause, which is what makes a big kill feel weighty
+    /// rather than just slow.
+    private func freeze(_ duration: TimeInterval, then: @escaping () -> Void) {
+        guard duration > 0 else { return then() }
+        freezeRemaining = duration
+        afterFreeze = then
+        bloomNode.isPaused = true
+    }
+
+    /// A destroyed piece's position in `bloomNode`'s space — pieces live under
+    /// the board or the fleet, both of which are inset within it.
+    private func bloomPosition(of node: SKNode) -> CGPoint {
+        bloomNode.convert(.zero, from: node)
+    }
+
+    /// The full ceremony for a destroyed piece: freeze if it was worth one,
+    /// then burst, pop the score, and shake.
+    private func celebrateDestruction(of node: PieceNode, type: PieceType,
+                                      points: Int, color: SKColor) {
+        let at = bloomPosition(of: node)
+        // King and queen get the pause; everything else fires immediately, or
+        // a wave of pawn kills would read as the game stuttering.
+        freeze(Juice.freezeDuration(forDestroying: type)) { [weak self] in
+            guard let self else { return }
+            // §24.8: the king's death is the level's climax — a bigger burst
+            // and a white flash over the whole playfield.
+            let scale: CGFloat = type == .king ? 2.4 : (type == .queen ? 1.5 : 1.0)
+            self.explosions?.burst(at: at, color: color, scale: scale)
+            if type == .king { self.flashScreen() }
+            self.scorePops?.pop(points, at: at, color: color)
+            self.startShake(Juice.shake(forDestroying: type))
+        }
+    }
+
+    /// §24.8's full-screen white flash, for the king only. Brief and dim: a
+    /// true white frame over a dark board is genuinely unpleasant.
+    private func flashScreen() {
+        let flash = SKSpriteNode(color: .white, size: size)
+        flash.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        flash.zPosition = 23
+        flash.alpha = 0
+        bloomNode.addChild(flash)
+        flash.run(.sequence([
+            .fadeAlpha(to: 0.5, duration: 0.05),
+            .fadeOut(withDuration: 0.35),
+            .removeFromParent(),
+        ]))
+    }
+
     private func flashMuzzle(at square: String) {
         guard let node = pieceNodes[square] else { return }
         let flare = SKShapeNode(circleOfRadius: BoardNode.squareSize * 0.16)
@@ -1791,6 +1899,7 @@ class GameScene: SKScene {
     private func resolvePlayerLaserHit(laser: LaserNode, node: SKNode, at point: CGPoint) {
         laser.deactivate()
         guard let pieceNode = node as? PieceNode else { return }
+        startShake(Juice.laserHit)
         // Before any damage is applied: the side the shot took off is the side
         // that stops being drawn, so the wedge has to know where it landed.
         pieceNode.noteHit(atLocalX: pieceNode.convert(point, from: self).x)
@@ -1890,6 +1999,9 @@ class GameScene: SKScene {
 
         pieceNodes.removeValue(forKey: square)
         detachFromFleet(node)
+        celebrateDestruction(of: node, type: type,
+                             points: ScoreManager.shared.scaled(points),
+                             color: NeonPalette.magenta)
         node.runDestructionAnimation {}
         AudioManager.shared.play(destroyedSound(for: type))
         ScoreManager.shared.addPoints(points, source: "\(type.rawValue) (shot)")
@@ -1916,6 +2028,11 @@ class GameScene: SKScene {
         }
 
         pieceNodes.removeValue(forKey: square)
+        let at = bloomPosition(of: node)
+        explosions?.burst(at: at, color: NeonPalette.cyan,
+                          scale: node.piece.type == .king ? 2.4 : 1.0)
+        if node.piece.type == .king { flashScreen() }
+        startShake(Juice.shake(forDestroying: node.piece.type))
         node.runDestructionAnimation {}
         AudioManager.shared.play(destroyedSound(for: node.piece.type))
 
@@ -1975,6 +2092,21 @@ class GameScene: SKScene {
 
         let dt = lastUpdateTime > 0 ? currentTime - lastUpdateTime : 0
         lastUpdateTime = currentTime
+
+        // §24.2's hit freeze: the playfield stops, this loop does not — it is
+        // what has to notice the freeze is over. Everything below is skipped,
+        // so the ship, the beat and the reveal all hold with it.
+        if freezeRemaining > 0 {
+            freezeRemaining -= dt
+            if freezeRemaining <= 0 {
+                bloomNode.isPaused = false
+                let resume = afterFreeze
+                afterFreeze = nil
+                resume?()
+            }
+            return
+        }
+        advanceShake(dt)
 
         if dt > 0, stateMachine.currentState is PlayingState {
             // Held still while a banner is up or the game is decided; §12.11

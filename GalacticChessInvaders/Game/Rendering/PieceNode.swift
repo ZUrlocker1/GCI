@@ -15,6 +15,7 @@ final class PieceNode: SKSpriteNode {
     private static let flickerKey = "criticalFlicker"
     private static let checkGlowKey = "checkGlow"
     private static let chargeGlowName = "gunnerCharge"
+    private static let ventName = "vent"
     private static let bobKey = "idleBob"
     /// Small enough to read as breathing rather than hovering.
     private static let bobAmplitude: CGFloat = 2.0
@@ -314,6 +315,9 @@ final class PieceNode: SKSpriteNode {
     func refresh(with updated: Piece) {
         let previousTexture = piece.textureName
         piece = updated
+        // Venting keys off raw HP, not the texture, so it starts on the hit
+        // that crosses half rather than on the next art change.
+        updateVenting()
         guard updated.textureName != previousTexture else { return }
 
         let next = SKTexture(imageNamed: updated.textureName)
@@ -375,6 +379,72 @@ final class PieceNode: SKSpriteNode {
             .run { ring.lineWidth = 0.8; ring.glowWidth = 2.5; ring.strokeColor = NeonPalette.cyan },
         ]), withKey: "flare")
     }
+
+    /// Embers drifting off a piece below half HP (§20 Phase 3.3's smoke trail).
+    ///
+    /// Not grey smoke: this board is neon on black, and grey reads as mud. A
+    /// sparse drift in the piece's own glow colour says "this one is failing"
+    /// in the vocabulary the rest of the board already uses.
+    ///
+    /// Idempotent — driven from `refresh`, which runs on every damage change.
+    private func updateVenting() {
+        let venting = Juice.vents(hp: piece.hp, maxHP: piece.type.maxHP)
+        guard venting else {
+            childNode(withName: Self.ventName)?.removeFromParent()
+            return
+        }
+        guard childNode(withName: Self.ventName) == nil else { return }
+
+        let vent = SKNode()
+        vent.name = Self.ventName
+        vent.zPosition = -0.6            // behind the piece, above the board
+        addChild(vent)
+
+        // One ember every 0.28s, each drifting up and out and fading. Cheap
+        // enough at a handful of damaged pieces, and self-limiting: an ember
+        // removes itself, so the node count cannot grow.
+        let emit = SKAction.run { [weak self, weak vent] in
+            guard let self, let vent else { return }
+            let ember = SKSpriteNode(texture: Self.emberTexture, color: self.baseColor,
+                                     size: CGSize(width: 3, height: 3))
+            ember.colorBlendFactor = 1
+            ember.alpha = 0.7
+            ember.position = CGPoint(x: CGFloat.random(in: -self.size.width * 0.2
+                                                       ... self.size.width * 0.2),
+                                     y: -self.size.height * 0.1)
+            vent.addChild(ember)
+            ember.run(.sequence([
+                .group([
+                    .moveBy(x: CGFloat.random(in: -6...6), y: CGFloat.random(in: 14...24),
+                            duration: 0.9),
+                    .fadeOut(withDuration: 0.9),
+                    .scale(to: 0.3, duration: 0.9),
+                ]),
+                .removeFromParent(),
+            ]))
+        }
+        vent.run(.repeatForever(.sequence([emit, .wait(forDuration: 0.28)])))
+    }
+
+    /// A soft round dot, shared by every ember so they batch into one draw
+    /// call — the same trick the starfield uses.
+    private static let emberTexture: SKTexture = {
+        let size = 8
+        guard let context = CGContext(
+            data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return SKTexture() }
+        let centre = CGFloat(size) / 2
+        for step in stride(from: centre, to: 0, by: -0.5) {
+            context.setFillColor(CGColor(red: 1, green: 1, blue: 1,
+                                         alpha: 1 - step / centre))
+            context.fillEllipse(in: CGRect(x: centre - step, y: centre - step,
+                                           width: step * 2, height: step * 2))
+        }
+        guard let image = context.makeImage() else { return SKTexture() }
+        return SKTexture(cgImage: image)
+    }()
 
     /// This gunner is charging a round: the piece lights up from the inside.
     ///
@@ -452,6 +522,7 @@ final class PieceNode: SKSpriteNode {
     func runDestructionAnimation(completion: @escaping () -> Void) {
         removeAction(forKey: Self.flickerKey)
         setCheckGlow(false)
+        childNode(withName: Self.ventName)?.removeFromParent()
         // Drop the physics body immediately, not when the animation ends. The
         // node lingers for 0.18s while it scales and fades, and a body left in
         // place keeps generating contacts for a piece the board no longer has —

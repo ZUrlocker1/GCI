@@ -3003,6 +3003,93 @@ final class LaserPhysicsTests: XCTestCase {
 }
 
 @MainActor
+final class JuiceTests: XCTestCase {
+
+    /// §24.1's table. Only the queen and king shake on a kill — everything else
+    /// is silent on purpose, or a wave of pawn kills rattles the board
+    /// continuously and the two that matter stop meaning anything.
+    func testOnlyTheQueenAndKingShakeTheBoard() {
+        XCTAssertEqual(Juice.shake(forDestroying: .king), Juice.heavy)
+        XCTAssertEqual(Juice.shake(forDestroying: .queen), Juice.light)
+        for type in [PieceType.pawn, .knight, .bishop, .rook] {
+            XCTAssertEqual(Juice.shake(forDestroying: type), .none, "\(type)")
+        }
+        // §24.1's durations, verbatim.
+        XCTAssertEqual(Juice.shake(forDestroying: .king).duration, 0.6)
+        XCTAssertEqual(Juice.shake(forDestroying: .queen).duration, 0.2)
+        XCTAssertEqual(Juice.shipDestroyed.duration, 0.4)
+        XCTAssertEqual(Juice.laserHit.duration, 0.05)
+        // Ordered, so "heavy" is always felt as more than "light".
+        XCTAssertLessThan(Juice.micro.amplitude, Juice.light.amplitude)
+        XCTAssertLessThan(Juice.light.amplitude, Juice.medium.amplitude)
+        XCTAssertLessThan(Juice.medium.amplitude, Juice.heavy.amplitude)
+    }
+
+    /// "Punchy, not nauseating" (§24.1): the shake has to be nearly gone well
+    /// before its window closes, not drift back to centre.
+    func testShakeDecaysToNothing() {
+        let shake = Juice.heavy
+        XCTAssertEqual(Juice.amplitude(shake, elapsed: 0), shake.amplitude)
+        XCTAssertLessThan(Juice.amplitude(shake, elapsed: shake.duration / 2),
+                          shake.amplitude * 0.15, "past halfway it is a tremor")
+        XCTAssertEqual(Juice.amplitude(shake, elapsed: shake.duration), 0,
+                       "and exactly zero at the end, so the board lands true")
+        XCTAssertEqual(Juice.amplitude(shake, elapsed: shake.duration * 2), 0)
+        XCTAssertEqual(Juice.amplitude(.none, elapsed: 0), 0)
+    }
+
+    /// §24.2: 2–4 frames on a big kill, none on a small one.
+    func testHitFreezeIsForBigKillsOnly() {
+        XCTAssertEqual(Juice.freezeFrames(forDestroying: .king), 4)
+        XCTAssertEqual(Juice.freezeFrames(forDestroying: .queen), 2)
+        for type in [PieceType.pawn, .knight, .bishop, .rook] {
+            XCTAssertEqual(Juice.freezeFrames(forDestroying: type), 0, "\(type)")
+        }
+        for type in PieceType.allCases {
+            let frames = Juice.freezeFrames(forDestroying: type)
+            XCTAssertTrue(frames == 0 || (2...4).contains(frames), "\(type): \(frames)")
+        }
+        XCTAssertEqual(Juice.freezeDuration(forDestroying: .king), 4.0 / 60, accuracy: 0.0001)
+        XCTAssertEqual(Juice.freezeDuration(forDestroying: .pawn), 0)
+    }
+
+    /// Venting starts at half HP and stops at zero — a destroyed piece must not
+    /// leave an emitter behind.
+    func testVentingStartsAtHalfHP() {
+        XCTAssertFalse(Juice.vents(hp: 8, maxHP: 12))
+        XCTAssertTrue(Juice.vents(hp: 6, maxHP: 12), "exactly half vents")
+        XCTAssertTrue(Juice.vents(hp: 1, maxHP: 12))
+        XCTAssertFalse(Juice.vents(hp: 0, maxHP: 12), "destroyed pieces do not vent")
+        XCTAssertFalse(Juice.vents(hp: 5, maxHP: 0))
+        // Against the real HP table: every piece vents on the shot that takes
+        // it past half, and no earlier.
+        for type in PieceType.allCases {
+            var piece = Piece(type: type, color: .black, square: "d5")
+            XCTAssertFalse(Juice.vents(hp: piece.hp, maxHP: type.maxHP), "\(type) intact")
+            piece.applyDamage(type.maxHP - type.maxHP / 2)
+            XCTAssertTrue(Juice.vents(hp: piece.hp, maxHP: type.maxHP), "\(type) at half")
+        }
+    }
+
+    /// The pop has to show the number the total actually moves by.
+    func testAScorePopMatchesWhatTheScoreGains() {
+        let manager = ScoreManager.shared
+        manager.resetForNewGame()
+        for _ in 0..<3 { manager.advanceLevel() }      // ×2.5
+        let before = manager.currentScore
+        let shown = manager.scaled(150)
+        manager.addPoints(150)
+        XCTAssertEqual(manager.currentScore - before, shown)
+        manager.resetForNewGame()
+    }
+
+    func testScorePopTimingFollowsTheDoc() {
+        XCTAssertEqual(Juice.popRise, 30, "§24.3: floats up ~30 points")
+        XCTAssertEqual(Juice.popDuration, 0.8, "§24.3: fades over 0.8s")
+    }
+}
+
+@MainActor
 final class SurvivingWedgeTests: XCTestCase {
 
     private func damaged(_ type: PieceType, hitAtX x: CGFloat) -> PieceNode {

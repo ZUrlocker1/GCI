@@ -42,10 +42,17 @@ final class ScoreManager {
 
     // MARK: - Scoring
 
+    /// What `base` is actually worth at the current multiplier. The score pop
+    /// has to show the same number the total goes up by, so both round the same
+    /// way — a pop reading +37 against a total that moved 38 is a bug report.
+    func scaled(_ base: Int) -> Int {
+        Int((Double(base) * multiplier).rounded())
+    }
+
     func addPoints(_ base: Int, source: String = "") {
         // Rounded, not truncated: ×1.5 on a 25-point pawn is 37.5, and
         // truncating quietly paid 37 on every scaled capture.
-        let points = Int((Double(base) * multiplier).rounded())
+        let points = scaled(base)
         currentScore += points
         DiagnosticsLog.shared.log(.score, "\(source.isEmpty ? "" : "\(source): ")+\(points) pts (×\(multiplier)) → \(currentScore)")
     }
