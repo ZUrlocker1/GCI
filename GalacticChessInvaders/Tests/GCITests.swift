@@ -2271,7 +2271,7 @@ final class FleetControllerTests: XCTestCase {
         let parent = SKNode()
         let fleet = FleetController(board: board, parent: parent,
                                     squareSize: BoardNode.squareSize,
-                                    boardWidth: BoardNode.boardSize,
+                                    lateralBounds: -194...706,
                                     level: LevelManager.parameters(for: 1))
         return (fleet, board, parent)
     }
@@ -2300,6 +2300,26 @@ final class FleetControllerTests: XCTestCase {
                              squareSize: BoardNode.squareSize)
         fleet.adopt(node, atLogicalCentre: centre)
         XCTAssertEqual(node.position, centre)
+    }
+
+    /// Regression: bounding the sweep to the board left a full 16-piece fleet
+    /// with nowhere to go, so it bounced every frame and fell to rank 1 in
+    /// seconds. The walls are the playfield's, not the board's.
+    func testAFullFleetHasRoomToSweep() {
+        let (fleet, board, _) = makeFleet()
+        let geometry = BoardNode()
+        for piece in board.allPieces(color: .black) {
+            if let centre = geometry.center(of: piece.logicalSquare) {
+                fleet.adopt(PieceNode(piece: piece, squareSize: BoardNode.squareSize),
+                            atLogicalCentre: centre)
+            }
+        }
+        XCTAssertGreaterThan(fleet.legTravel, BoardNode.squareSize * 4,
+                             "a full formation must still cross several files per leg")
+        // Slowest case: a full fleet at level 1 should take several seconds a leg.
+        let speed = FleetRules.sweepSpeed(level: LevelManager.parameters(for: 1),
+                                          piecesRemaining: fleet.pieceCount)
+        XCTAssertGreaterThan(fleet.legTravel / speed, 5)
     }
 
     func testResetEmptiesTheFormation() {
