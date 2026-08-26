@@ -271,62 +271,53 @@ left the game with no ending at all.
 Escalations persist except where a level's identity depends on not persisting:
 King Activated and Crossfire are their own waves (Blitz carries Crossfire again).
 
-### Who shoots, and how you can tell
+### Combat, as it stands
 
-- **Pawns are the only gunners** from Level 2; bishops add diagonals at
-  Crossfire. This replaces §5.3's *weighting* toward pawns — real (84% of
-  shots) but invisible, since a probability reads as "anything can shoot". A
-  rule is something a banner can promise and a player can act on
-- Two fallbacks: with no pawns left everything remaining takes over, or the
-  fleet goes silent exactly when the player is hunting the king; and at most
-  half the gunners fire per beat, or the charge-up lights the whole rank
-- **Every shot charges up for 0.35s first**, the king's included. The piece
-  lights from within — a tinted additive copy of its own texture, so no new
-  shape appears — and a tick grows along the line the round will take, so at
-  Crossfire the *angle* is readable before the missile exists. A round with no
-  telegraph has no visible source: the fleet keeps sweeping while the shot
-  falls straight, so the shooter has slid out from behind it by the time the
-  eye arrives
-- **Angled fire aims.** Bishops lean toward one of White's actual pieces
-  (17°–45°) at §21.3's fixed 160 px/s; the king leans more gently (9°–31°, on
-  45% of its rounds) at its own speed, 30% above its straight round — a lean
-  makes the path longer, so at a shared speed the angled shot just arrives
-  later and reads as the weaker of the two. A fixed 45°
-  from the back rank crosses seven files before reaching White: measured, a
-  third of shooter positions threw the round off the board, now 4%
-- **Rounds shoot each other down.** Black's fire can take your shot out of the
-  air, which §20's Phase 3.2 bitmask spec explicitly excluded — a departure,
-  and one that costs the player real shots, since a laser eaten in flight still
-  counts against the two-round cap until it clears. The clash gets the biggest
-  glass in the game: cyan and magenta thrown along their own two headings
-  around a white core, so it reads as a collision rather than as one more
-  explosion
-- **Formation membership goes both ways.** `adopt` used to run only at board
-  build time, so a black piece that stepped out of the marching band once was a
-  civilian for the rest of the level however far back it came — worst for the
-  king, which then parks behind White's own pawns where it is nearly
-  unshootable, the exact problem the marching rule exists to prevent. A piece
-  now rejoins on a chess move back into the band, and a rank descent sweeps up
-  any stray it has come down onto. The band has a front edge only: nothing is
-  behind the fleet to be separated from, so a king retreating to rank 8 after
-  the formation has descended still marches, and the formation is allowed to be
-  deeper than `formationRanks`. The rear rank it is all measured from comes
-  from the descent count, not from where the members are — reading
-  `max(member rank)` broke the moment a straggler rejoined *behind* the fleet. Joining slides into place over 0.2s: the
-  fleet transform is shared, so a joining piece necessarily lands at whatever
-  offset the formation carries, and the slide is what makes that read as
-  falling in rather than teleporting
-- **A damaged piece keeps its identity.** The art erodes bottom-up, which takes
-  the profile with it — so a Cracked pawn, bishop, queen and knight were all "a
-  blob with debris" (rook and king survived only because crenellations and a
-  cross are top-of-piece features). A full-height slice of one side, 34% of the
-  ink width, is now drawn from the undamaged texture underneath the damage. No
-  new art: every damage state shares the full sprite's canvas, so a sub-texture
-  lands exactly where that part of the piece was — pinned by a test, since a
-  re-export that broke it would misalign every damaged piece silently. The
-  surviving side is the one the shot missed, from the contact point, fixed by
-  the first hit; a centre hit tosses a coin. Compound hitbox, so the wedge is
-  hittable without the empty two thirds between it and the top
+**Who shoots.** Pawns are the fleet's gunners from Level 2; bishops add
+diagonals at Crossfire, and the black king its own heavy weapon at King
+Activated. Arming a *type* replaces §5.3's weighting toward pawns: the weighting
+was real (84% of shots) but invisible, and a rule is something a banner can
+promise and a player can act on. Two guards keep it honest — with no pawns left
+everything remaining takes over, and at most half the gunners fire in a beat, so
+the charge-up never lights the whole rank.
+
+**The telegraph.** Every round charges for 0.35s before it leaves. The piece
+lights from within — a tinted additive copy of its own texture, so no new shape
+appears and it cannot be confused with the check halo — and a tick grows out of
+its foot along the exact line the round will take, from the same `atan2` that
+aims the round.
+
+**Angles.** Bishops lean toward one of White's actual pieces, 17°–45°, at
+§21.3's 160 px/s. The king inflects instead: 9°–31°, on 45% of its rounds, at
+30% above its own straight speed, since a lean lengthens the path and would
+otherwise make the angled round the weaker of the two. Aiming at real targets
+rather than a fixed 45° is what keeps the shot on the board — from the back rank
+a true diagonal crosses seven files before it reaches White.
+
+**Rounds shoot each other down.** Black's fire can take a player laser out of
+the air. §20's bitmask spec excluded that; it is a deliberate departure and a
+costly one, since a laser eaten in flight still counts against the two-round cap
+until it clears. The clash throws cyan and magenta along their own two headings
+around a white core.
+
+**Formation membership goes both ways.** A black piece rejoins the fleet on a
+chess move back into the marching band, and a rank descent sweeps up any stray
+it comes down onto — sliding into step over 0.2s, since the fleet transform is
+shared and a joining piece must land on the formation's current offset. The band
+has a front edge only: nothing is behind the fleet to be separated from, so a
+king retreating to rank 8 after the fleet has descended still marches, and the
+formation is deeper than `formationRanks` by design. Its rear rank comes from the
+descent count, not from where the members happen to be.
+
+**A damaged piece keeps its identity.** The art erodes bottom-up, which takes
+the profile with it — a Cracked pawn, bishop, queen and knight were all "a blob
+with debris". A full-height slice of one side, 34% of the ink width, is drawn
+from the undamaged texture underneath the damage. No new art: every damage state
+shares the full sprite's canvas, so a sub-texture lands exactly where that part
+of the piece was, and a test pins that invariant against a re-export. The
+surviving side is the one the shot missed, taken from the contact point and
+fixed by the first hit; a centre hit tosses a coin. The hitbox is compound, so
+the wedge is hittable without also covering the gap between it and the top.
 
 ### Playtest fixes
 
@@ -334,11 +325,10 @@ One line each; the reasoning is in the commits and the code.
 
 - **No collisions at all** — every physics body was static, and SpriteKit needs
   one dynamic body in a pair to report a contact
-- **Hitboxes followed the frame, not the art** — shots died in blank space under
-  a damaged piece. Ink bounds are measured and cached per texture
+- **Hitboxes followed the frame, not the art** — ink bounds are measured and
+  cached per texture
 - **Damage was invisible** — the hit path never refreshed the sprite, and
-  `damageState` used HP ratios rather than §7.1's table, hiding a stage on the
-  big pieces
+  `damageState` used HP ratios rather than §7.1's table
 - **Enemy shots spawned off-target** — board-local coordinates for a node living
   in `bloomNode`
 - **Angled rounds flew broadside** — `zRotation` turns a node's own axes, so the
@@ -346,17 +336,14 @@ One line each; the reasoning is in the commits and the code.
   now, dressed as a missile, with a circular hitbox so the angle cannot matter
 - **A hit that resolved to nothing deleted the round in mid-air** — deactivated
   before the board lookup
-- **Heavy shots landed light** — the resolver hardcoded `enemyShotDamage`, so
-  the king's double-damage round always did 1
-- **Play continued after a win** — `isBeatSuspended` now gates every path that
-  could restart the beat
+- **Heavy shots landed light** — the resolver hardcoded `enemyShotDamage`
+- **Play continued after a win** — `isBeatSuspended` gates every path that could
+  restart the beat
 - **Two crashes, one cause** — releasing a fleet member by square no-oped on a
   stale key. Released by identity now
-- **`applyDamage` never told the chess engine** — same class as `forcePlace`,
-  latent since the field was written
+- **`applyDamage` never told the chess engine** — same class as `forcePlace`
 - **The sounds were never missing, only never copied** into `Resources/sfx/`
-- **Messages stacked** — the reveal banner was only cleared on teardown, so the
-  wave-clear overlay landed on top of it
+- **Messages stacked** — the reveal banner was only cleared on teardown
 
 ### Deviations from the design doc
 
@@ -389,54 +376,44 @@ app in this environment, so a firing/hit/lose/win playtest is the real next step
 
 ## Phase 3.3 — Damage States & Juice ✅
 
-`Juice.swift` holds §24's whole table — shake intensities and decay, freeze
-lengths, pop timings — as pure data, so "how hard does a queen shake the board"
-is answerable and tested in one place rather than scattered through the scene.
+`Juice.swift` holds §24's table — shake tiers and decay, freeze lengths, pop
+timings, the venting threshold — as pure data, so "how hard does a queen shake
+the board" is answerable and tested in one place.
 
 - [x] **Explosion on destruction** — `ExplosionPool`, 8 pre-built bursts: an
       expanding ring plus 8 shards in the target's own glow colour, riding the
       bloom already on the parent. Not a particle system and not grey smoke,
-      which reads as mud against neon on black. Scaled 2.4× for a king, which
-      also gets §24.8's white flash
-- [x] **Score pops** — `ScorePopPool`, 20 pooled labels; +N rises 30pt over
-      0.8s in the target's colour. Shows `ScoreManager.scaled`, the same number
-      the total moves by, so the pop can never disagree with the HUD
-- [x] **Screen shake** (§24.1) — laser hit 4pt, officers 7, queen 10, life lost
-      15, king 24; pawns silent. Raised twice from a first pass that measured as
-      invisible, and extended past the doc's queen-and-king-only table, which
-      left the feature effectively absent since each of those dies at most once
-      a wave. What actually made it read, though, was the offset: it alternates
-      roughly 180° each frame at full amplitude, where the original picked x and
-      y independently — a random walk averages half the amplitude and sits near
-      the centre on a good fraction of frames. Applied to `bloomNode`, not a
-      camera: a camera
-      also changes how a mouse point maps into the scene, and click-to-select
-      depends on that. It leaves the starfield still, which reads as the board
-      being hit rather than the universe wobbling. Exponential decay, and a
-      bigger event replaces a running one rather than adding to it
+      which reads as mud against neon on black. 2.4× for a king, which also gets
+      §24.8's white flash
+- [x] **Shattered glass on a survivable hit** — `ShatterPool`, 14 pooled:
+      §24.5's impact flash plus 9 slivers in a 150° cone along the round's own
+      heading, tumbling and then falling. Pooled apart from the destruction
+      bursts, which fire far less often and must not be starved by them
+- [x] **Score pops** — `ScorePopPool`, 20 pooled labels; +N rises 30pt over 0.8s
+      in the target's colour. Shows `ScoreManager.scaled`, the same number the
+      total moves by, so a pop can never disagree with the HUD
+- [x] **Screen shake** (§24.1) — laser hit 4pt, rook/bishop/knight 7, queen 10,
+      life lost 15, king 24; pawns silent, since they die constantly and a board
+      always shaking is a board never shaking. The doc lists only the queen and
+      king, which in practice meant a player could clear a level and never see
+      the board move. What makes it *read* is the offset: full amplitude every
+      frame, alternating roughly 180°, so consecutive frames land on opposite
+      sides. Picking x and y independently averages half the amplitude and looks
+      like blur. Applied to `bloomNode` rather than a camera — a camera also
+      changes how a mouse point maps into the scene, and click-to-select depends
+      on that — which leaves the starfield still, so it reads as the board being
+      hit rather than the universe wobbling
 - [x] **Hit freeze** (§24.2) — 4 frames for a king, 2 for a queen, none below.
       `bloomNode.isPaused` stops the playfield while the scene's own `update`
       keeps running to time it; the explosion lands *after* the pause
-- [x] **Shattered glass on a survivable hit** — `ShatterPool`, 14 pooled:
-      §24.5's impact flash plus 9 slivers thrown in a 150° cone along the
-      round's own heading, tumbling and falling. Sized at twice the first
-      attempt, which was too quiet against a board already carrying bloom, a
-      starfield and charge-up glows Pooled separately from the
-      destruction bursts, because these fire on every landed shot and would
-      otherwise starve the pool for the kills that matter. The heading is
-      captured at the contact — `deactivate` clears the round's rotation, and
-      every call site deactivates before the handler runs
-- [x] **The spaceship explodes when it is hit** — §8.4 and §24.1's medium 0.4s
-      shake, both specified from the start and never built: losing a life was a
-      sound, a hidden sprite and a HUD icon going out, which made the worst
-      thing that can happen to the player the quietest event on screen. Glass in
-      two opposed sprays, since the ship is coming apart rather than being shot
-      through. The last life gets the heavy shake and the white flash otherwise
-      reserved for a king
-- [x] **Venting at ≤50% HP** — drifting embers in the piece's glow colour,
-      one every 0.28s, self-removing. Deviates from §20's "smoke": grey is mud
-      here. Flicker at Critical was already in place from 2.2
-- [x] Arcade SFX were bundled and wired during 3.2
+- [x] **The spaceship explodes when it is hit** — §8.4 and §24.1's medium shake,
+      both specified and never built: losing a life had been a sound, a hidden
+      sprite and a HUD icon going out. Glass in two opposed sprays, since the
+      ship is coming apart rather than being shot through. The last life gets the
+      heavy shake and white flash otherwise reserved for a king
+- [x] **Venting at ≤50% HP** — drifting embers in the piece's glow colour, one
+      every 0.28s, self-removing. Deviates from §20's "smoke": grey is mud here.
+      Flicker at Critical was already in place from 2.2
 
 Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
 
