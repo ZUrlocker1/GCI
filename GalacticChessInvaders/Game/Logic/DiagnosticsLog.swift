@@ -13,6 +13,11 @@ enum LogCategory: String {
     case black   = "BLACK    "
     case chess   = "CHESS    "
     case fleet   = "FLEET    "
+    /// Piece regeneration and armored pawns (§23.9, §10.1). Its own category
+    /// rather than more FLEET lines: a regeneration plays out over three
+    /// separate moments seconds apart, and following one through a wave's worth
+    /// of sweep and descent chatter is the point of having categories at all.
+    case regen   = "REGEN    "
     case shoot   = "SHOOT    "
     case hit     = "HIT      "
     case destroy = "DESTROY  "
