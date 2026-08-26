@@ -321,7 +321,8 @@ the wedge is hittable without also covering the gap between it and the top.
 One system: armor arrives *only* through regeneration, so Level 9's banner is a
 promise Level 4's regeneration has to be built to keep.
 
-- **Regeneration** from Level 4: a pawn replaces a dead black piece after 1.5
+- **Regeneration** from Level 4, after *any* black death — shot, captured by a
+  chess move, or crushed by the fleet: a pawn replaces it after 1.5
   beats — 6s at most levels, 4.5s at Blitz — capped by the level's slot count
   (2 at Level 4, rising to 9). §23.9's flat 10s was written before the beat
   settled at 4, and two and a half turns is long enough that the kill which
@@ -330,10 +331,13 @@ promise Level 4's regeneration has to be built to keep.
   could queue twenty at once. A level ending cancels everything pending, which
   falls out of the queue living on the scene rather than needing its own rule.
   The king never regenerates
-- **Transporter beam-in**, 1.8s: a column of flecks with the sprite assembling
-  out of it, then one white frame. The pawn has no hitbox until it finishes —
-  §23.9's "the shimmering column is the warning" is the entire UI for that
-  state. Green-white normally, blue-white in defensive mode
+- **Transporter beam-in**, 1.8s: a shaft of light four squares tall striking
+  into the square, flecks falling through it, and the piece strobing into
+  existence rather than fading up — a linear fade spends most of its time as a
+  faint ghost, which is the part nobody sees. It resolves with a white frame and
+  a burst. The pawn has no hitbox until it finishes: §23.9's "the shimmering
+  column is the warning" is the entire UI for that state. Green-white normally,
+  blue-white in defensive mode
 - **Defensive mode**: once the black king is Cracked or worse, pawns stop
   scattering along the rear rank and materialise directly in front of him.
   §23.9's rook and bishop defensive spawns are not built

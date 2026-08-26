@@ -461,41 +461,111 @@ final class PieceNode: SKSpriteNode {
         alpha = 0
         let column = SKNode()
         column.name = Self.beamName
-        column.zPosition = 1
+        // Behind the sprite. In front — where this started — the shaft is
+        // bright enough to hide the very thing it is delivering, and the
+        // assembling piece is the part the player needs to read.
+        column.zPosition = -1
         addChild(column)
 
-        // Flecks rather than a particle system: ~20Hz of short-lived dots
-        // inside the piece's own box, which is what §23.9 describes and what
-        // the rest of the board's vocabulary is built from.
+        // A shaft of light four squares tall, striking down into the square.
+        // The first version was flecks confined to the piece's own box, which
+        // is what §23.9 describes and was far too quiet to notice across a busy
+        // board — a piece coming *back* is one of the worst things that can
+        // happen to the player, and it was the most easily missed event in the
+        // game. The shaft is what makes it visible from anywhere.
+        // Narrower than the piece, so its silhouette always shows past both
+        // edges of the beam rather than being swallowed by it.
+        let shaft = SKSpriteNode(texture: Self.beamTexture, color: tint,
+                                 size: CGSize(width: size.width * 0.8,
+                                              height: squareSize * 4))
+        shaft.colorBlendFactor = 1
+        shaft.blendMode = .add
+        shaft.anchorPoint = CGPoint(x: 0.5, y: 0)      // grows upward from the square
+        shaft.position = CGPoint(x: 0, y: -size.height * 0.45)
+        shaft.alpha = 0
+        column.addChild(shaft)
+        shaft.run(.sequence([
+            .group([.fadeAlpha(to: 0.7, duration: 0.12),
+                    .scaleY(to: 1.0, duration: 0.12)]),
+            // Then it breathes for the rest of the arrival.
+            .repeatForever(.sequence([.fadeAlpha(to: 0.38, duration: 0.11),
+                                      .fadeAlpha(to: 0.7, duration: 0.11)])),
+        ]))
+        shaft.yScale = 0.05
+
+        // Flecks over the whole shaft, not just the piece — denser and brighter
+        // than the first pass, and falling, so the column reads as pouring the
+        // piece into place.
         let spawn = SKAction.run { [weak self, weak column] in
             guard let self, let column else { return }
             let fleck = SKSpriteNode(texture: Self.emberTexture, color: tint,
-                                     size: CGSize(width: 2.5, height: 2.5))
+                                     size: CGSize(width: 4, height: 4))
             fleck.colorBlendFactor = 1
+            fleck.blendMode = .add
+            let top = self.squareSize * 3.2
             fleck.position = CGPoint(
-                x: .random(in: -self.size.width * 0.3...self.size.width * 0.3),
-                y: .random(in: -self.size.height / 2...self.size.height / 2))
+                x: .random(in: -self.size.width * 0.5...self.size.width * 0.5),
+                y: .random(in: 0...top))
             column.addChild(fleck)
-            fleck.run(.sequence([.fadeOut(withDuration: 0.16), .removeFromParent()]))
+            fleck.run(.sequence([
+                .group([.moveBy(x: 0, y: -CGFloat.random(in: 20...60), duration: 0.3),
+                        .fadeOut(withDuration: 0.3)]),
+                .removeFromParent(),
+            ]))
         }
-        column.run(.repeatForever(.sequence([spawn, .wait(forDuration: 0.05)])))
+        column.run(.repeatForever(.sequence([spawn, .wait(forDuration: 0.025)])))
 
-        run(.sequence([
-            .fadeAlpha(to: 1, duration: duration),
-            // One white frame as it resolves, then the shimmer cuts out at once.
+        // The piece strobes into existence rather than fading up. A linear fade
+        // spends most of its time as a faint ghost, which is exactly the part
+        // nobody sees; a stutter is visible from the first step.
+        let steps: [CGFloat] = [0.15, 0.02, 0.35, 0.05, 0.6, 0.15, 0.85, 0.4, 1.0]
+        let stepTime = duration / TimeInterval(steps.count)
+        var flicker: [SKAction] = []
+        for step in steps {
+            flicker.append(.fadeAlpha(to: step, duration: stepTime * 0.35))
+            flicker.append(.wait(forDuration: stepTime * 0.65))
+        }
+
+        run(.sequence(flicker + [
+            // One white frame as it resolves, and the shaft collapses at once.
             .run { [weak self] in
                 guard let self else { return }
-                self.childNode(withName: Self.beamName)?.removeFromParent()
+                self.alpha = 1
+                if let column = self.childNode(withName: Self.beamName) {
+                    column.run(.sequence([.scaleY(to: 0, duration: 0.1),
+                                          .removeFromParent()]))
+                }
                 self.run(.sequence([
                     .colorize(with: .white, colorBlendFactor: 1, duration: 0),
-                    .wait(forDuration: Juice.frameDuration),
+                    .wait(forDuration: Juice.frameDuration * 3),
                     .colorize(with: self.baseColor,
-                              colorBlendFactor: Self.baseBlend, duration: 0.1),
+                              colorBlendFactor: Self.baseBlend, duration: 0.14),
                 ]))
                 completion()
             },
         ]))
     }
+
+    /// A soft-edged vertical bar: solid down the middle, falling away to
+    /// nothing at both sides, so the shaft reads as light rather than as a
+    /// painted rectangle.
+    private static let beamTexture: SKTexture = {
+        let width = 32, height = 4
+        guard let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8,
+            bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return SKTexture() }
+        let centre = CGFloat(width) / 2
+        for x in 0..<width {
+            let distance = abs(CGFloat(x) + 0.5 - centre) / centre
+            context.setFillColor(CGColor(red: 1, green: 1, blue: 1,
+                                         alpha: pow(1 - distance, 1.6)))
+            context.fill(CGRect(x: CGFloat(x), y: 0, width: 1, height: CGFloat(height)))
+        }
+        guard let image = context.makeImage() else { return SKTexture() }
+        return SKTexture(cgImage: image)
+    }()
 
     /// Embers drifting off a piece below half HP (§20 Phase 3.3's smoke trail).
     ///

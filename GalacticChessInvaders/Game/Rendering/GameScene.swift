@@ -817,6 +817,9 @@ class GameScene: SKScene {
     /// HP check and no points, because the fleet took it rather than the player.
     private func applyCrush(_ crush: CrushEvent) {
         if let victim = pieceNodes.removeValue(forKey: crush.atSquare) {
+            if victim.piece.color == .black {
+                scheduleRegeneration(after: victim.piece.type)
+            }
             detachFromFleet(victim)
             victim.runDestructionAnimation {}
         }
@@ -1364,6 +1367,13 @@ class GameScene: SKScene {
         if let capturedSquare = outcome.capturedSquare,
            let victim = pieceNodes.removeValue(forKey: capturedSquare) {
             victimPosition = bloomPosition(of: victim)
+            // §23.9 regenerates "destroyed black pieces" — however they died.
+            // This used to fire only on a laser kill, so taking a piece with a
+            // chess move quietly bought the player a permanent removal that
+            // shooting the same piece did not.
+            if victim.piece.color == .black {
+                scheduleRegeneration(after: victim.piece.type)
+            }
             detachFromFleet(victim)
             victim.runDestructionAnimation {}
         }
@@ -1929,8 +1939,8 @@ class GameScene: SKScene {
 
         // Green-white for a standard arrival, blue-white when it is shielding
         // the king (§23.9) — the colour is the whole tell.
-        node.beamIn(duration: Regeneration.beamInDuration,
-                    tint: defensive ? NeonPalette.starBlueLight : NeonPalette.transporterGreen) {
+        let tint = defensive ? NeonPalette.starBlueLight : NeonPalette.transporterGreen
+        node.beamIn(duration: Regeneration.beamInDuration, tint: tint) {
             [weak self, weak node] in
             guard let self, let node, self.pieceNodes[square] === node else { return }
             // The hitbox is the whole point of the materialisation: until this
@@ -1941,6 +1951,13 @@ class GameScene: SKScene {
             node.refresh(with: self.board.piece(at: square) ?? pawn)
             if armored { node.setArmored(true) }
             node.startIdleBob(phase: .random(in: 0...0.8))
+            // The board just gained a piece back. That deserves the same
+            // vocabulary losing one gets, or the single most demoralising event
+            // in the game is also its quietest.
+            self.explosions?.burst(at: self.bloomPosition(of: node),
+                                   color: tint, scale: 1.6)
+            self.shatters?.shatter(at: self.bloomPosition(of: node), color: .white,
+                                   along: CGVector(dx: 0, dy: 1), scale: 1.4)
             self.refreshStatus()
         }
         AudioManager.shared.play(.pieceRegenerates)
