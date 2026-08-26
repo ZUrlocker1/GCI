@@ -1871,9 +1871,9 @@ class GameScene: SKScene {
                                      slotsUsed: regeneration.slotsUsed) else { return }
         let delay = Regeneration.delay(for: levels.parameters)
         regeneration.schedule(after: delay)
-        DiagnosticsLog.shared.log(.fleet,
-            "regen in \(String(format: "%.1f", delay))s "
-            + "(\(regeneration.slotsUsed)/\(levels.parameters.regenSlots))")
+        DiagnosticsLog.shared.log(.regen,
+            "Pawn in \(String(format: "%.1f", delay))s "
+            + "(slot \(regeneration.slotsUsed)/\(levels.parameters.regenSlots))")
     }
 
     /// Materialises everything whose ten seconds are up.
@@ -1899,7 +1899,7 @@ class GameScene: SKScene {
             // The slot goes back: the cap counts pawns that arrive, not
             // attempts that were made.
             regeneration.refund()
-            DiagnosticsLog.shared.log(.fleet, "regen no space, slot back")
+            DiagnosticsLog.shared.log(.regen, "No space to arrive — slot returned")
             return
         }
         let armored = Regeneration.arrivesArmored(level: levels.parameters)
@@ -1926,8 +1926,9 @@ class GameScene: SKScene {
             self.refreshStatus()
         }
         AudioManager.shared.play(.pieceRegenerates)
-        DiagnosticsLog.shared.log(.fleet, "beam-in \(square)"
-            + (armored ? " armored" : "") + (defensive ? " defensive" : ""))
+        DiagnosticsLog.shared.log(.regen,
+            "\(armored ? "Armored Pawn" : "Pawn") beaming in at \(square)"
+            + (defensive ? " (defending King)" : ""))
     }
 
     /// §10.1 counts armor in White's moves, so this runs once per completed
@@ -2220,7 +2221,7 @@ class GameScene: SKScene {
                                   scale: 1.2)
             }
             AudioManager.shared.play(.armorRicochet)
-            DiagnosticsLog.shared.log(.hit, "\(square) armor deflects")
+            DiagnosticsLog.shared.log(.hit, "Armor deflects at \(square)")
             return
         }
         guard case .blackPieceHit(let square, let type, let destroyed, let points, let comboBonus) = result
