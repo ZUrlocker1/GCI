@@ -24,7 +24,7 @@ enum LogCategory: String {
     case error   = "ERROR    "
     /// Standalone banner lines that read as the whole message, e.g. RESTART.
     case restart = "RESTART  "
-    case test    = "TESTMODE "
+    case auto    = "AUTOMODE "
     case info    = "INFO     "
 }
 
