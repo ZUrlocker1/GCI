@@ -341,8 +341,13 @@ promise Level 4's regeneration has to be built to keep.
 - **Defensive mode**: once the black king is Cracked or worse, pawns stop
   scattering along the rear rank and materialise directly in front of him.
   §23.9's rook and bishop defensive spawns are not built
-- **Armored pawns** (Level 9): half of every regenerated pawn arrives silver and
-  immune to laser fire for three White moves. A hit ricochets — orange sparks,
+- **Armored pawns** (Level 9): half of every regenerated pawn arrives with its
+  interior filled a translucent lighter red — outline untouched, so it reads as
+  the same pawn wearing something rather than as a different piece — and immune
+  to laser fire for three White moves. The sprites are hollow, so the fill is a
+  silhouette found by flooding inward from the image border: transparent pixels
+  the flood cannot reach are the ones the outline encloses. Cached per texture,
+  beside the ink bounds. A hit ricochets — orange sparks,
   a metallic clunk, the outline flares — and does nothing. Only a chess capture
   removes it, which is the point of the level: it asks the player to solve
   something with the board rather than the trigger. Armor expires with a crack
