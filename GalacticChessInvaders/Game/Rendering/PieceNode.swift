@@ -40,6 +40,16 @@ final class PieceNode: SKSpriteNode {
         colorBlendFactor = Self.baseBlend
         color = baseColor
         zPosition = 5
+
+        // Contact detection only — no physical push. The laser side owns
+        // contactTestBitMask, so this only needs the right categoryBitMask.
+        let body = SKPhysicsBody(rectangleOf: size)
+        body.isDynamic = false
+        body.categoryBitMask = piece.color == .white
+            ? PhysicsCategory.friendlyPiece : PhysicsCategory.enemyPiece
+        body.contactTestBitMask = PhysicsCategory.none
+        body.collisionBitMask = PhysicsCategory.none
+        physicsBody = body
     }
 
     @available(*, unavailable)

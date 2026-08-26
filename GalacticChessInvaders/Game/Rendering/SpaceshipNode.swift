@@ -26,6 +26,13 @@ final class SpaceshipNode: SKSpriteNode {
         colorBlendFactor = 0.15
         color = NeonPalette.cyan
         zPosition = 6
+
+        let body = SKPhysicsBody(rectangleOf: size)
+        body.isDynamic = false
+        body.categoryBitMask = PhysicsCategory.ship
+        body.contactTestBitMask = PhysicsCategory.none   // the enemy shot side tests for this
+        body.collisionBitMask = PhysicsCategory.none
+        physicsBody = body
     }
 
     @available(*, unavailable)
