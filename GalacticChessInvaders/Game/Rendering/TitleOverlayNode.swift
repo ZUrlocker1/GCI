@@ -15,7 +15,6 @@ final class TitleOverlayNode: SKNode {
     private static let titleFont  = "PressStart2P-Regular"
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
-    private static let orange  = NeonPalette.alertOrange
 
     override init() {
         super.init()
@@ -88,10 +87,10 @@ final class TitleOverlayNode: SKNode {
         let label = SKLabelNode(fontNamed: Self.titleFont)
         label.text = "\u{2605} 40 YEARS IN THE MAKING \u{2605}"   // ★ ... ★
         label.fontSize = 18
-        label.fontColor = Self.orange
+        label.fontColor = Self.magenta
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
-        label.position = CGPoint(x: 0, y: 88)
+        label.position = CGPoint(x: 0, y: 98)
         addChild(label)
     }
 
@@ -182,7 +181,7 @@ final class TitleOverlayNode: SKNode {
 
             let rank = SKLabelNode(fontNamed: Self.titleFont)
             rank.text = "\(i + 1)."
-            rank.fontSize = 11; rank.fontColor = Self.orange
+            rank.fontSize = 11; rank.fontColor = Self.magenta
             rank.horizontalAlignmentMode = .left; rank.verticalAlignmentMode = .center
             rank.position = CGPoint(x: -175, y: y)
             addChild(rank)
