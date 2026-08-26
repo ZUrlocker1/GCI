@@ -37,9 +37,12 @@ enum FleetRules {
     /// Paces descent on chess beats rather than wall bounces, so sweep width and
     /// speed are free to be tuned for looks without changing difficulty.
     struct DescentSchedule {
-        /// Beats of quiet at the start of a level before anything descends. The
-        /// player needs a stretch of board to learn the position before the
-        /// arcade layer starts taking squares away.
+        /// Beats the fleet holds completely still at the start of a level. The
+        /// opening position should be legible as a chess position first; the
+        /// arcade layer arrives once the player has had a look at it.
+        let sweepBeats: Int
+        /// Beats of quiet before anything descends. Later than `sweepBeats`, so
+        /// the fleet is seen moving before it is seen taking ground.
         let graceBeats: Int
         /// Beats between half-drops. Two half-drops make a rank, so a rank costs
         /// twice this.
@@ -48,10 +51,14 @@ enum FleetRules {
         private var beats = 0
         private var halfDrops = 0
 
-        init(graceBeats: Int, beatsPerHalfDrop: Int) {
+        init(sweepBeats: Int = 0, graceBeats: Int, beatsPerHalfDrop: Int) {
+            self.sweepBeats = sweepBeats
             self.graceBeats = graceBeats
             self.beatsPerHalfDrop = max(1, beatsPerHalfDrop)
         }
+
+        /// False while the fleet is still holding its opening position.
+        var isSweeping: Bool { beats >= sweepBeats }
 
         /// Call once per resolved chess beat.
         mutating func registerBeat() -> DescentStep {
@@ -68,8 +75,10 @@ enum FleetRules {
     /// Descent pacing for a level. Later levels close the distance faster, but
     /// never so fast that a rank costs fewer than four beats.
     static func descentSchedule(for level: Int) -> DescentSchedule {
-        DescentSchedule(graceBeats: Swift.max(2, 7 - level),
-                        beatsPerHalfDrop: Swift.max(2, 4 - (level - 1) / 2))
+        let grace = Swift.max(2, 7 - level)
+        return DescentSchedule(sweepBeats: Swift.max(1, grace / 2),
+                               graceBeats: grace,
+                               beatsPerHalfDrop: Swift.max(2, 4 - (level - 1) / 2))
     }
 
     // MARK: - Sweep width

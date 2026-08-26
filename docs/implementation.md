@@ -194,9 +194,10 @@ rank every few seconds. Two rules came out of it, both now pinned by tests.
 - [x] **Descent is paced by the chess beat, not wall bounces.** Tying it to
       bounces coupled difficulty to sweep width — narrowing the shuffle for
       readability would have silently made the fleet fall faster
-- [x] Level 1: nothing descends for 6 beats, then half a rank every 4 (a full
-      rank every 8). `descentSchedule(for:)` tightens this with level, floored so
-      a rank never costs fewer than 4 beats
+- [x] Level 1: the fleet holds completely still for 3 beats, starts sweeping,
+      then descends half a rank every 4 beats from beat 6 (a full rank every 8).
+      `descentSchedule(for:)` tightens all three with level, floored so a rank
+      never costs fewer than 4 beats. Movement always precedes ground being taken
 - [x] Check and mate lines resolve endpoints through the fleet's drawn position,
       not the logical square
 - [x] Checkmate snap: the fleet eases onto its true squares over 0.32s and the

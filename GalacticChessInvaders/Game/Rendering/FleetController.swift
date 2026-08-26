@@ -79,10 +79,13 @@ final class FleetController {
 
     // MARK: - Sweep
 
+    /// Marks the fleet live. It holds its opening position until the schedule
+    /// says to sweep — a fresh board should read as a chess position before it
+    /// starts moving.
     func start() {
         guard !isRunning else { return }
         isRunning = true
-        beginLeg()
+        if schedule.isSweeping { beginLeg() }
     }
 
     func stop() {
@@ -150,7 +153,13 @@ final class FleetController {
     /// wall bounces — see FleetRules.
     func registerBeat() {
         guard isRunning else { return }
-        switch schedule.registerBeat() {
+        let wasHolding = !schedule.isSweeping
+        let step = schedule.registerBeat()
+        if wasHolding, schedule.isSweeping {
+            DiagnosticsLog.shared.log(.fleet, "fleet begins its sweep")
+            beginLeg()
+        }
+        switch step {
         case .none:
             return
         case .halfDrop:
