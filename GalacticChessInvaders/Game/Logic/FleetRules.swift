@@ -157,7 +157,7 @@ enum FleetRules {
     /// Black's back rank, where every formation starts.
     static let startingRearRank = 8
 
-    // MARK: - King Activated (§10.1, Level 8)
+    // MARK: - King Activated (§10.1, Level 9)
 
     /// The forcefield makes the black king take 50% more hits to destroy.
     ///
