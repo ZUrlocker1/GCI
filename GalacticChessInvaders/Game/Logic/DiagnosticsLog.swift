@@ -25,6 +25,7 @@ enum LogCategory: String {
     /// Standalone banner lines that read as the whole message, e.g. RESTART.
     case restart = "RESTART  "
     case test    = "TESTMODE "
+    case info    = "INFO     "
 }
 
 struct LogLine: Identifiable {

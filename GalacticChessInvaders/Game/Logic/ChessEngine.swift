@@ -325,6 +325,11 @@ final class ChessEngine {
         return score
     }
 
+    // Deeper search was also measured as a fix for the same problem, including
+    // giving only the winning side extra plies: depth 3 converted 0 of 15
+    // queen-vs-king endgames and depth 4 converted 1. Mating with Q vs K needs a
+    // ~15-ply plan, so this is not a "slightly more lookahead" problem.
+    //
     // An endgame "mop-up" term — driving the losing king to the edge and closing
     // with your own — was tried here and removed. It is the textbook fix for a
     // flat evaluation in a won endgame, but measured over 20 queen-vs-king games
