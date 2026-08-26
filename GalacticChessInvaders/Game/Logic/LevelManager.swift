@@ -52,9 +52,9 @@ final class LevelManager {
         switch max(1, level) {
         case 1:  return nil
         case 2:  return ("FIRE POWER",     "BLACK SHOOTS BACK")
-        case 3:  return ("DOUBLE TROUBLE", "BLACK MOVES TWICE EVERY TURN")
+        case 3:  return ("DOUBLE TROUBLE", "BLACK MOVES TWICE")
         case 4:  return ("RELENTLESS",     "FASTER, HARDER FIRE")
-        case 5:  return ("TRIPLE THREAT",  "BLACK MOVES THREE TIMES EVERY TURN")
+        case 5:  return ("TRIPLE THREAT",  "BLACK MOVES THREE TIMES")
         case 6:  return ("ESCALATION",     "NO CEILING FROM HERE")
         // §10.1 gives these two verbatim; the Armored Pawns subtitle is
         // shortened to fit the 22-character limit.

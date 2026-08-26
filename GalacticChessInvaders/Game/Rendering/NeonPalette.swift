@@ -22,7 +22,7 @@ enum NeonPalette {
     static let orange = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
 
     /// A hotter, more saturated accent reserved for the title screen and
-    /// transient in-game call-outs (TEST MODE's sibling AUTO flash, the title
+    /// transient in-game call-outs (the AUTO move flash, SKIP LEVEL, the title
     /// headline). Deliberately distinct from `orange` — not a duplicate to
     /// collapse.
     static let alertOrange = SKColor(red: 1.00, green: 0.55, blue: 0.00, alpha: 1)

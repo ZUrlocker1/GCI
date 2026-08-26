@@ -145,9 +145,9 @@ Deviations
       defaults are 60–100 so any real game displaces them
 - [x] HUD hi-score drawn (best ever, or your run once you pass it)
 - [x] Hidden `V` skips to the next level mid-game, keeping score and lives —
-      no wave-clear overlay, no bonus, no mechanic banner, just a brief
-      SKIP LEVEL notice in the gutter
-- [x] Hidden test mode — `T` toggles; White auto-moves on a 1s beat, labelled
+      no wave-clear overlay and no bonus, but the mechanic banner still
+      shows, plus a brief SKIP LEVEL notice in the gutter
+- [x] Hidden Auto Mode — `A` toggles; White auto-moves on a 1s beat, labelled
       TEST MODE in the gutter and logged; ends automatically at mate/stalemate
 - [ ] Lives hardcoded to 3 *(blocked until 3.2 — nothing can kill the ship yet)*
 
