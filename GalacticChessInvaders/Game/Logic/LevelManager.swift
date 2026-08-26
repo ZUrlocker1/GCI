@@ -37,6 +37,30 @@ final class LevelManager {
 
     func advance() { level += 1 }
 
+    /// What the mechanic banner says at the start of a level (§12.11).
+    ///
+    /// Nil for Level 1 — nothing has escalated yet, and the tutorial wave has
+    /// its own first-play hints. Names follow the design doc's own level titles
+    /// where it gives them, and describe what actually changes otherwise.
+    ///
+    /// §12.11 caps the layout at 18 characters for the title and 22 for the
+    /// subtitle; `LevelAnnouncementTests` holds that line.
+    static func announcement(for level: Int) -> (title: String, subtitle: String)? {
+        switch max(1, level) {
+        case 1:  return nil
+        case 2:  return ("FIRE POWER",     "BLACK SHOOTS BACK")
+        case 3:  return ("DOUBLE TROUBLE", "TWO MOVES PER TURN")
+        case 4:  return ("RELENTLESS",     "FASTER, HARDER FIRE")
+        case 5:  return ("TRIPLE THREAT",  "THREE MOVES PER TURN")
+        case 6:  return ("ESCALATION",     "NO CEILING FROM HERE")
+        // §10.1 gives these two verbatim; the Armored Pawns subtitle is
+        // shortened to fit the 22-character limit.
+        case 7:  return ("KING ACTIVATED",  "THE KING NOW ATTACKS")
+        case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
+        default: return ("LEVEL \(level)",  "NO LET UP")
+        }
+    }
+
     /// The §21.1 table. Levels 1–5 are explicit; 6+ scales by formula with the
     /// stated caps and floors.
     static func parameters(for level: Int) -> LevelParameters {

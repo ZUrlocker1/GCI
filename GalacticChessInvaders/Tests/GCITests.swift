@@ -2902,6 +2902,44 @@ final class CollisionResolverTests: XCTestCase {
 }
 
 @MainActor
+final class LevelAnnouncementTests: XCTestCase {
+
+    /// §12.11's layout caps: 18 characters of title, 22 of subtitle. Longer
+    /// text silently overflows the rules either side of it.
+    func testEveryAnnouncementFitsTheBannerLayout() {
+        for level in 1...30 {
+            guard let a = LevelManager.announcement(for: level) else { continue }
+            XCTAssertLessThanOrEqual(a.title.count, 18,
+                                     "level \(level) title '\(a.title)' overflows")
+            XCTAssertLessThanOrEqual(a.subtitle.count, 22,
+                                     "level \(level) subtitle '\(a.subtitle)' overflows")
+            XCTAssertFalse(a.title.isEmpty)
+            XCTAssertFalse(a.subtitle.isEmpty)
+        }
+    }
+
+    /// Level 1 has escalated nothing, so it opens straight into play.
+    func testLevelOneIsNotAnnounced() {
+        XCTAssertNil(LevelManager.announcement(for: 1))
+        XCTAssertNil(LevelManager.announcement(for: 0), "clamped, still level 1")
+        XCTAssertNotNil(LevelManager.announcement(for: 2))
+    }
+
+    /// The two the design doc names verbatim (§10.1).
+    func testDocumentedNamesAreUsedVerbatim() {
+        XCTAssertEqual(LevelManager.announcement(for: 7)?.title, "KING ACTIVATED")
+        XCTAssertEqual(LevelManager.announcement(for: 7)?.subtitle, "THE KING NOW ATTACKS")
+        XCTAssertEqual(LevelManager.announcement(for: 9)?.title, "ARMORED PAWNS")
+    }
+
+    func testEveryLevelAboveOneHasSomethingToSay() {
+        for level in 2...40 {
+            XCTAssertNotNil(LevelManager.announcement(for: level), "level \(level)")
+        }
+    }
+}
+
+@MainActor
 final class FleetFiringTests: XCTestCase {
 
     private func candidates(_ squares: [String], type: PieceType = .pawn) -> [FleetFiring.Candidate] {
