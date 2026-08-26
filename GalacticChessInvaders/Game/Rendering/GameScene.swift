@@ -399,7 +399,7 @@ class GameScene: SKScene {
             isPaused = true
             AudioManager.shared.pauseMusic()
         }
-        DiagnosticsLog.shared.log(.startup, "How To Play shown (game paused)")
+        DiagnosticsLog.shared.log(.info, "game paused")
     }
 
     /// Dismisses the overlay and resumes from the exact state play was in (§10).
@@ -415,7 +415,6 @@ class GameScene: SKScene {
             // Discard the frame the pause spanned so the beat doesn't jump.
             lastUpdateTime = 0
         }
-        DiagnosticsLog.shared.log(.startup, "How To Play dismissed (resumed)")
     }
 
     func resetToTitle() {
