@@ -21,6 +21,9 @@ struct LevelParameters {
     let raiderInterval: TimeInterval
     /// Level 1 Black plays passively; every level above it plays aggressively.
     let isAggressive: Bool
+    /// Half the fleet's lateral sweep, as a fraction of a square. Widens at
+    /// Level 6 (see `FleetRules.wideSweepAmplitudeRatio`).
+    let sweepAmplitudeRatio: CGFloat
 }
 
 @MainActor
@@ -55,7 +58,7 @@ final class LevelManager {
         case 3:  return ("DOUBLE TROUBLE", "BLACK MOVES TWICE")
         case 4:  return ("RELENTLESS",     "FASTER, HARDER FIRE")
         case 5:  return ("TRIPLE THREAT",  "BLACK MOVES THREE TIMES")
-        case 6:  return ("ESCALATION",     "NO CEILING FROM HERE")
+        case 6:  return ("WIDE ORBIT",     "THE FLEET SWEEPS WIDER")
         // §10.1 gives these two verbatim; the Armored Pawns subtitle is
         // shortened to fit the 22-character limit.
         case 7:  return ("KING ACTIVATED",  "THE KING NOW ATTACKS")
@@ -73,32 +76,40 @@ final class LevelManager {
             return LevelParameters(level: 1, fleetSpeed: 40, blackMovesPerTurn: 1,
                                    shotsPerTurn: 0...0, projectileSpeed: 0,
                                    turnTimer: 5, regenSlots: 0, raiderInterval: 20,
-                                   isAggressive: false)
+                                   isAggressive: false,
+                                   sweepAmplitudeRatio: FleetRules.baseSweepAmplitudeRatio)
         case 2:
             return LevelParameters(level: 2, fleetSpeed: 55, blackMovesPerTurn: 1,
                                    shotsPerTurn: 1...2, projectileSpeed: 180,
                                    turnTimer: 5, regenSlots: 0, raiderInterval: 15,
-                                   isAggressive: true)
+                                   isAggressive: true,
+                                   sweepAmplitudeRatio: FleetRules.baseSweepAmplitudeRatio)
         case 3:
             return LevelParameters(level: 3, fleetSpeed: 70, blackMovesPerTurn: 2,
                                    shotsPerTurn: 2...2, projectileSpeed: 180,
                                    turnTimer: 4, regenSlots: 0, raiderInterval: 12,
-                                   isAggressive: true)
+                                   isAggressive: true,
+                                   sweepAmplitudeRatio: FleetRules.baseSweepAmplitudeRatio)
         case 4:
+            // 234, not §21.1's 200. Level 4's banner already promises "FASTER,
+            // HARDER FIRE" and +11% is imperceptible; +30% over Levels 2-3
+            // makes the announcement honest. Later levels scale from here.
             return LevelParameters(level: 4, fleetSpeed: 90, blackMovesPerTurn: 2,
-                                   shotsPerTurn: 2...3, projectileSpeed: 200,
+                                   shotsPerTurn: 2...3, projectileSpeed: 234,
                                    turnTimer: 4, regenSlots: 2, raiderInterval: 10,
-                                   isAggressive: true)
+                                   isAggressive: true,
+                                   sweepAmplitudeRatio: FleetRules.baseSweepAmplitudeRatio)
         case 5:
             return LevelParameters(level: 5, fleetSpeed: 110, blackMovesPerTurn: 3,
-                                   shotsPerTurn: 3...3, projectileSpeed: 216,
+                                   shotsPerTurn: 3...3, projectileSpeed: 253,
                                    turnTimer: 4, regenSlots: 4, raiderInterval: 8,
-                                   isAggressive: true)
+                                   isAggressive: true,
+                                   sweepAmplitudeRatio: FleetRules.baseSweepAmplitudeRatio)
         default:
             // 6+: fleet +15/level, projectile +10%/level compounding from L5,
             // moves and shots capped at 3, timer floored at 4s, raiders at 6s.
             let over = clamped - 5
-            let projectile = 216.0 * pow(1.1, Double(over))
+            let projectile = 253.0 * pow(1.1, Double(over))
             return LevelParameters(
                 level: clamped,
                 fleetSpeed: 110 + CGFloat(15 * over),
@@ -108,7 +119,9 @@ final class LevelManager {
                 turnTimer: 4,
                 regenSlots: 4 + over,
                 raiderInterval: max(6, 8 - TimeInterval(over)),
-                isAggressive: true
+                isAggressive: true,
+                // The wide sweep arrives at Level 6 and stays.
+                sweepAmplitudeRatio: FleetRules.wideSweepAmplitudeRatio
             )
         }
     }

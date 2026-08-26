@@ -297,7 +297,14 @@ Several rounds of tuning and fixes on top of the initial build. In brief:
 - [x] Home-rank chess moves keep a black piece in the formation *(experiment)* —
       a parked black piece sits behind White's own pawns where it is nearly
       unshootable, so shuffling within ranks 7–8 keeps it marching
-- [x] Tuning: ship 294 px/s, laser 520 px/s, sweep 0.9 of a square, audio mixed
+- [x] Two escalations added to the level ladder: Black's fire jumps **+30% at
+      Level 4** (its banner already promised "FASTER, HARDER FIRE" but delivered
+      only +11%), and the fleet's sweep widens to **1.5 squares at Level 6**,
+      renamed WIDE ORBIT. Both persist for every later level. The wide sweep
+      knowingly breaks the sub-half-square readability rule — a piece's centre
+      does cross into the next file — which is the point of the level and is
+      pinned by its own test so it stays deliberate
+- [x] Tuning: ship 294 px/s, laser 520 px/s, base sweep 0.9 of a square, audio mixed
       as a deliberate ladder (laser under hit under destruction), Black's
       projectiles lightened 50% so they read as glowing
 
