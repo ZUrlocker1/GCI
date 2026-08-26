@@ -11,8 +11,20 @@ import Foundation
 
 enum Regeneration {
 
-    /// §23.9: a destroyed black piece regenerates ten seconds later.
-    static let delay: TimeInterval = 10
+    /// How long after a kill the replacement arrives.
+    ///
+    /// §23.9 says a flat ten seconds. That was written before the beat settled
+    /// at four, and ten seconds is two and a half beats — long enough that the
+    /// kill which caused it has left the player's head, so the pawn reads as
+    /// arriving from nowhere rather than as a consequence.
+    ///
+    /// Paced off the beat instead, like the descent and the firing: one and a
+    /// half turns, so it lands on the turn after next. That is six seconds at
+    /// most levels and four and a half at Blitz, and it stays in proportion
+    /// when the clock changes rather than becoming a different mechanic.
+    static func delay(for level: LevelParameters) -> TimeInterval {
+        max(4, level.turnTimer * 1.5)
+    }
     /// §23.9's transporter beam-in. The piece cannot be shot while it runs.
     static let beamInDuration: TimeInterval = 1.8
     /// §10.1: half of the pawns regenerated from Level 9 arrive armored.
@@ -91,7 +103,7 @@ struct RegenerationQueue {
 
     var waiting: Int { pending.count }
 
-    mutating func schedule(after delay: TimeInterval = Regeneration.delay) {
+    mutating func schedule(after delay: TimeInterval) {
         pending.append(Pending(remaining: delay))
         slotsUsed += 1
     }

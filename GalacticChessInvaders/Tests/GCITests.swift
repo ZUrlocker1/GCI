@@ -3108,19 +3108,36 @@ final class RegenerationTests: XCTestCase {
     }
 
     func testQueueSpendsASlotPerScheduleAndFiresOnTime() {
+        let delay = Regeneration.delay(for: level(9))
         var queue = RegenerationQueue()
-        queue.schedule()
-        queue.schedule()
+        queue.schedule(after: delay)
+        queue.schedule(after: delay)
         XCTAssertEqual(queue.slotsUsed, 2)
-        XCTAssertEqual(queue.tick(Regeneration.delay - 1), 0, "not yet")
+        XCTAssertEqual(queue.tick(delay - 1), 0, "not yet")
         XCTAssertEqual(queue.tick(2), 2, "both due in the same frame")
         XCTAssertEqual(queue.waiting, 0)
         XCTAssertEqual(queue.tick(100), 0, "and they only fire once")
         // §23.9: a level ending cancels everything pending.
-        queue.schedule()
+        queue.schedule(after: delay)
         queue.reset()
         XCTAssertEqual(queue.waiting, 0)
         XCTAssertEqual(queue.slotsUsed, 0)
+    }
+
+    /// The gap is paced off the beat, not §23.9's flat ten seconds: ten is two
+    /// and a half turns, long enough that the kill which caused it has left the
+    /// player's head and the pawn reads as arriving from nowhere.
+    func testRegenerationIsPacedOffTheBeat() {
+        for n in 4...10 {
+            let delay = Regeneration.delay(for: level(n))
+            XCTAssertEqual(delay, level(n).turnTimer * 1.5, accuracy: 0.001,
+                           "level \(n)")
+            XCTAssertGreaterThanOrEqual(delay, 4, "never instant")
+            XCTAssertLessThan(delay, 10, "and always shorter than the doc's flat 10s")
+        }
+        // Blitz's 3s clock pulls it in with everything else.
+        XCTAssertLessThan(Regeneration.delay(for: level(10)),
+                          Regeneration.delay(for: level(9)))
     }
 
     /// Standard spawns scatter along the fleet's rear rank; a badly hurt king
@@ -3301,28 +3318,22 @@ final class JuiceTests: XCTestCase {
         XCTAssertEqual(Juice.amplitude(.none, elapsed: 0), 0)
     }
 
-    /// §24.2's hit freeze, on the three events big enough to earn one.
-    ///
-    /// The doc asks for 2–4 frames. Two is 33ms, which is under the threshold
-    /// at which a pause registers as anything — so the floor here is 4, and the
-    /// king is well past the doc's ceiling because its death already carries a
-    /// 0.6s shake and a white flash that 67ms of stillness vanishes underneath.
-    func testHitFreezeIsForBigKillsOnly() {
+    /// The hit freeze is the king's alone. §24.2 grades it across the queen and
+    /// the flagship too, but those already shake, and freeze and shake compete
+    /// for the same job — a queen's 67ms was real input latency that then
+    /// vanished underneath the shake behind it. On the king the contrast earns
+    /// its keep, and it makes that death the one moment the game stops.
+    func testOnlyTheKingFreezesTheGame() {
         XCTAssertEqual(Juice.freezeFrames(forDestroying: .king), 10)
-        XCTAssertEqual(Juice.freezeFrames(forDestroying: .queen), 4)
-        XCTAssertEqual(Juice.shipLossFreezeFrames, 6, "the player's own death")
-        for type in [PieceType.pawn, .knight, .bishop, .rook] {
+        for type in PieceType.allCases where type != .king {
             XCTAssertEqual(Juice.freezeFrames(forDestroying: type), 0, "\(type)")
-        }
-        // Every freeze that happens at all is long enough to feel, and short
-        // enough not to read as a hang.
-        for frames in [Juice.freezeFrames(forDestroying: .king),
-                       Juice.freezeFrames(forDestroying: .queen),
-                       Juice.shipLossFreezeFrames] {
-            XCTAssertTrue((4...12).contains(frames), "\(frames) frames")
         }
         XCTAssertEqual(Juice.freezeDuration(forDestroying: .king), 10.0 / 60, accuracy: 0.0001)
         XCTAssertEqual(Juice.freezeDuration(forDestroying: .pawn), 0)
+        // The king is the only event that both stops time and shakes the board.
+        XCTAssertNotEqual(Juice.shake(forDestroying: .king), .none)
+        XCTAssertNotEqual(Juice.shake(forDestroying: .queen), .none,
+                          "the queen still shakes — it just no longer freezes")
     }
 
     /// Venting starts at half HP and stops at zero — a destroyed piece must not
