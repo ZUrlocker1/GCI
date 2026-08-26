@@ -55,6 +55,10 @@ class GameScene: SKScene {
     private var outcome: GameOverNode.Outcome = .whiteMated
     /// Last banner state, so the check alarm fires on the transition only.
     private var lastStatus: GameStatusNode.Status = .none
+    /// The alarm still machine-gunned when a king was checked, stepped out and was
+    /// checked again a ply later, which is the norm in a lopsided endgame.
+    private var lastCheckAlarm: TimeInterval = 0
+    private static let checkAlarmCooldown: TimeInterval = 3.0
     /// The king currently lit red, so it can be cleared when check resolves.
     private weak var glowingKing: PieceNode?
     /// Last countdown value sounded, so the warning ticks once per second.
@@ -945,7 +949,11 @@ class GameScene: SKScene {
         if status != lastStatus {
             switch status {
             case .check(let side):
-                AudioManager.shared.play(.checkAlarm)
+                let now = CACurrentMediaTime()
+                if now - lastCheckAlarm >= Self.checkAlarmCooldown {
+                    lastCheckAlarm = now
+                    AudioManager.shared.play(.checkAlarm)
+                }
                 showCheckPaths(against: side)
                 setKingGlow(for: side)
             case .checkmate(let side):

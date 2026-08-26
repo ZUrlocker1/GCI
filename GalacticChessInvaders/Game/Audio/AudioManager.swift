@@ -19,6 +19,19 @@ final class AudioManager {
     private var musicPlayer: AVAudioPlayer?
     private let poolSize = 4
 
+    /// Music sits on top; effects sit just under it. Each SoundKey keeps its own
+    /// relative balance and the whole SFX bus is scaled, so the mix is tuned here
+    /// rather than across 120 cases. The ceiling matters because a few keys are
+    /// authored at 1.0 and would otherwise punch through the track.
+    static let musicVolume: Float = 0.75
+    private static let sfxGain: Float = 0.82
+    private static let sfxCeiling: Float = 0.68
+
+    /// Final mixer level for a key: its own balance, scaled and capped under the music.
+    static func volume(for key: SoundKey) -> Float {
+        min(key.defaultVolume * sfxGain, sfxCeiling)
+    }
+
     private var sfxBaseURL: URL? {
         Bundle.main.url(forResource: "sfx", withExtension: nil)
     }
@@ -50,7 +63,7 @@ final class AudioManager {
         if key.loops {
             guard let player = try? AVAudioPlayer(contentsOf: url) else { return false }
             player.numberOfLoops = -1
-            player.volume = key.defaultVolume
+            player.volume = Self.volume(for: key)
             player.prepareToPlay()
             loopPlayers[key] = player
             return true
@@ -59,7 +72,7 @@ final class AudioManager {
         var pool: [AVAudioPlayer] = []
         for _ in 0..<poolSize {
             if let player = try? AVAudioPlayer(contentsOf: url) {
-                player.volume = key.defaultVolume
+                player.volume = Self.volume(for: key)
                 player.prepareToPlay()
                 pool.append(player)
             }
@@ -95,7 +108,7 @@ final class AudioManager {
 
     // MARK: - Music
 
-    func playMusic(_ trackName: String, volume: Float = 0.75) {
+    func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {
         guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a") else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
             return
