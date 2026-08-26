@@ -25,43 +25,37 @@ enum Juice {
         var isSilent: Bool { amplitude <= 0 || duration <= 0 }
     }
 
-    // Raised twice. The first pass was set cautiously and measured afterwards
-    // at 1.5pt over three frames for a laser hit — below anyone's threshold.
-    // These are the amplitudes that read, alongside `offset`'s change from a
-    // random walk to an alternating displacement, which is most of why they
-    // now land: the *displacement* is what the eye sees, and a random walk
-    // spends most of its frames near the middle.
-    static let micro  = Shake(amplitude: 4.0,  duration: 0.10)
-    static let small  = Shake(amplitude: 7.0,  duration: 0.20)
-    static let light  = Shake(amplitude: 10.0, duration: 0.26)
-    static let medium = Shake(amplitude: 15.0, duration: 0.40)
-    static let heavy  = Shake(amplitude: 24.0, duration: 0.60)
+    // Three tiers, and nothing below them. §24.1 also gives a "micro-shake" to
+    // every laser landing; that was built and removed. A cue that fires several
+    // times a second cannot be obvious without being constant, and a board
+    // that is always moving carries no information — spending the shake on the
+    // rare events is what lets them be unmistakable.
+    //
+    // Large, deliberately. These now happen a handful of times in a wave, so
+    // "punchy, not nauseating" (§24.1) has room: heavy is 30pt of displacement
+    // on a board with 224pt of margin, roughly half a square.
+    static let light  = Shake(amplitude: 14.0, duration: 0.26)
+    static let medium = Shake(amplitude: 20.0, duration: 0.40)
+    static let heavy  = Shake(amplitude: 30.0, duration: 0.60)
 
-    /// Every player laser landing (§24.1's "micro-shake"). Fires constantly, so
-    /// it has to be barely perceptible on its own and only register as weight.
-    static let laserHit = micro
     static let shipDestroyed = medium
     /// §24.1 gives the flagship medium at a shorter 0.3s. Not built yet.
     static let flagshipDestroyed = Shake(amplitude: medium.amplitude, duration: 0.30)
 
-    /// What destroying a piece is worth.
+    /// What destroying a piece is worth: the queen and the king, and nothing
+    /// else — §24.1's own list.
     ///
-    /// §24.1 names only the queen and the king, and taken literally that leaves
-    /// the feature all but absent: each of those dies at most once a wave, so a
-    /// player can clear a whole level of pawns and rooks and never see the
-    /// board move. The officers get a small shake so destruction has weight
-    /// during ordinary play, and the gap to the queen and king is kept wide
-    /// enough that those two still land as events.
-    ///
-    /// Pawns stay silent deliberately. They die constantly — eight a wave, two
-    /// shots each — and a board that shakes on every pawn is a board that is
-    /// always shaking, which is the same as never.
+    /// The officers had a tier of their own for a while, on the reasoning that
+    /// the queen and king die at most once a wave each and the feature would
+    /// otherwise go unseen. Backwards: a shake that turns up on every rook is
+    /// scenery, and the two kills that decide a wave stop being announced by
+    /// it. Rarity is what the effect is *for*, so the answer was to make the
+    /// rare ones unmissable rather than to add more of them.
     static func shake(forDestroying type: PieceType) -> Shake {
         switch type {
-        case .king:                    return heavy
-        case .queen:                   return light
-        case .rook, .bishop, .knight:  return small
-        case .pawn:                    return .none
+        case .king:                              return heavy
+        case .queen:                             return light
+        case .rook, .bishop, .knight, .pawn:     return .none
         }
     }
 
@@ -94,20 +88,36 @@ enum Juice {
 
     // MARK: - Hit freeze (§24.2)
 
-    /// 2–4 frames before the explosion on a high-value kill. Small hits get
+    /// The pause before the explosion on a high-value kill. Small hits get
     /// none: a freeze on every pawn would read as the game stuttering.
+    ///
+    /// §24.2 asks for 2–4 frames. Two is 33ms — under the threshold at which a
+    /// pause registers as anything, so the queen's freeze was doing nothing.
+    /// The king's is longer than the doc's ceiling on purpose: its death is the
+    /// level's climax, arriving with a 0.6s shake, a white flash and a 2.4x
+    /// burst, and 67ms of stillness disappears underneath all that. A sixth of
+    /// a second does not.
     static func freezeFrames(forDestroying type: PieceType) -> Int {
         switch type {
-        case .king:  return 4
-        case .queen: return 2
+        case .king:  return 10      // 167ms
+        case .queen: return 4       // 67ms
         default:     return 0
         }
     }
+
+    /// Losing a life. Not in §24.2's list, which names only pieces — but this
+    /// is the player's own death, and it should land at least as hard as the
+    /// queen's.
+    static let shipLossFreezeFrames = 6     // 100ms
 
     static let frameDuration: TimeInterval = 1.0 / 60
 
     static func freezeDuration(forDestroying type: PieceType) -> TimeInterval {
         TimeInterval(freezeFrames(forDestroying: type)) * frameDuration
+    }
+
+    static var shipLossFreezeDuration: TimeInterval {
+        TimeInterval(shipLossFreezeFrames) * frameDuration
     }
 
     // MARK: - Score pop (§24.3)

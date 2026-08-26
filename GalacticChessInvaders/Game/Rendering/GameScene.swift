@@ -738,6 +738,7 @@ class GameScene: SKScene {
         freezeRemaining = 0
         afterFreeze = nil
         bloomNode.isPaused = false
+        starfieldNode.isPaused = false
         bloomNode.position = .zero
         removeEndBanner()
         dismissLevelBanner()
@@ -1886,6 +1887,10 @@ class GameScene: SKScene {
         freezeRemaining = duration
         afterFreeze = then
         bloomNode.isPaused = true
+        // The starfield is a sibling of the playfield, not a child of it, so
+        // pausing the playfield alone left the stars scrolling through the
+        // freeze — which is most of what gives a hitstop away. Nothing may move.
+        starfieldNode.isPaused = true
     }
 
     /// Where a round landed and which way it was going — enough to throw the
@@ -1944,7 +1949,6 @@ class GameScene: SKScene {
                           along: playerHeading, scale: 1.6)
         shatters?.shatter(at: at, color: NeonPalette.magentaLight,
                           along: enemyHeading, scale: 1.6)
-        startShake(Juice.laserHit)
         AudioManager.shared.play(.pieceHitHeavy)
         DiagnosticsLog.shared.log(.shoot, "rounds collide — both destroyed")
     }
@@ -2030,7 +2034,6 @@ class GameScene: SKScene {
         let impact = Impact(point: point, heading: laser.travelDirection)
         laser.deactivate()
         guard let pieceNode = node as? PieceNode else { return }
-        startShake(Juice.laserHit)
         // Before any damage is applied: the side the shot took off is the side
         // that stops being drawn, so the wedge has to know where it landed.
         pieceNode.noteHit(atLocalX: pieceNode.convert(point, from: self).x)
@@ -2189,7 +2192,9 @@ class GameScene: SKScene {
         ship?.direction = 0
 
         let lastLife = shipState.lives == 0
-        blowUpSpaceship(final: lastLife)
+        freeze(Juice.shipLossFreezeDuration) { [weak self] in
+            self?.blowUpSpaceship(final: lastLife)
+        }
 
         guard !lastLife else {
             AudioManager.shared.play(.playerShipDestroyed)
@@ -2239,6 +2244,7 @@ class GameScene: SKScene {
             freezeRemaining -= dt
             if freezeRemaining <= 0 {
                 bloomNode.isPaused = false
+                starfieldNode.isPaused = false
                 let resume = afterFreeze
                 afterFreeze = nil
                 resume?()

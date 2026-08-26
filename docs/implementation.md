@@ -392,20 +392,23 @@ the board" is answerable and tested in one place.
 - [x] **Score pops** — `ScorePopPool`, 20 pooled labels; +N rises 30pt over 0.8s
       in the target's colour. Shows `ScoreManager.scaled`, the same number the
       total moves by, so a pop can never disagree with the HUD
-- [x] **Screen shake** (§24.1) — laser hit 4pt, rook/bishop/knight 7, queen 10,
-      life lost 15, king 24; pawns silent, since they die constantly and a board
-      always shaking is a board never shaking. The doc lists only the queen and
-      king, which in practice meant a player could clear a level and never see
-      the board move. What makes it *read* is the offset: full amplitude every
-      frame, alternating roughly 180°, so consecutive frames land on opposite
-      sides. Picking x and y independently averages half the amplitude and looks
-      like blur. Applied to `bloomNode` rather than a camera — a camera also
-      changes how a mouse point maps into the scene, and click-to-select depends
-      on that — which leaves the starfield still, so it reads as the board being
-      hit rather than the universe wobbling
-- [x] **Hit freeze** (§24.2) — 4 frames for a king, 2 for a queen, none below.
-      `bloomNode.isPaused` stops the playfield while the scene's own `update`
-      keeps running to time it; the explosion lands *after* the pause
+- [x] **Screen shake** (§24.1) — three events only: black queen 14pt, a life
+      lost 20, black or white king 30. Deliberately scarce and deliberately
+      large. Tiers for ordinary kills and for every landed laser were built and
+      removed: a shake that turns up on every rook is scenery, and then the two
+      kills that decide a wave are no longer announced by it. What makes it read
+      is the offset — full amplitude every frame, alternating roughly 180°, so
+      consecutive frames land on opposite sides; picking x and y independently
+      averages half the amplitude and looks like blur. Applied to `bloomNode`
+      rather than a camera, since a camera also changes how a mouse point maps
+      into the scene and click-to-select depends on that
+- [x] **Hit freeze** (§24.2) — 10 frames for a king, 6 for a life lost, 4 for a
+      queen, none below. Past the doc's 2–4: two frames is 33ms, under the
+      threshold at which a pause registers, and the king's death already carries
+      a 0.6s shake and a white flash that 67ms of stillness vanishes underneath.
+      The playfield *and* the starfield pause — they are siblings, and stars
+      still scrolling is most of what gives a hitstop away — while the scene's
+      own `update` keeps running to time it. The explosion lands after the pause
 - [x] **The spaceship explodes when it is hit** — §8.4 and §24.1's medium shake,
       both specified and never built: losing a life had been a sound, a hidden
       sprite and a HUD icon going out. Glass in two opposed sprays, since the
