@@ -33,7 +33,7 @@ final class GameOverNode: SKNode {
             case .blackMated, .waveCleared: return "BLACK CHECKMATED"
             case .stalemate:         return "NO LEGAL MOVES"
             case .drawnByRepetition: return "SAME POSITION THREE TIMES"
-            case .drawnByMoveLimit:  return "50 MOVES, NO CAPTURE"
+            case .drawnByMoveLimit:  return "\(ChessEngine.quietMoveLimit) MOVES, NO CAPTURE"
             }
         }
 

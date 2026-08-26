@@ -79,7 +79,11 @@ Deviations
   a bare king, so it shuffles: one playtest ran ~200 plies. Threefold repetition
   is keyed on the whole position (side to move, castling rights and the
   en-passant square all count); a capture or pawn move resets the clock and
-  clears the table. Measured over 60 engine games: median 76 plies, max 269, none
+  clears the table. The quiet-move draw is set to **30 moves, not the standard
+  50** — this is an arcade game and a shuffling endgame is unwatchable long
+  before a real match would be drawn. Caps a grind at 60 plies instead of 100,
+  while 28 of 30 normal games still end in mate. Likely to come down again once
+  the fleet supplies its own time pressure. Measured over 60 engine games: median 76 plies, max 269, none
   unfinished. Endings observed: 58 mate, 1 repetition, 1 fifty-move
 - Stalemate ends the game as a draw. Note it is *not* what a queen chasing a bare
   king produces — that side is in check with legal moves available
@@ -160,7 +164,64 @@ guideline, above the 40pt tap target.
       referenced would be 91MB, dominated by three long uncompressed GDC stems —
       trim or convert to AAC before ship
 
-## Phases 3.x, 5, 6.x, 7.x, 8, 9 ⬜
+## Phase 3.1 — Fleet Movement ⬜
+
+Get the black fleet sweeping and descending alongside the chess game. No shooting.
+
+- [ ] `FleetRules.swift` — pure two-step descent counter, logical rank descent,
+      speed scaling by pieces remaining (§21.2 table: 1.0× at 16 → 2.5× at 1)
+- [ ] `FleetController.swift` — lateral sweep as **one `SKAction` on the fleet
+      parent**, so 16 pieces move at zero per-piece cost; calls `FleetRules` at
+      wall bounces
+- [ ] Two half-drops per rank: the first is visual only, the second updates
+      logical squares via `GCIBoard.forcePlace` — this is what makes the fleet
+      and the chess position diverge and re-sync
+- [ ] Crush events when a descending black piece lands on a white one
+- [ ] Fleet sweeps must **not** trigger extra black chess moves — the beat owns
+      chess timing (§3)
+- [ ] Fleet log lines: sweep, half-drop, logical descent, speed change
+
+Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
+
+## Phase 3.2 — Shooting & Collision ⬜
+
+The core shoot-em-up loop, and the phase that finally lets a run *end*.
+
+- [ ] `SpaceshipState.swift` — lives, 2-shot laser cap, shield, respawn and
+      invincibility timers (pure)
+- [ ] `ProjectileState.swift` — ownership, damage, speed, active flag (pure)
+- [ ] `LaserNode` + **`LaserPool`** — 6 player and 16 enemy nodes pre-created
+- [ ] `CollisionResolver.swift` — pure damage/scoring/destruction outcomes
+- [ ] `CollisionHandler.swift` — physics contact delegate; bitmasks per the
+      `PhysicsCategory` table, rule decisions delegated to the resolver
+- [ ] Fleet firing — shots per turn from the §21.1 table, weighted to front-rank
+      pawns; Level 1 fires none
+- [ ] Damage: player laser 2 HP, invader shot 1 HP, friendly fire 2 HP
+- [ ] Shooting score wired (the chess-capture path already exists)
+- [ ] **Real lose conditions**: 3 lives gone, black piece reaches rank 1, white
+      king shot to 0 HP
+- [ ] **Real win condition**: all black pieces destroyed clears the wave
+- [ ] King shot at checkmate — the 800 bonus (§Scoring), the one scoring rule
+      still unimplemented
+
+Pass: a level completable by shooting alone, all damage and scoring correct.
+
+Unblocks three things currently stuck: the HUD lives display (hardcoded to 3),
+banking a score without having to lose at chess, and runs ending from arcade
+pressure rather than chess grinding.
+
+## Phase 3.3 — Damage States & Juice ⬜
+
+- [ ] Smoke trail at ≤50% HP, sprite flicker at ≤25%
+- [ ] Explosion on destruction (placeholder burst; per-piece art in Phase 8)
+- [ ] Score pop-ups floating from destroyed targets, via a **`ScorePopPool`** of 20
+- [ ] Screen shake per §24.1 intensities; hit freeze on high-value kills
+- [ ] Arcade SFX — the keys are already mapped in `SoundKey`, they just need
+      bundling and wiring (see the Phase 4 note on bundle size)
+
+Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
+
+## Phases 5, 6.x, 7.x, 8, 9 ⬜
 
 Not started.
 
