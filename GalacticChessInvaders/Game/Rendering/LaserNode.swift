@@ -145,12 +145,13 @@ final class LaserNode: SKSpriteNode {
     /// Fires straight up (player, from the ship) or down (enemy, from a fleet
     /// piece) from `origin`, dealing `state.damage` on contact. Deactivates on
     /// its own after `travelDistance` if nothing hits it first.
-    /// `lean` angles the shot: 0 straight, -1 left, +1 right. A leaning shot
-    /// travels 45°, so it covers `travelDistance` on both axes and therefore a
-    /// sqrt(2) longer path — the duration accounts for that, or an angled shot
-    /// would cross the board faster than its stated speed (§21.3).
+    /// `lean` is the slope: sideways travel per unit of forward travel, 0 for
+    /// straight, negative left. An angled shot therefore covers a longer path
+    /// than `travelDistance`, and the duration is taken from the real path
+    /// length — otherwise an angled round would cross the board faster than its
+    /// stated speed (§21.3).
     func fire(from origin: CGPoint, damage: Int, speed: CGFloat,
-              travelDistance: CGFloat, lean: Int = 0) {
+              travelDistance: CGFloat, lean: CGFloat = 0) {
         guard speed > 0, travelDistance > 0 else { return }
         state = ProjectileState(owner: owner, damage: damage, speed: speed)
         position = origin
@@ -160,7 +161,7 @@ final class LaserNode: SKSpriteNode {
         physicsBody?.contactTestBitMask = liveContactMask
 
         let dy = owner == .player ? travelDistance : -travelDistance
-        let dx = CGFloat(lean) * travelDistance
+        let dx = lean * travelDistance
         let path = (dx * dx + dy * dy).squareRoot()
         let duration = TimeInterval(path / speed)
 

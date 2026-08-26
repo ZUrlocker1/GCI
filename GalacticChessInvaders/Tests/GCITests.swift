@@ -2936,13 +2936,13 @@ final class LaserPhysicsTests: XCTestCase {
     /// hand-computed constants.
     func testEveryRoundPointsAlongItsFlightPath() {
         for owner in [ProjectileState.Owner.player, .enemy] {
-            for lean in [-1, 0, 1] {
+            for lean in [-1.0, 0.0, 1.0] as [CGFloat] {
                 let laser = LaserNode(owner: owner)
                 laser.fire(from: .zero, damage: 2, speed: 200,
                            travelDistance: 400, lean: lean)
                 // The travel vector `fire` builds from the same inputs.
                 let dy: CGFloat = owner == .player ? 400 : -400
-                let dx = CGFloat(lean) * 400
+                let dx = lean * 400
                 // The node's long axis is its local +y, rotated by zRotation.
                 let z = laser.zRotation
                 let axis = CGPoint(x: -sin(z), y: cos(z))
@@ -3260,20 +3260,55 @@ final class KingActivatedTests: XCTestCase {
     }
 
     /// A diagonal is aimed inward from the edge files, or a shot from the a- or
-    /// h-file would leave the board almost immediately.
-    func testDiagonalLeansAwayFromTheEdge() {
-        for file in 0...1 {
-            XCTAssertEqual(FleetRules.diagonalLean(fromFile: file, isDiagonal: true), 1)
+    /// A bishop leans toward one of White's pieces, not at a fixed 45°. From
+    /// rank 8 a true diagonal covers seven files before reaching White — off
+    /// the board, nowhere near anything the player owns.
+    func testBishopLeansTowardWhitesPieces() {
+        // c8 (file 2) aiming at g1 (file 6): 4 files over 7 ranks.
+        let toward = FleetRules.diagonalSlope(fromFile: 2, rank: 8, towardFile: 6, rank: 1)
+        XCTAssertEqual(toward, 4.0 / 7.0, accuracy: 0.001)
+        XCTAssertLessThan(toward, 1.0, "shallower than a true diagonal, and that is the point")
+        // Sign follows the target.
+        XCTAssertLessThan(FleetRules.diagonalSlope(fromFile: 6, rank: 8,
+                                                   towardFile: 1, rank: 1), 0)
+    }
+
+    func testBishopLeanStaysWithinItsAngleBand() {
+        // Steeper than 45° would fly off the side: f6 (file 5) at b5 is 3
+        // files over 1 rank.
+        XCTAssertEqual(FleetRules.diagonalSlope(fromFile: 5, rank: 6,
+                                                towardFile: 2, rank: 5),
+                       -FleetRules.maxDiagonalSlope, "clamped to 45°")
+        // Nearly straight down would read as a missed vertical shot.
+        XCTAssertEqual(FleetRules.diagonalSlope(fromFile: 3, rank: 8,
+                                                towardFile: 4, rank: 1),
+                       FleetRules.minDiagonalSlope, "clamped away from vertical")
+        // Directly below: lean away from the nearer edge.
+        XCTAssertGreaterThan(FleetRules.diagonalSlope(fromFile: 1, rank: 8,
+                                                      towardFile: 1, rank: 1), 0)
+        XCTAssertLessThan(FleetRules.diagonalSlope(fromFile: 6, rank: 8,
+                                                   towardFile: 6, rank: 1), 0)
+        // A target level with or behind the shooter cannot be aimed at.
+        XCTAssertEqual(abs(FleetRules.diagonalSlope(fromFile: 3, rank: 4,
+                                                    towardFile: 6, rank: 4)),
+                       FleetRules.maxDiagonalSlope)
+    }
+
+    /// Whatever the target, the round always reads as angled — never vertical,
+    /// never flatter than the eye can follow.
+    func testEveryBishopLeanIsAVisibleAngle() {
+        for file in 0...7 {
+            for rank in 3...8 {
+                for targetFile in 0...7 {
+                    let slope = FleetRules.diagonalSlope(fromFile: file, rank: rank,
+                                                         towardFile: targetFile, rank: 1)
+                    XCTAssertGreaterThanOrEqual(abs(slope), FleetRules.minDiagonalSlope,
+                                                "\(file),\(rank) → \(targetFile)")
+                    XCTAssertLessThanOrEqual(abs(slope), FleetRules.maxDiagonalSlope,
+                                             "\(file),\(rank) → \(targetFile)")
+                }
+            }
         }
-        for file in 6...7 {
-            XCTAssertEqual(FleetRules.diagonalLean(fromFile: file, isDiagonal: true), -1)
-        }
-        // The middle files can go either way, so both must be reachable.
-        var seen = Set<Int>()
-        for _ in 0..<200 { seen.insert(FleetRules.diagonalLean(fromFile: 4, isDiagonal: true)) }
-        XCTAssertEqual(seen, [-1, 1])
-        XCTAssertEqual(FleetRules.diagonalLean(fromFile: 4, isDiagonal: false), 0,
-                       "a straight shot has no lean")
     }
 
     /// §21.3 fixes diagonals at 160 px/s along the path. Since a 45° shot

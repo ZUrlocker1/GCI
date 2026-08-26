@@ -1566,11 +1566,10 @@ class GameScene: SKScene {
         // arriving at random.
         if level.diagonalShots, beatsThisLevel % FleetRules.bishopShotInterval == 0 {
             for square in FleetFiring.diagonalShooters(from: candidates) {
-                let lean = FleetRules.diagonalLean(fromFile: Self.fileIndex(of: square),
-                                                   isDiagonal: true)
                 scheduleInvaderShot(from: square, after: 0,
                                     speed: FleetRules.diagonalShotSpeed,
-                                    lean: lean, sound: .crossfireLaserFire)
+                                    lean: bishopLean(from: square),
+                                    sound: .crossfireLaserFire)
             }
         }
 
@@ -1590,6 +1589,25 @@ class GameScene: SKScene {
         }
     }
 
+    /// The angle this bishop should fire at: leaning toward one of White's own
+    /// pieces, picked fresh each time so the pair does not fire the same shape
+    /// every beat. With nothing left to aim at, lean over the ship's lane —
+    /// the board is empty, so that is where the player must be.
+    private func bishopLean(from square: String) -> CGFloat {
+        let rank = Self.rankIndex(of: square)
+        let targets = board.allPieces(color: .white)
+        guard let target = targets.randomElement() else {
+            let originX = boardNode?.position.x ?? 0
+            let lane = ship.map { Int(($0.position.x - originX) / BoardNode.squareSize) }
+            return FleetRules.diagonalSlope(fromFile: Self.fileIndex(of: square), rank: rank,
+                                            towardFile: lane ?? 4, rank: 0)
+        }
+        return FleetRules.diagonalSlope(
+            fromFile: Self.fileIndex(of: square), rank: rank,
+            towardFile: Self.fileIndex(of: target.logicalSquare),
+            rank: Self.rankIndex(of: target.logicalSquare))
+    }
+
     /// Charges a gunner up, then fires it.
     ///
     /// The charge-up is the whole point: a shot used to appear at the same
@@ -1599,7 +1617,7 @@ class GameScene: SKScene {
     /// will take — so at Crossfire the *angle* is readable before the missile
     /// exists, which is the part the player actually has to plan around.
     private func scheduleInvaderShot(from square: String, after delay: TimeInterval,
-                                     speed: CGFloat, lean: Int, sound: SoundKey) {
+                                     speed: CGFloat, lean: CGFloat, sound: SoundKey) {
         let charge = SKAction.run { [weak self] in
             guard let self, self.isFiringLive else { return }
             self.telegraphShot(at: square, lean: lean)
@@ -1620,7 +1638,7 @@ class GameScene: SKScene {
 
     /// The charge-up cue: the gunner brightens, and a tick grows out of it
     /// along the line the shot will travel.
-    private func telegraphShot(at square: String, lean: Int) {
+    private func telegraphShot(at square: String, lean: CGFloat) {
         guard let node = pieceNodes[square] else { return }
         let angled = lean != 0
         let tint = angled ? NeonPalette.shotPurple : NeonPalette.magenta
@@ -1632,9 +1650,11 @@ class GameScene: SKScene {
         tick.lineWidth = 0.75
         tick.glowWidth = 4
         tick.zPosition = 2
-        // Grows out of the piece's foot, pointing where the round will go.
-        tick.zRotation = angled ? CGFloat(lean) * .pi / 4 : 0
-        tick.position = CGPoint(x: CGFloat(lean) * node.size.width * 0.22,
+        // Grows out of the piece's foot, pointing exactly where the round will
+        // go — the same `atan2(dx, -dy)` the round itself is aimed by, so the
+        // cue cannot promise one angle and the missile take another.
+        tick.zRotation = atan2(lean, 1)
+        tick.position = CGPoint(x: lean * node.size.width * 0.22,
                                 y: -node.size.height * 0.42)
         tick.setScale(0.2)
         tick.alpha = 0
@@ -1653,7 +1673,7 @@ class GameScene: SKScene {
     private func fireInvaderShot(from square: String, speed: CGFloat,
                                  damage: Int = ProjectileState.enemyShotDamage,
                                  heavy: Bool = false,
-                                 lean: Int = 0,
+                                 lean: CGFloat = 0,
                                  sound: SoundKey = .invaderLaserFire,
                                  note: String? = nil) {
         guard let laserPool,
@@ -1673,6 +1693,11 @@ class GameScene: SKScene {
         flashMuzzle(at: square)
         AudioManager.shared.play(sound)
         DiagnosticsLog.shared.log(.shoot, note ?? "black \(square) fires")
+    }
+
+    /// 1 through 8, or 0 for a square that does not parse.
+    private static func rankIndex(of square: String) -> Int {
+        Int(String(square.suffix(1))) ?? 0
     }
 
     /// 0 for the a-file through 7 for the h-file.

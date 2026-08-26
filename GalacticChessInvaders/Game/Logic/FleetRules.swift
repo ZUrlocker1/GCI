@@ -191,14 +191,36 @@ enum FleetRules {
     /// warning rather than a countdown.
     static let chargeUpDelay: TimeInterval = 0.35
 
-    /// Which way a diagonal shot leans: -1 left, +1 right, 0 for straight down.
-    /// Aimed away from the board edge when the shooter is near one, so a
-    /// diagonal from the a-file does not immediately fly out of play.
-    static func diagonalLean(fromFile file: Int, isDiagonal: Bool) -> Int {
-        guard isDiagonal else { return 0 }
-        if file <= 1 { return 1 }
-        if file >= 6 { return -1 }
-        return Bool.random() ? 1 : -1
+    /// How steeply a bishop's round leans: files travelled per rank descended.
+    /// 0 is straight down, 1.0 is a true 45° diagonal, and the sign is the
+    /// direction.
+    ///
+    /// A fixed 45° does not work from the back ranks. A bishop on rank 8 firing
+    /// at 45° covers seven files before it reaches White — it leaves the board
+    /// entirely and lands nowhere near anything the player owns, so the level's
+    /// threat arrives as a light show. The angle is instead taken from where
+    /// White actually is, then clamped: shallower than `minDiagonalSlope` and it
+    /// reads as a straight shot that missed, steeper than `maxDiagonalSlope`
+    /// and it is back to flying off the side.
+    static let minDiagonalSlope: CGFloat = 0.3    // ~17° off vertical
+    static let maxDiagonalSlope: CGFloat = 1.0    // 45°
+
+    /// Board coordinates throughout — files and ranks, not points. The squares
+    /// are square, so the slope is the same number on screen.
+    /// `targetFile`/`targetRank` name a white piece to lean toward; a target on
+    /// or above the shooter's own rank cannot be aimed at and leans at random.
+    static func diagonalSlope(fromFile file: Int, rank: Int,
+                              towardFile targetFile: Int, rank targetRank: Int)
+        -> CGFloat
+    {
+        let drop = rank - targetRank
+        guard drop > 0 else { return Bool.random() ? maxDiagonalSlope : -maxDiagonalSlope }
+        let wanted = CGFloat(targetFile - file) / CGFloat(drop)
+        // A target directly below cannot say which way to lean; away from the
+        // nearer edge keeps the round over the board for longer.
+        guard wanted != 0 else { return file < 4 ? minDiagonalSlope : -minDiagonalSlope }
+        let sign: CGFloat = wanted < 0 ? -1 : 1
+        return sign * min(maxDiagonalSlope, max(minDiagonalSlope, abs(wanted)))
     }
 
     // MARK: - Sweep width
