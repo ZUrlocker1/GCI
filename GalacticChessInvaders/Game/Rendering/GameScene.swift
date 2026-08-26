@@ -153,7 +153,6 @@ class GameScene: SKScene {
 
         DiagnosticsLog.shared.log(.startup, "App launched (macOS, debug build)")
         DiagnosticsLog.shared.log(.startup, "Scene size: \(Int(size.width))×\(Int(size.height))")
-        DiagnosticsLog.shared.log(.startup, "Title screen displayed")
     }
 
     // MARK: - Scene Setup
@@ -418,7 +417,7 @@ class GameScene: SKScene {
         bloomNode.addChild(overlay)
         titleOverlay = overlay
 
-        DiagnosticsLog.shared.log(.level, "State → TITLE")
+        DiagnosticsLog.shared.log(.level, "TITLE")
     }
 
     func hideTitleScreen() {
@@ -435,7 +434,6 @@ class GameScene: SKScene {
         hudNode = hud
         hud.updateLives(3)
         hud.updateLevel(1)
-        DiagnosticsLog.shared.log(.startup, "HUD displayed")
     }
 
     func hideHUD() {
@@ -506,7 +504,7 @@ class GameScene: SKScene {
             flashGutterNotice("LAST LEVEL")
             return
         }
-        DiagnosticsLog.shared.log(.auto, "SKIP LEVEL → \(levels.level + 1)")
+        DiagnosticsLog.shared.log(.auto, "skip to \(levels.level + 1)")
         // buildPlayfield tears the board down and back up, so the notice has to
         // be raised afterwards or it is removed with everything else. The
         // mechanic banner still shows, so a skip is a way to *see* a level's
@@ -581,7 +579,17 @@ class GameScene: SKScene {
         ScoreManager.shared.resetForNewGame()
         shipState = SpaceshipState()
         buildPlayfield()
-        DiagnosticsLog.shared.log(.level, "State → PLAYING")
+        DiagnosticsLog.shared.log(.level, "PLAYING")
+    }
+
+    /// One line per level, in the same shape whether it is the first or the
+    /// eleventh — the two used to differ, so "Level 1 started" and "Level 2 —
+    /// beat 5s…" read as unrelated events.
+    func logLevel() {
+        let p = levels.parameters
+        DiagnosticsLog.shared.log(.level,
+            "\(levels.level) — \(Int(p.turnTimer))s beat, "
+            + "\(p.blackMovesPerTurn) move/turn, ×\(ScoreManager.shared.multiplier)")
     }
 
     /// The next wave: level and multiplier step up, score carries over. Lives
@@ -591,10 +599,7 @@ class GameScene: SKScene {
         ScoreManager.shared.advanceLevel()
         shipState?.resetForNewLevel()
         buildPlayfield(announceLevel: announce)
-        DiagnosticsLog.shared.log(.level,
-            "Level \(levels.level) — beat \(Int(levels.parameters.turnTimer))s, "
-            + "\(levels.parameters.blackMovesPerTurn) black move(s)/turn, "
-            + "×\(ScoreManager.shared.multiplier)")
+        logLevel()
     }
 
     private func buildPlayfield(announceLevel: Bool = true) {
@@ -617,7 +622,7 @@ class GameScene: SKScene {
         controller.onRankDescended = { [weak self] moves in self?.applyFleetDescent(moves) }
         controller.onCrush = { [weak self] crush in self?.applyCrush(crush) }
         controller.onBreach = { [weak self] square in
-            DiagnosticsLog.shared.log(.fleet, "breach — black reached rank 1 at \(square)")
+            DiagnosticsLog.shared.log(.fleet, "breach at \(square)")
             self?.fleet?.stop()
             self?.loseGame(outcome: .blackBreachedRank1)
         }
@@ -1037,7 +1042,7 @@ class GameScene: SKScene {
         addChild(overlay)
         gameOverNode = overlay
         isAwaitingWaveContinue = true
-        DiagnosticsLog.shared.log(.level, "wave clear — awaiting continue")
+        DiagnosticsLog.shared.log(.level, "wave clear")
     }
 
     /// The game ends on a chess fact, so the reveal should show the position the
@@ -1051,7 +1056,7 @@ class GameScene: SKScene {
         guard let fleet, fleet.isOffTruePosition else { return }
         fleet.snapToTruePosition()
         boardNode?.clearCheckPaths()
-        DiagnosticsLog.shared.log(.fleet, "settling onto true squares for the reveal")
+        DiagnosticsLog.shared.log(.fleet, "settling for reveal")
 
         let redraw = SKAction.run { [weak self] in
             guard let self, self.board.isCheck || self.board.isMate else { return }
@@ -1239,7 +1244,7 @@ class GameScene: SKScene {
                     slidingFrom: node.position)
         node.run(.sequence([.wait(forDuration: 0.2),
                             .run { node.startIdleBob() }]))
-        DiagnosticsLog.shared.log(.fleet, "\(square) falls back into formation")
+        DiagnosticsLog.shared.log(.fleet, "\(square) rejoins")
     }
 
     /// After a rank descent the formation has moved down onto the board, so any
@@ -1348,8 +1353,12 @@ class GameScene: SKScene {
         guard let boardNode, let point = boardNode.center(of: outcome.to) else { return }
 
         // Use the captured square, not the destination — en passant differs.
+        // Where the victim stood, captured before its node goes: the score pop
+        // below needs the position, and by then the node is out of `pieceNodes`.
+        var victimPosition: CGPoint?
         if let capturedSquare = outcome.capturedSquare,
            let victim = pieceNodes.removeValue(forKey: capturedSquare) {
+            victimPosition = bloomPosition(of: victim)
             detachFromFleet(victim)
             victim.runDestructionAnimation {}
         }
@@ -1358,11 +1367,9 @@ class GameScene: SKScene {
         // reward the player. Chess captures score at the lower of the two
         // tables (§9) — pointValue is the higher, shoot-to-kill rate.
         if let captured = outcome.captured, captured.color == .black {
-            if let node = pieceNodes[outcome.capturedSquare ?? outcome.to] {
+            if let victimPosition {
                 scorePops?.pop(ScoreManager.shared.scaled(captured.type.chessCaptureValue),
-                               at: bloomPosition(of: node),
-                               color: captured.color == .white
-                                   ? NeonPalette.cyan : NeonPalette.magenta)
+                               at: victimPosition, color: NeonPalette.magenta)
             }
             ScoreManager.shared.addPoints(captured.type.chessCaptureValue,
                                           source: captured.type.rawValue)
@@ -1533,7 +1540,7 @@ class GameScene: SKScene {
         // ignore the update-loop gate and have to be stopped explicitly.
         fleet?.setPaused(true)
         laserPool?.setPaused(true)
-        DiagnosticsLog.shared.log(.level, "State → PAUSED")
+        DiagnosticsLog.shared.log(.level, "PAUSED")
     }
 
     func hidePausedOverlay() {
@@ -1575,7 +1582,7 @@ class GameScene: SKScene {
         overlay.zPosition = 25
         addChild(overlay)
         gameOverNode = overlay
-        DiagnosticsLog.shared.log(.level, "\(outcome.headline) — final score: \(ScoreManager.shared.currentScore)")
+        DiagnosticsLog.shared.log(.level, "\(outcome.headline) — \(ScoreManager.shared.currentScore)")
     }
 
     func hideGameOverOverlay() {
@@ -1605,7 +1612,7 @@ class GameScene: SKScene {
         addChild(entry)
         highScoreEntry = entry
         AudioManager.shared.play(.pawnPromotion)
-        DiagnosticsLog.shared.log(.score, "high score — awaiting name")
+        DiagnosticsLog.shared.log(.score, "high score — name?")
     }
 
     // MARK: - Shooting & Collision (§20 Phase 3.2)
@@ -1631,7 +1638,7 @@ class GameScene: SKScene {
                   speed: ProjectileState.playerLaserSpeed,
                   travelDistance: size.height - origin.y)
         AudioManager.shared.play(.playerLaserFire)
-        DiagnosticsLog.shared.log(.shoot, "ship fires (\(shipState.activeLasers)/\(shipState.laserCap))")
+        DiagnosticsLog.shared.log(.shoot, "ship fires \(shipState.activeLasers)/\(shipState.laserCap)")
     }
 
     /// Once per beat, after the position has settled (§5.3): 0–`shotsPerTurn`
@@ -1899,7 +1906,7 @@ class GameScene: SKScene {
             // The slot goes back: the cap counts pawns that arrive, not
             // attempts that were made.
             regeneration.refund()
-            DiagnosticsLog.shared.log(.regen, "No space to arrive — slot returned")
+            DiagnosticsLog.shared.log(.regen, "no space, slot back")
             return
         }
         let armored = Regeneration.arrivesArmored(level: levels.parameters)
@@ -1927,8 +1934,8 @@ class GameScene: SKScene {
         }
         AudioManager.shared.play(.pieceRegenerates)
         DiagnosticsLog.shared.log(.regen,
-            "\(armored ? "Armored Pawn" : "Pawn") beaming in at \(square)"
-            + (defensive ? " (defending King)" : ""))
+            "\(armored ? "Armored Pawn" : "Pawn") at \(square)"
+            + (defensive ? " (shield)" : ""))
     }
 
     /// §10.1 counts armor in White's moves, so this runs once per completed
@@ -2045,7 +2052,7 @@ class GameScene: SKScene {
         shatters?.shatter(at: at, color: NeonPalette.magentaLight,
                           along: enemyHeading, scale: 1.6)
         AudioManager.shared.play(.pieceHitHeavy)
-        DiagnosticsLog.shared.log(.shoot, "rounds collide — both destroyed")
+        DiagnosticsLog.shared.log(.shoot, "rounds collide")
     }
 
     /// Glass off a piece that took a hit and lived, thrown along the round's
@@ -2146,7 +2153,7 @@ class GameScene: SKScene {
             // condition is intact.
             pieceNode.flashDeflection()
             AudioManager.shared.play(.shieldAbsorbsHit)
-            DiagnosticsLog.shared.log(.hit, "white king deflected friendly fire")
+            DiagnosticsLog.shared.log(.hit, "white king deflects")
         } else {
             guard let result = CollisionResolver.playerLaserHitWhitePiece(
                 at: pieceNode.square, board: board) else { return }
@@ -2221,7 +2228,7 @@ class GameScene: SKScene {
                                   scale: 1.2)
             }
             AudioManager.shared.play(.armorRicochet)
-            DiagnosticsLog.shared.log(.hit, "Armor deflects at \(square)")
+            DiagnosticsLog.shared.log(.hit, "armor deflects \(square)")
             return
         }
         guard case .blackPieceHit(let square, let type, let destroyed, let points, let comboBonus) = result

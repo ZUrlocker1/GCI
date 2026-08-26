@@ -38,7 +38,7 @@ final class GCIBoard {
                                             color: occupant.color,
                                             square: occupant.square)
         }
-        DiagnosticsLog.shared.log(.chess, "Board: standard position set (\(pieces.count) pieces)")
+        DiagnosticsLog.shared.log(.chess, "standard board")
     }
 
     /// Raises the black king's HP above its type maximum (§10.1's forcefield).
@@ -52,7 +52,7 @@ final class GCIBoard {
         else { return }
         king.hp = FleetRules.forcefieldHP(baseMaxHP: PieceType.king.maxHP)
         pieces[king.logicalSquare] = king
-        DiagnosticsLog.shared.log(.level, "black king forcefield: \(king.hp) HP")
+        DiagnosticsLog.shared.log(.level, "king forcefield \(king.hp)HP")
     }
 
     /// True while the black king still has shield HP left over its normal max.
@@ -174,7 +174,7 @@ final class GCIBoard {
         // scene kept a node for something that no longer existed.
         if let occupant = pieces[square] {
             crush = CrushEvent(crushedPiece: occupant, atSquare: square)
-            DiagnosticsLog.shared.log(.fleet, "CRUSH: \(occupant.color) \(occupant.type) at \(square) crushed by \(piece.type)")
+            DiagnosticsLog.shared.log(.fleet, "\(occupant.color) \(occupant.type) \(square) crushed by \(piece.type)")
         }
 
         pieces[piece.logicalSquare] = nil
@@ -226,7 +226,7 @@ final class GCIBoard {
             pieces[square] = updated
             if !updated.isArmored {
                 expired.append(square)
-                DiagnosticsLog.shared.log(.regen, "Armor spent at \(square)")
+                DiagnosticsLog.shared.log(.regen, "armor gone \(square)")
             }
         }
         return expired
@@ -244,10 +244,10 @@ final class GCIBoard {
             // Same reasoning as forcePlace: without this the engine's own board
             // keeps believing the piece is still there, forever.
             engine.forceRemove(at: square)
-            DiagnosticsLog.shared.log(.destroy, "\(target.color) \(target.type.rawValue) at \(square) destroyed")
+            DiagnosticsLog.shared.log(.destroy, "\(target.color) \(target.type.rawValue) \(square)")
         } else {
             pieces[square] = target
-            DiagnosticsLog.shared.log(.hit, "\(target.color) \(target.type.rawValue) \(square) hit -\(amount) → \(target.hp)HP")
+            DiagnosticsLog.shared.log(.hit, "\(target.color) \(target.type.rawValue) \(square) -\(amount) → \(target.hp)HP")
         }
         return destroyed
     }
