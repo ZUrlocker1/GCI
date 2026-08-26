@@ -2323,9 +2323,16 @@ final class FleetRulesTests: XCTestCase {
             XCTAssertEqual(FleetRules.speedMultiplier(piecesRemaining: remaining),
                            CGFloat(expected), accuracy: 0.001, "\(remaining) pieces")
         }
+        // The §21.2 multipliers are exact; the sweep speed carries a tuning scale
+        // on top, so it is checked against the table rather than raw numbers.
         let level1 = LevelManager.parameters(for: 1)
-        XCTAssertEqual(FleetRules.sweepSpeed(level: level1, piecesRemaining: 16), 40)
-        XCTAssertEqual(FleetRules.sweepSpeed(level: level1, piecesRemaining: 1), 100)
+        for remaining in [16, 1] {
+            let expected = level1.fleetSpeed
+                * FleetRules.speedMultiplier(piecesRemaining: remaining)
+                * FleetRules.sweepSpeedScale
+            XCTAssertEqual(FleetRules.sweepSpeed(level: level1, piecesRemaining: remaining),
+                           expected, accuracy: 0.001)
+        }
     }
 
     @MainActor

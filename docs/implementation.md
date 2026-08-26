@@ -225,6 +225,8 @@ rank every few seconds. Two rules came out of it, both now pinned by tests.
       — things that march, things that sit — beat one hybrid one, and engaging
       Black on the board now defuses arcade pressure instead of stacking with it
 - [x] Fixed `GCIBoard.forcePlace` silently overwriting a same-colour occupant
+- [x] Tuning pass: fleet sweep/step pace ×0.7 (`FleetRules.sweepSpeedScale`),
+      grid and deployment-band alpha ×1.3
 
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 
