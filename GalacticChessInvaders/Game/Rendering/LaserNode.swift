@@ -88,7 +88,12 @@ final class LaserNode: SKSpriteNode {
     /// Fires straight up (player, from the ship) or down (enemy, from a fleet
     /// piece) from `origin`, dealing `state.damage` on contact. Deactivates on
     /// its own after `travelDistance` if nothing hits it first.
-    func fire(from origin: CGPoint, damage: Int, speed: CGFloat, travelDistance: CGFloat) {
+    /// `lean` angles the shot: 0 straight, -1 left, +1 right. A leaning shot
+    /// travels 45°, so it covers `travelDistance` on both axes and therefore a
+    /// sqrt(2) longer path — the duration accounts for that, or an angled shot
+    /// would cross the board faster than its stated speed (§21.3).
+    func fire(from origin: CGPoint, damage: Int, speed: CGFloat,
+              travelDistance: CGFloat, lean: Int = 0) {
         guard speed > 0, travelDistance > 0 else { return }
         state = ProjectileState(owner: owner, damage: damage, speed: speed)
         position = origin
@@ -98,8 +103,21 @@ final class LaserNode: SKSpriteNode {
         physicsBody?.contactTestBitMask = liveContactMask
 
         let dy = owner == .player ? travelDistance : -travelDistance
-        let duration = TimeInterval(travelDistance / speed)
-        let move = SKAction.moveBy(x: 0, y: dy, duration: duration)
+        let dx = CGFloat(lean) * travelDistance
+        let path = (dx * dx + dy * dy).squareRoot()
+        let duration = TimeInterval(path / speed)
+
+        // §12 wants the same bolt rotated, in purple, so an angled shot reads as
+        // a different threat rather than a mis-aimed one.
+        if lean == 0 {
+            zRotation = 0
+            color = owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight
+        } else {
+            zRotation = CGFloat(lean) * -.pi / 4
+            color = NeonPalette.shotPurple
+        }
+
+        let move = SKAction.moveBy(x: dx, y: dy, duration: duration)
         let finish = SKAction.run { [weak self] in self?.deactivate() }
         run(.sequence([move, finish]), withKey: Self.flightKey)
     }
@@ -158,6 +176,7 @@ final class LaserNode: SKSpriteNode {
         state = nil
         isHidden = true
         removeAction(forKey: Self.flightKey)
+        zRotation = 0
         childNode(withName: Self.beamName)?.removeFromParent()
         // Stop testing for contacts rather than clearing `isDynamic` — the body
         // has to stay dynamic to ever generate a contact again when re-fired.
