@@ -401,7 +401,12 @@ is answerable and tested in one place rather than scattered through the scene.
 - [x] **Score pops** — `ScorePopPool`, 20 pooled labels; +N rises 30pt over
       0.8s in the target's colour. Shows `ScoreManager.scaled`, the same number
       the total moves by, so the pop can never disagree with the HUD
-- [x] **Screen shake** (§24.1) — applied to `bloomNode`, not a camera: a camera
+- [x] **Screen shake** (§24.1) — pawn silent, officers 4.5pt, queen 6, life
+      lost 10, king 16, every laser hit 3. Doubled after the first pass measured
+      as invisible (micro was 1.5pt over three frames), and extended past the
+      doc's queen-and-king-only table, which left the feature effectively absent
+      — each of those dies at most once a wave. Applied to `bloomNode`, not a
+      camera: a camera
       also changes how a mouse point maps into the scene, and click-to-select
       depends on that. It leaves the starfield still, which reads as the board
       being hit rather than the universe wobbling. Exponential decay, and a

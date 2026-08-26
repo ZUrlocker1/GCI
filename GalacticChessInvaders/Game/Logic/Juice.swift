@@ -25,10 +25,16 @@ enum Juice {
         var isSilent: Bool { amplitude <= 0 || duration <= 0 }
     }
 
-    static let micro  = Shake(amplitude: 1.5, duration: 0.05)
-    static let light  = Shake(amplitude: 3.0, duration: 0.20)
-    static let medium = Shake(amplitude: 5.5, duration: 0.40)
-    static let heavy  = Shake(amplitude: 9.0, duration: 0.60)
+    // Roughly doubled from the first pass, which was set cautiously and
+    // measured afterwards as invisible: micro peaked at 1.5pt over three
+    // frames, which nobody can see, and the whole table topped out at 0.9% of
+    // the screen's width. "Punchy, not nauseating" still governs — heavy is
+    // 16pt on a 960pt scene — but the floor has to be above perceptible.
+    static let micro  = Shake(amplitude: 3.0,  duration: 0.09)
+    static let small  = Shake(amplitude: 4.5,  duration: 0.16)
+    static let light  = Shake(amplitude: 6.0,  duration: 0.20)
+    static let medium = Shake(amplitude: 10.0, duration: 0.40)
+    static let heavy  = Shake(amplitude: 16.0, duration: 0.60)
 
     /// Every player laser landing (§24.1's "micro-shake"). Fires constantly, so
     /// it has to be barely perceptible on its own and only register as weight.
@@ -37,15 +43,24 @@ enum Juice {
     /// §24.1 gives the flagship medium at a shorter 0.3s. Not built yet.
     static let flagshipDestroyed = Shake(amplitude: medium.amplitude, duration: 0.30)
 
-    /// What destroying a piece is worth. §24.1 names only the queen and the
-    /// king; everything else is silent on purpose, or a wave of pawn kills
-    /// would rattle the board continuously and the two that matter would stop
-    /// meaning anything.
+    /// What destroying a piece is worth.
+    ///
+    /// §24.1 names only the queen and the king, and taken literally that leaves
+    /// the feature all but absent: each of those dies at most once a wave, so a
+    /// player can clear a whole level of pawns and rooks and never see the
+    /// board move. The officers get a small shake so destruction has weight
+    /// during ordinary play, and the gap to the queen and king is kept wide
+    /// enough that those two still land as events.
+    ///
+    /// Pawns stay silent deliberately. They die constantly — eight a wave, two
+    /// shots each — and a board that shakes on every pawn is a board that is
+    /// always shaking, which is the same as never.
     static func shake(forDestroying type: PieceType) -> Shake {
         switch type {
-        case .king:  return heavy
-        case .queen: return light
-        default:     return .none
+        case .king:                    return heavy
+        case .queen:                   return light
+        case .rook, .bishop, .knight:  return small
+        case .pawn:                    return .none
         }
     }
 
