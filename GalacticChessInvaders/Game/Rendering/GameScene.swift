@@ -441,7 +441,7 @@ class GameScene: SKScene {
         lastUpdateTime = 0
         hideHUD()
         hideBoard()
-        bloomNode.childNode(withName: "pausedLabel")?.removeFromParent()
+        removePausedOverlay()
         AudioManager.shared.stopMusic()
         DiagnosticsLog.shared.clear()
         DiagnosticsLog.shared.log(.restart, "")
@@ -476,7 +476,7 @@ class GameScene: SKScene {
         lastUpdateTime = 0
         hideHUD()
         hideBoard()
-        bloomNode.childNode(withName: "pausedLabel")?.removeFromParent()
+        removePausedOverlay()
         // GameOverState stopped the music; start it fresh rather than leaving silence.
         AudioManager.shared.playMusic("GCI-intro")
         DiagnosticsLog.shared.log(.restart, "new game")
@@ -1170,14 +1170,40 @@ class GameScene: SKScene {
         label.verticalAlignmentMode   = .center
         label.position = CGPoint(x: size.width / 2, y: size.height / 2)
         bloomNode.addChild(label)
+
+        // Say how to get out, the same way the title screen does — "any key"
+        // is not discoverable otherwise.
+        let hint = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        hint.name = "pausedLabel"
+        hint.text = "PRESS ANY KEY TO RESUME"
+        hint.fontSize = 11
+        hint.fontColor = NeonPalette.cyan
+        hint.horizontalAlignmentMode = .center
+        hint.verticalAlignmentMode   = .center
+        hint.position = CGPoint(x: size.width / 2, y: size.height / 2 - 34)
+        hint.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0.35, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
+        ])))
+        bloomNode.addChild(hint)
+
         // The fleet advances on SKActions, so it ignores the update-loop gate.
         fleet?.setPaused(true)
         DiagnosticsLog.shared.log(.level, "State → PAUSED")
     }
 
     func hidePausedOverlay() {
-        bloomNode.childNode(withName: "pausedLabel")?.removeFromParent()
+        removePausedOverlay()
         fleet?.setPaused(false)
+    }
+
+    /// The PAUSED banner is two labels (title + hint) sharing one name, so this
+    /// clears every match — `childNode(withName:)` returns only the first, which
+    /// would have stranded the hint on screen.
+    private func removePausedOverlay() {
+        for node in bloomNode.children where node.name == "pausedLabel" {
+            node.removeAllActions()
+            node.removeFromParent()
+        }
     }
 
     // MARK: - Game Over
@@ -1523,6 +1549,13 @@ class GameScene: SKScene {
             return
         }
 
+        // Paused: any key resumes. `X` is handled above and still restarts, so
+        // there is always a way out other than resuming.
+        if stateMachine.currentState is PausedState {
+            stateMachine.enter(PlayingState.self)
+            return
+        }
+
         // Hidden test mode: T plays White automatically on a very short beat.
         if stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "t" {
@@ -1566,6 +1599,13 @@ class GameScene: SKScene {
         if hit.name == "infoButton" || hit.parent?.name == "infoButton" {
             AudioManager.shared.play(.uiButtonClick)
             showHowToPlay()
+            return
+        }
+
+        // Paused: a click resumes, same as any key. Checked before the board
+        // hit-test so a click on the board resumes rather than being swallowed.
+        if stateMachine.currentState is PausedState {
+            stateMachine.enter(PlayingState.self)
             return
         }
 

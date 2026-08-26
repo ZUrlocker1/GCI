@@ -14,7 +14,7 @@ enum SoundKey: String, CaseIterable {
     // ── Player spaceship ─────────────────────────────────────────────────────
     case playerLaserFire        // laserRetro_001.ogg        (kenney-sci-fi)
     case playerLaserMiss        // phaserDown1.ogg           (kenney-digital)
-    case playerShipDestroyed    // DSGNBass_Rattling Downer 3.wav (gdc-bundle)
+    case playerShipDestroyed    // explosionCrunch_004.ogg   (kenney-sci-fi)
     case playerExtraLife        // powerUp11.ogg             (kenney-digital)
 
     // ── Chess UI ─────────────────────────────────────────────────────────────
@@ -30,10 +30,10 @@ enum SoundKey: String, CaseIterable {
     // ── Piece destruction — one per type ──────────────────────────────────────
     case pawnDestroyed          // explosionCrunch_000.ogg   (kenney-sci-fi)
     case knightDestroyed        // explosionCrunch_002.ogg   (kenney-sci-fi)
-    case bishopDestroyed        // DSGNTonl_Designed Metal Bowed Screech Tonal Reverb 7.wav (gdc-bundle)
-    case rookDestroyed          // DSGNTonl_Metal Scrape Low Tonal LFE 4.wav (gdc-bundle)
+    case bishopDestroyed        // explosionCrunch_001.ogg   (kenney-sci-fi)
+    case rookDestroyed          // explosionCrunch_003.ogg   (kenney-sci-fi)
     case queenDestroyed         // explosionCrunch_003.ogg   (kenney-sci-fi)
-    case kingDestroyed          // EffectiveTrailer_Booms_Vol2_214.wav (gdc-bundle)
+    case kingDestroyed          // explosionCrunch_004.ogg   (kenney-sci-fi)
 
     // ── Piece hit (laser impact before HP reaches 0) ──────────────────────────
     case pieceHitLight          // impactMetal_001.ogg       (kenney-sci-fi)
@@ -102,7 +102,7 @@ extension SoundKey {
         // Player
         case .playerLaserFire:          return "kenney-sci-fi/laserRetro_001.caf"
         case .playerLaserMiss:          return "kenney-digital/phaserDown1.caf"
-        case .playerShipDestroyed:      return "gdc-bundle/DSGNBass_Rattling Downer 3_344 Audio_Bass Drops and Downers Vol 3.caf"
+        case .playerShipDestroyed:      return "kenney-sci-fi/explosionCrunch_004.caf"
         case .playerExtraLife:          return "kenney-digital/powerUp11.caf"
         // Chess UI
         case .pieceSelected:            return "kenney-digital/pepSound1.caf"
@@ -113,13 +113,19 @@ extension SoundKey {
         case .pawnPromotion:            return "gdc-bundle/UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.caf"
         case .autoMoveTrigger:          return "kenney-digital/lowDown.caf"
         case .turnTimerWarning:         return "kenney-digital/tone1.caf"
-        // Piece destruction
+        // Piece destruction — the kenney explosionCrunch set, which happens to
+        // be a clean ladder by length (0.78s / 1.26s / 1.36s / 1.55s / 1.98s),
+        // so a bigger piece simply gets a longer boom and _004 lands exactly on
+        // §12's "~2 seconds" for the king. Four of these were specced to
+        // gdc-bundle files that are 2.5-15.5 MB each — a 15 MB bishop death is
+        // not a reasonable thing to ship, and these are both smaller and more
+        // consistent with each other.
         case .pawnDestroyed:            return "kenney-sci-fi/explosionCrunch_000.caf"
         case .knightDestroyed:          return "kenney-sci-fi/explosionCrunch_002.caf"
-        case .bishopDestroyed:          return "gdc-bundle/DSGNTonl_Designed Metal Bowed Screech Tonal Reverb 7_The Noisery_Moaning Metal.caf"
-        case .rookDestroyed:            return "gdc-bundle/DSGNTonl_Metal Scrape Low Tonal LFE 4_The Noisery_Moaning Metal.caf"
+        case .bishopDestroyed:          return "kenney-sci-fi/explosionCrunch_001.caf"
+        case .rookDestroyed:            return "kenney-sci-fi/explosionCrunch_003.caf"
         case .queenDestroyed:           return "kenney-sci-fi/explosionCrunch_003.caf"
-        case .kingDestroyed:            return "gdc-bundle/EffectiveTrailer_Booms_Vol2_214.caf"
+        case .kingDestroyed:            return "kenney-sci-fi/explosionCrunch_004.caf"
         // Hits
         case .pieceHitLight:            return "kenney-sci-fi/impactMetal_001.caf"
         case .pieceHitHeavy:            return "kenney-sci-fi/impactMetal_004.caf"
@@ -172,37 +178,6 @@ extension SoundKey {
     }
 
     /// Sounds that should loop (pass numberOfLoops: -1 to AVAudioPlayer)
-    /// A stand-in drawn from the 12 files that *are* bundled, used only when
-    /// `filename` isn't present yet. `filename` stays the canonical intended
-    /// asset — this exists so a phase can be played and heard before its real
-    /// audio is sourced, rather than shipping silent.
-    ///
-    /// Phase 3.2 needed this: every sound the shooting loop asks for
-    /// (player/invader fire, light hits, all six destruction sounds, ship hit)
-    /// was in the not-yet-bundled set, so the whole arcade layer was silent.
-    /// Delete a case here once its real file lands.
-    var placeholderFilename: String? {
-        switch self {
-        case .playerLaserFire:      return "kenney-digital/tone1.caf"
-        case .invaderLaserFire:     return "kenney-digital/lowDown.caf"
-        case .pieceHitLight,
-             .invaderHitsPiece:     return "kenney-sci-fi/impactMetal_004.caf"
-        // Destruction uses purpose-built synthesised explosions rather than a
-        // metal impact — see make_explosions.py. The impact stand-in read as a
-        // light "tink", which made a kill sound like a glancing hit. Sized to
-        // the piece: small pieces get out of the way, the king gets §12's
-        // ~2-second falling sweep.
-        case .pawnDestroyed, .knightDestroyed, .bishopDestroyed:
-            return "generated/explosion-small.caf"
-        case .rookDestroyed, .queenDestroyed:
-            return "generated/explosion-large.caf"
-        case .kingDestroyed:        return "generated/explosion-king.caf"
-        case .playerShipDestroyed:  return "generated/ship-destroyed.caf"
-        case .invaderHitsShip:      return "gdc-bundle/Interface Deny Low Fat Dark.caf"
-        default:                    return nil
-        }
-    }
-
     var loops: Bool {
         switch self {
         case .scoutEnterLoop, .ambientSpaceLoop,

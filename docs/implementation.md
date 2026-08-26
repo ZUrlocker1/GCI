@@ -47,6 +47,18 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
       would have been rejected
 - [x] Escape while entering a high-score name records the entry with a blank
       name rather than trapping the player in the prompt or discarding the score
+- [x] **Keyboard focus.** "PRESS ANY KEY TO START" ignored every key until the
+      player clicked — a focus bug, not an input-mapping one. The diagnostics
+      sidebar's log is a *selectable* `NSTextView`, so it accepts first
+      responder, and the sidebar is on by default in debug builds: AppKit gave
+      it the initial focus and it swallowed every keystroke. Clicking the game
+      moved focus to the `SKView`, which is why keys worked afterwards.
+      `KeyboardFocusedSKView` claims focus on `viewDidMoveToWindow` and again on
+      the next run-loop turn. Reproduced in isolation to confirm: 0 keys reach
+      the scene without it, 1 with
+- [x] Pausing: any key **or** mouse click resumes, and the banner says so.
+      Previously only Escape/P were mapped while paused, so every other key did
+      nothing with no indication why
 - [ ] **60fps / draw count / music looping never actually measured**
 
 Deviations
@@ -293,12 +305,19 @@ was written. Fixed with `ChessEngine.forceRemove(at:)`, the same fix shape as
   reachable states disagreed with the doc, every one of them hiding damage.
   Ruled out rasterization as a cause first — a texture swap inside a
   `shouldRasterize` effect node does repaint, verified against a real render loop
-- **Real explosions.** Destruction was falling back to a metal-impact
-  placeholder, so a kill sounded like a glancing hit. `make_explosions.py`
-  synthesises four purpose-built sounds (decaying noise burst through a falling
-  low-pass, plus a pitch-dropping sine body), sized to the piece — the king
-  getting §12's ~2-second falling sweep. Committed as a script, so the assets
-  are reproducible rather than mystery binaries
+- **The sounds were never missing — they were never copied.** `assets/sfx/`
+  holds the full 132-file library, already converted to `.caf`; only 16 files
+  had ever been copied into the bundled `Resources/sfx/`. Copied the 10 the
+  shooting loop needs (+0.8 MB), so lasers, impacts and explosions all play
+  their real assets. A short-lived placeholder-fallback mechanism written before
+  spotting this has been removed — it solved a misdiagnosed problem
+- **Destruction remapped onto the kenney `explosionCrunch` ladder**, which is
+  conveniently graduated by length (0.78 / 1.26 / 1.36 / 1.55 / 1.98s) so a
+  bigger piece gets a longer boom, and `_004` lands exactly on §12's "~2
+  seconds" for the king. Four of these were specced to gdc-bundle files of
+  2.5–15.5 MB each; a 15 MB bishop death is not shippable, and 28 MB for four
+  sounds bought nothing over 0.6 MB of kenney audio. Deviation from §12.12,
+  taken on size
 - Added `SHOOT` diagnostics for both fire paths. Their absence is why the
   playtest log gave no clue — the shooting loop was completely invisible in it
 
