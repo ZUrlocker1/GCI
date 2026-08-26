@@ -401,11 +401,14 @@ is answerable and tested in one place rather than scattered through the scene.
 - [x] **Score pops** — `ScorePopPool`, 20 pooled labels; +N rises 30pt over
       0.8s in the target's colour. Shows `ScoreManager.scaled`, the same number
       the total moves by, so the pop can never disagree with the HUD
-- [x] **Screen shake** (§24.1) — pawn silent, officers 4.5pt, queen 6, life
-      lost 10, king 16, every laser hit 3. Doubled after the first pass measured
-      as invisible (micro was 1.5pt over three frames), and extended past the
-      doc's queen-and-king-only table, which left the feature effectively absent
-      — each of those dies at most once a wave. Applied to `bloomNode`, not a
+- [x] **Screen shake** (§24.1) — laser hit 4pt, officers 7, queen 10, life lost
+      15, king 24; pawns silent. Raised twice from a first pass that measured as
+      invisible, and extended past the doc's queen-and-king-only table, which
+      left the feature effectively absent since each of those dies at most once
+      a wave. What actually made it read, though, was the offset: it alternates
+      roughly 180° each frame at full amplitude, where the original picked x and
+      y independently — a random walk averages half the amplitude and sits near
+      the centre on a good fraction of frames. Applied to `bloomNode`, not a
       camera: a camera
       also changes how a mouse point maps into the scene, and click-to-select
       depends on that. It leaves the starfield still, which reads as the board

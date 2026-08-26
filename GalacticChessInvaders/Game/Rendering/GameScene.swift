@@ -59,6 +59,7 @@ class GameScene: SKScene {
     /// as the board being hit rather than the universe wobbling.
     private var shake: Juice.Shake = .none
     private var shakeElapsed: TimeInterval = 0
+    private var shakeAngle: CGFloat = 0
 
     /// §24.2's hit freeze. The scene's own `update` keeps running so it can
     /// time itself; everything under `bloomNode` is what actually stops.
@@ -1860,6 +1861,7 @@ class GameScene: SKScene {
         guard next.amplitude >= remaining else { return }
         shake = next
         shakeElapsed = 0
+        shakeAngle = .random(in: 0..<(2 * .pi))
     }
 
     private func advanceShake(_ dt: TimeInterval) {
@@ -1871,8 +1873,9 @@ class GameScene: SKScene {
             bloomNode.position = .zero      // always land back on true centre
             return
         }
-        bloomNode.position = CGPoint(x: .random(in: -amplitude...amplitude),
-                                     y: .random(in: -amplitude...amplitude))
+        let (offset, angle) = Juice.offset(amplitude: amplitude, lastAngle: shakeAngle)
+        shakeAngle = angle
+        bloomNode.position = offset
     }
 
     /// §24.2: hold everything for a few frames, then run `then` — the explosion

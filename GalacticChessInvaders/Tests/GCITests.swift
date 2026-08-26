@@ -3100,10 +3100,11 @@ final class JuiceTests: XCTestCase {
         XCTAssertEqual(Juice.shipDestroyed.duration, 0.4)
         XCTAssertEqual(Juice.laserHit.duration, 0.05)
         // Ordered, so "heavy" is always felt as more than "light".
-        XCTAssertLessThan(Juice.micro.amplitude, Juice.small.amplitude)
-        XCTAssertLessThan(Juice.small.amplitude, Juice.light.amplitude)
-        XCTAssertLessThan(Juice.light.amplitude, Juice.medium.amplitude)
-        XCTAssertLessThan(Juice.medium.amplitude, Juice.heavy.amplitude)
+        let tiers = [Juice.micro, Juice.small, Juice.light, Juice.medium, Juice.heavy]
+        for pair in zip(tiers, tiers.dropFirst()) {
+            XCTAssertLessThan(pair.0.amplitude, pair.1.amplitude)
+            XCTAssertLessThanOrEqual(pair.0.duration, pair.1.duration)
+        }
     }
 
     /// Every tier has to be visible at all. The first pass was measured after
@@ -3117,8 +3118,32 @@ final class JuiceTests: XCTestCase {
             let frames = shake.duration / Juice.frameDuration
             XCTAssertGreaterThanOrEqual(frames, 5, "\(name) lasts \(frames) frames")
         }
-        // And still well inside "punchy, not nauseating": a quarter of a square.
-        XCTAssertLessThanOrEqual(Juice.heavy.amplitude, BoardNode.squareSize / 4)
+        // The board is 512pt centred in a 960pt scene, so it has 224pt of
+        // margin: nothing here can shake an edge into view.
+        XCTAssertLessThan(Juice.heavy.amplitude, (960 - BoardNode.boardSize) / 2)
+    }
+
+    /// The offset alternates rather than wandering. A random walk spends most
+    /// of its frames near the middle and reads as blur; flipping roughly 180°
+    /// each frame puts consecutive frames on opposite sides, so the eye sees
+    /// twice the amplitude between them. This is most of why the shake became
+    /// visible — more than the amplitudes did.
+    func testShakeAlternatesAtFullAmplitude() {
+        var angle = CGFloat(0)
+        var previous: CGPoint?
+        for _ in 0..<40 {
+            let (point, next) = Juice.offset(amplitude: 10, lastAngle: angle)
+            angle = next
+            // Every frame is displaced by the full amplitude, never less.
+            XCTAssertEqual(hypot(point.x, point.y), 10, accuracy: 0.001)
+            if let previous {
+                // Opposite sides, so the travel between frames beats the
+                // amplitude itself — 180° ± 0.7rad is at worst 2·cos(0.7)·a.
+                XCTAssertGreaterThan(hypot(point.x - previous.x, point.y - previous.y),
+                                     10 * 1.5)
+            }
+            previous = point
+        }
     }
 
     /// "Punchy, not nauseating" (§24.1): the shake has to be nearly gone well
