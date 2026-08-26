@@ -135,6 +135,29 @@ final class PieceNode: SKSpriteNode {
         }
     }
 
+    /// A shot bounced off. Used when the player's own laser hits their king,
+    /// which is refused rather than damaging (§Lose conditions would otherwise
+    /// end the run on a stray shot).
+    ///
+    /// Deliberately a separate, self-removing node rather than reusing `halo`:
+    /// the king can be in check at the same time, and that halo is owned by
+    /// `setCheckGlow` — sharing one node would leave the red glow stranded.
+    func flashDeflection() {
+        let ring = SKShapeNode(circleOfRadius: squareSize * 0.34)
+        ring.strokeColor = .white
+        ring.lineWidth = 3
+        ring.glowWidth = 8
+        ring.fillColor = .clear
+        ring.zPosition = 3
+        ring.alpha = 0.95
+        ring.setScale(0.6)
+        addChild(ring)
+        ring.run(.sequence([
+            .group([.scale(to: 1.5, duration: 0.28), .fadeOut(withDuration: 0.28)]),
+            .removeFromParent(),
+        ]))
+    }
+
     func applyHitFlash() {
         // A hit flash and the check glow both drive `color`, so restart the glow
         // afterwards rather than letting the flash strand the piece on its base tint.

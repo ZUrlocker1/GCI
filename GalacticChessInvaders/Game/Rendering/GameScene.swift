@@ -103,6 +103,7 @@ class GameScene: SKScene {
     private static let testBeatDuration: TimeInterval = 1.0
     /// Awarded for checkmating Black (§Scoring), before the level multiplier.
     private static let checkmateBonus = 300
+    private static let endBannerName = "endBanner"
     /// Awarded whenever the black king falls outside of checkmate — shot,
     /// captured, or crushed (§9). Stacks with `checkmateBonus` for the 800-pt
     /// combo when the king dies while a checkmate is also standing.
@@ -580,6 +581,7 @@ class GameScene: SKScene {
     }
 
     func hideBoard() {
+        removeEndBanner()
         laserPool?.deactivateAll()
         laserPool = nil
         fleet?.reset()
@@ -640,7 +642,8 @@ class GameScene: SKScene {
         // is fair game for whatever descends onto it next, kings included.
         guard crush.crushedPiece.type == .king else { return }
         if crush.crushedPiece.color == .black {
-            winLevel(bonus: Self.kingFallBonus, label: "king crushed")
+            winLevel(bonus: Self.kingFallBonus, label: "king crushed",
+                     banner: "BLACK KING DESTROYED")
         } else {
             loseGame(outcome: .whiteKingDestroyed)
         }
@@ -770,9 +773,10 @@ class GameScene: SKScene {
     /// hold on the position, then start the next level. A no-op once the game
     /// is already ending, so a laser and a checkmate landing in the same
     /// instant cannot both try to end the level.
-    private func winLevel(bonus: Int, label: String) {
+    private func winLevel(bonus: Int, label: String, banner: String? = nil) {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
         setTestMode(false, retimingBeat: false)
+        if let banner { showEndBanner(banner, color: NeonPalette.cyan) }
         isEndingGame = true
         turnTimer.stop()
         clearSelection()
@@ -793,12 +797,13 @@ class GameScene: SKScene {
     /// reached rank 1, or the white king was destroyed by something other
     /// than checkmate (shot, or crushed). Mirrors `endGameIfDecided`'s own
     /// ending flow, generalized for a cause that isn't a chess fact.
-    private func loseGame(outcome newOutcome: GameOverNode.Outcome) {
+    private func loseGame(outcome newOutcome: GameOverNode.Outcome, banner: String? = nil) {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
         setTestMode(false, retimingBeat: false)
         outcome = newOutcome
         DiagnosticsLog.shared.log(.white, newOutcome.detail.lowercased())
 
+        if let banner { showEndBanner(banner, color: NeonPalette.magenta) }
         isEndingGame = true
         turnTimer.stop()
         clearSelection()
@@ -845,6 +850,44 @@ class GameScene: SKScene {
             self.showCheckPaths(against: side, pulses: 3)
         }
         run(.sequence([.wait(forDuration: 0.32), redraw]))
+    }
+
+    /// A big centred banner for the 2.5s reveal hold. The gutter status node is
+    /// only a small chip beside the board, and a king being *shot* is not a
+    /// chess event so nothing else announced it: the hold played out over an
+    /// unchanged board and then jumped to the high-score prompt, which read as
+    /// the game skipping straight past the ending.
+    private func showEndBanner(_ text: String, color: SKColor) {
+        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        label.name = Self.endBannerName
+        label.text = text
+        label.fontSize = 30
+        label.fontColor = color
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode   = .center
+        label.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        label.zPosition = 24
+        label.setScale(0.7)
+        label.alpha = 0
+        bloomNode.addChild(label)
+        label.run(.group([
+            .fadeIn(withDuration: 0.18),
+            .scale(to: 1.0, duration: 0.22),
+        ]))
+        label.run(.sequence([
+            .wait(forDuration: 0.4),
+            .repeatForever(.sequence([
+                .fadeAlpha(to: 0.55, duration: 0.5),
+                .fadeAlpha(to: 1.00, duration: 0.5),
+            ])),
+        ]))
+    }
+
+    private func removeEndBanner() {
+        for node in bloomNode.children where node.name == Self.endBannerName {
+            node.removeAllActions()
+            node.removeFromParent()
+        }
     }
 
     /// Holds on the final position for `gameEndRevealDelay` before running `action`.
@@ -1086,7 +1129,8 @@ class GameScene: SKScene {
         // shot or checkmated (§25.2) — refreshStatus below would only ever see
         // checkmate, never a capture that skipped straight past it.
         if let captured = outcome.captured, captured.color == .black, captured.type == .king {
-            winLevel(bonus: Self.kingFallBonus, label: "king captured")
+            winLevel(bonus: Self.kingFallBonus, label: "king captured",
+                     banner: "BLACK KING DESTROYED")
             return
         }
 
@@ -1322,6 +1366,16 @@ class GameScene: SKScene {
             guard let result = CollisionResolver.playerLaserHitBlackPiece(
                 at: pieceNode.square, board: board) else { return }
             handleBlackPieceHit(result, node: pieceNode)
+        } else if pieceNode.piece.type == .king {
+            // The player's own king is armoured against the player's own fire.
+            // Shooting it is almost always a mistake — the ship sits directly
+            // below the back rank — and ending the run on a stray shot punishes
+            // exactly the player who does not yet know the board. Invader fire
+            // still kills it (that path is `resolveEnemyShotHit`), so the lose
+            // condition is intact.
+            pieceNode.flashDeflection()
+            AudioManager.shared.play(.shieldAbsorbsHit)
+            DiagnosticsLog.shared.log(.hit, "white king deflected friendly fire")
         } else {
             guard let result = CollisionResolver.playerLaserHitWhitePiece(
                 at: pieceNode.square, board: board) else { return }
@@ -1379,7 +1433,9 @@ class GameScene: SKScene {
         // beat this happened on hadn't formally resolved yet, so both bonuses
         // land in the same instant rather than one pre-empting the other.
         let bonus = points + (comboBonus ? Self.checkmateBonus : 0)
-        winLevel(bonus: bonus, label: comboBonus ? "king shot + checkmate" : "king shot")
+        winLevel(bonus: bonus,
+                 label: comboBonus ? "king shot + checkmate" : "king shot",
+                 banner: "BLACK KING DESTROYED")
     }
 
     private func handleWhitePieceHit(_ result: CollisionOutcome, node: PieceNode) {
@@ -1397,7 +1453,7 @@ class GameScene: SKScene {
         AudioManager.shared.play(destroyedSound(for: node.piece.type))
 
         if node.piece.type == .king {
-            loseGame(outcome: .whiteKingDestroyed)
+            loseGame(outcome: .whiteKingDestroyed, banner: "WHITE KING DESTROYED")
         }
     }
 

@@ -18,9 +18,14 @@ extension XCTestCase {
 @MainActor
 final class PieceTests: XCTestCase {
 
+    /// 3, not §7.1's 2 — raised so a 2-damage laser needs two shots. One-shot
+    /// pawns read as inconsistent next to every other piece, and skipped the
+    /// damage art entirely.
     func testPawnMaxHP() {
         let pawn = Piece(type: .pawn, color: .white, square: "e2")
-        XCTAssertEqual(pawn.hp, 2)
+        XCTAssertEqual(pawn.hp, 3)
+        XCTAssertEqual(2, Int(ceil(Double(pawn.hp) / Double(ProjectileState.playerLaserDamage))),
+                       "two laser shots to kill")
     }
 
     func testKingMaxHP() {
@@ -368,7 +373,9 @@ final class GCIBoardTests: XCTestCase {
     func testDamageErodesHPThenDestroys() {
         let board = GCIBoard()
         board.setupStandardPosition()
-        XCTAssertFalse(board.applyDamage(1, at: "a7"), "pawn has 2 HP")
+        XCTAssertFalse(board.applyDamage(1, at: "a7"), "pawn has 3 HP")
+        XCTAssertEqual(board.piece(at: "a7")?.hp, 2)
+        XCTAssertFalse(board.applyDamage(1, at: "a7"))
         XCTAssertEqual(board.piece(at: "a7")?.hp, 1)
         XCTAssertTrue(board.applyDamage(1, at: "a7"))
         XCTAssertNil(board.piece(at: "a7"))
@@ -2647,7 +2654,7 @@ final class DamageStateTests: XCTestCase {
     /// invisible on exactly the pieces the player shoots most.
     func testDamageStatesMatchTheDesignTable() {
         let expectations: [(PieceType, Int, DamageState)] = [
-            (.pawn, 0, .full), (.pawn, 1, .chipped),
+            (.pawn, 0, .full), (.pawn, 1, .chipped), (.pawn, 2, .cracked),
             (.knight, 1, .full), (.knight, 2, .chipped), (.knight, 4, .cracked), (.knight, 5, .critical),
             (.bishop, 1, .full), (.bishop, 2, .chipped), (.bishop, 4, .cracked), (.bishop, 5, .critical),
             (.rook, 1, .full), (.rook, 2, .chipped), (.rook, 4, .cracked), (.rook, 6, .critical),
@@ -2792,8 +2799,8 @@ final class CollisionResolverTests: XCTestCase {
             CollisionResolver.enemyShotHitWhitePiece(at: "a2", board: board) else {
             return XCTFail("expected a white-piece hit")
         }
-        XCTAssertFalse(destroyed, "a pawn has 2 HP; one invader shot must not kill it")
-        XCTAssertEqual(board.piece(at: "a2")?.hp, 1)
+        XCTAssertFalse(destroyed, "a pawn has 3 HP; one invader shot must not kill it")
+        XCTAssertEqual(board.piece(at: "a2")?.hp, 2)
     }
 
     func testWrongColorMissesEntirely() {
