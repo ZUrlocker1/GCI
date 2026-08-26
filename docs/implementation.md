@@ -144,6 +144,9 @@ Deviations
       submits at any length, offered once per game; persists across games; seeded
       defaults are 60–100 so any real game displaces them
 - [x] HUD hi-score drawn (best ever, or your run once you pass it)
+- [x] Hidden `V` skips to the next level mid-game, keeping score and lives —
+      no wave-clear overlay, no bonus, no mechanic banner, just a brief
+      SKIP LEVEL notice in the gutter
 - [x] Hidden test mode — `T` toggles; White auto-moves on a 1s beat, labelled
       TEST MODE in the gutter and logged; ends automatically at mate/stalemate
 - [ ] Lives hardcoded to 3 *(blocked until 3.2 — nothing can kill the ship yet)*
@@ -257,6 +260,46 @@ The core shoot-em-up loop, and the phase that finally lets a run *end*.
 - [x] King shot at checkmate — the 800 bonus. The window is real: a beat that
       delivers mate doesn't formally end until it resolves, so the king can
       still be shot while already checkmated
+
+### 3.2 playtest passes
+
+Several rounds of tuning and fixes on top of the initial build. In brief:
+
+- [x] **Collision boxes follow the art.** The hitbox was the sprite's full
+      frame, but the damage sprites erode bottom-up — ink fills ~84% of the box
+      intact, ~49% Chipped, ~27% Cracked — so shots died in blank space beneath
+      a damaged piece. `PieceNode` now measures each texture's ink bounds once,
+      caches them, and refits the box on every damage swap. A rectangle over
+      those bounds rather than a texture-derived body: these are neon outlines
+      covering only ~10% of their box, so an alpha body would be hollow and
+      shots would sail through the middle of a healthy piece
+- [x] **Level mechanic banner** (§12.11) — `LevelBannerNode`, shown at the start
+      of every level above 1, sliding in from the left with the beat held until
+      it leaves, so an escalation is announced before it is inflicted. Names in
+      `LevelManager.announcement(for:)`, using the doc's own titles where it
+      gives them; a test pins the 18/22-character layout limits
+- [x] **Invader firing made coherent** — pause now stops in-flight rounds
+      (previously a paused player could still be hit), §5.3's weighting covers
+      *pawns* as well as front rank (a home rook used to outshoot an advanced
+      pawn), §10.1's Level 1 warning shot is implemented, and a volley staggers
+      over 0.18s with a muzzle flare so a shot has a visible source
+- [x] **Damage is visible when it lands.** Hits updated HP and score but not the
+      sprite until the piece happened to move; damage stages also ran a stage
+      behind the doc's §7.1 table on the big pieces
+- [x] Pawns take two laser shots (HP 2 → 3) — one-shot pawns read as
+      inconsistent against every other piece and skipped the damage art
+- [x] Friendly fire on your own king deflects rather than killing it — the ship
+      sits below the back rank, so it is nearly always an accident. Invader fire
+      still kills it
+- [x] A king destroyed outside checkmate now gets a centred banner before the
+      game-over flow, rather than the reveal hold playing out over an unchanged
+      board
+- [x] Home-rank chess moves keep a black piece in the formation *(experiment)* —
+      a parked black piece sits behind White's own pawns where it is nearly
+      unshootable, so shuffling within ranks 7–8 keeps it marching
+- [x] Tuning: ship 294 px/s, laser 520 px/s, sweep 0.9 of a square, audio mixed
+      as a deliberate ladder (laser under hit under destruction), Black's
+      projectiles lightened 50% so they read as glowing
 
 **A real bug fixed along the way, same class as `forcePlace`:** `GCIBoard
 .applyDamage` only ever updated the arcade-facing `pieces` dictionary, never

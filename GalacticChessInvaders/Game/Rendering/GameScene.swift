@@ -104,10 +104,14 @@ class GameScene: SKScene {
     /// Awarded for checkmating Black (§Scoring), before the level multiplier.
     private static let checkmateBonus = 300
     private static let endBannerName = "endBanner"
+    private static let gutterNoticeName = "gutterNotice"
     /// Gap between rounds in one beat's volley (§5.3 fires them as a group).
     private static let volleyStagger: TimeInterval = 0.18
     /// The Level 1 warning shot is once per level (§10.1).
     private var hasFiredWarningShot = false
+    /// True while the level's mechanic banner is on screen. The beat waits for
+    /// it, so an escalation is announced before it is inflicted (§12.11).
+    private var isAnnouncingLevel = false
     /// Awarded whenever the black king falls outside of checkmate — shot,
     /// captured, or crushed (§9). Stacks with `checkmateBonus` for the 800-pt
     /// combo when the king dies while a checkmate is also standing.
@@ -453,6 +457,42 @@ class GameScene: SKScene {
         stateMachine.enter(TitleState.self)
     }
 
+    /// Hidden developer aid: jump straight to the next level, keeping score and
+    /// lives. Rebuilds the playfield exactly as finishing a wave does, but with
+    /// no wave-clear overlay and no bonus — it is a shortcut for reaching a
+    /// level, not a way to farm one.
+    private func skipLevel() {
+        guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
+        DiagnosticsLog.shared.log(.test, "SKIP LEVEL → \(levels.level + 1)")
+        // buildPlayfield tears the board down and back up, so the notice has to
+        // be raised afterwards or it is removed with everything else. No
+        // mechanic banner either — a skip is a developer shortcut, not a reveal.
+        startNextLevel(announce: false)
+        flashGutterNotice("SKIP LEVEL")
+    }
+
+    /// A brief label in the gutter slot TEST MODE uses, for developer actions
+    /// that happen once rather than toggling.
+    private func flashGutterNotice(_ text: String) {
+        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        label.name = Self.gutterNoticeName
+        label.text = text
+        label.fontSize = 9
+        label.fontColor = NeonPalette.alertOrange
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode = .center
+        // Sits just under the TEST MODE slot so both can show at once.
+        label.position = CGPoint(x: 112, y: Self.boardBottomY + 30)
+        label.zPosition = 12
+        bloomNode.addChild(label)
+        label.run(.sequence([
+            .repeat(.sequence([.fadeAlpha(to: 0.35, duration: 0.18),
+                               .fadeAlpha(to: 1.00, duration: 0.18)]), count: 3),
+            .fadeOut(withDuration: 0.4),
+            .removeFromParent(),
+        ]))
+    }
+
     /// Hidden developer aid: White stops waiting for the player and the beat
     /// collapses to a fraction of a second, so a whole game plays through quickly.
     private func toggleTestMode() {
@@ -502,18 +542,18 @@ class GameScene: SKScene {
 
     /// The next wave: level and multiplier step up, score carries over. Lives
     /// carry over too (§8.5) — only the laser cap and invincibility reset.
-    private func startNextLevel() {
+    private func startNextLevel(announce: Bool = true) {
         levels.advance()
         ScoreManager.shared.advanceLevel()
         shipState?.resetForNewLevel()
-        buildPlayfield()
+        buildPlayfield(announceLevel: announce)
         DiagnosticsLog.shared.log(.level,
             "Level \(levels.level) — beat \(Int(levels.parameters.turnTimer))s, "
             + "\(levels.parameters.blackMovesPerTurn) black move(s)/turn, "
             + "×\(ScoreManager.shared.multiplier)")
     }
 
-    private func buildPlayfield() {
+    private func buildPlayfield(announceLevel: Bool = true) {
         hideBoard()
         board.setupStandardPosition()
 
@@ -572,7 +612,46 @@ class GameScene: SKScene {
         testModeLabel = testLabel
 
         refreshHUD()
-        beginBeat()
+        if announceLevel {
+            announceLevelThenBegin()
+        } else {
+            beginBeat()
+        }
+    }
+
+    /// Level 1 starts straight away; anything above it gets its mechanic banner
+    /// first, with the board visible behind it and the beat held until it
+    /// leaves (§12.11).
+    private func announceLevelThenBegin() {
+        guard let announcement = LevelManager.announcement(for: levels.level) else {
+            beginBeat()
+            return
+        }
+
+        isAnnouncingLevel = true
+        // Nothing should be advancing while the banner explains what is about
+        // to happen — both of these run on SKActions and ignore the beat gate.
+        fleet?.setPaused(true)
+        laserPool?.setPaused(true)
+
+        let banner = LevelBannerNode(title: announcement.title,
+                                     subtitle: announcement.subtitle,
+                                     sceneSize: size)
+        addChild(banner)
+        DiagnosticsLog.shared.log(.level,
+            "\(announcement.title) — \(announcement.subtitle)")
+
+        run(.sequence([
+            .wait(forDuration: LevelBannerNode.totalDuration),
+            .run { [weak self] in
+                guard let self, self.isAnnouncingLevel else { return }
+                self.isAnnouncingLevel = false
+                guard self.stateMachine.currentState is PlayingState else { return }
+                self.fleet?.setPaused(false)
+                self.laserPool?.setPaused(false)
+                self.beginBeat()
+            },
+        ]))
     }
 
     private func refreshHUD() {
@@ -586,7 +665,12 @@ class GameScene: SKScene {
 
     func hideBoard() {
         removeEndBanner()
+        for node in bloomNode.children where node.name == Self.gutterNoticeName {
+            node.removeAllActions()
+            node.removeFromParent()
+        }
         hasFiredWarningShot = false
+        isAnnouncingLevel = false
         laserPool?.deactivateAll()
         laserPool = nil
         fleet?.reset()
@@ -1614,7 +1698,8 @@ class GameScene: SKScene {
             // White's move and no beat is running, start one. `resolveBeat` has
             // several early returns — pausing while Black was thinking used to
             // leave the game with no live beat and no way to move again.
-            if !isEndingGame, !isResolvingBeat, board.turn == .white, !turnTimer.isRunning {
+            if !isEndingGame, !isResolvingBeat, !isAnnouncingLevel,
+               board.turn == .white, !turnTimer.isRunning {
                 beginBeat()
             }
 
@@ -1713,6 +1798,13 @@ class GameScene: SKScene {
         if stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "t" {
             toggleTestMode()
+            return
+        }
+
+        // Hidden: V skips to the next level, mid-game, with no fanfare.
+        if stateMachine.currentState is PlayingState,
+           event.charactersIgnoringModifiers?.lowercased() == "v" {
+            skipLevel()
             return
         }
 

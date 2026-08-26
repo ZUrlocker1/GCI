@@ -41,15 +41,99 @@ final class PieceNode: SKSpriteNode {
         color = baseColor
         zPosition = 5
 
+        rebuildPhysicsBody()
+    }
+
+    // MARK: - Collision shape
+
+    /// Ink bounds per texture, in unit coordinates of the texture box measured
+    /// from the bottom-left. Computed once per sprite and cached: 36 sprites,
+    /// each scanned a single time, and never during a frame that matters.
+    private static var inkBoundsCache: [String: CGRect] = [:]
+
+    /// Fits the collision box to the sprite's visible ink rather than its whole
+    /// frame.
+    ///
+    /// The art erodes from the bottom up — measured across all six pieces, ink
+    /// fills ~84% of the box when intact, ~49% at Chipped and ~27% at Cracked —
+    /// so a full-frame rectangle left a tall band of empty space below a damaged
+    /// piece that still absorbed shots. A laser aimed at a half-destroyed king
+    /// died in blank space under it.
+    ///
+    /// A rectangle over the ink bounds, not a texture-derived (alpha) body:
+    /// these are neon outlines covering only ~10% of their box even intact, so
+    /// an alpha body would be hollow and shots would sail through the middle of
+    /// a healthy piece.
+    private func rebuildPhysicsBody() {
+        let unit = Self.inkBounds(forTexture: piece.textureName)
+        let boxWidth = size.width, boxHeight = size.height
+
+        // `unit` is measured from the image's TOP-left, while the node's +y is
+        // up, so the vertical axis inverts and the horizontal one does not.
+        // Getting this backwards puts the hitbox at the wrong end of the piece
+        // and makes the very problem it fixes worse, so it is worth being
+        // explicit: a Cracked piece's ink is near the top of its box, and the
+        // body must end up near the top too.
+        let bodySize = CGSize(width: unit.width * boxWidth,
+                              height: unit.height * boxHeight)
+        let centre = CGPoint(x: (unit.midX - 0.5) * boxWidth,
+                             y: (0.5 - unit.midY) * boxHeight)
+
         // Contact detection only — no physical push. The laser side owns
         // contactTestBitMask, so this only needs the right categoryBitMask.
-        let body = SKPhysicsBody(rectangleOf: size)
+        let body = SKPhysicsBody(rectangleOf: bodySize, center: centre)
         body.isDynamic = false
         body.categoryBitMask = piece.color == .white
             ? PhysicsCategory.friendlyPiece : PhysicsCategory.enemyPiece
         body.contactTestBitMask = PhysicsCategory.none
         body.collisionBitMask = PhysicsCategory.none
         physicsBody = body
+    }
+
+    private static func inkBounds(forTexture name: String) -> CGRect {
+        if let cached = inkBoundsCache[name] { return cached }
+        let bounds = measureInkBounds(forTexture: name)
+            ?? CGRect(x: 0, y: 0, width: 1, height: 1)   // fall back to the full frame
+        inkBoundsCache[name] = bounds
+        return bounds
+    }
+
+    /// Scans the texture's alpha for its bounding box, returned in unit
+    /// coordinates measured from the image's **top**-left (the natural bitmap
+    /// order — the caller flips y). Nil if the image can't be read, in
+    /// which case the caller keeps the full frame — a slightly generous hitbox
+    /// is much better than none.
+    private static func measureInkBounds(forTexture name: String) -> CGRect? {
+        guard let image = SKTexture(imageNamed: name).cgImage() as CGImage?,
+              image.width > 0, image.height > 0 else { return nil }
+        let w = image.width, h = image.height
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let context = CGContext(
+            data: &pixels, width: w, height: h,
+            bitsPerComponent: 8, bytesPerRow: w * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        // Row 0 of the buffer is the image's top row. Verified against an
+        // independent raw-PNG scan: both report the Cracked king's ink at
+        // 7.3%-58% of the box, so this is top-down, not bottom-up.
+        var minX = w, maxX = -1, minY = h, maxY = -1
+        for y in 0..<h {
+            let row = y * w * 4
+            for x in 0..<w where pixels[row + x * 4 + 3] > 20 {
+                if x < minX { minX = x }
+                if x > maxX { maxX = x }
+                if y < minY { minY = y }
+                if y > maxY { maxY = y }
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return nil }   // fully transparent
+        return CGRect(x: CGFloat(minX) / CGFloat(w),
+                      y: CGFloat(minY) / CGFloat(h),
+                      width: CGFloat(maxX - minX + 1) / CGFloat(w),
+                      height: CGFloat(maxY - minY + 1) / CGFloat(h))
     }
 
     @available(*, unavailable)
@@ -122,6 +206,8 @@ final class PieceNode: SKSpriteNode {
         let next = SKTexture(imageNamed: updated.textureName)
         texture = next
         size = Self.fit(next, in: squareSize)
+        // The eroded art is a different shape, so the hitbox has to follow it.
+        rebuildPhysicsBody()
 
         if updated.damageState == .critical {
             guard action(forKey: Self.flickerKey) == nil else { return }
