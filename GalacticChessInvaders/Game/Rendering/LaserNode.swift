@@ -34,16 +34,34 @@ final class LaserNode: SKSpriteNode {
         isHidden = true
 
         let body = SKPhysicsBody(rectangleOf: size)
-        body.isDynamic = false
+        // MUST be dynamic. SpriteKit only evaluates a contact pair when at
+        // least one body is dynamic — two static bodies never produce a
+        // didBegin callback at all, which is exactly why nothing collided when
+        // this was first written. Pieces and the ship stay static; the laser is
+        // the moving half, so it carries the dynamic flag.
+        //
+        // It is still driven entirely by SKAction, not by the simulation:
+        // gravity off, no collision response, no damping or rotation. The body
+        // exists only to generate contacts.
+        body.isDynamic = true
+        body.affectedByGravity = false
+        body.allowsRotation = false
+        body.linearDamping = 0
+        body.friction = 0
+        body.restitution = 0
         body.usesPreciseCollisionDetection = true   // thin and fast — avoid tunnelling
         body.categoryBitMask = owner == .player ? PhysicsCategory.playerLaser : PhysicsCategory.enemyShot
-        // §20 Phase 3.2 bitmask spec: player laser tests only pieces (not the
-        // ship, not enemy shots); enemy shots test only white pieces + ship.
-        body.contactTestBitMask = owner == .player
-            ? (PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece)
-            : (PhysicsCategory.friendlyPiece | PhysicsCategory.ship)
+        body.contactTestBitMask = PhysicsCategory.none   // parked; set on fire
         body.collisionBitMask = PhysicsCategory.none
         physicsBody = body
+    }
+
+    /// §20 Phase 3.2 bitmask spec: player laser tests only pieces (not the
+    /// ship, not enemy shots); enemy shots test only white pieces + ship.
+    private var liveContactMask: UInt32 {
+        owner == .player
+            ? (PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece)
+            : (PhysicsCategory.friendlyPiece | PhysicsCategory.ship)
     }
 
     @available(*, unavailable)
@@ -70,9 +88,13 @@ final class LaserNode: SKSpriteNode {
     /// piece) from `origin`, dealing `state.damage` on contact. Deactivates on
     /// its own after `travelDistance` if nothing hits it first.
     func fire(from origin: CGPoint, damage: Int, speed: CGFloat, travelDistance: CGFloat) {
+        guard speed > 0, travelDistance > 0 else { return }
         state = ProjectileState(owner: owner, damage: damage, speed: speed)
         position = origin
         isHidden = false
+        // Only a live laser tests for contacts, so a parked one sitting on top
+        // of a piece cannot fire a spurious hit.
+        physicsBody?.contactTestBitMask = liveContactMask
 
         let dy = owner == .player ? travelDistance : -travelDistance
         let duration = TimeInterval(travelDistance / speed)
@@ -88,7 +110,9 @@ final class LaserNode: SKSpriteNode {
         state = nil
         isHidden = true
         removeAction(forKey: Self.flightKey)
-        physicsBody?.isDynamic = false
+        // Stop testing for contacts rather than clearing `isDynamic` — the body
+        // has to stay dynamic to ever generate a contact again when re-fired.
+        physicsBody?.contactTestBitMask = PhysicsCategory.none
         let callback = onDeactivate
         onDeactivate = nil
         callback?()

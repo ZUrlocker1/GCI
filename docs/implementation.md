@@ -263,6 +263,29 @@ was written. Fixed with `ChessEngine.forceRemove(at:)`, the same fix shape as
   constructed anywhere, a leftover from before wave-clear existed. Removed
   while touching this enum for the new win/lose cases
 
+**Playtest #1 found three real defects, all fixed:**
+- **No collisions at all.** Every physics body was created `isDynamic = false`.
+  SpriteKit only evaluates a contact pair when at least one body is dynamic —
+  two static bodies never produce a `didBegin` callback, so lasers passed
+  straight through pieces: no damage, no explosion, no score. The laser is now
+  the dynamic half (gravity off, no collision response, SKAction-driven as
+  before); pieces and the ship stay static. Verified empirically against a real
+  render loop — static/static reports 0 contacts, one dynamic reports the hit —
+  and pinned by `LaserPhysicsTests`
+- **Enemy shots spawned off-target.** They used `drawnPosition`, which is
+  board-local — correct for check paths and tethers, which are `boardNode`
+  children — but lasers live in `bloomNode`, and the board is inset within it.
+  Every fleet shot appeared a board-origin down and to the left. Now converted
+  through `laserOrigin(forFleetSquare:)`
+- **Silent.** Every sound the shooting loop asks for was in the "not yet
+  bundled" set, so the whole arcade layer had no audio. Added
+  `SoundKey.placeholderFilename` — `filename` stays the canonical intended
+  asset, and a stand-in from the 12 bundled files is used only when the real
+  one is absent. The startup log now reports how many keys are on placeholders,
+  so a stopgap is never mistaken for finished sound design
+- Added `SHOOT` diagnostics for both fire paths. Their absence is why the
+  playtest log gave no clue — the shooting loop was completely invisible in it
+
 **Not yet done:** visually verified in the running app. Confirmed instead via
 a trustworthy typecheck pass (macro-plugin flakiness ruled out first), a
 standalone runtime harness exercising every pure Logic path (31/31 checks:

@@ -172,6 +172,31 @@ extension SoundKey {
     }
 
     /// Sounds that should loop (pass numberOfLoops: -1 to AVAudioPlayer)
+    /// A stand-in drawn from the 12 files that *are* bundled, used only when
+    /// `filename` isn't present yet. `filename` stays the canonical intended
+    /// asset — this exists so a phase can be played and heard before its real
+    /// audio is sourced, rather than shipping silent.
+    ///
+    /// Phase 3.2 needed this: every sound the shooting loop asks for
+    /// (player/invader fire, light hits, all six destruction sounds, ship hit)
+    /// was in the not-yet-bundled set, so the whole arcade layer was silent.
+    /// Delete a case here once its real file lands.
+    var placeholderFilename: String? {
+        switch self {
+        case .playerLaserFire:      return "kenney-digital/tone1.caf"
+        case .invaderLaserFire:     return "kenney-digital/lowDown.caf"
+        case .pieceHitLight,
+             .invaderHitsPiece:     return "kenney-sci-fi/impactMetal_004.caf"
+        case .pawnDestroyed, .knightDestroyed, .bishopDestroyed,
+             .rookDestroyed, .queenDestroyed:
+            return "kenney-sci-fi/impactMetal_004.caf"
+        case .kingDestroyed, .playerShipDestroyed:
+            return "gdc-bundle/DSGNBass_Bass Drop & Downer Slow 10_344 Audio_Bass Drops & Downers.caf"
+        case .invaderHitsShip:      return "gdc-bundle/Interface Deny Low Fat Dark.caf"
+        default:                    return nil
+        }
+    }
+
     var loops: Bool {
         switch self {
         case .scoutEnterLoop, .ambientSpaceLoop,
