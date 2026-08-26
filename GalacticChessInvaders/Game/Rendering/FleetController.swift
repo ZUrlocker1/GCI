@@ -112,6 +112,14 @@ final class FleetController {
         return wasMember
     }
 
+    /// The rearmost rank the formation still occupies — the anchor "the back N
+    /// ranks" is measured from (`FleetRules.staysInFormation`). Rank 8 at the
+    /// start of a level, one lower after each rank descent. Nil when the fleet
+    /// is empty.
+    var rearRank: Int? {
+        members.keys.compactMap { Int(String($0.suffix(1))) }.max()
+    }
+
     /// Moves an existing member to a new square without it leaving the
     /// formation — a black piece shuffling around its home ranks (§FleetRules
     /// .staysInFormation). The node keeps its fleet parent, so the caller still

@@ -120,24 +120,31 @@ enum FleetRules {
 
     /// The rearmost rank a black piece can move to and still march with the
     /// fleet. Ranks 7-8 are Black's own two starting rows.
-    static let formationRearRank = 7
+    /// How many of the formation's own rearmost ranks keep a moving piece in
+    /// step with it. Two by default; three from Level 10 (`deepFormationRanks`).
+    static let formationRanks = 2
+    static let deepFormationRanks = 3
 
     /// Does a black piece that just played a chess move stay in the formation?
     ///
     /// A piece that leaves the fleet stops sweeping, and a stationary black
     /// piece is usually parked directly behind one of White's own pawns — which
     /// makes it very hard to shoot, since a laser is consumed by the first thing
-    /// it touches. Shuffling around its home ranks therefore keeps a piece in
-    /// the formation; genuinely advancing (rank 6 or beyond) still detaches it.
+    /// it touches. Shuffling around the formation's own rear ranks therefore
+    /// keeps a piece marching; genuinely advancing out in front detaches it.
     ///
-    /// Note this reads the *destination* rank absolutely, not relative to the
-    /// formation. Once the fleet has descended past rank 7 nothing can satisfy
-    /// it any more, so the rule quietly decays back to "any chess move
-    /// detaches" as a level wears on. That may want revisiting if the effect
-    /// should persist — it would mean tracking the formation's own front rank.
-    static func staysInFormation(afterMovingTo square: String) -> Bool {
+    /// Measured relative to `formationRearRank` — the rearmost rank the fleet
+    /// still occupies — not to absolute ranks 7 and 8. An absolute rule expired
+    /// silently: after two rank descents nothing could satisfy "rank >= 7" any
+    /// more, so the whole mechanic decayed back to "any chess move detaches"
+    /// partway through every level. Relative, "the back three ranks of the
+    /// fleet" stays true however far it has descended.
+    static func staysInFormation(afterMovingTo square: String,
+                                 formationRearRank: Int,
+                                 ranks: Int = formationRanks) -> Bool {
         guard let rank = Int(String(square.last ?? "0")) else { return false }
-        return rank >= formationRearRank
+        // The band runs from the rear rank forward by `ranks`.
+        return rank > formationRearRank - ranks && rank <= formationRearRank
     }
 
     // MARK: - King Activated (§10.1, Level 7+)
@@ -205,6 +212,15 @@ enum FleetRules {
     /// and the point of the level is that the game stops respecting its own
     /// limits. Levels 1-5 keep the readable width.
     static let wideSweepAmplitudeRatio: CGFloat = 0.75
+
+    /// Level 10's sweep: 1.75 squares end to end, not 2.0.
+    ///
+    /// 2.0 would put the amplitude at exactly one file, which is the single
+    /// worst width available — a piece at the extreme would sit dead centre on
+    /// its neighbour's square, reading as a confident answer to the wrong
+    /// question rather than as something in between. 0.875 of a file stays
+    /// visibly off-grid.
+    static let widestSweepAmplitudeRatio: CGFloat = 0.875
 
     static func sweepAmplitude(squareSize: CGFloat, ratio: CGFloat) -> CGFloat {
         squareSize * ratio
