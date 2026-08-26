@@ -261,7 +261,7 @@ left the game with no ending at all.
 | 4 | RELENTLESS | Fire speed +30% |
 | 5 | TRIPLE THREAT | Black moves three times |
 | 6 | WIDE ORBIT | Sweep widens to 1.5 squares |
-| 7 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon |
+| 7 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
 | 8 | CROSSFIRE | Bishops fire 45° diagonals on their own cadence |
 | 9 | ARMORED PAWNS | **Banner only — needs pawn regeneration (§6.x)** |
 | 10 | BLITZ! | 3s clock, three marching ranks, and a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th |
@@ -283,6 +283,10 @@ King Activated and Crossfire are their own waves (Blitz carries Crossfire again)
   attempt was a ring behind the sprite, which was the check halo) and a tick
   grows along the line the round will take, so at Crossfire the *angle* is
   readable before the missile exists
+- Every gunner charges up, the king included — a round that appears with no
+  telegraph has no visible source, because the fleet keeps sweeping while the
+  shot falls straight, so the shooter has slid out from behind it by the time
+  the eye arrives
 - Bishops lean toward one of White's actual pieces, clamped to 17°–45°. A fixed
   45° from the back rank crosses seven files before reaching White: measured, a
   third of shooter positions sent the round off the board entirely, now 4%

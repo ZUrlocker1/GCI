@@ -2957,6 +2957,26 @@ final class LaserPhysicsTests: XCTestCase {
         }
     }
 
+    /// The king's heavy dressing has to survive being aimed. `setHeavy` runs
+    /// before `fire`, and `fire` re-dresses the round for its angle — which used
+    /// to reset the heavy shot to an ordinary bolt's size and colour while
+    /// leaving its beam attached.
+    func testAHeavyRoundStaysHeavyWhenItIsAimed() {
+        let plain = LaserNode(owner: .enemy)
+        plain.fire(from: .zero, damage: 1, speed: 200, travelDistance: 400)
+        let plainSize = plain.size
+
+        for lean in [CGFloat(0), 0.4] {
+            let heavy = LaserNode(owner: .enemy)
+            heavy.setHeavy(true)
+            heavy.fire(from: .zero, damage: 2, speed: 300, travelDistance: 400, lean: lean)
+            XCTAssertGreaterThan(heavy.size.width, plainSize.width, "lean \(lean)")
+            XCTAssertGreaterThan(heavy.size.height, plainSize.height, "lean \(lean)")
+            XCTAssertEqual(heavy.color, .white, "lean \(lean)")
+            XCTAssertNotNil(heavy.childNode(withName: "kingBeam"), "lean \(lean)")
+        }
+    }
+
     /// An angled round is a different shape as well as a different colour, and
     /// the hitbox has to follow it — a paddle-shaped body would collect hits the
     /// missile never touched.
@@ -3292,6 +3312,22 @@ final class KingActivatedTests: XCTestCase {
         XCTAssertEqual(abs(FleetRules.diagonalSlope(fromFile: 3, rank: 4,
                                                     towardFile: 6, rank: 4)),
                        FleetRules.maxDiagonalSlope)
+    }
+
+    /// The king inflects where a bishop commits: same aiming, a shallower band,
+    /// and most rounds still go straight down.
+    func testTheKingsAngleIsShallowerThanABishops() {
+        XCTAssertLessThan(FleetRules.kingMaxSlope, FleetRules.maxDiagonalSlope)
+        XCTAssertLessThan(FleetRules.kingMinSlope, FleetRules.minDiagonalSlope)
+        XCTAssertLessThan(FleetRules.kingShotAngleShare, 0.5,
+                          "straight down stays the king's default")
+        for targetFile in 0...7 {
+            let slope = FleetRules.diagonalSlope(
+                fromFile: 4, rank: 8, towardFile: targetFile, rank: 1,
+                minSlope: FleetRules.kingMinSlope, maxSlope: FleetRules.kingMaxSlope)
+            XCTAssertGreaterThanOrEqual(abs(slope), FleetRules.kingMinSlope)
+            XCTAssertLessThanOrEqual(abs(slope), FleetRules.kingMaxSlope)
+        }
     }
 
     /// Whatever the target, the round always reads as angled — never vertical,

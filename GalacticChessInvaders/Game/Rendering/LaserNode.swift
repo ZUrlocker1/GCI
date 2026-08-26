@@ -35,6 +35,8 @@ final class LaserNode: SKSpriteNode {
     /// Whether the current body is the angled round's circle. Tracked because
     /// `size` alone cannot tell the two apart on a re-fire.
     private var bodyIsRound = false
+    private var isHeavy = false
+    private var isDiagonal = false
 
     /// The angled round's dressing — a bright nose and a two-stage exhaust.
     /// Built once and shown or hidden per shot rather than created per shot
@@ -189,25 +191,9 @@ final class LaserNode: SKSpriteNode {
         // Local +y is the tail, so +y must point *opposite* the travel.
         // R(z)·(0,1) = (-sin z, cos z), so z = atan2(dx, -dy).
         zRotation = atan2(dx, -dy)
+        isDiagonal = diagonal
+        applyDressing()
 
-        let target = diagonal ? Self.diagonalSize
-                              : CGSize(width: Self.width,
-                                       height: owner == .player ? 18 : 14)
-        if size != target || diagonal != bodyIsRound {
-            size = target
-            // An angled round gets a *round* body, so its hitbox cannot depend
-            // on the angle it happens to be travelling at. A rect aligned with
-            // the flight path presents only its 3.4pt width to whatever it is
-            // aimed at, and a bolt that thin grazes past corners the player
-            // reads as hits. The circle is both rotation-invariant and wider,
-            // which is the compensation an angled shot needs.
-            bodyIsRound = diagonal
-            installBody(for: target)
-        }
-        color = diagonal ? NeonPalette.shotPurple
-                         : (owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight)
-
-        missileRig.isHidden = !diagonal
         missileRig.removeAction(forKey: Self.exhaustKey)
         if diagonal {
             // A slow flicker, so the exhaust reads as burning rather than drawn.
@@ -224,14 +210,9 @@ final class LaserNode: SKSpriteNode {
     /// and white-hot — or back to an ordinary bolt. Purely cosmetic; speed and
     /// damage are the caller's.
     func setHeavy(_ heavy: Bool) {
+        isHeavy = heavy
         let baseHeight: CGFloat = owner == .player ? 18 : 14
-        // Only slightly bigger than an ordinary bolt. At 2.5x width it read as
-        // a blocky rectangle rather than a projectile — the beam below is what
-        // now carries the "this is the king's weapon" signal.
-        size = heavy ? CGSize(width: Self.width * 1.3, height: baseHeight * 1.4)
-                     : CGSize(width: Self.width, height: baseHeight)
-        color = heavy ? .white
-                      : (owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight)
+        applyDressing()
 
         childNode(withName: Self.beamName)?.removeFromParent()
         if heavy {
@@ -254,9 +235,39 @@ final class LaserNode: SKSpriteNode {
                 .fadeAlpha(to: 0.85, duration: 0.07),
             ])))
         }
-        // The body must follow, or a heavy round keeps a thin bolt's hitbox.
-        bodyIsRound = false
-        installBody(for: size)
+    }
+
+    /// Size, colour and hitbox from `isHeavy` and `isDiagonal` together.
+    ///
+    /// These used to be set in two places that each assumed the other had not
+    /// run. `setHeavy` is called before `fire`, and `fire` then re-dressed the
+    /// round for its angle — which reset the king's heavy shot back to an
+    /// ordinary bolt's size and colour while leaving its beam attached. One
+    /// function owns the whole look now.
+    private func applyDressing() {
+        let baseHeight: CGFloat = owner == .player ? 18 : 14
+        let target: CGSize
+        if isHeavy {
+            // Only slightly bigger than an ordinary bolt. At 2.5x width it read
+            // as a blocky rectangle rather than a projectile — the beam is what
+            // carries the "this is the king's weapon" signal.
+            target = CGSize(width: Self.width * 1.3, height: baseHeight * 1.4)
+        } else if isDiagonal {
+            target = Self.diagonalSize
+        } else {
+            target = CGSize(width: Self.width, height: baseHeight)
+        }
+        size = target
+        color = isHeavy ? .white
+              : isDiagonal ? NeonPalette.shotPurple
+              : (owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight)
+        missileRig.isHidden = !isDiagonal || isHeavy   // the beam is the king's trail
+        // An angled round gets a *round* body, so its hitbox cannot depend on
+        // the angle it happens to be travelling at. A rect aligned with the
+        // flight path presents only its 3.4pt width to whatever it is aimed at,
+        // and a bolt that thin grazes past corners the player reads as hits.
+        bodyIsRound = isDiagonal
+        installBody(for: target)
     }
 
     /// Stops the flight and returns the node to the pool. Safe to call whether
@@ -270,6 +281,8 @@ final class LaserNode: SKSpriteNode {
         missileRig.isHidden = true
         missileRig.removeAction(forKey: Self.exhaustKey)
         missileRig.alpha = 1
+        isHeavy = false
+        isDiagonal = false
         childNode(withName: Self.beamName)?.removeFromParent()
         // Stop testing for contacts rather than clearing `isDynamic` — the body
         // has to stay dynamic to ever generate a contact again when re-fired.
