@@ -1132,9 +1132,17 @@ final class CheckPathNodeTests: XCTestCase {
         board.children.filter { $0.name == "checkPath" }
     }
 
+    /// Endpoints are points now, not squares — fleet pieces are drawn off their
+    /// logical square, so the scene resolves where each piece actually is.
+    private func path(_ board: BoardNode, _ from: String, _ to: String,
+                      isJump: Bool = false) -> (from: CGPoint, to: CGPoint, isJump: Bool) {
+        (from: board.center(of: from) ?? .zero,
+         to: board.center(of: to) ?? .zero, isJump: isJump)
+    }
+
     func testLineStartsAtTheAttackerAndPointsAtTheKing() throws {
         let board = BoardNode()
-        board.showCheckPaths([(from: "e8", to: "e1", isJump: false)], color: .magenta)
+        board.showCheckPaths([path(board, "e8", "e1")], color: .magenta)
 
         let node = try XCTUnwrap(pathNodes(in: board).first)
         let shapes = node.children.compactMap { $0 as? SKShapeNode }
@@ -1153,15 +1161,15 @@ final class CheckPathNodeTests: XCTestCase {
 
     func testDoubleCheckDrawsTwoPaths() {
         let board = BoardNode()
-        board.showCheckPaths([(from: "e8", to: "e1", isJump: false),
-                              (from: "f3", to: "e1", isJump: true)], color: .magenta)
+        board.showCheckPaths([path(board, "e8", "e1"),
+                              path(board, "f3", "e1", isJump: true)], color: .magenta)
         XCTAssertEqual(pathNodes(in: board).count, 2)
     }
 
     func testRepeatedShowsReplaceRatherThanStack() {
         let board = BoardNode()
         for _ in 0..<5 {
-            board.showCheckPaths([(from: "e8", to: "e1", isJump: false)], color: .magenta)
+            board.showCheckPaths([path(board, "e8", "e1")], color: .magenta)
         }
         XCTAssertEqual(pathNodes(in: board).count, 1)
         board.clearCheckPaths()
@@ -1170,10 +1178,15 @@ final class CheckPathNodeTests: XCTestCase {
 
     func testDegenerateInputIsSafe() {
         let board = BoardNode()
-        board.showCheckPaths([(from: "zz", to: "e1", isJump: false)], color: .magenta)
-        XCTAssertTrue(pathNodes(in: board).isEmpty, "invalid square must be skipped")
+        // A zero-length path would divide by zero when computing the angle. It is
+        // reachable now that endpoints are points: a piece drawn exactly on the
+        // king's square during a snap would produce one.
+        let king = try? XCTUnwrap(board.center(of: "e1"))
+        board.showCheckPaths([(from: king ?? .zero, to: king ?? .zero, isJump: false)],
+                             color: .magenta)
+        XCTAssertTrue(pathNodes(in: board).allSatisfy { $0.children.isEmpty })
+        board.clearCheckPaths()
 
-        // A zero-length path would divide by zero when computing the angle.
         let degenerate = CheckPathNode(from: .zero, to: .zero, isJump: false, color: .magenta)
         XCTAssertTrue(degenerate.children.isEmpty)
     }
@@ -2211,12 +2224,45 @@ final class FleetRulesTests: XCTestCase {
 
     /// The whole illusion: the fleet drops visually twice per rank, and the board
     /// only catches up on the second drop.
-    func testEverySecondBounceCompletesARank() {
-        var counter = FleetRules.DescentCounter()
-        var pattern: [Bool] = []
-        for _ in 0..<10 { pattern.append(counter.registerBounce()) }
-        XCTAssertEqual(pattern, [false, true, false, true, false,
-                                 true, false, true, false, true])
+    func testEverySecondDescentCompletesARank() {
+        var schedule = FleetRules.DescentSchedule(graceBeats: 0, beatsPerHalfDrop: 1)
+        let pattern = (0..<6).map { _ in schedule.registerBeat() }
+        XCTAssertEqual(pattern, [.halfDrop, .fullRank, .halfDrop,
+                                 .fullRank, .halfDrop, .fullRank])
+    }
+
+    /// The player gets a stretch of quiet to read the position before the arcade
+    /// layer starts taking squares away.
+    func testNothingDescendsDuringTheGracePeriod() {
+        var schedule = FleetRules.DescentSchedule(graceBeats: 6, beatsPerHalfDrop: 4)
+        let steps = (1...14).map { _ in schedule.registerBeat() }
+        let dropBeats = steps.enumerated().filter { $0.element != .none }.map { $0.offset + 1 }
+        XCTAssertEqual(dropBeats, [6, 10, 14], "first drop at beat 6, then every 4")
+        XCTAssertEqual(steps[9], .fullRank, "a rank costs two half-drops, so 8 beats")
+    }
+
+    /// Later levels close the distance faster, but never faster than four beats
+    /// a rank — below that the player cannot plan around it.
+    func testDescentSchedulesTightenWithLevel() {
+        var previous = Int.max
+        for level in 1...8 {
+            let schedule = FleetRules.descentSchedule(for: level)
+            XCTAssertGreaterThanOrEqual(schedule.beatsPerHalfDrop, 2)
+            XCTAssertLessThanOrEqual(schedule.beatsPerHalfDrop, previous)
+            previous = schedule.beatsPerHalfDrop
+        }
+        XCTAssertEqual(FleetRules.descentSchedule(for: 1).graceBeats, 6)
+        XCTAssertEqual(FleetRules.descentSchedule(for: 1).beatsPerHalfDrop, 4,
+                       "level 1: half a rank every 4 beats, a full rank every 8")
+    }
+
+    /// The readability invariant: a piece that drifts half a square sits on a
+    /// file boundary and its square becomes genuinely ambiguous.
+    func testSweepStaysWithinTheOwnFile() {
+        XCTAssertLessThan(FleetRules.sweepAmplitudeRatio, 0.5)
+        let amplitude = FleetRules.sweepAmplitude(squareSize: BoardNode.squareSize)
+        XCTAssertLessThan(amplitude * 2, BoardNode.squareSize,
+                          "total sweep must stay under one file width")
     }
 
     func testDescendingASquare() {
@@ -2271,7 +2317,6 @@ final class FleetControllerTests: XCTestCase {
         let parent = SKNode()
         let fleet = FleetController(board: board, parent: parent,
                                     squareSize: BoardNode.squareSize,
-                                    lateralBounds: -194...706,
                                     level: LevelManager.parameters(for: 1))
         return (fleet, board, parent)
     }
@@ -2302,11 +2347,14 @@ final class FleetControllerTests: XCTestCase {
         XCTAssertEqual(node.position, centre)
     }
 
-    /// Regression: bounding the sweep to the board left a full 16-piece fleet
-    /// with nowhere to go, so it bounced every frame and fell to rank 1 in
-    /// seconds. The walls are the playfield's, not the board's.
-    func testAFullFleetHasRoomToSweep() {
+    /// Regression, twice over. Bounding the sweep to the board left a full fleet
+    /// nowhere to go, so it bounced every frame and fell to rank 1 in seconds.
+    /// Unbounding it let pieces drift three files off true, which is unreadable.
+    /// The answer is a fixed sub-file amplitude, independent of piece count.
+    func testSweepWidthIsSubFileAndIndependentOfPieceCount() {
         let (fleet, board, _) = makeFleet()
+        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.8, accuracy: 0.001)
+
         let geometry = BoardNode()
         for piece in board.allPieces(color: .black) {
             if let centre = geometry.center(of: piece.logicalSquare) {
@@ -2314,12 +2362,9 @@ final class FleetControllerTests: XCTestCase {
                             atLogicalCentre: centre)
             }
         }
-        XCTAssertGreaterThan(fleet.legTravel, BoardNode.squareSize * 4,
-                             "a full formation must still cross several files per leg")
-        // Slowest case: a full fleet at level 1 should take several seconds a leg.
-        let speed = FleetRules.sweepSpeed(level: LevelManager.parameters(for: 1),
-                                          piecesRemaining: fleet.pieceCount)
-        XCTAssertGreaterThan(fleet.legTravel / speed, 5)
+        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.8, accuracy: 0.001,
+                       "a full formation shuffles exactly as far as a lone piece")
+        XCTAssertFalse(fleet.isOffTruePosition, "a fresh fleet starts on its squares")
     }
 
     func testResetEmptiesTheFormation() {

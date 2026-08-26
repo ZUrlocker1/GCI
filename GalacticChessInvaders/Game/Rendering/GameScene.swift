@@ -499,15 +499,8 @@ class GameScene: SKScene {
         bloomNode.addChild(node)
         boardNode = node
 
-        // The fleet sweeps the same lane the ship patrols, expressed relative to
-        // the board's origin. Anything narrower than this and a full formation has
-        // no room to move — it is exactly eight files wide at level start.
-        let laneLeft = Self.shipMargin - node.position.x
-        let laneRight = size.width - Self.shipMargin - node.position.x
-        let lane = laneLeft...laneRight
         let controller = FleetController(board: board, parent: node,
                                          squareSize: BoardNode.squareSize,
-                                         lateralBounds: lane,
                                          level: levels.parameters)
         fleet = controller
         controller.onRankDescended = { [weak self] moves in self?.applyFleetDescent(moves) }
@@ -685,6 +678,11 @@ class GameScene: SKScene {
 
         guard stateMachine.currentState is PlayingState else { return }
         if endGameIfDecided() { return }
+        // The fleet descends on the chess beat, never on its wall bounces — so
+        // the shuffle can be tuned for looks without changing how fast the board
+        // is taken away. Fired after the position settles so a descent never
+        // races a chess move for the same square.
+        fleet?.registerBeat()
         beginBeat()
     }
 
@@ -722,6 +720,7 @@ class GameScene: SKScene {
         isEndingGame = true
         turnTimer.stop()
         clearSelection()
+        settleFleetForReveal(against: loser)
         AudioManager.shared.play(outcome == .blackMated ? .levelClear : .gameOver)
 
         scheduleAfterReveal { [weak self] in
@@ -737,6 +736,7 @@ class GameScene: SKScene {
         isEndingGame = true
         turnTimer.stop()
         clearSelection()
+        settleFleetForReveal(against: .black)
 
         ScoreManager.shared.addPoints(Self.checkmateBonus, source: "checkmate")
         refreshHUD()
@@ -762,6 +762,26 @@ class GameScene: SKScene {
         gameOverNode = overlay
         isAwaitingWaveContinue = true
         DiagnosticsLog.shared.log(.level, "wave clear — awaiting continue")
+    }
+
+    /// The game ends on a chess fact, so the reveal should show the position the
+    /// engine actually sees. The fleet eases off its shuffle and half-rank onto
+    /// its true squares, and the mating line is then redrawn to match — drawn
+    /// before the snap it would point at where the pieces used to be.
+    ///
+    /// Costs ~0.32s of the 2.5s hold, leaving the full check-path animation room
+    /// to play out afterwards.
+    private func settleFleetForReveal(against side: PieceColor) {
+        guard let fleet, fleet.isOffTruePosition else { return }
+        fleet.snapToTruePosition()
+        boardNode?.clearCheckPaths()
+        DiagnosticsLog.shared.log(.fleet, "settling onto true squares for the reveal")
+
+        let redraw = SKAction.run { [weak self] in
+            guard let self, self.board.isCheck || self.board.isMate else { return }
+            self.showCheckPaths(against: side, pulses: 3)
+        }
+        run(.sequence([.wait(forDuration: 0.32), redraw]))
     }
 
     /// Holds on the final position for `gameEndRevealDelay` before running `action`.
@@ -862,6 +882,31 @@ class GameScene: SKScene {
 
     // MARK: - Chess Interaction
 
+    /// Where the piece on `square` is actually drawn, in board coordinates.
+    /// White pieces sit on their square; fleet pieces carry the sweep offset.
+    private func drawnPosition(of square: String) -> CGPoint? {
+        guard let boardNode, let centre = boardNode.center(of: square) else { return nil }
+        guard let node = pieceNodes[square], let fleet, fleet.contains(node) else { return centre }
+        return fleet.screenPosition(of: node)
+    }
+
+    /// Hairlines from each threatened fleet piece to the square it occupies.
+    /// Drawn only while a white piece is selected — it answers "which square is
+    /// that?" exactly when the player is asking it.
+    private func showCaptureTethers(for captures: Set<String>) {
+        guard let boardNode, let fleet else { return }
+        let tethers = captures.compactMap { square -> (from: CGPoint, to: CGPoint)? in
+            guard let node = pieceNodes[square], fleet.contains(node),
+                  let centre = boardNode.center(of: square) else { return nil }
+            let drawn = fleet.screenPosition(of: node)
+            // A piece sitting on its square needs no line to itself.
+            guard hypot(drawn.x - centre.x, drawn.y - centre.y) > 2 else { return nil }
+            return (from: drawn, to: centre)
+        }
+        guard !tethers.isEmpty else { return }
+        boardNode.showTethers(tethers, color: SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1))
+    }
+
     private func selectPiece(at square: String) {
         guard canAcceptChessInput,
               let piece = board.piece(at: square),
@@ -872,6 +917,7 @@ class GameScene: SKScene {
         let captures = Set(destinations.filter { board.piece(at: $0) != nil })
         boardNode?.showSelection(at: square)
         boardNode?.showLegalMoves(destinations, captures: captures)
+        showCaptureTethers(for: captures)
         AudioManager.shared.play(.pieceSelected)
     }
 
@@ -900,6 +946,7 @@ class GameScene: SKScene {
     private func clearSelection() {
         selectedSquare = nil
         boardNode?.clearMarkers()
+        boardNode?.clearTethers()
     }
 
     private var canAcceptChessInput: Bool {
@@ -973,8 +1020,10 @@ class GameScene: SKScene {
     /// threat comes from — the board draws no grid to read it off.
     private func showCheckPaths(against side: PieceColor, pulses: Int = 2) {
         guard let boardNode, let threat = board.checkThreat(against: side) else { return }
-        let paths = threat.attackers.map {
-            (from: $0.square, to: threat.kingSquare, isJump: $0.kind == .knight)
+        guard let king = drawnPosition(of: threat.kingSquare) else { return }
+        let paths = threat.attackers.compactMap { attacker -> (from: CGPoint, to: CGPoint, isJump: Bool)? in
+            guard let origin = drawnPosition(of: attacker.square) else { return nil }
+            return (from: origin, to: king, isJump: attacker.kind == .knight)
         }
         // Magenta when the player is the one in trouble, cyan when Black is.
         let color: SKColor = side == .white

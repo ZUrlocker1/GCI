@@ -20,6 +20,7 @@ final class BoardNode: SKNode {
     /// squares, so 32 covers every real case with headroom.
     static let markerPoolSize = 32
     private static let checkPathName = "checkPath"
+    private static let tetherName = "fleetTether"
 
     private static let cyan    = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
     private static let magenta = SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1)
@@ -140,15 +141,52 @@ final class BoardNode: SKNode {
 
     /// Draws the path from each checking piece to the king. Checks are rare, so
     /// these are created and self-remove rather than being pooled.
-    func showCheckPaths(_ paths: [(from: String, to: String, isJump: Bool)],
+    ///
+    /// Endpoints arrive as points, not squares: a black piece belongs to the
+    /// fleet and is drawn offset from its logical square, so the caller resolves
+    /// where each piece actually *is*. A line that visibly misses the piece it
+    /// indicts defeats the whole purpose of drawing it.
+    func showCheckPaths(_ paths: [(from: CGPoint, to: CGPoint, isJump: Bool)],
                         color: SKColor, pulses: Int = 2) {
         clearCheckPaths()
         for path in paths {
-            guard let origin = center(of: path.from), let king = center(of: path.to) else { continue }
-            let node = CheckPathNode(from: origin, to: king, isJump: path.isJump,
+            let node = CheckPathNode(from: path.from, to: path.to, isJump: path.isJump,
                                      color: color, pulses: pulses)
             node.name = Self.checkPathName
             addChild(node)
+        }
+    }
+
+    /// A hairline from where a fleet piece is drawn to the square it actually
+    /// occupies. Only shown for pieces the player has just threatened, so it
+    /// answers "which square is that?" at the moment the question is asked and
+    /// stays out of the way otherwise.
+    func showTethers(_ tethers: [(from: CGPoint, to: CGPoint)], color: SKColor) {
+        clearTethers()
+        for tether in tethers {
+            let path = CGMutablePath()
+            path.move(to: tether.from)
+            path.addLine(to: tether.to)
+            let line = SKShapeNode(path: path)
+            line.strokeColor = color.withAlphaComponent(0.45)
+            line.lineWidth = 1
+            line.zPosition = 4
+            line.name = Self.tetherName
+            addChild(line)
+
+            let foot = SKShapeNode(circleOfRadius: 3)
+            foot.position = tether.to
+            foot.strokeColor = .clear
+            foot.fillColor = color.withAlphaComponent(0.55)
+            foot.zPosition = 4
+            foot.name = Self.tetherName
+            addChild(foot)
+        }
+    }
+
+    func clearTethers() {
+        for node in children where node.name == Self.tetherName {
+            node.removeFromParent()
         }
     }
 
