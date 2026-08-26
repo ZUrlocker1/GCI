@@ -658,9 +658,9 @@ class GameScene: SKScene {
             return
         }
 
-        // Skipping levels with `V` can arrive mid-banner, so clear any previous
-        // one rather than stacking illegibly on top of it.
-        dismissLevelBanner()
+        // Skipping levels with `V` can arrive mid-banner, or mid-reveal, so
+        // clear whatever is up rather than stacking illegibly on top of it.
+        clearCentredMessages()
 
         isAnnouncingLevel = true
         // Nothing should be advancing while the banner explains what is about
@@ -972,6 +972,7 @@ class GameScene: SKScene {
     /// score, the high-score table, NEW GAME?).
     private func showWaveClearOverlay() {
         guard gameOverNode == nil else { return }
+        clearCentredMessages()
         if levels.isFinalLevel {
             outcome = .runCompleted
             DiagnosticsLog.shared.log(.level,
@@ -1016,6 +1017,7 @@ class GameScene: SKScene {
     /// unchanged board and then jumped to the high-score prompt, which read as
     /// the game skipping straight past the ending.
     private func showEndBanner(_ text: String, color: SKColor) {
+        clearCentredMessages()
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
         label.name = Self.endBannerName
         label.text = text
@@ -1039,6 +1041,18 @@ class GameScene: SKScene {
                 .fadeAlpha(to: 1.00, duration: 0.5),
             ])),
         ]))
+    }
+
+    /// Clears every full-screen message before a new one goes up.
+    ///
+    /// The reveal banner ("BLACK KING DESTROYED") holds for 2.5s and was only
+    /// ever removed when the board was torn down, so the wave-clear overlay
+    /// arrived on top of it and LEVEL CLEARED! was read through the message
+    /// underneath. Anything that puts up a centred message calls this first, so
+    /// there is only ever one to read.
+    private func clearCentredMessages() {
+        removeEndBanner()
+        dismissLevelBanner()
     }
 
     private func removeEndBanner() {
@@ -1442,6 +1456,7 @@ class GameScene: SKScene {
 
     func showGameOverOverlay() {
         guard gameOverNode == nil, highScoreEntry == nil else { return }
+        clearCentredMessages()
         turnTimer.stop()
         clearSelection()
         ship?.direction = 0
