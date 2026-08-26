@@ -2503,18 +2503,30 @@ final class FleetRulesTests: XCTestCase {
         XCTAssertGreaterThan(laps, 150, "unreachable within a wave")
     }
 
-    /// Crossfire is Level 8's identity, so it steps back out for Level 9 and
+    /// Crossfire is Level 7's identity, so it steps back out for 8 and 9 and
     /// only returns for Blitz, which is meant to carry everything at once.
-    func testCrossfireIsLevelEightAndBlitzOnly() {
-        for level in 1...7 {
+    func testCrossfireIsLevelSevenAndBlitzOnly() {
+        for level in 1...6 {
             XCTAssertFalse(LevelManager.parameters(for: level).diagonalShots,
                            "level \(level) fires straight")
         }
-        XCTAssertTrue(LevelManager.parameters(for: 8).diagonalShots)
-        XCTAssertFalse(LevelManager.parameters(for: 9).diagonalShots,
-                       "Armored Pawns is its own level, not Crossfire again")
+        XCTAssertTrue(LevelManager.parameters(for: 7).diagonalShots)
+        XCTAssertFalse(LevelManager.parameters(for: 8).diagonalShots,
+                       "King Activated is its own level, not Crossfire again")
+        XCTAssertFalse(LevelManager.parameters(for: 9).diagonalShots)
         XCTAssertTrue(LevelManager.parameters(for: 10).diagonalShots,
                       "Blitz carries every complication")
+    }
+
+    /// Crossfire before King Activated: the angles wave teaches the player to
+    /// watch the diagonals, and the king is more interesting once they must.
+    func testCrossfireComesBeforeKingActivated() {
+        XCTAssertEqual(LevelManager.announcement(for: 7)?.title, "CROSSFIRE")
+        XCTAssertEqual(LevelManager.announcement(for: 8)?.title, "KING ACTIVATED")
+        XCTAssertTrue(LevelManager.parameters(for: 7).diagonalShots)
+        XCTAssertFalse(LevelManager.parameters(for: 7).kingActivated)
+        XCTAssertTrue(LevelManager.parameters(for: 8).kingActivated)
+        XCTAssertFalse(LevelManager.parameters(for: 8).diagonalShots)
     }
 
     /// Level 10 is Blitz: 3-second clock, and the *opening* width is still
@@ -3471,22 +3483,18 @@ final class LevelAnnouncementTests: XCTestCase {
         XCTAssertNotNil(LevelManager.announcement(for: 2))
     }
 
-    /// The two the design doc names verbatim (§10.1).
+    /// The names the design doc gives verbatim (§10.1), wherever the level
+    /// ladder has since put them.
     func testDocumentedNamesAreUsedVerbatim() {
-        XCTAssertEqual(LevelManager.announcement(for: 7)?.title, "KING ACTIVATED")
+        XCTAssertEqual(LevelManager.announcement(for: 8)?.title, "KING ACTIVATED")
         // Subtitle deviates from §10.1's "THE KING NOW ATTACKS": the king does
         // not move differently, it gains a forcefield and its own weapon.
-        XCTAssertEqual(LevelManager.announcement(for: 7)?.subtitle, "SHIELDED, AND ARMED")
+        XCTAssertEqual(LevelManager.announcement(for: 8)?.subtitle, "SHIELDED, AND ARMED")
         XCTAssertEqual(LevelManager.announcement(for: 9)?.title, "ARMORED PAWNS")
-        // The banners now name the piece that shoots, which is the whole point
-        // of arming a type rather than weighting a distribution.
+        // The banners name the piece that shoots, which is the whole point of
+        // arming a type rather than weighting a distribution.
         XCTAssertEqual(LevelManager.announcement(for: 2)?.subtitle, "PAWNS FIRE BACK")
-        XCTAssertEqual(LevelManager.announcement(for: 8)?.subtitle,
-                       "BISHOPS FIRE ON THE DIAGONAL")
-        // The banners now name the piece that shoots, which is the whole point
-        // of arming a type rather than weighting a distribution.
-        XCTAssertEqual(LevelManager.announcement(for: 2)?.subtitle, "PAWNS FIRE BACK")
-        XCTAssertEqual(LevelManager.announcement(for: 8)?.subtitle,
+        XCTAssertEqual(LevelManager.announcement(for: 7)?.subtitle,
                        "BISHOPS FIRE ON THE DIAGONAL")
     }
 
@@ -3500,23 +3508,13 @@ final class LevelAnnouncementTests: XCTestCase {
 @MainActor
 final class KingActivatedTests: XCTestCase {
 
-    /// Level 7 only. The forcefield and the king's weapon are that wave's
+    /// Level 8 only. The forcefield and the king's weapon are that wave's
     /// character; leaving them on forever would permanently buff the single
     /// most important target in the game.
-    func testActivatesOnLevelSevenOnly() {
+    func testActivatesOnLevelEightOnly() {
         for level in 1...15 {
-            XCTAssertEqual(LevelManager.parameters(for: level).kingActivated, level == 7,
+            XCTAssertEqual(LevelManager.parameters(for: level).kingActivated, level == 8,
                            "level \(level)")
-        }
-    }
-
-    /// Diagonal fire (§21.3) arrives at Level 8 and never leaves.
-    func testDiagonalFireArrivesAtLevelEightAndStays() {
-        for level in 1...7 {
-            XCTAssertFalse(LevelManager.parameters(for: level).diagonalShots, "level \(level)")
-        }
-        for level in 8...15 {
-            XCTAssertTrue(LevelManager.parameters(for: level).diagonalShots, "level \(level)")
         }
     }
 
@@ -3594,7 +3592,7 @@ final class KingActivatedTests: XCTestCase {
     func testDiagonalIsSlowerToArriveThanAStraightShot() {
         let drop: CGFloat = 400
         let diagonalTime = (drop * 2.squareRoot()) / FleetRules.diagonalShotSpeed
-        let straightTime = drop / LevelManager.parameters(for: 8).projectileSpeed
+        let straightTime = drop / LevelManager.parameters(for: 7).projectileSpeed
         XCTAssertGreaterThan(diagonalTime, straightTime)
     }
 
@@ -3630,7 +3628,7 @@ final class KingActivatedTests: XCTestCase {
     /// The king's own weapon must out-class ordinary fleet fire on both axes,
     /// or "ARMED" means nothing.
     func testKingWeaponBeatsOrdinaryFleetFire() {
-        let level = LevelManager.parameters(for: 7)
+        let level = LevelManager.parameters(for: 8)
         XCTAssertGreaterThan(FleetRules.kingShotSpeedMultiplier, 1.0)
         XCTAssertGreaterThan(level.projectileSpeed * FleetRules.kingShotSpeedMultiplier,
                              level.projectileSpeed)
