@@ -45,4 +45,14 @@ final class LaserPool {
     func deactivateAll() {
         (playerLasers + enemyLasers).forEach { $0.deactivate() }
     }
+
+    /// Freezes every in-flight round where it is.
+    ///
+    /// Lasers are parented alongside the board rather than under the fleet, so
+    /// `FleetController.setPaused` never reached them: pausing stopped the
+    /// formation while shots carried on across a frozen board — and since
+    /// contacts kept firing too, a paused player could still lose a life.
+    func setPaused(_ paused: Bool) {
+        (playerLasers + enemyLasers).forEach { $0.isPaused = paused }
+    }
 }

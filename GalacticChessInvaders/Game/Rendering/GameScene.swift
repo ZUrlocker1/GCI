@@ -104,6 +104,10 @@ class GameScene: SKScene {
     /// Awarded for checkmating Black (§Scoring), before the level multiplier.
     private static let checkmateBonus = 300
     private static let endBannerName = "endBanner"
+    /// Gap between rounds in one beat's volley (§5.3 fires them as a group).
+    private static let volleyStagger: TimeInterval = 0.18
+    /// The Level 1 warning shot is once per level (§10.1).
+    private var hasFiredWarningShot = false
     /// Awarded whenever the black king falls outside of checkmate — shot,
     /// captured, or crushed (§9). Stacks with `checkmateBonus` for the 800-pt
     /// combo when the king dies while a checkmate is also standing.
@@ -582,6 +586,7 @@ class GameScene: SKScene {
 
     func hideBoard() {
         removeEndBanner()
+        hasFiredWarningShot = false
         laserPool?.deactivateAll()
         laserPool = nil
         fleet?.reset()
@@ -1230,14 +1235,17 @@ class GameScene: SKScene {
         ])))
         bloomNode.addChild(hint)
 
-        // The fleet advances on SKActions, so it ignores the update-loop gate.
+        // Both the fleet and in-flight lasers advance on SKActions, so they
+        // ignore the update-loop gate and have to be stopped explicitly.
         fleet?.setPaused(true)
+        laserPool?.setPaused(true)
         DiagnosticsLog.shared.log(.level, "State → PAUSED")
     }
 
     func hidePausedOverlay() {
         removePausedOverlay()
         fleet?.setPaused(false)
+        laserPool?.setPaused(false)
     }
 
     /// The PAUSED banner is two labels (title + hint) sharing one name, so this
@@ -1328,22 +1336,91 @@ class GameScene: SKScene {
 
     /// Once per beat, after the position has settled (§5.3): 0–`shotsPerTurn`
     /// fleet pieces fire straight down, weighted toward the front rank.
+    /// One firing phase per chess beat (§5.3). Called from `resolveBeat` after
+    /// the position has settled, so a shot never races a chess move landing on
+    /// the same square.
     private func fireFleetShots() {
-        guard let laserPool else { return }
+        guard laserPool != nil else { return }
         let level = levels.parameters
+
+        // §10.1: Level 1 schedules nothing, but the black king fires one slow
+        // warning round the first time it reaches Critical damage — the first
+        // incoming fire the player ever sees.
+        if FleetFiring.shouldFireWarningShot(level: levels.level,
+                                             blackKing: blackKing(),
+                                             alreadyFired: hasFiredWarningShot),
+           let king = blackKing() {
+            hasFiredWarningShot = true
+            fireInvaderShot(from: king.logicalSquare,
+                            speed: FleetFiring.warningShotSpeed,
+                            note: "level 1 warning shot")
+            return
+        }
+
         let count = FleetFiring.shotCount(for: level)
         guard count > 0 else { return }
 
-        let blackSquares = board.allPieces(color: .black).map(\.logicalSquare)
-        let shooters = FleetFiring.chooseShooters(from: blackSquares, count: count)
-        for square in shooters {
-            guard let laser = laserPool.nextAvailable(owner: .enemy),
-                  let origin = laserOrigin(forFleetSquare: square) else { continue }
-            laser.fire(from: origin, damage: ProjectileState.enemyShotDamage,
-                      speed: level.projectileSpeed, travelDistance: origin.y)
-            AudioManager.shared.play(.invaderLaserFire)
-            DiagnosticsLog.shared.log(.shoot, "black \(square) fires")
+        let candidates = board.allPieces(color: .black).map {
+            FleetFiring.Candidate(square: $0.logicalSquare, type: $0.type)
         }
+        let shooters = FleetFiring.chooseShooters(from: candidates, count: count)
+
+        // Spread the volley across a fraction of a second rather than firing it
+        // in one instant. Same rate, but three simultaneous rounds read as one
+        // event, and staggered ones read as three pieces choosing to shoot.
+        for (index, square) in shooters.enumerated() {
+            let delay = Double(index) * Self.volleyStagger
+            guard delay > 0 else {
+                fireInvaderShot(from: square, speed: level.projectileSpeed)
+                continue
+            }
+            run(.sequence([
+                .wait(forDuration: delay),
+                .run { [weak self] in
+                    guard let self, self.stateMachine.currentState is PlayingState else { return }
+                    self.fireInvaderShot(from: square, speed: level.projectileSpeed)
+                },
+            ]))
+        }
+    }
+
+    /// Spawns one invader round from `square`, if the piece is still there and a
+    /// pooled laser is free.
+    private func fireInvaderShot(from square: String, speed: CGFloat, note: String? = nil) {
+        guard let laserPool,
+              let laser = laserPool.nextAvailable(owner: .enemy),
+              // A staggered shot can arrive after its piece has been destroyed.
+              board.piece(at: square)?.color == .black,
+              let origin = laserOrigin(forFleetSquare: square) else { return }
+
+        laser.fire(from: origin, damage: ProjectileState.enemyShotDamage,
+                   speed: speed, travelDistance: origin.y)
+        flashMuzzle(at: square)
+        AudioManager.shared.play(.invaderLaserFire)
+        DiagnosticsLog.shared.log(.shoot, note ?? "black \(square) fires")
+    }
+
+    private func blackKing() -> Piece? {
+        board.allPieces(color: .black).first { $0.type == .king }
+    }
+
+    /// A brief flare on the piece that just fired, so the player can see where a
+    /// round came from. Without it a shot simply appears mid-board and the fleet
+    /// gives no clue which piece is shooting at them.
+    private func flashMuzzle(at square: String) {
+        guard let node = pieceNodes[square] else { return }
+        let flare = SKShapeNode(circleOfRadius: BoardNode.squareSize * 0.16)
+        flare.fillColor = NeonPalette.magenta
+        flare.strokeColor = .white
+        flare.lineWidth = 1.5
+        flare.glowWidth = 5
+        flare.zPosition = 2
+        flare.position = CGPoint(x: 0, y: -node.size.height * 0.4)
+        node.addChild(flare)
+        flare.run(.sequence([
+            .group([.scale(to: 1.8, duration: 0.16), .fadeOut(withDuration: 0.16)]),
+            .removeFromParent(),
+        ]))
     }
 
     /// A fleet piece's firing point, converted into the lasers' own coordinate
@@ -1461,6 +1538,9 @@ class GameScene: SKScene {
     /// reports that back, so an ignored hit during the grace window plays no
     /// sound and does nothing else.
     private func handleShipHit() {
+        // Contacts can still be delivered while paused or during the end-game
+        // reveal; neither should ever cost a life.
+        guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
         guard let shipState, shipState.loseLife() else { return }
         refreshHUD()
         ship?.direction = 0

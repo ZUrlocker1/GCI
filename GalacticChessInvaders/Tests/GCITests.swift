@@ -2849,48 +2849,96 @@ final class CollisionResolverTests: XCTestCase {
 @MainActor
 final class FleetFiringTests: XCTestCase {
 
-    func testLevel1NeverFires() {
+    private func candidates(_ squares: [String], type: PieceType = .pawn) -> [FleetFiring.Candidate] {
+        squares.map { FleetFiring.Candidate(square: $0, type: type) }
+    }
+
+    func testLevelOneSchedulesNoFire() {
         let level = LevelManager.parameters(for: 1)
         for _ in 0..<50 {
             XCTAssertEqual(FleetFiring.shotCount(for: level), 0)
         }
     }
 
-    func testShotCountStaysWithinTheLevelsRange() {
-        let level = LevelManager.parameters(for: 4)   // 2...3
-        for _ in 0..<100 {
-            let count = FleetFiring.shotCount(for: level)
-            XCTAssertTrue(level.shotsPerTurn.contains(count))
+    func testShotCountStaysInTheLevelRange() {
+        for level in 2...9 {
+            let params = LevelManager.parameters(for: level)
+            for _ in 0..<50 {
+                let count = FleetFiring.shotCount(for: params)
+                XCTAssertTrue(params.shotsPerTurn.contains(count), "level \(level) gave \(count)")
+            }
         }
     }
 
-    func testChooseShootersNeverExceedsWhatsAvailable() {
-        let squares = ["a7", "b6", "c5"]
-        XCTAssertEqual(FleetFiring.chooseShooters(from: squares, count: 10).count, squares.count,
-                       "can't choose more shooters than pieces exist")
+    func testShootersAreDistinctAndBounded() {
+        let squares = ["a7", "b7", "c7", "d8"]
+        XCTAssertEqual(FleetFiring.chooseShooters(from: candidates(squares), count: 10).count,
+                       squares.count, "cannot fire more pieces than exist")
         XCTAssertTrue(FleetFiring.chooseShooters(from: [], count: 3).isEmpty)
-        XCTAssertTrue(FleetFiring.chooseShooters(from: squares, count: 0).isEmpty)
+        XCTAssertTrue(FleetFiring.chooseShooters(from: candidates(squares), count: 0).isEmpty)
+
+        let chosen = FleetFiring.chooseShooters(from: candidates(squares), count: 4)
+        XCTAssertEqual(Set(chosen).count, chosen.count, "one shot per piece per beat")
     }
 
-    func testChooseShootersNeverPicksTheSameSquareTwice() {
-        let squares = ["a5", "b4", "c3", "d2"]
-        let chosen = FleetFiring.chooseShooters(from: squares, count: 4)
-        XCTAssertEqual(Set(chosen).count, chosen.count)
+    /// §5.3 weights toward "front-rank pawns" — both halves of that phrase.
+    func testWeightingFavoursFrontRanksAndPawns() {
+        // Closer to White outranks further away.
+        XCTAssertGreaterThan(FleetFiring.weight(forRank: 2, type: .pawn),
+                             FleetFiring.weight(forRank: 7, type: .pawn))
+        // On the same rank, a pawn outranks anything else.
+        XCTAssertGreaterThan(FleetFiring.weight(forRank: 5, type: .pawn),
+                             FleetFiring.weight(forRank: 5, type: .rook))
+        // Regression: rank alone used to decide it, so a back-rank rook beat an
+        // advanced pawn — the queen and king ended up doing the shooting.
+        XCTAssertGreaterThan(FleetFiring.weight(forRank: 7, type: .pawn),
+                             FleetFiring.weight(forRank: 8, type: .rook))
     }
 
-    /// Weighting is probabilistic, not absolute — pin the trend over many
-    /// draws rather than a single outcome.
-    func testChooseShootersLeansTowardTheFrontRank() {
-        var frontRankPicks = 0
-        var backRankPicks = 0
-        let trials = 400
-        for _ in 0..<trials {
-            let picked = FleetFiring.chooseShooters(from: ["a2", "a8"], count: 1)
-            if picked == ["a2"] { frontRankPicks += 1 }
-            if picked == ["a8"] { backRankPicks += 1 }
+    func testAdvancedPawnIsPickedMoreOftenThanAHomeRook() {
+        let pool = [FleetFiring.Candidate(square: "a2", type: .pawn),
+                    FleetFiring.Candidate(square: "h8", type: .rook)]
+        var advanced = 0
+        for _ in 0..<400 {
+            if FleetFiring.chooseShooters(from: pool, count: 1).first == "a2" { advanced += 1 }
         }
-        XCTAssertGreaterThan(frontRankPicks, backRankPicks,
-                             "rank 2 (weight 7) should be picked far more than rank 8 (weight 1)")
+        XCTAssertGreaterThan(advanced, 300, "front-rank pawn should dominate (got \(advanced)/400)")
+    }
+
+    // MARK: - Level 1 warning shot (§10.1)
+
+    func testWarningShotFiresOnceWhenTheBlackKingIsCritical() {
+        var king = Piece(type: .king, color: .black, square: "e8")
+        XCTAssertFalse(FleetFiring.shouldFireWarningShot(level: 1, blackKing: king,
+                                                         alreadyFired: false),
+                       "a healthy king does not fire it")
+
+        king.applyDamage(PieceType.king.maxHP - 4)   // -> critical
+        XCTAssertEqual(king.damageState, .critical)
+        XCTAssertTrue(FleetFiring.shouldFireWarningShot(level: 1, blackKing: king,
+                                                        alreadyFired: false))
+        XCTAssertFalse(FleetFiring.shouldFireWarningShot(level: 1, blackKing: king,
+                                                         alreadyFired: true),
+                       "once per level")
+    }
+
+    func testWarningShotIsLevelOneOnlyAndNeedsAKing() {
+        var king = Piece(type: .king, color: .black, square: "e8")
+        king.applyDamage(PieceType.king.maxHP - 4)
+        for level in 2...5 {
+            XCTAssertFalse(FleetFiring.shouldFireWarningShot(level: level, blackKing: king,
+                                                             alreadyFired: false),
+                           "level \(level) has its own scheduled fire")
+        }
+        XCTAssertFalse(FleetFiring.shouldFireWarningShot(level: 1, blackKing: nil,
+                                                        alreadyFired: false),
+                       "king already destroyed — no scripted moment")
+    }
+
+    /// Half of Level 2's speed (§10.1): the slowness is the telegraph.
+    func testWarningShotIsSlowerThanNormalFire() {
+        XCTAssertLessThan(FleetFiring.warningShotSpeed,
+                          LevelManager.parameters(for: 2).projectileSpeed)
     }
 }
 
