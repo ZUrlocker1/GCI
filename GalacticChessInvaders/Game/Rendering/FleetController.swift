@@ -147,13 +147,17 @@ final class FleetController {
         return wasMember
     }
 
-    /// The rearmost rank the formation still occupies — the anchor "the back N
-    /// ranks" is measured from (`FleetRules.staysInFormation`). Rank 8 at the
-    /// start of a level, one lower after each rank descent. Nil when the fleet
-    /// is empty.
-    var rearRank: Int? {
-        members.keys.compactMap { Int(String($0.suffix(1))) }.max()
-    }
+    /// The rank the formation's own rear sits on: 8 at the start of a level,
+    /// one lower after each rank descent. The anchor "the back N ranks" is
+    /// measured from (`FleetRules.staysInFormation`).
+    ///
+    /// Derived from the descent count rather than from where the members
+    /// actually are. Reading `max(member rank)` was wrong in two ways: an empty
+    /// fleet had no answer at all, and — since a straggler can now rejoin
+    /// *behind* the formation — one king retreating to rank 8 would drag the
+    /// notional rear back to 8 and evict the real front rank from its own band.
+    var rearRank: Int { max(1, FleetRules.startingRearRank - ranksDescended) }
+    private(set) var ranksDescended = 0
 
     /// Moves an existing member to a new square without it leaving the
     /// formation — a black piece shuffling around its home ranks (§FleetRules
@@ -212,6 +216,7 @@ final class FleetController {
         fleetNode.position = .zero
         schedule.reset()
         direction = 1
+        ranksDescended = 0
         leftEdgeArrivals = 0
         lastLoggedSpeed = 0
     }
@@ -356,6 +361,7 @@ final class FleetController {
     func applyFullRankDescentForTesting() { applyFullRankDescent() }
 
     private func applyFullRankDescent() {
+        ranksDescended += 1
         var breached: [String] = []
         var crushes: [CrushEvent] = []
         var moved: [(from: String, to: String)] = []

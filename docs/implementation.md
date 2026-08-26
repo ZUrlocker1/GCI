@@ -294,13 +294,25 @@ King Activated and Crossfire are their own waves (Blitz carries Crossfire again)
   later and reads as the weaker of the two. A fixed 45°
   from the back rank crosses seven files before reaching White: measured, a
   third of shooter positions threw the round off the board, now 4%
+- **Rounds shoot each other down.** Black's fire can take your shot out of the
+  air, which §20's Phase 3.2 bitmask spec explicitly excluded — a departure,
+  and one that costs the player real shots, since a laser eaten in flight still
+  counts against the two-round cap until it clears. The clash gets the biggest
+  glass in the game: cyan and magenta thrown along their own two headings
+  around a white core, so it reads as a collision rather than as one more
+  explosion
 - **Formation membership goes both ways.** `adopt` used to run only at board
   build time, so a black piece that stepped out of the marching band once was a
   civilian for the rest of the level however far back it came — worst for the
   king, which then parks behind White's own pawns where it is nearly
   unshootable, the exact problem the marching rule exists to prevent. A piece
   now rejoins on a chess move back into the band, and a rank descent sweeps up
-  any stray it has come down onto. Joining slides into place over 0.2s: the
+  any stray it has come down onto. The band has a front edge only: nothing is
+  behind the fleet to be separated from, so a king retreating to rank 8 after
+  the formation has descended still marches, and the formation is allowed to be
+  deeper than `formationRanks`. The rear rank it is all measured from comes
+  from the descent count, not from where the members are — reading
+  `max(member rank)` broke the moment a straggler rejoined *behind* the fleet. Joining slides into place over 0.2s: the
   fleet transform is shared, so a joining piece necessarily lands at whatever
   offset the formation carries, and the slide is what makes that read as
   falling in rather than teleporting
@@ -395,8 +407,10 @@ is answerable and tested in one place rather than scattered through the scene.
       `bloomNode.isPaused` stops the playfield while the scene's own `update`
       keeps running to time it; the explosion lands *after* the pause
 - [x] **Shattered glass on a survivable hit** — `ShatterPool`, 14 pooled:
-      §24.5's impact flash plus 7 slivers thrown in a 150° cone along the
-      round's own heading, tumbling and falling. Pooled separately from the
+      §24.5's impact flash plus 9 slivers thrown in a 150° cone along the
+      round's own heading, tumbling and falling. Sized at twice the first
+      attempt, which was too quiet against a board already carrying bloom, a
+      starfield and charge-up glows Pooled separately from the
       destruction bursts, because these fire on every landed shot and would
       otherwise starve the pool for the kills that matter. The heading is
       captured at the contact — `deactivate` clears the round's rotation, and

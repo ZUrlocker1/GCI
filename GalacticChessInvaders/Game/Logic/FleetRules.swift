@@ -137,15 +137,25 @@ enum FleetRules {
     /// still occupies — not to absolute ranks 7 and 8. An absolute rule expired
     /// silently: after two rank descents nothing could satisfy "rank >= 7" any
     /// more, so the whole mechanic decayed back to "any chess move detaches"
-    /// partway through every level. Relative, "the back three ranks of the
-    /// fleet" stays true however far it has descended.
+    /// partway through every level.
+    ///
+    /// Only the *front* edge is bounded. There is no back edge, because there
+    /// is nothing behind the fleet to be separated from: once the formation has
+    /// descended, a king retreating to rank 8 is still at the back, and holding
+    /// it to "within N of the rear rank" left it stranded off-grid on an empty
+    /// rank while everything else marched — observed in play, on exactly the
+    /// piece it matters most for. So the marching band is the fleet's rearmost
+    /// `ranks` ranks *and everything behind them*, which means the formation
+    /// can be deeper than `ranks` and should be.
     static func staysInFormation(afterMovingTo square: String,
                                  formationRearRank: Int,
                                  ranks: Int = formationRanks) -> Bool {
         guard let rank = Int(String(square.last ?? "0")) else { return false }
-        // The band runs from the rear rank forward by `ranks`.
-        return rank > formationRearRank - ranks && rank <= formationRearRank
+        return rank > formationRearRank - ranks
     }
+
+    /// Black's back rank, where every formation starts.
+    static let startingRearRank = 8
 
     // MARK: - King Activated (§10.1, Level 7+)
 

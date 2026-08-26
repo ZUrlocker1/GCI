@@ -2383,6 +2383,7 @@ final class FleetRulesTests: XCTestCase {
 
     func testFormationBandIsTwoRanksDeepByDefault() {
         XCTAssertEqual(FleetRules.formationRanks, 2)
+        XCTAssertEqual(FleetRules.startingRearRank, 8)
         XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: "d7",
                                                   formationRearRank: 8))
         XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d6",
@@ -2398,11 +2399,33 @@ final class FleetRulesTests: XCTestCase {
                                                   formationRearRank: 6))
         XCTAssertTrue(FleetRules.staysInFormation(afterMovingTo: "d5",
                                                   formationRearRank: 6))
-        // Rank 7 is now *behind* the fleet, and rank 4 is out in front.
-        XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d7",
-                                                   formationRearRank: 6))
+        // Rank 4 is out in front of the band.
         XCTAssertFalse(FleetRules.staysInFormation(afterMovingTo: "d4",
                                                    formationRearRank: 6))
+    }
+
+    /// A retreat is not a desertion. Observed in play: with the fleet down to
+    /// rank 7, a king stepping back to rank 8 was ruled outside the band and
+    /// stranded off-grid on an empty rank while everything else marched.
+    /// Nothing is behind the fleet to be separated from, so nothing behind it
+    /// detaches — the formation is allowed to be deeper than `ranks`.
+    func testAPieceBehindTheFleetStillMarches() {
+        for rear in 4...8 {
+            for rank in rear...8 {
+                XCTAssertTrue(
+                    FleetRules.staysInFormation(afterMovingTo: "e\(rank)",
+                                                formationRearRank: rear),
+                    "rear \(rear): rank \(rank) is at or behind it")
+            }
+            // And the front edge still bites, two ranks ahead of the rear.
+            let ahead = rear - FleetRules.formationRanks
+            if ahead >= 1 {
+                XCTAssertFalse(
+                    FleetRules.staysInFormation(afterMovingTo: "e\(ahead)",
+                                                formationRearRank: rear),
+                    "rear \(rear): rank \(ahead) is out in front")
+            }
+        }
     }
 
     /// Level 10's deeper band: three ranks march instead of two.
@@ -2916,6 +2939,26 @@ final class LaserPhysicsTests: XCTestCase {
         XCTAssertEqual(mask & PhysicsCategory.enemyPiece, 0, "must not hit its own fleet")
         XCTAssertNotEqual(mask & PhysicsCategory.friendlyPiece, 0)
         XCTAssertNotEqual(mask & PhysicsCategory.ship, 0)
+    }
+
+    /// Rounds shoot each other down. A departure from §20's Phase 3.2 bitmask
+    /// spec, which excluded it — and one that costs the player shots, so it
+    /// should be deliberate rather than a stray bit.
+    func testRoundsCanShootEachOtherDown() {
+        let laser = LaserNode(owner: .player)
+        laser.fire(from: .zero, damage: 2, speed: 400, travelDistance: 400)
+        XCTAssertNotEqual((laser.physicsBody?.contactTestBitMask ?? 0)
+                          & PhysicsCategory.enemyShot, 0)
+
+        let shot = LaserNode(owner: .enemy)
+        shot.fire(from: .zero, damage: 1, speed: 180, travelDistance: 400)
+        XCTAssertNotEqual((shot.physicsBody?.contactTestBitMask ?? 0)
+                          & PhysicsCategory.playerLaser, 0)
+
+        // A parked round in the pool sits on top of whatever is passing and
+        // must still test nothing at all.
+        shot.deactivate()
+        XCTAssertEqual(shot.physicsBody?.contactTestBitMask, PhysicsCategory.none)
     }
 
     func testFiringIsRefusedWithoutRealSpeedOrDistance() {

@@ -15,6 +15,8 @@ final class CollisionHandler: NSObject, @preconcurrency SKPhysicsContactDelegate
     var onPlayerLaserHit: ((LaserNode, SKNode, CGPoint) -> Void)?
     /// An enemy shot touched something — the shot node, what it hit, and where.
     var onEnemyShotHit: ((LaserNode, SKNode, CGPoint) -> Void)?
+    /// Two rounds met in mid-air: the player's, Black's, and where.
+    var onProjectilesCollided: ((LaserNode, LaserNode, CGPoint) -> Void)?
 
     func didBegin(_ contact: SKPhysicsContact) {
         guard let nodeA = contact.bodyA.node, let nodeB = contact.bodyB.node else { return }
@@ -22,6 +24,16 @@ final class CollisionHandler: NSObject, @preconcurrency SKPhysicsContactDelegate
         let categoryB = contact.bodyB.categoryBitMask
 
         let at = contact.contactPoint
+        // Round against round has to be tested first: both of the branches
+        // below would otherwise match it and hand a laser to a handler
+        // expecting a piece, which quietly ate the shot and drew nothing.
+        if let a = nodeA as? LaserNode, let b = nodeB as? LaserNode {
+            let player = a.owner == .player ? a : b
+            let enemy   = a.owner == .player ? b : a
+            guard player.owner == .player, enemy.owner == .enemy else { return }
+            onProjectilesCollided?(player, enemy, at)
+            return
+        }
         if categoryA == PhysicsCategory.playerLaser, let laser = nodeA as? LaserNode {
             onPlayerLaserHit?(laser, nodeB, at)
         } else if categoryB == PhysicsCategory.playerLaser, let laser = nodeB as? LaserNode {

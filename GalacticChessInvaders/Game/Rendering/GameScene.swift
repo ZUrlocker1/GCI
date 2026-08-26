@@ -163,6 +163,9 @@ class GameScene: SKScene {
         handler.onEnemyShotHit = { [weak self] shot, node, at in
             self?.resolveEnemyShotHit(shot: shot, node: node, at: at)
         }
+        handler.onProjectilesCollided = { [weak self] player, enemy, at in
+            self?.resolveProjectileClash(player: player, enemy: enemy, at: at)
+        }
         physicsWorld.contactDelegate = handler
         collisionHandler = handler
 
@@ -1204,16 +1207,13 @@ class GameScene: SKScene {
     /// A no-op for pieces the fleet does not own.
     /// Does a black piece standing on `square` belong in the formation?
     ///
-    /// Measured against the fleet's own rearmost rank, falling back to the
-    /// rearmost black piece anywhere when the formation is empty — otherwise a
-    /// fleet that lost every member could never re-form, and the rule would
-    /// quietly switch itself off for the rest of the level.
+    /// Measured against the fleet's own rear rank, which is derived from how
+    /// far it has descended — so it holds even when the formation is empty and
+    /// has to re-form from stragglers.
     private func marchesAfterMoving(to square: String) -> Bool {
-        let rear = fleet?.rearRank
-            ?? board.allPieces(color: .black).map { Self.rankIndex(of: $0.logicalSquare) }.max()
-        guard let rear else { return false }
+        guard let fleet else { return false }
         return FleetRules.staysInFormation(afterMovingTo: square,
-                                           formationRearRank: rear,
+                                           formationRearRank: fleet.rearRank,
                                            ranks: levels.parameters.formationRanks)
     }
 
@@ -1896,6 +1896,31 @@ class GameScene: SKScene {
         /// before the handler runs. Read late, a player laser's glass sprayed
         /// downward.
         let heading: CGVector
+    }
+
+    /// Black shot your shot out of the air.
+    ///
+    /// Both rounds die, and the collision gets the biggest glass in the game:
+    /// two sprays in the two sides' own colours, thrown along the two headings,
+    /// around a white core. Cyan going one way and magenta the other is what
+    /// makes it read as a *collision* rather than as one more explosion — the
+    /// event has two authors and the picture should say so.
+    private func resolveProjectileClash(player: LaserNode, enemy: LaserNode,
+                                        at point: CGPoint) {
+        let playerHeading = player.travelDirection
+        let enemyHeading = enemy.travelDirection
+        player.deactivate()
+        enemy.deactivate()
+
+        let at = bloomNode.convert(point, from: self)
+        explosions?.burst(at: at, color: .white, scale: 0.9)
+        shatters?.shatter(at: at, color: NeonPalette.cyan,
+                          along: playerHeading, scale: 1.6)
+        shatters?.shatter(at: at, color: NeonPalette.magentaLight,
+                          along: enemyHeading, scale: 1.6)
+        startShake(Juice.laserHit)
+        AudioManager.shared.play(.pieceHitHeavy)
+        DiagnosticsLog.shared.log(.shoot, "rounds collide — both destroyed")
     }
 
     /// Glass off a piece that took a hit and lived, thrown along the round's
