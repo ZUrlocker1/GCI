@@ -11,7 +11,7 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 | 1 | Chess logic | ✅ |
 | 2.1 | Playfield: chess functional | 🟡 |
 | 2.2 | Playfield: Recharged visual treatment | ✅ |
-| 3.1 | Arcade layer: fleet movement | 🟡 |
+| 3.1 | Arcade layer: fleet movement | ✅ |
 | 3.2 | Arcade layer: shooting & collision | ⬜ |
 | 3.3 | Arcade layer: damage states & juice | ⬜ |
 | 4 | Basic sound effects | 🟡 |
@@ -167,7 +167,7 @@ guideline, above the 40pt tap target.
       referenced would be 91MB, dominated by three long uncompressed GDC stems —
       trim or convert to AAC before ship
 
-## Phase 3.1 — Fleet Movement 🟡
+## Phase 3.1 — Fleet Movement ✅
 
 Get the black fleet sweeping and descending alongside the chess game. No shooting.
 
