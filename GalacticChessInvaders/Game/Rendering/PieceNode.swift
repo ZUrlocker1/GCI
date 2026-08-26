@@ -234,15 +234,29 @@ final class PieceNode: SKSpriteNode {
         let ring = SKShapeNode(circleOfRadius: squareSize * 0.42)
         ring.name = key
         ring.strokeColor = NeonPalette.cyan
-        ring.lineWidth = 2
-        ring.glowWidth = 7
-        ring.fillColor = NeonPalette.cyan.withAlphaComponent(0.08)
+        // Thin at rest so it reads as a field rather than a drawn circle;
+        // `flareForcefield` thickens and brightens it on each absorbed hit.
+        ring.lineWidth = 1
+        ring.glowWidth = 4
+        ring.fillColor = NeonPalette.cyan.withAlphaComponent(0.05)
         ring.zPosition = -1
         addChild(ring)
         ring.run(.repeatForever(.sequence([
             .group([.fadeAlpha(to: 0.45, duration: 0.7), .scale(to: 1.06, duration: 0.7)]),
             .group([.fadeAlpha(to: 0.95, duration: 0.7), .scale(to: 1.00, duration: 0.7)]),
         ])))
+    }
+
+    /// Brightens the shield for a moment — called when it absorbs a hit, so
+    /// the field visibly takes the impact instead of the sprite.
+    func flareForcefield() {
+        guard let ring = childNode(withName: "forcefield") as? SKShapeNode else { return }
+        ring.removeAction(forKey: "flare")
+        ring.run(.sequence([
+            .run { ring.lineWidth = 3; ring.glowWidth = 12; ring.strokeColor = .white },
+            .wait(forDuration: 0.09),
+            .run { ring.lineWidth = 1; ring.glowWidth = 4; ring.strokeColor = NeonPalette.cyan },
+        ]), withKey: "flare")
     }
 
     /// A shot bounced off. Used when the player's own laser hits their king,
