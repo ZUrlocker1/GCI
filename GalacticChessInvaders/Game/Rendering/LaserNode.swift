@@ -198,8 +198,8 @@ final class LaserNode: SKSpriteNode {
     /// than a missile. It is now aimed from the actual travel vector, which is
     /// also correct for a straight shot and for either owner.
     ///
-    /// Heavy and diagonal never co-occur — the king's weapon is Level 7 and
-    /// angled fire is Levels 8 and 10 — and this runs after `setHeavy`, so if
+    /// Heavy and diagonal never co-occur — the king's weapon is Level 8 and
+    /// angled fire is Levels 7 and 10 — and this runs after `setHeavy`, so if
     /// they ever did meet, the diagonal dressing would win.
     private func setDiagonal(_ diagonal: Bool, dx: CGFloat, dy: CGFloat) {
         // Local +y is the tail, so +y must point *opposite* the travel.

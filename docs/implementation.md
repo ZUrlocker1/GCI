@@ -263,8 +263,8 @@ left the game with no ending at all.
 | 4 | RELENTLESS | Fire speed +30% |
 | 5 | TRIPLE THREAT | Black moves three times |
 | 6 | WIDE ORBIT | Sweep widens to 1.5 squares |
-| 7 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
-| 8 | CROSSFIRE | Bishops fire 45° diagonals on their own cadence |
+| 7 | CROSSFIRE | Bishops fire diagonals on their own cadence |
+| 8 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
 | 9 | ARMORED PAWNS | **Banner only — needs pawn regeneration (§6.x)** |
 | 10 | BLITZ! | 3s clock, three marching ranks, and a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th |
 
@@ -360,11 +360,14 @@ One line each; the reasoning is in the commits and the code.
 
 ### Deviations from the design doc
 
-- Level 7 is arcade, not chess. §10.1 asks for aggressive King *play*; that was
+- Crossfire is Level 7 and King Activated Level 8 — §10.1 has them the other
+  way round. Crossfire teaches the player to watch the angles, and the king is
+  a more interesting problem once they already have to
+- King Activated is arcade, not chess. §10.1 asks for aggressive King *play*; that was
   built and reverted — it measured as invisible in a full position, because the
   king's move never outscores thirty alternatives until the fleet is nearly
   cleared, and it read as chess rather than arcade
-- Crossfire is Levels 8 and 10, not "8 onward" (§21.3), and it is the bishops'
+- Crossfire is Levels 7 and 10, not "8 onward" (§21.3), and it is the bishops'
   cadence rather than a 40% roll on a pawn's shot
 - Level 4 fires +30%, not §21.1's +11% — its banner already promised "FASTER,
   HARDER FIRE"

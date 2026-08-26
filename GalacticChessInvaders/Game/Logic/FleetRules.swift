@@ -157,7 +157,7 @@ enum FleetRules {
     /// Black's back rank, where every formation starts.
     static let startingRearRank = 8
 
-    // MARK: - King Activated (§10.1, Level 7+)
+    // MARK: - King Activated (§10.1, Level 8)
 
     /// The forcefield makes the black king take 50% more hits to destroy.
     ///
@@ -187,7 +187,7 @@ enum FleetRules {
     /// threat rather than one more pawn.
     static let kingShotInterval = 2
 
-    // MARK: - Diagonal fire (§21.3, Level 8+)
+    // MARK: - Diagonal fire (§21.3, Level 7 and Blitz)
 
     /// §21.3 fixes diagonal shots at 160 px/s along their path, whatever the
     /// level's straight-down speed is. They are a different threat, not a

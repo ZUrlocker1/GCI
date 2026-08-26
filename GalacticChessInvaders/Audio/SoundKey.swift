@@ -48,7 +48,7 @@ enum SoundKey: String, CaseIterable {
     // ── Invader fleet ─────────────────────────────────────────────────────────
     case invaderLaserFire       // laserSmall_001.ogg        (kenney-sci-fi)
     case kingLaserFire          // laserLarge_001.ogg        (kenney-sci-fi) — §10.1 King Activated
-    case crossfireLaserFire     // laserSmall_004.ogg        (kenney-sci-fi) — Level 8 bishops
+    case crossfireLaserFire     // laserSmall_004.ogg        (kenney-sci-fi) — Level 7 bishops
     case invaderHitsShip        // explosionCrunch_001.ogg   (kenney-sci-fi)
     case invaderHitsPiece       // impactMetal_001.ogg       (kenney-sci-fi)  — reuse pieceHitLight
     case fleetWallBounce        // lowDown.ogg               (kenney-digital)

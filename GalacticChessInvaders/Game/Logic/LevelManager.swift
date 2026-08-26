@@ -24,16 +24,16 @@ struct LevelParameters {
     /// Half the fleet's lateral sweep, as a fraction of a square. Widens at
     /// Level 6 (see `FleetRules.wideSweepAmplitudeRatio`).
     let sweepAmplitudeRatio: CGFloat
-    /// §10.1 King Activated — Level 7 *only*. The black king gains a forcefield
+    /// §10.1 King Activated — Level 8 *only*. The black king gains a forcefield
     /// and its own heavy weapon for that wave and reverts afterwards, so the
     /// level has a character of its own rather than permanently buffing the
     /// most important target in the game.
-    var kingActivated: Bool { level == 7 }
-    /// Diagonal invader fire (§21.3). Level 8 is its own wave, and it comes
-    /// back for Blitz — but Level 9 gets it out of the way again, so CROSSFIRE
-    /// stays that level's identity rather than becoming permanent furniture.
-    /// Blitz can carry it because Blitz is meant to carry everything.
-    var diagonalShots: Bool { level == 8 || level >= 10 }
+    var kingActivated: Bool { level == 8 }
+    /// Diagonal invader fire (§21.3). Level 7 is its own wave, and it comes
+    /// back for Blitz — but Levels 8 and 9 get it out of the way again, so
+    /// CROSSFIRE stays that level's identity rather than becoming permanent
+    /// furniture. Blitz carries it because Blitz is meant to carry everything.
+    var diagonalShots: Bool { level == 7 || level >= 10 }
     /// Level 10 "Blitz": the sweep widens and quickens as the wave runs, and
     /// the beat clock is cut to 3s (`FleetRules.blitz*`).
     var blitz: Bool { level >= 10 }
@@ -83,10 +83,12 @@ final class LevelManager {
         case 4:  return ("RELENTLESS",     "FASTER, HARDER FIRE")
         case 5:  return ("TRIPLE THREAT",  "BLACK MOVES THREE TIMES")
         case 6:  return ("WIDE ORBIT",     "THE FLEET SWEEPS WIDER")
-        // §10.1 gives these two verbatim; the Armored Pawns subtitle is
-        // shortened to fit the 22-character limit.
-        case 7:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
-        case 8:  return ("CROSSFIRE",       "BISHOPS FIRE ON THE DIAGONAL")
+        // Crossfire comes first: it is the wave that teaches the player to
+        // watch the angles, and King Activated is more interesting once they
+        // already have to. §10.1 puts them the other way round and gives both
+        // names verbatim; only the order moved.
+        case 7:  return ("CROSSFIRE",       "BISHOPS FIRE ON THE DIAGONAL")
+        case 8:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
         case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
         // The last wave. Named for both the chess variation and the Cray
         // Blitz that won the 1983 world computer championship.
