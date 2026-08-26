@@ -12,7 +12,7 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 | 2.1 | Playfield: chess functional | 🟡 |
 | 2.2 | Playfield: Recharged visual treatment | ✅ |
 | 3.1 | Arcade layer: fleet movement | ✅ |
-| 3.2 | Arcade layer: shooting & collision | ⬜ |
+| 3.2 | Arcade layer: shooting & collision | 🟡 |
 | 3.3 | Arcade layer: damage states & juice | ⬜ |
 | 4 | Basic sound effects | 🟡 |
 | 5 | Background music + settings | ⬜ |
@@ -210,32 +210,72 @@ The first build was unplayable. What got it there, in brief:
 
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 
-## Phase 3.2 — Shooting & Collision ⬜
+## Phase 3.2 — Shooting & Collision 🟡
 
 The core shoot-em-up loop, and the phase that finally lets a run *end*.
 
-- [ ] `SpaceshipState.swift` — lives, 2-shot laser cap, shield, respawn and
-      invincibility timers (pure)
-- [ ] `ProjectileState.swift` — ownership, damage, speed, active flag (pure)
-- [ ] `LaserNode` + **`LaserPool`** — 6 player and 16 enemy nodes pre-created
-- [ ] `CollisionResolver.swift` — pure damage/scoring/destruction outcomes
-- [ ] `CollisionHandler.swift` — physics contact delegate; bitmasks per the
-      `PhysicsCategory` table, rule decisions delegated to the resolver
-- [ ] Fleet firing — shots per turn from the §21.1 table, weighted to front-rank
-      pawns; Level 1 fires none
-- [ ] Damage: player laser 2 HP, invader shot 1 HP, friendly fire 2 HP
-- [ ] Shooting score wired (the chess-capture path already exists)
-- [ ] **Real lose conditions**: 3 lives gone, black piece reaches rank 1, white
-      king shot to 0 HP
-- [ ] **Real win condition**: all black pieces destroyed clears the wave
-- [ ] King shot at checkmate — the 800 bonus (§Scoring), the one scoring rule
-      still unimplemented
+- [x] `SpaceshipState.swift` — lives, 2-shot laser cap, respawn/invincibility
+      timer (pure). Shield is a later power-up, not built here
+- [x] `ProjectileState.swift` — ownership, damage, speed (pure)
+- [x] `LaserNode` + **`LaserPool`** — 6 player and 16 enemy nodes pre-created,
+      never removed from the scene graph. No projectile art exists yet, so the
+      beam is a solid tinted rect — the existing bloom filter glows it for free
+- [x] `CollisionResolver.swift` — pure damage/scoring/destruction outcomes
+- [x] `CollisionHandler.swift` — physics contact delegate; identifies who
+      collided from `PhysicsCategory` bitmasks and reports it through
+      callbacks, same pattern as `FleetController`'s `onCrush`/`onRankDescended`.
+      Bitmasks follow the design doc's own Phase 3.2 spec exactly: the player
+      laser tests only pieces, never the ship or an enemy shot directly
+- [x] Fleet firing — once per beat, after the position settles (same reasoning
+      as fleet descent: never races a chess move for the same square); shot
+      count and front-rank weighting live in `FleetFiring.swift` (pure)
+- [x] Damage: player laser 2 HP, invader shot 1 HP, friendly fire 2 HP
+- [x] Shooting scores at the higher table (§9); chess captures were quietly
+      using the *shoot* value since it was the only one that existed — fixed to
+      use the correct, lower `chessCaptureValue`
+- [x] **Real lose conditions**: 3 lives gone, a black piece reaching rank 1
+      (previously just halted the fleet), white king destroyed by anything
+      other than checkmate (shot, or crushed by fleet descent)
+- [x] **Real win condition**: the black king falling — by checkmate, chess
+      capture, fleet crush, or the player's laser — all four read as the same
+      win (§25.2's "the mission is the King"), and continue into the next wave
+      exactly like checkmate already did. "All pieces destroyed" isn't a
+      separate check: the last piece standing is necessarily the king, which
+      the king-fall check already catches
+- [x] King shot at checkmate — the 800 bonus. The window is real: a beat that
+      delivers mate doesn't formally end until it resolves, so the king can
+      still be shot while already checkmated
 
-Pass: a level completable by shooting alone, all damage and scoring correct.
+**A real bug fixed along the way, same class as `forcePlace`:** `GCIBoard
+.applyDamage` only ever updated the arcade-facing `pieces` dictionary, never
+the chess engine's own board. A laser kill was the first thing to actually
+exercise `applyDamage` in production, so this had been latent since the field
+was written. Fixed with `ChessEngine.forceRemove(at:)`, the same fix shape as
+`forceRelocate`.
 
-Unblocks three things currently stuck: the HUD lives display (hardcoded to 3),
-banking a score without having to lose at chess, and runs ending from arcade
-pressure rather than chess grinding.
+**Judgment calls made without an explicit spec answer:**
+- Player laser speed is 400 px/s — the design doc's own §20 Phase 3.2 testing
+  section states this explicitly; it is not a guess
+- Enemy laser origin/travel distance derived from the fleet piece's *drawn*
+  position (sweep offset included), consistent with how check-paths and
+  tethers already resolve a fleet piece's real screen position
+- `.blackMated`, a `GameOverNode.Outcome` case, was already dead — never
+  constructed anywhere, a leftover from before wave-clear existed. Removed
+  while touching this enum for the new win/lose cases
+
+**Not yet done:** visually verified in the running app. Confirmed instead via
+a trustworthy typecheck pass (macro-plugin flakiness ruled out first), a
+standalone runtime harness exercising every pure Logic path (31/31 checks:
+`SpaceshipState`, `CollisionResolver`, `FleetFiring`, the scoring tables), and
+a clean signed build. Launching the app to drive it interactively was denied
+in this environment — there is no GUI automation available here for a native
+macOS app, unlike the iOS simulator tooling. A firing/hit/lose/win playtest
+pass is the next real step before trusting this beyond "it typechecks and the
+logic is right in isolation."
+
+Unblocks three things that were stuck: the HUD lives display (was hardcoded
+to 3), banking a score without having to lose at chess, and runs ending from
+arcade pressure rather than chess grinding.
 
 ## Phase 3.3 — Damage States & Juice ⬜
 

@@ -10,30 +10,40 @@ final class GameOverNode: SKNode {
 
     enum Outcome: Equatable {
         case whiteMated                 // player lost — game over
-        case blackMated                 // player won outright
         case stalemate
         case drawnByRepetition
         case drawnByMoveLimit
-        /// Black checkmated but the run continues into the next wave.
+        /// Lost outside of chess entirely: three lives gone, a black piece
+        /// reached rank 1, or the white king was shot to 0 HP (§Lose conditions).
+        case livesDepleted
+        case blackBreachedRank1
+        case whiteKingDestroyed
+        /// Black's king has fallen — by checkmate, chess capture, fleet crush,
+        /// or the player's laser (§25.2: all four are the same win). The run
+        /// continues into the next wave.
         case waveCleared(next: Int)
 
         /// Speaks to the player, not the game model: "wave clear" is an internal
         /// notion and does not tell someone they just won.
         var headline: String {
             switch self {
-            case .whiteMated: return "GAME OVER"
-            case .blackMated, .waveCleared: return "YOU WIN"
+            case .waveCleared: return "YOU WIN"
             case .stalemate, .drawnByRepetition, .drawnByMoveLimit: return "DRAW"
+            case .whiteMated, .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed:
+                return "GAME OVER"
             }
         }
 
         var detail: String {
             switch self {
-            case .whiteMated: return "WHITE CHECKMATED"
-            case .blackMated, .waveCleared: return "BLACK CHECKMATED"
-            case .stalemate:         return "NO LEGAL MOVES"
-            case .drawnByRepetition: return "SAME POSITION THREE TIMES"
-            case .drawnByMoveLimit:  return "\(ChessEngine.quietMoveLimit) MOVES, NO CAPTURE"
+            case .whiteMated:            return "WHITE CHECKMATED"
+            case .waveCleared:           return "BLACK KING DEFEATED"
+            case .stalemate:             return "NO LEGAL MOVES"
+            case .drawnByRepetition:     return "SAME POSITION THREE TIMES"
+            case .drawnByMoveLimit:      return "\(ChessEngine.quietMoveLimit) MOVES, NO CAPTURE"
+            case .livesDepleted:         return "OUT OF LIVES"
+            case .blackBreachedRank1:    return "THE FLEET BROKE THROUGH"
+            case .whiteKingDestroyed:    return "WHITE KING DESTROYED"
             }
         }
 
@@ -47,8 +57,9 @@ final class GameOverNode: SKNode {
         /// Good news for the player gets the friendly colour.
         var isFavourable: Bool {
             switch self {
-            case .blackMated, .waveCleared: return true
-            case .whiteMated, .stalemate, .drawnByRepetition, .drawnByMoveLimit:
+            case .waveCleared: return true
+            case .whiteMated, .stalemate, .drawnByRepetition, .drawnByMoveLimit,
+                 .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed:
                 return false
             }
         }

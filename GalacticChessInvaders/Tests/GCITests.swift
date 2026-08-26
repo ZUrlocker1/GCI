@@ -374,6 +374,26 @@ final class GCIBoardTests: XCTestCase {
         XCTAssertNil(board.piece(at: "a7"))
     }
 
+    /// Regression, same bug class as `forcePlace`/`forceRelocate`: a laser
+    /// kill is the first production path that ever exercises `applyDamage`,
+    /// and it only ever touched `pieces`, never the engine's own board. Left
+    /// unfixed, the engine would go on believing a shot-dead piece — a king,
+    /// even — was still standing, forever.
+    func testApplyDamageKeepsTheChessEnginesOwnBoardInSync() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        board.applyDamage(1, at: "a7")   // chip only — must not yet touch the engine
+        XCTAssertEqual(board.currentPosition.board["a7"]?.kind, .pawn,
+                       "a damaged-but-alive piece must still be on the engine's board")
+
+        board.applyDamage(1, at: "a7")   // now destroyed
+        XCTAssertNil(board.currentPosition.board["a7"],
+                     "the engine's own board must also see the destroyed square emptied")
+        board.forceTurn(.black)
+        XCTAssertTrue(board.legalDestinations(from: "a7").isEmpty,
+                     "the engine must not still think a7 holds a movable pawn")
+    }
+
     func testForcePlaceCrushesAnEnemyOccupant() {
         let board = GCIBoard()
         board.setupStandardPosition()
@@ -1008,7 +1028,7 @@ final class GameOverNodeTests: XCTestCase {
     }
 
     func testEveryOutcomeShowsThePromptAndScore() {
-        for outcome in [GameOverNode.Outcome.whiteMated, .blackMated, .stalemate] {
+        for outcome in [GameOverNode.Outcome.whiteMated, .livesDepleted, .stalemate] {
             let node = GameOverNode(outcome: outcome, score: 1275,
                                     sceneSize: CGSize(width: 960, height: 700))
             let labels = texts(in: node)
@@ -1022,9 +1042,9 @@ final class GameOverNodeTests: XCTestCase {
     /// Losing and winning must not both read "GAME OVER".
     func testWinAndLossReadDifferently() {
         XCTAssertEqual(GameOverNode.Outcome.whiteMated.headline, "GAME OVER")
-        XCTAssertEqual(GameOverNode.Outcome.blackMated.headline, "YOU WIN")
+        XCTAssertEqual(GameOverNode.Outcome.waveCleared(next: 2).headline, "YOU WIN")
         XCTAssertNotEqual(GameOverNode.Outcome.whiteMated.detail,
-                          GameOverNode.Outcome.blackMated.detail)
+                          GameOverNode.Outcome.waveCleared(next: 2).detail)
     }
 }
 
@@ -1705,7 +1725,8 @@ final class OutcomePresentationTests: XCTestCase {
     /// next wave, which read as the game restarting itself.
     func testEveryOutcomeDrawsHeadlineScoreAndPrompt() {
         let cases: [GameOverNode.Outcome] =
-            [.whiteMated, .blackMated, .stalemate, .waveCleared(next: 2)]
+            [.whiteMated, .stalemate, .waveCleared(next: 2),
+             .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed]
         for outcome in cases {
             let node = GameOverNode(outcome: outcome, score: 1234,
                                     sceneSize: CGSize(width: 960, height: 700))
@@ -1722,10 +1743,12 @@ final class OutcomePresentationTests: XCTestCase {
     }
 
     func testFavourableOutcomesAreColouredDifferently() {
-        XCTAssertTrue(GameOverNode.Outcome.blackMated.isFavourable)
         XCTAssertTrue(GameOverNode.Outcome.waveCleared(next: 2).isFavourable)
         XCTAssertFalse(GameOverNode.Outcome.whiteMated.isFavourable)
         XCTAssertFalse(GameOverNode.Outcome.stalemate.isFavourable)
+        XCTAssertFalse(GameOverNode.Outcome.livesDepleted.isFavourable)
+        XCTAssertFalse(GameOverNode.Outcome.blackBreachedRank1.isFavourable)
+        XCTAssertFalse(GameOverNode.Outcome.whiteKingDestroyed.isFavourable)
     }
 }
 
@@ -2527,5 +2550,217 @@ final class FleetControllerTests: XCTestCase {
         }
         fleet.reset()
         XCTAssertEqual(fleet.pieceCount, 0)
+    }
+}
+
+// MARK: - Shooting & Collision (Phase 3.2)
+
+@MainActor
+final class SpaceshipStateTests: XCTestCase {
+
+    func testStartsWithThreeLivesAndAFullCap() {
+        let ship = SpaceshipState()
+        XCTAssertEqual(ship.lives, 3)
+        XCTAssertEqual(ship.laserCap, SpaceshipState.baseLaserCap)
+        XCTAssertTrue(ship.canFire)
+    }
+
+    func testLaserCapBlocksFiringAtTheLimit() {
+        let ship = SpaceshipState()
+        for _ in 0..<ship.laserCap { ship.laserFired() }
+        XCTAssertFalse(ship.canFire, "at the cap, one more shot must be refused")
+        ship.laserResolved()
+        XCTAssertTrue(ship.canFire, "resolving one frees a slot")
+    }
+
+    func testLosingALifeStartsInvincibilityUnlessItWasTheLast() {
+        let ship = SpaceshipState(lives: 2)
+        XCTAssertTrue(ship.loseLife())
+        XCTAssertEqual(ship.lives, 1)
+        XCTAssertTrue(ship.isInvincible, "a life remains, so the grace window starts (§8.4)")
+
+        // A second hit during the grace window does nothing — not even to lives.
+        XCTAssertFalse(ship.loseLife())
+        XCTAssertEqual(ship.lives, 1)
+
+        ship.update(deltaTime: SpaceshipState.invincibilityDuration + 0.1)
+        XCTAssertFalse(ship.isInvincible)
+        XCTAssertTrue(ship.loseLife())
+        XCTAssertEqual(ship.lives, 0)
+        XCTAssertFalse(ship.isInvincible, "no life left to protect — no respawn (§8.4)")
+    }
+
+    func testResetForNewLevelKeepsLivesButClearsEverythingElse() {
+        let ship = SpaceshipState(lives: 2)
+        ship.laserFired()
+        ship.loseLife()
+        XCTAssertTrue(ship.isInvincible)
+
+        ship.resetForNewLevel()
+        XCTAssertEqual(ship.lives, 1, "lives carry across levels (§8.5)")
+        XCTAssertEqual(ship.activeLasers, 0)
+        XCTAssertFalse(ship.isInvincible)
+    }
+}
+
+@MainActor
+final class CollisionResolverTests: XCTestCase {
+
+    func testPlayerLaserOnlyScoresOnTheKill() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+
+        // Pawn has 2 HP; the laser deals 2, so one hit is already lethal.
+        guard case .blackPieceHit(let square, let type, let destroyed, let points, let combo)? =
+            CollisionResolver.playerLaserHitBlackPiece(at: "a7", board: board) else {
+            return XCTFail("expected a black-piece hit")
+        }
+        XCTAssertEqual(square, "a7")
+        XCTAssertEqual(type, .pawn)
+        XCTAssertTrue(destroyed)
+        XCTAssertEqual(points, PieceType.pawn.pointValue, "shooting scores the higher table, not chessCaptureValue")
+        XCTAssertFalse(combo)
+    }
+
+    func testPlayerLaserOnAWoundedPieceScoresNothingUntilTheKill() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        // A queen has 12 HP; one 2-HP hit must not destroy or score.
+        guard case .blackPieceHit(_, _, let destroyed, let points, _)? =
+            CollisionResolver.playerLaserHitBlackPiece(at: "d8", board: board) else {
+            return XCTFail("expected a black-piece hit")
+        }
+        XCTAssertFalse(destroyed)
+        XCTAssertEqual(points, 0, "no score for a hit that doesn't kill")
+    }
+
+    func testFriendlyFireNeverScoresEvenOnDestruction() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        board.applyDamage(1, at: "a2")   // pre-damage so the next 2-HP hit is lethal
+        guard case .whitePieceHit(let square, let destroyed)? =
+            CollisionResolver.playerLaserHitWhitePiece(at: "a2", board: board) else {
+            return XCTFail("expected a white-piece hit")
+        }
+        XCTAssertEqual(square, "a2")
+        XCTAssertTrue(destroyed)
+        // No points field exists on this case at all — friendly fire structurally
+        // cannot score, not merely "scores zero".
+    }
+
+    func testEnemyShotDealsOneHPToAWhitePiece() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        guard case .whitePieceHit(_, let destroyed)? =
+            CollisionResolver.enemyShotHitWhitePiece(at: "a2", board: board) else {
+            return XCTFail("expected a white-piece hit")
+        }
+        XCTAssertFalse(destroyed, "a pawn has 2 HP; one invader shot must not kill it")
+        XCTAssertEqual(board.piece(at: "a2")?.hp, 1)
+    }
+
+    func testWrongColorMissesEntirely() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        XCTAssertNil(CollisionResolver.playerLaserHitBlackPiece(at: "a2", board: board),
+                    "a2 holds a white pawn, not black")
+        XCTAssertNil(CollisionResolver.playerLaserHitWhitePiece(at: "a7", board: board),
+                    "a7 holds a black pawn, not white")
+    }
+
+    /// The 800-point combo (§9): the king dies while already checkmated. The
+    /// beat that delivered the mate hasn't formally resolved yet, so there's a
+    /// real window where this can happen.
+    func testDoubleCheckmateBonusFiresWhenTheKingDiesAlreadyMated() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        // Scholar's Mate: black is checkmated, king still on e8.
+        for (from, to) in [("e2", "e4"), ("e7", "e5"), ("f1", "c4"), ("b8", "c6"),
+                           ("d1", "h5"), ("g8", "f6"), ("h5", "f7")] {
+            board.applyChessMove(from: from, to: to)
+        }
+        XCTAssertTrue(board.isMate)
+        XCTAssertEqual(board.turn, .black)
+
+        board.applyDamage(14, at: "e8")   // soften the king to exactly 2 HP first
+        guard case .blackPieceHit(_, .king, let destroyed, _, let combo)? =
+            CollisionResolver.playerLaserHitBlackPiece(at: "e8", board: board) else {
+            return XCTFail("expected a hit on the king")
+        }
+        XCTAssertTrue(destroyed)
+        XCTAssertTrue(combo, "already mated when the killing shot landed — both bonuses apply")
+    }
+
+    func testDoubleCheckmateBonusDoesNotFireOnAnOrdinaryKill() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        guard case .blackPieceHit(_, _, _, _, let combo)? =
+            CollisionResolver.playerLaserHitBlackPiece(at: "e8", board: board) else {
+            return XCTFail("expected a black-piece hit on the king's home square")
+        }
+        XCTAssertFalse(combo, "not mated at game start — must not claim the combo")
+    }
+}
+
+@MainActor
+final class FleetFiringTests: XCTestCase {
+
+    func testLevel1NeverFires() {
+        let level = LevelManager.parameters(for: 1)
+        for _ in 0..<50 {
+            XCTAssertEqual(FleetFiring.shotCount(for: level), 0)
+        }
+    }
+
+    func testShotCountStaysWithinTheLevelsRange() {
+        let level = LevelManager.parameters(for: 4)   // 2...3
+        for _ in 0..<100 {
+            let count = FleetFiring.shotCount(for: level)
+            XCTAssertTrue(level.shotsPerTurn.contains(count))
+        }
+    }
+
+    func testChooseShootersNeverExceedsWhatsAvailable() {
+        let squares = ["a7", "b6", "c5"]
+        XCTAssertEqual(FleetFiring.chooseShooters(from: squares, count: 10).count, squares.count,
+                       "can't choose more shooters than pieces exist")
+        XCTAssertTrue(FleetFiring.chooseShooters(from: [], count: 3).isEmpty)
+        XCTAssertTrue(FleetFiring.chooseShooters(from: squares, count: 0).isEmpty)
+    }
+
+    func testChooseShootersNeverPicksTheSameSquareTwice() {
+        let squares = ["a5", "b4", "c3", "d2"]
+        let chosen = FleetFiring.chooseShooters(from: squares, count: 4)
+        XCTAssertEqual(Set(chosen).count, chosen.count)
+    }
+
+    /// Weighting is probabilistic, not absolute — pin the trend over many
+    /// draws rather than a single outcome.
+    func testChooseShootersLeansTowardTheFrontRank() {
+        var frontRankPicks = 0
+        var backRankPicks = 0
+        let trials = 400
+        for _ in 0..<trials {
+            let picked = FleetFiring.chooseShooters(from: ["a2", "a8"], count: 1)
+            if picked == ["a2"] { frontRankPicks += 1 }
+            if picked == ["a8"] { backRankPicks += 1 }
+        }
+        XCTAssertGreaterThan(frontRankPicks, backRankPicks,
+                             "rank 2 (weight 7) should be picked far more than rank 8 (weight 1)")
+    }
+}
+
+@MainActor
+final class ScoringTableTests: XCTestCase {
+
+    /// §9: shooting a piece dead pays more than capturing it in chess — the
+    /// tables must stay distinct, not accidentally collapse to one value.
+    func testShootValueExceedsChessCaptureValueExceptForTheKing() {
+        for type in PieceType.allCases where type != .king {
+            XCTAssertGreaterThan(type.pointValue, type.chessCaptureValue,
+                                 "\(type) should reward shooting over capturing")
+        }
+        XCTAssertEqual(PieceType.king.pointValue, PieceType.king.chessCaptureValue,
+                       "the king falling is worth the same either way (§9)")
     }
 }

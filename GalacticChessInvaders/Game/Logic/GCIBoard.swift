@@ -180,6 +180,9 @@ final class GCIBoard {
         let destroyed = target.applyDamage(amount)
         if destroyed {
             pieces[square] = nil
+            // Same reasoning as forcePlace: without this the engine's own board
+            // keeps believing the piece is still there, forever.
+            engine.forceRemove(at: square)
             DiagnosticsLog.shared.log(.destroy, "\(target.color) \(target.type.rawValue) at \(square) destroyed")
         } else {
             pieces[square] = target

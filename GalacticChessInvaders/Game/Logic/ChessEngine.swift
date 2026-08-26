@@ -226,6 +226,15 @@ final class ChessEngine {
         position.board[to] = piece
     }
 
+    /// Clears a square outright — used when a piece is shot dead, per
+    /// `GCIBoard.applyDamage`. The same reasoning as `forceRelocate`: without
+    /// this the engine goes on believing a destroyed piece is still there,
+    /// including a king, which would leave `isMate`/`isCheck` evaluating a
+    /// position that no longer exists.
+    func forceRemove(at square: String) {
+        position.board[square] = nil
+    }
+
     // MARK: - Search
 
     /// Narrows what the search may consider.

@@ -17,6 +17,9 @@ enum PieceType: String, CaseIterable {
         }
     }
 
+    /// Points for *shooting* this piece dead with the laser (§9). Higher than
+    /// the chess-capture value below — the design intentionally rewards the
+    /// arcade half of the game more than the chess half.
     var pointValue: Int {
         switch self {
         case .pawn:   return 25
@@ -24,6 +27,21 @@ enum PieceType: String, CaseIterable {
         case .bishop: return 50
         case .rook:   return 75
         case .queen:  return 150
+        case .king:   return 500
+        }
+    }
+
+    /// Points for taking this piece in a normal chess capture (§9) — distinct
+    /// from, and lower than, `pointValue`. Until Phase 3.2 wired up shooting,
+    /// `GameScene` awarded `pointValue` for chess captures too, since it was
+    /// the only scoring path that existed; that call site now uses this instead.
+    var chessCaptureValue: Int {
+        switch self {
+        case .pawn:   return 10
+        case .knight: return 25
+        case .bishop: return 25
+        case .rook:   return 40
+        case .queen:  return 75
         case .king:   return 500
         }
     }

@@ -43,6 +43,9 @@ class GameScene: SKScene {
     private var statusNode: GameStatusNode?
     private var testModeLabel: SKLabelNode?
     private var fleet: FleetController?
+    private var shipState: SpaceshipState?
+    private var laserPool: LaserPool?
+    private var collisionHandler: CollisionHandler?
     private var gameOverNode: GameOverNode?
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
@@ -100,6 +103,10 @@ class GameScene: SKScene {
     private static let testBeatDuration: TimeInterval = 1.0
     /// Awarded for checkmating Black (§Scoring), before the level multiplier.
     private static let checkmateBonus = 300
+    /// Awarded whenever the black king falls outside of checkmate — shot,
+    /// captured, or crushed (§9). Stacks with `checkmateBonus` for the 800-pt
+    /// combo when the king dies while a checkmate is also standing.
+    private static let kingFallBonus = 500
     private var isTestMode = false
 
     // MARK: - Lifecycle
@@ -119,7 +126,12 @@ class GameScene: SKScene {
     private func setupScene() {
         backgroundColor = SKColor(red: 0, green: 0, blue: 0, alpha: 1)
         physicsWorld.gravity = .zero
-        physicsWorld.contactDelegate = self
+
+        let handler = CollisionHandler()
+        handler.onPlayerLaserHit = { [weak self] laser, node in self?.resolvePlayerLaserHit(laser: laser, node: node) }
+        handler.onEnemyShotHit = { [weak self] shot, node in self?.resolveEnemyShotHit(shot: shot, node: node) }
+        physicsWorld.contactDelegate = handler
+        collisionHandler = handler
 
         setupBloomNode()
         setupStarfield()
@@ -300,6 +312,9 @@ class GameScene: SKScene {
         case .moveRight:  ship?.direction =  1
         case .stopMoving: ship?.direction =  0
 
+        case .fireLaser:
+            fireLaserFromShip()
+
         case .selectPieceAt(let square):
             selectPiece(at: square)
 
@@ -475,14 +490,17 @@ class GameScene: SKScene {
         levels.reset()
         hasOfferedHighScore = false
         ScoreManager.shared.resetForNewGame()
+        shipState = SpaceshipState()
         buildPlayfield()
         DiagnosticsLog.shared.log(.level, "State → PLAYING")
     }
 
-    /// The next wave: level and multiplier step up, score carries over.
+    /// The next wave: level and multiplier step up, score carries over. Lives
+    /// carry over too (§8.5) — only the laser cap and invincibility reset.
     private func startNextLevel() {
         levels.advance()
         ScoreManager.shared.advanceLevel()
+        shipState?.resetForNewLevel()
         buildPlayfield()
         DiagnosticsLog.shared.log(.level,
             "Level \(levels.level) — beat \(Int(levels.parameters.turnTimer))s, "
@@ -506,10 +524,9 @@ class GameScene: SKScene {
         controller.onRankDescended = { [weak self] moves in self?.applyFleetDescent(moves) }
         controller.onCrush = { [weak self] crush in self?.applyCrush(crush) }
         controller.onBreach = { [weak self] square in
-            // Phase 3.2 turns this into a lose condition; for now the fleet halts
-            // rather than marching off the bottom of the board.
             DiagnosticsLog.shared.log(.fleet, "breach — black reached rank 1 at \(square)")
             self?.fleet?.stop()
+            self?.loseGame(outcome: .blackBreachedRank1)
         }
 
         for piece in board.allPieces() { addPieceNode(piece) }
@@ -519,6 +536,8 @@ class GameScene: SKScene {
         player.position = CGPoint(x: size.width / 2, y: Self.shipLaneY)
         bloomNode.addChild(player)
         ship = player
+
+        laserPool = LaserPool(parent: bloomNode)
 
         // Countdown lives in the gutter left of the board (§19), with the
         // check/mate banner directly beneath it.
@@ -557,9 +576,12 @@ class GameScene: SKScene {
         // Arcade convention: HI tracks the best ever, or your run once you pass it.
         let best = ScoreManager.shared.topHighScores(limit: 1).first?.score ?? 0
         hudNode?.updateHiScore(max(best, ScoreManager.shared.currentScore))
+        if let shipState { hudNode?.updateLives(shipState.lives) }
     }
 
     func hideBoard() {
+        laserPool?.deactivateAll()
+        laserPool = nil
         fleet?.reset()
         fleet = nil
         hideGameOverOverlay()
@@ -613,6 +635,15 @@ class GameScene: SKScene {
             victim.runDestructionAnimation {}
         }
         AudioManager.shared.play(.pieceHitHeavy)
+
+        // Either king can end up the crush victim — a stalled piece at rank 1
+        // is fair game for whatever descends onto it next, kings included.
+        guard crush.crushedPiece.type == .king else { return }
+        if crush.crushedPiece.color == .black {
+            winLevel(bonus: Self.kingFallBonus, label: "king crushed")
+        } else {
+            loseGame(outcome: .whiteKingDestroyed)
+        }
     }
 
     // MARK: - Chess Beat
@@ -684,6 +715,9 @@ class GameScene: SKScene {
         // is taken away. Fired after the position settles so a descent never
         // races a chess move for the same square.
         fleet?.registerBeat()
+        // Once per beat (§5.3), same reasoning: after the position has
+        // settled, not raced against a chess move landing on the same square.
+        fireFleetShots()
         beginBeat()
     }
 
@@ -701,7 +735,7 @@ class GameScene: SKScene {
         setTestMode(false, retimingBeat: false)
 
         if board.isMate, loser == .black {
-            clearWave()
+            winLevel(bonus: Self.checkmateBonus, label: "checkmate")
             return true
         }
         if board.isMate {
@@ -722,7 +756,7 @@ class GameScene: SKScene {
         turnTimer.stop()
         clearSelection()
         settleFleetForReveal(against: loser)
-        AudioManager.shared.play(outcome == .blackMated ? .levelClear : .gameOver)
+        AudioManager.shared.play(.gameOver)
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }
@@ -731,22 +765,50 @@ class GameScene: SKScene {
         return true
     }
 
-    /// Black is checkmated: the wave is cleared, not the game won (§4). Award the
-    /// bonus, hold on the mating position, then start the next level.
-    private func clearWave() {
+    /// Black's king has fallen — by checkmate, chess capture, fleet crush, or
+    /// the player's laser (§25.2: all four are the same win). Award the bonus,
+    /// hold on the position, then start the next level. A no-op once the game
+    /// is already ending, so a laser and a checkmate landing in the same
+    /// instant cannot both try to end the level.
+    private func winLevel(bonus: Int, label: String) {
+        guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
+        setTestMode(false, retimingBeat: false)
         isEndingGame = true
         turnTimer.stop()
         clearSelection()
         settleFleetForReveal(against: .black)
 
-        ScoreManager.shared.addPoints(Self.checkmateBonus, source: "checkmate")
+        ScoreManager.shared.addPoints(bonus, source: label)
         refreshHUD()
         AudioManager.shared.play(.levelClear)
-        DiagnosticsLog.shared.log(.level, "WAVE CLEAR — black is checkmated")
+        DiagnosticsLog.shared.log(.level, "WAVE CLEAR — \(label)")
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }
             self.showWaveClearOverlay()
+        }
+    }
+
+    /// A loss outside of chess entirely — three lives gone, a black piece
+    /// reached rank 1, or the white king was destroyed by something other
+    /// than checkmate (shot, or crushed). Mirrors `endGameIfDecided`'s own
+    /// ending flow, generalized for a cause that isn't a chess fact.
+    private func loseGame(outcome newOutcome: GameOverNode.Outcome) {
+        guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
+        setTestMode(false, retimingBeat: false)
+        outcome = newOutcome
+        DiagnosticsLog.shared.log(.white, newOutcome.detail.lowercased())
+
+        isEndingGame = true
+        turnTimer.stop()
+        clearSelection()
+        ship?.direction = 0
+        settleFleetForReveal(against: .white)
+        AudioManager.shared.play(.gameOver)
+
+        scheduleAfterReveal { [weak self] in
+            guard let self, self.stateMachine.currentState is PlayingState else { return }
+            self.stateMachine.enter(GameOverState.self)
         }
     }
 
@@ -984,9 +1046,10 @@ class GameScene: SKScene {
         }
 
         // Only the player's captures score; Black taking White pieces must not
-        // reward the player.
+        // reward the player. Chess captures score at the lower of the two
+        // tables (§9) — pointValue is the higher, shoot-to-kill rate.
         if let captured = outcome.captured, captured.color == .black {
-            ScoreManager.shared.addPoints(captured.type.pointValue,
+            ScoreManager.shared.addPoints(captured.type.chessCaptureValue,
                                           source: captured.type.rawValue)
             refreshHUD()
         }
@@ -1018,6 +1081,14 @@ class GameScene: SKScene {
         }
 
         if outcome.promotedTo != nil { AudioManager.shared.play(.pawnPromotion) }
+
+        // The black king falling by chess capture is a win exactly like being
+        // shot or checkmated (§25.2) — refreshStatus below would only ever see
+        // checkmate, never a capture that skipped straight past it.
+        if let captured = outcome.captured, captured.color == .black, captured.type == .king {
+            winLevel(bonus: Self.kingFallBonus, label: "king captured")
+            return
+        }
 
         refreshStatus()
     }
@@ -1164,6 +1235,159 @@ class GameScene: SKScene {
         DiagnosticsLog.shared.log(.score, "high score — awaiting name")
     }
 
+    // MARK: - Shooting & Collision (§20 Phase 3.2)
+
+    /// Space bar: one shot, straight up from the ship's current column, if
+    /// the 2-laser cap allows it (§8.2). Held-key repeat is already filtered
+    /// out in `InputHandler`, so this fires once per press.
+    private func fireLaserFromShip() {
+        guard stateMachine.currentState is PlayingState, !isEndingGame,
+              let ship, let shipState, shipState.canFire,
+              let laserPool, let laser = laserPool.nextAvailable(owner: .player)
+        else { return }
+
+        shipState.laserFired()
+        laser.onDeactivate = { [weak shipState] in shipState?.laserResolved() }
+        let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
+        laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
+                  speed: ProjectileState.playerLaserSpeed,
+                  travelDistance: size.height - origin.y)
+        AudioManager.shared.play(.playerLaserFire)
+    }
+
+    /// Once per beat, after the position has settled (§5.3): 0–`shotsPerTurn`
+    /// fleet pieces fire straight down, weighted toward the front rank.
+    private func fireFleetShots() {
+        guard let laserPool else { return }
+        let level = levels.parameters
+        let count = FleetFiring.shotCount(for: level)
+        guard count > 0 else { return }
+
+        let blackSquares = board.allPieces(color: .black).map(\.logicalSquare)
+        let shooters = FleetFiring.chooseShooters(from: blackSquares, count: count)
+        for square in shooters {
+            guard let laser = laserPool.nextAvailable(owner: .enemy),
+                  let origin = drawnPosition(of: square) else { continue }
+            laser.fire(from: origin, damage: ProjectileState.enemyShotDamage,
+                      speed: level.projectileSpeed, travelDistance: origin.y)
+            AudioManager.shared.play(.invaderLaserFire)
+        }
+    }
+
+    /// The player's laser touched something. Always consumed on contact,
+    /// whatever it hit — a laser doesn't pass through.
+    private func resolvePlayerLaserHit(laser: LaserNode, node: SKNode) {
+        laser.deactivate()
+        guard let pieceNode = node as? PieceNode else { return }
+
+        if pieceNode.piece.color == .black {
+            guard let result = CollisionResolver.playerLaserHitBlackPiece(
+                at: pieceNode.square, board: board) else { return }
+            handleBlackPieceHit(result, node: pieceNode)
+        } else {
+            guard let result = CollisionResolver.playerLaserHitWhitePiece(
+                at: pieceNode.square, board: board) else { return }
+            handleWhitePieceHit(result, node: pieceNode)
+        }
+    }
+
+    /// An invader shot touched something — either the ship, or a white piece
+    /// blocking its lane.
+    private func resolveEnemyShotHit(shot: LaserNode, node: SKNode) {
+        shot.deactivate()
+        if let ship, node === ship {
+            handleShipHit()
+        } else if let pieceNode = node as? PieceNode, pieceNode.piece.color == .white {
+            guard let result = CollisionResolver.enemyShotHitWhitePiece(
+                at: pieceNode.square, board: board) else { return }
+            handleWhitePieceHit(result, node: pieceNode)
+        }
+    }
+
+    private func handleBlackPieceHit(_ result: CollisionOutcome, node: PieceNode) {
+        guard case .blackPieceHit(let square, let type, let destroyed, let points, let comboBonus) = result
+        else { return }
+
+        if !destroyed {
+            node.applyHitFlash()
+            AudioManager.shared.play(.pieceHitLight)
+            return
+        }
+
+        pieceNodes.removeValue(forKey: square)
+        detachFromFleet(node, at: square)
+        node.runDestructionAnimation {}
+        AudioManager.shared.play(destroyedSound(for: type))
+        ScoreManager.shared.addPoints(points, source: "\(type.rawValue) (shot)")
+        refreshHUD()
+
+        guard type == .king else { return }
+        // §9's 800-point line: the king died while already checkmated — the
+        // beat this happened on hadn't formally resolved yet, so both bonuses
+        // land in the same instant rather than one pre-empting the other.
+        let bonus = points + (comboBonus ? Self.checkmateBonus : 0)
+        winLevel(bonus: bonus, label: comboBonus ? "king shot + checkmate" : "king shot")
+    }
+
+    private func handleWhitePieceHit(_ result: CollisionOutcome, node: PieceNode) {
+        guard case .whitePieceHit(let square, let destroyed) = result else { return }
+
+        if !destroyed {
+            node.applyHitFlash()
+            AudioManager.shared.play(.pieceHitLight)
+            return
+        }
+
+        pieceNodes.removeValue(forKey: square)
+        node.runDestructionAnimation {}
+        AudioManager.shared.play(destroyedSound(for: node.piece.type))
+
+        if node.piece.type == .king {
+            loseGame(outcome: .whiteKingDestroyed)
+        }
+    }
+
+    /// A life is lost only if the ship isn't currently invincible — `loseLife`
+    /// reports that back, so an ignored hit during the grace window plays no
+    /// sound and does nothing else.
+    private func handleShipHit() {
+        guard let shipState, shipState.loseLife() else { return }
+        refreshHUD()
+        ship?.direction = 0
+
+        guard shipState.lives > 0 else {
+            AudioManager.shared.play(.playerShipDestroyed)
+            loseGame(outcome: .livesDepleted)
+            return
+        }
+
+        AudioManager.shared.play(.invaderHitsShip)
+        ship?.isHidden = true
+        run(.sequence([
+            .wait(forDuration: 1.0),
+            .run { [weak self] in self?.respawnShip() },
+        ]))
+    }
+
+    /// Respawns at center-bottom (§8.4) with the invincibility flash.
+    private func respawnShip() {
+        guard let ship, stateMachine.currentState is PlayingState else { return }
+        ship.position = CGPoint(x: size.width / 2, y: Self.shipLaneY)
+        ship.isHidden = false
+        ship.startRespawnInvincibility(duration: SpaceshipState.invincibilityDuration)
+    }
+
+    private func destroyedSound(for type: PieceType) -> SoundKey {
+        switch type {
+        case .pawn:   return .pawnDestroyed
+        case .knight: return .knightDestroyed
+        case .bishop: return .bishopDestroyed
+        case .rook:   return .rookDestroyed
+        case .queen:  return .queenDestroyed
+        case .king:   return .kingDestroyed
+        }
+    }
+
     // MARK: - Update
 
     override func update(_ currentTime: TimeInterval) {
@@ -1175,6 +1399,7 @@ class GameScene: SKScene {
         if dt > 0, stateMachine.currentState is PlayingState {
             let lane = Self.shipMargin...(size.width - Self.shipMargin)
             ship?.update(deltaTime: dt, bounds: lane)
+            shipState?.update(deltaTime: dt)
 
             // The end-of-game hold owns the beat while it runs.
             if advanceReveal(dt) {
@@ -1326,13 +1551,5 @@ class GameScene: SKScene {
 
         let inTitle = stateMachine.currentState is TitleState
         InputHandler.shared.handleMouseDown(at: location, in: self, inTitleScreen: inTitle)
-    }
-}
-
-// MARK: - Physics Contact
-
-extension GameScene: @preconcurrency SKPhysicsContactDelegate {
-    func didBegin(_ contact: SKPhysicsContact) {
-        // Phase 3+: laser/piece, shot/ship, ship/projectile contacts
     }
 }
