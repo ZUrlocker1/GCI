@@ -326,7 +326,21 @@ Several rounds of tuning and fixes on top of the initial build. In brief:
       the player has to do rather than how fast they must do it — standing
       outside a file stops being cover. King Activated became Level 7 only at
       the same time, so the forcefield and the king's weapon read as one wave's
-      character instead of a permanent buff on the game's most important target
+      character instead of a permanent buff on the game's most important target.
+      Crossfire is Level 8 **and Blitz only** — deviating from §21.3's "from
+      Level 8 onward". A mechanic that never leaves stops being that level's
+      identity, so Level 9 goes back to straight fire and Blitz gets it back
+      along with everything else
+- [x] **Angled rounds are aimed along their own flight path.** They were not:
+      `zRotation` turns a node's own axes and a bolt's length is its y axis, so
+      rotating an angled shot by 45° left a long thin slab travelling
+      *broadside* — verified perpendicular for both leans. On screen it read as
+      a purple paddle sliding sideways. Now `atan2(dx, -dy)` from the real
+      travel vector, which is right for both owners and for a straight shot,
+      and the round is dressed as a missile: longer and narrower (3.4×22 vs
+      4×14), a white nose cone at the leading tip, and a two-stage fading
+      exhaust behind. Pinned by a cross-product test rather than four
+      hand-computed angles
 - [x] **Level 10 BLITZ! is the last wave, and the game now has an ending.**
       Named for both the chess variation and the Cray Blitz that took the 1983
       world computer championship. It is the one level that escalates *within*
@@ -345,8 +359,8 @@ Several rounds of tuning and fixes on top of the initial build. In brief:
 - [x] Clearing Level 10 **wins the run** (`GameOverNode.Outcome.runCompleted`,
       `LevelManager.finalLevel`) rather than rolling into a generically-harder
       Level 11. §10.1's "no ceiling" left the game with no ending at all. An
-      intermediate wave clear now reads WAVE CLEAR and the run's end reads YOU
-      WIN — sharing one headline made the ending invisible. `V` refuses to skip
+      intermediate wave clear now reads LEVEL CLEARED! and the run's end reads
+      YOU WIN — sharing one headline made the ending invisible. `V` refuses to skip
       past the last level rather than building an eleventh that has no design
 - [x] Tuning: ship 294 px/s, laser 520 px/s, base sweep 0.9 of a square, audio mixed
       as a deliberate ladder (laser under hit under destruction), Black's

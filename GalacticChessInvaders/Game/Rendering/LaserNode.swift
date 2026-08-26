@@ -23,6 +23,17 @@ final class LaserNode: SKSpriteNode {
     private static let width: CGFloat = 4
     private static let flightKey = "fly"
     private static let beamName = "kingBeam"
+    private static let exhaustKey = "exhaust"
+
+    /// An angled round is longer and narrower than a straight bolt: its whole
+    /// job is to read as travelling *along* a line the player has to judge.
+    private static let diagonalSize = CGSize(width: 3.4, height: 22)
+
+    /// The angled round's dressing — a bright nose and a two-stage exhaust.
+    /// Built once and shown or hidden per shot rather than created per shot
+    /// (§18: no allocation during play). Laid out along local ±y, which
+    /// `aim(dx:dy:)` then points down the flight path.
+    private let missileRig = SKNode()
 
     init(owner: ProjectileState.Owner) {
         self.owner = owner
@@ -34,6 +45,16 @@ final class LaserNode: SKSpriteNode {
         zPosition = 7
         isHidden = true
 
+        installBody(for: size)
+        buildMissileRig()
+    }
+
+    /// Fits a fresh contact-only body to `size`, preserving whether this round
+    /// is currently live. Every place that changes the node's size has to go
+    /// through here, or a re-dressed round keeps the previous shape's hitbox —
+    /// and rebuilding a body silently drops the contact mask, which is why it
+    /// is re-derived from `isActive` rather than copied.
+    private func installBody(for size: CGSize) {
         let body = SKPhysicsBody(rectangleOf: size)
         // MUST be dynamic. SpriteKit only evaluates a contact pair when at
         // least one body is dynamic — two static bodies never produce a
@@ -52,9 +73,36 @@ final class LaserNode: SKSpriteNode {
         body.restitution = 0
         body.usesPreciseCollisionDetection = true   // thin and fast — avoid tunnelling
         body.categoryBitMask = owner == .player ? PhysicsCategory.playerLaser : PhysicsCategory.enemyShot
-        body.contactTestBitMask = PhysicsCategory.none   // parked; set on fire
+        body.contactTestBitMask = isActive ? liveContactMask : PhysicsCategory.none
         body.collisionBitMask = PhysicsCategory.none
         physicsBody = body
+    }
+
+    /// A nose cone and a tapering two-stage exhaust, so an angled round reads
+    /// as a missile pointed somewhere rather than as a tumbling slab. Local -y
+    /// is the nose; `aim(dx:dy:)` turns that into the direction of travel.
+    private func buildMissileRig() {
+        let half = Self.diagonalSize.height / 2
+        func part(_ size: CGSize, y: CGFloat, color: SKColor, alpha: CGFloat) -> SKSpriteNode {
+            let node = SKSpriteNode(texture: Self.solidTexture, color: color, size: size)
+            node.colorBlendFactor = 1.0
+            node.alpha = alpha
+            node.position = CGPoint(x: 0, y: y)
+            return node
+        }
+        // A hot white tip overhanging the head slightly: the point of the round
+        // is where it is going, so that is what should be brightest.
+        missileRig.addChild(part(CGSize(width: 2.2, height: 7),
+                                 y: -half - 1.5, color: .white, alpha: 0.95))
+        // Exhaust, behind the head and fading as it goes.
+        let trail = owner == .player ? NeonPalette.cyan : NeonPalette.shotPurple
+        let near = part(CGSize(width: 2.6, height: 12), y: half + 5, color: trail, alpha: 0.55)
+        let far  = part(CGSize(width: 1.6, height: 12), y: half + 17, color: trail, alpha: 0.22)
+        missileRig.addChild(near)
+        missileRig.addChild(far)
+        missileRig.zPosition = -1
+        missileRig.isHidden = true
+        addChild(missileRig)
     }
 
     /// §20 Phase 3.2 bitmask spec: player laser tests only pieces (not the
@@ -107,19 +155,52 @@ final class LaserNode: SKSpriteNode {
         let path = (dx * dx + dy * dy).squareRoot()
         let duration = TimeInterval(path / speed)
 
-        // §12 wants the same bolt rotated, in purple, so an angled shot reads as
-        // a different threat rather than a mis-aimed one.
-        if lean == 0 {
-            zRotation = 0
-            color = owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight
-        } else {
-            zRotation = CGFloat(lean) * -.pi / 4
-            color = NeonPalette.shotPurple
-        }
+        setDiagonal(lean != 0, dx: dx, dy: dy)
 
         let move = SKAction.moveBy(x: dx, y: dy, duration: duration)
         let finish = SKAction.run { [weak self] in self?.deactivate() }
         run(.sequence([move, finish]), withKey: Self.flightKey)
+    }
+
+    /// Dresses this round as §21.3's angled missile, or back to a straight
+    /// bolt: longer, narrower, deep purple, with a nose and an exhaust.
+    ///
+    /// The rotation is the part that was wrong. `zRotation` turns the node's
+    /// *own* axes, and a bolt's length is its y axis — so rotating an angled
+    /// shot by 45° left the slab broadside to its own flight path, sliding
+    /// sideways through the air. That is what read as a purple paddle rather
+    /// than a missile. It is now aimed from the actual travel vector, which is
+    /// also correct for a straight shot and for either owner.
+    ///
+    /// Heavy and diagonal never co-occur — the king's weapon is Level 7 and
+    /// angled fire is Levels 8 and 10 — and this runs after `setHeavy`, so if
+    /// they ever did meet, the diagonal dressing would win.
+    private func setDiagonal(_ diagonal: Bool, dx: CGFloat, dy: CGFloat) {
+        // Local +y is the tail, so +y must point *opposite* the travel.
+        // R(z)·(0,1) = (-sin z, cos z), so z = atan2(dx, -dy).
+        zRotation = atan2(dx, -dy)
+
+        let target = diagonal ? Self.diagonalSize
+                              : CGSize(width: Self.width,
+                                       height: owner == .player ? 18 : 14)
+        if size != target {
+            size = target
+            installBody(for: target)
+        }
+        color = diagonal ? NeonPalette.shotPurple
+                         : (owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight)
+
+        missileRig.isHidden = !diagonal
+        missileRig.removeAction(forKey: Self.exhaustKey)
+        if diagonal {
+            // A slow flicker, so the exhaust reads as burning rather than drawn.
+            missileRig.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.7, duration: 0.09),
+                .fadeAlpha(to: 1.0, duration: 0.09),
+            ])), withKey: Self.exhaustKey)
+        } else {
+            missileRig.alpha = 1
+        }
     }
 
     /// Redresses this round as the activated king's heavy shot — wider, longer
@@ -157,16 +238,7 @@ final class LaserNode: SKSpriteNode {
             ])))
         }
         // The body must follow, or a heavy round keeps a thin bolt's hitbox.
-        let body = SKPhysicsBody(rectangleOf: size)
-        body.isDynamic = true
-        body.affectedByGravity = false
-        body.allowsRotation = false
-        body.linearDamping = 0
-        body.usesPreciseCollisionDetection = true
-        body.categoryBitMask = owner == .player ? PhysicsCategory.playerLaser : PhysicsCategory.enemyShot
-        body.contactTestBitMask = isActive ? liveContactMask : PhysicsCategory.none
-        body.collisionBitMask = PhysicsCategory.none
-        physicsBody = body
+        installBody(for: size)
     }
 
     /// Stops the flight and returns the node to the pool. Safe to call whether
@@ -177,6 +249,9 @@ final class LaserNode: SKSpriteNode {
         isHidden = true
         removeAction(forKey: Self.flightKey)
         zRotation = 0
+        missileRig.isHidden = true
+        missileRig.removeAction(forKey: Self.exhaustKey)
+        missileRig.alpha = 1
         childNode(withName: Self.beamName)?.removeFromParent()
         // Stop testing for contacts rather than clearing `isDynamic` — the body
         // has to stay dynamic to ever generate a contact again when re-fired.

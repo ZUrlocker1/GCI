@@ -934,7 +934,7 @@ class GameScene: SKScene {
         ScoreManager.shared.addPoints(bonus, source: label)
         refreshHUD()
         AudioManager.shared.play(.levelClear)
-        DiagnosticsLog.shared.log(.level, "WAVE CLEAR — \(label)")
+        DiagnosticsLog.shared.log(.level, "LEVEL CLEARED — \(label)")
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }

@@ -31,7 +31,7 @@ final class GameOverNode: SKNode {
         var headline: String {
             switch self {
             case .runCompleted: return "YOU WIN"
-            case .waveCleared: return "WAVE CLEAR"
+            case .waveCleared: return "LEVEL CLEARED!"
             case .stalemate, .drawnByRepetition, .drawnByMoveLimit: return "DRAW"
             case .whiteMated, .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed:
                 return "GAME OVER"

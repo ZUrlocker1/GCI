@@ -1051,7 +1051,7 @@ final class GameOverNodeTests: XCTestCase {
     /// must not read the same as finishing the run, or the ending is invisible.
     func testWinAndLossReadDifferently() {
         XCTAssertEqual(GameOverNode.Outcome.whiteMated.headline, "GAME OVER")
-        XCTAssertEqual(GameOverNode.Outcome.waveCleared(next: 2).headline, "WAVE CLEAR")
+        XCTAssertEqual(GameOverNode.Outcome.waveCleared(next: 2).headline, "LEVEL CLEARED!")
         XCTAssertEqual(GameOverNode.Outcome.runCompleted.headline, "YOU WIN")
         XCTAssertNotEqual(GameOverNode.Outcome.whiteMated.detail,
                           GameOverNode.Outcome.waveCleared(next: 2).detail)
@@ -2480,6 +2480,20 @@ final class FleetRulesTests: XCTestCase {
         XCTAssertGreaterThan(laps, 150, "unreachable within a wave")
     }
 
+    /// Crossfire is Level 8's identity, so it steps back out for Level 9 and
+    /// only returns for Blitz, which is meant to carry everything at once.
+    func testCrossfireIsLevelEightAndBlitzOnly() {
+        for level in 1...7 {
+            XCTAssertFalse(LevelManager.parameters(for: level).diagonalShots,
+                           "level \(level) fires straight")
+        }
+        XCTAssertTrue(LevelManager.parameters(for: 8).diagonalShots)
+        XCTAssertFalse(LevelManager.parameters(for: 9).diagonalShots,
+                       "Armored Pawns is its own level, not Crossfire again")
+        XCTAssertTrue(LevelManager.parameters(for: 10).diagonalShots,
+                      "Blitz carries every complication")
+    }
+
     /// Level 10 is Blitz: 3-second clock, and the *opening* width is still
     /// Level 6's, because the growth happens within the level.
     func testBlitzIsLevelTenOnly() {
@@ -2910,6 +2924,61 @@ final class LaserPhysicsTests: XCTestCase {
         XCTAssertFalse(laser.isActive, "zero speed would divide by zero for the duration")
         laser.fire(from: .zero, damage: 2, speed: 400, travelDistance: 0)
         XCTAssertFalse(laser.isActive, "nowhere to travel — nothing to fire")
+    }
+
+    /// A round has to point along its own flight path. It did not: the old
+    /// rotation turned an angled bolt 45° the *wrong* way, leaving a long thin
+    /// slab travelling broadside — which read on screen as a purple paddle
+    /// sliding sideways rather than as a missile.
+    ///
+    /// Checked as a cross product against the travel vector rather than against
+    /// a literal angle, so it holds for both owners and both leans without four
+    /// hand-computed constants.
+    func testEveryRoundPointsAlongItsFlightPath() {
+        for owner in [ProjectileState.Owner.player, .enemy] {
+            for lean in [-1, 0, 1] {
+                let laser = LaserNode(owner: owner)
+                laser.fire(from: .zero, damage: 2, speed: 200,
+                           travelDistance: 400, lean: lean)
+                // The travel vector `fire` builds from the same inputs.
+                let dy: CGFloat = owner == .player ? 400 : -400
+                let dx = CGFloat(lean) * 400
+                // The node's long axis is its local +y, rotated by zRotation.
+                let z = laser.zRotation
+                let axis = CGPoint(x: -sin(z), y: cos(z))
+                let cross = axis.x * dy - axis.y * dx
+                XCTAssertEqual(cross, 0, accuracy: 0.001,
+                               "\(owner) lean \(lean): the bolt is not aligned "
+                               + "with its own travel")
+                // And the tail must point backwards, not lead the way.
+                let dot = axis.x * dx + axis.y * dy
+                XCTAssertLessThan(dot, 0, "\(owner) lean \(lean): exhaust is in front")
+            }
+        }
+    }
+
+    /// An angled round is a different shape as well as a different colour, and
+    /// the hitbox has to follow it — a paddle-shaped body would collect hits the
+    /// missile never touched.
+    func testAngledRoundIsLongerAndCarriesItsOwnHitbox() {
+        let straight = LaserNode(owner: .enemy)
+        straight.fire(from: .zero, damage: 2, speed: 200, travelDistance: 400)
+        let straightSize = straight.size
+
+        let angled = LaserNode(owner: .enemy)
+        angled.fire(from: .zero, damage: 2, speed: 200, travelDistance: 400, lean: 1)
+        XCTAssertGreaterThan(angled.size.height, straightSize.height, "longer")
+        XCTAssertLessThan(angled.size.width, straightSize.width, "and narrower")
+        XCTAssertEqual(angled.color, NeonPalette.shotPurple)
+        // Rebuilding the body must not silently drop the live contact mask.
+        XCTAssertNotEqual(angled.physicsBody?.contactTestBitMask, PhysicsCategory.none,
+                          "a live round with no contact mask hits nothing")
+        XCTAssertTrue(angled.physicsBody?.isDynamic == true)
+
+        // Returning to the pool leaves nothing dressed for the next shot.
+        angled.deactivate()
+        XCTAssertEqual(angled.zRotation, 0)
+        XCTAssertEqual(angled.physicsBody?.contactTestBitMask, PhysicsCategory.none)
     }
 }
 
