@@ -206,9 +206,9 @@ class GameScene: SKScene {
         // Neon palette: mostly white, accent cyan, hint of magenta
         let palette: [SKColor] = [
             .white, .white, .white, .white, .white,
-            SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1),  // cyan
-            SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1),  // cyan (doubled weight)
-            SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1),  // magenta
+            NeonPalette.cyan,
+            NeonPalette.cyan,  // doubled weight
+            NeonPalette.magenta,
         ]
 
         // Faster tiers twinkle more snappily.
@@ -536,7 +536,7 @@ class GameScene: SKScene {
         let testLabel = SKLabelNode(fontNamed: "PressStart2P-Regular")
         testLabel.text = "TEST MODE"
         testLabel.fontSize = 9
-        testLabel.fontColor = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
+        testLabel.fontColor = NeonPalette.orange
         testLabel.horizontalAlignmentMode = .center
         testLabel.verticalAlignmentMode = .center
         testLabel.position = CGPoint(x: 112, y: Self.boardBottomY + 46)
@@ -852,7 +852,7 @@ class GameScene: SKScene {
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
         label.text = "AUTO"
         label.fontSize = 12
-        label.fontColor = SKColor(red: 1.00, green: 0.55, blue: 0.00, alpha: 1)
+        label.fontColor = NeonPalette.alertOrange
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         label.position = CGPoint(x: point.x, y: point.y + BoardNode.squareSize * 0.55)
@@ -917,7 +917,7 @@ class GameScene: SKScene {
             return (from: drawn, to: centre)
         }
         guard !tethers.isEmpty else { return }
-        boardNode.showTethers(tethers, color: SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1))
+        boardNode.showTethers(tethers, color: NeonPalette.cyan)
     }
 
     private func selectPiece(at square: String) {
@@ -1045,9 +1045,7 @@ class GameScene: SKScene {
             return (from: origin, to: king, isJump: attacker.kind == .knight)
         }
         // Magenta when the player is the one in trouble, cyan when Black is.
-        let color: SKColor = side == .white
-            ? SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1)
-            : SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
+        let color: SKColor = side == .white ? NeonPalette.magenta : NeonPalette.cyan
         boardNode.showCheckPaths(paths, color: color, pulses: pulses)
     }
 

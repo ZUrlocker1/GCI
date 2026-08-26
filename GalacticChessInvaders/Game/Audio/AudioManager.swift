@@ -101,11 +101,6 @@ final class AudioManager {
         }
     }
 
-    func setVolume(_ volume: Float, for key: SoundKey) {
-        loopPlayers[key]?.volume = volume
-        sfxPools[key]?.forEach { $0.volume = volume }
-    }
-
     // MARK: - Music
 
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {

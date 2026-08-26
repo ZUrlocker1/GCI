@@ -24,7 +24,7 @@ final class SpaceshipNode: SKSpriteNode {
                    color: .clear,
                    size: CGSize(width: source.width * scale, height: Self.displayHeight))
         colorBlendFactor = 0.15
-        color = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
+        color = NeonPalette.cyan
         zPosition = 6
     }
 

@@ -11,8 +11,10 @@
 //     includes enemy-king adjacency. ChessKit's `isCheck` reads the side to move
 //     and handles king adjacency separately in KingMoving, which is easy to
 //     desync. One function serves both check detection and legality here.
-//  2. Castling and en passant are absent (GCI excludes them), so the illegal-
-//     castling checks and the en-passant capture fixups are gone with them.
+//  2. Castling and en passant are implemented — see `castlingMoves`/
+//     `isCastling` and the `enPassant`-target handling throughout
+//     `pawnMoves`/`apply`. An earlier version of GCI excluded both; this
+//     comment is what's left of that decision after it was reversed.
 
 import Foundation
 
