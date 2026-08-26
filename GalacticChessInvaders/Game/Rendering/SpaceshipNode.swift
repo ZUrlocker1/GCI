@@ -7,7 +7,10 @@ import SpriteKit
 
 final class SpaceshipNode: SKSpriteNode {
 
-    static let speed: CGFloat = 420          // points per second
+    /// Points per second. 420 originally; 30% slower after playtest — at full
+    /// speed the shortest tap overshot the file you were aiming at, and aiming
+    /// is the whole game once the fleet sweep opens narrow lanes.
+    static let speed: CGFloat = 294
     private static let displayHeight: CGFloat = 40
 
     private(set) var isInvincible = false

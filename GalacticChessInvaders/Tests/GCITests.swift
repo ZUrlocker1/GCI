@@ -2513,7 +2513,7 @@ final class FleetControllerTests: XCTestCase {
     /// The answer is a fixed sub-file amplitude, independent of piece count.
     func testSweepWidthIsSubFileAndIndependentOfPieceCount() {
         let (fleet, board, _) = makeFleet()
-        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.7, accuracy: 0.001)
+        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.9, accuracy: 0.001)
 
         let geometry = BoardNode()
         for piece in board.allPieces(color: .black) {
@@ -2522,7 +2522,7 @@ final class FleetControllerTests: XCTestCase {
                             square: piece.logicalSquare, atLogicalCentre: centre)
             }
         }
-        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.7, accuracy: 0.001,
+        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.9, accuracy: 0.001,
                        "a full formation shuffles exactly as far as a lone piece")
         XCTAssertFalse(fleet.isOffTruePosition, "a fresh fleet starts on its squares")
     }
