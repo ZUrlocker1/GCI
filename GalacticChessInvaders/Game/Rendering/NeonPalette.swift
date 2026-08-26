@@ -18,6 +18,12 @@ enum NeonPalette {
     /// recognisably Black's colour while actually looking like it is glowing.
     static let magentaLight = SKColor(red: 1.00, green: 0.565, blue: 0.69, alpha: 1)
 
+    /// Starfield accents. The field used to carry a few magenta stars, which
+    /// read as dull red specks against black rather than as distant suns —
+    /// blue sits far better beside the white majority and the cyan accents.
+    static let starBlueDeep  = SKColor(red: 0.20, green: 0.34, blue: 0.85, alpha: 1)
+    static let starBlueLight = SKColor(red: 0.60, green: 0.80, blue: 1.00, alpha: 1)
+
     /// General UI chrome — HUD text, menu highlights, headings.
     static let orange = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
 

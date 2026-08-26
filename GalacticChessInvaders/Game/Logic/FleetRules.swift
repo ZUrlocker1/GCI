@@ -140,6 +140,28 @@ enum FleetRules {
         return rank >= formationRearRank
     }
 
+    // MARK: - King Activated (§10.1, Level 7+)
+
+    /// The forcefield makes the black king take 50% more hits to destroy.
+    ///
+    /// Implemented as bonus HP rather than reduced damage, because the laser
+    /// deals a flat 2 and any per-hit division lands on fractions. 16 HP is 8
+    /// hits; 24 is 12.
+    static let kingForcefieldMultiplier = 1.5
+
+    static func forcefieldHP(baseMaxHP: Int) -> Int {
+        Int((Double(baseMaxHP) * kingForcefieldMultiplier).rounded())
+    }
+
+    /// The king's own weapon: faster and heavier than ordinary fleet fire.
+    static let kingShotSpeedMultiplier: CGFloat = 1.6
+    static let kingShotDamage = 2
+
+    /// How often the activated king fires, in beats. It shoots on its own
+    /// cadence rather than as part of the volley, so it reads as a separate
+    /// threat rather than one more pawn.
+    static let kingShotInterval = 2
+
     // MARK: - Sweep width
 
     /// How far the fleet may drift from true, as a fraction of a square.

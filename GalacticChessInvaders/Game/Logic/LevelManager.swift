@@ -24,6 +24,9 @@ struct LevelParameters {
     /// Half the fleet's lateral sweep, as a fraction of a square. Widens at
     /// Level 6 (see `FleetRules.wideSweepAmplitudeRatio`).
     let sweepAmplitudeRatio: CGFloat
+    /// §10.1 King Activated, from Level 7. The black king gains a forcefield
+    /// and its own heavy weapon; it does not change how the engine moves it.
+    var kingActivated: Bool { level >= 7 }
 }
 
 @MainActor
@@ -61,7 +64,7 @@ final class LevelManager {
         case 6:  return ("WIDE ORBIT",     "THE FLEET SWEEPS WIDER")
         // §10.1 gives these two verbatim; the Armored Pawns subtitle is
         // shortened to fit the 22-character limit.
-        case 7:  return ("KING ACTIVATED",  "THE KING NOW ATTACKS")
+        case 7:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
         case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
         default: return ("LEVEL \(level)",  "NO LET UP")
         }

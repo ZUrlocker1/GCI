@@ -3016,7 +3016,9 @@ final class LevelAnnouncementTests: XCTestCase {
     /// The two the design doc names verbatim (§10.1).
     func testDocumentedNamesAreUsedVerbatim() {
         XCTAssertEqual(LevelManager.announcement(for: 7)?.title, "KING ACTIVATED")
-        XCTAssertEqual(LevelManager.announcement(for: 7)?.subtitle, "THE KING NOW ATTACKS")
+        // Subtitle deviates from §10.1's "THE KING NOW ATTACKS": the king does
+        // not move differently, it gains a forcefield and its own weapon.
+        XCTAssertEqual(LevelManager.announcement(for: 7)?.subtitle, "SHIELDED, AND ARMED")
         XCTAssertEqual(LevelManager.announcement(for: 9)?.title, "ARMORED PAWNS")
     }
 
@@ -3024,6 +3026,60 @@ final class LevelAnnouncementTests: XCTestCase {
         for level in 2...40 {
             XCTAssertNotNil(LevelManager.announcement(for: level), "level \(level)")
         }
+    }
+}
+
+@MainActor
+final class KingActivatedTests: XCTestCase {
+
+    func testActivatesAtLevelSevenAndStays() {
+        for level in 1...6 {
+            XCTAssertFalse(LevelManager.parameters(for: level).kingActivated, "level \(level)")
+        }
+        for level in 7...15 {
+            XCTAssertTrue(LevelManager.parameters(for: level).kingActivated, "level \(level)")
+        }
+    }
+
+    /// The forcefield is worth exactly 50% more laser hits.
+    func testForcefieldIsFiftyPercentMoreHits() {
+        let base = PieceType.king.maxHP
+        let shielded = FleetRules.forcefieldHP(baseMaxHP: base)
+        let hits = { (hp: Int) in Int(ceil(Double(hp) / Double(ProjectileState.playerLaserDamage))) }
+        XCTAssertEqual(shielded, 24)
+        XCTAssertEqual(hits(base), 8)
+        XCTAssertEqual(hits(shielded), 12)
+    }
+
+    /// The shield absorbs before the sprite erodes, so the ring going out is
+    /// the cue that the king is now takeable.
+    func testShieldAbsorbsBeforeTheKingErodes() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        board.applyKingForcefield()
+        XCTAssertTrue(board.blackKingShieldIsUp())
+        XCTAssertEqual(board.piece(at: "e8")?.damageState, .full,
+                       "a shielded king shows no damage yet")
+
+        var hits = 0
+        while board.blackKingShieldIsUp(), hits < 40 {
+            _ = board.applyDamage(ProjectileState.playerLaserDamage, at: "e8")
+            hits += 1
+        }
+        XCTAssertEqual(hits, 4, "24 -> 16 HP at 2 damage a hit")
+        XCTAssertFalse(board.blackKingShieldIsUp())
+    }
+
+    /// The king's own weapon must out-class ordinary fleet fire on both axes,
+    /// or "ARMED" means nothing.
+    func testKingWeaponBeatsOrdinaryFleetFire() {
+        let level = LevelManager.parameters(for: 7)
+        XCTAssertGreaterThan(FleetRules.kingShotSpeedMultiplier, 1.0)
+        XCTAssertGreaterThan(level.projectileSpeed * FleetRules.kingShotSpeedMultiplier,
+                             level.projectileSpeed)
+        XCTAssertGreaterThan(FleetRules.kingShotDamage, ProjectileState.enemyShotDamage)
+        XCTAssertGreaterThan(FleetRules.kingShotInterval, 1,
+                             "on its own cadence, not every single beat")
     }
 }
 

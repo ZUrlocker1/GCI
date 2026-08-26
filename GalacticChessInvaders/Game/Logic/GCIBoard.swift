@@ -41,6 +41,27 @@ final class GCIBoard {
         DiagnosticsLog.shared.log(.chess, "Board: standard position set (\(pieces.count) pieces)")
     }
 
+    /// Raises the black king's HP above its type maximum (§10.1's forcefield).
+    ///
+    /// Its `damageState` reads `maxHP - hp`, which is negative while the shield
+    /// holds, so the king shows undamaged art until the bonus is spent and then
+    /// erodes normally. That is exactly the read we want: the forcefield
+    /// absorbs, then the king starts to break.
+    func applyKingForcefield() {
+        guard var king = pieces.values.first(where: { $0.color == .black && $0.type == .king })
+        else { return }
+        king.hp = FleetRules.forcefieldHP(baseMaxHP: PieceType.king.maxHP)
+        pieces[king.logicalSquare] = king
+        DiagnosticsLog.shared.log(.level, "black king forcefield: \(king.hp) HP")
+    }
+
+    /// True while the black king still has shield HP left over its normal max.
+    func blackKingShieldIsUp() -> Bool {
+        guard let king = pieces.values.first(where: { $0.color == .black && $0.type == .king })
+        else { return false }
+        return king.hp > PieceType.king.maxHP
+    }
+
     /// Where a check against `color` originates, for the board to visualise.
     func checkThreat(against color: PieceColor) -> ChessEngine.CheckThreat? {
         engine.checkThreat(against: color)
