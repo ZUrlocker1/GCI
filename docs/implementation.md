@@ -307,3 +307,14 @@ Not started.
   in a row. `typecheck.sh` now detects the plugin failure and fails the whole
   run rather than filtering it out; a clean run is only trustworthy when it
   actually says so. A real build remains the authority regardless
+- **Fixed a serious desync between the chess engine's own board and the
+  rendering-facing `pieces` dictionary.** `GCIBoard.forcePlace` (the fleet's
+  only way to move a piece) updated `pieces` but never told `ChessEngine`'s own
+  `position` — so after any descent, the engine went on believing every
+  descended piece was still at its pre-descent square, forever. When the
+  engine later proposed a move from that stale square, `applyChessMove` looked
+  up whichever piece had since occupied it *for real* and moved that one
+  instead. Reported directly from playtest as two pieces rendered on the same
+  square; reproduced and pinned with a standalone harness before fixing, since
+  `swift-plugin-server` flakiness was actively unreliable at the time. Fixed
+  by `ChessEngine.forceRelocate(from:to:)`, called from `forcePlace`

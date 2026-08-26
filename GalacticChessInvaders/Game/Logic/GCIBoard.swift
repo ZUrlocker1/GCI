@@ -161,6 +161,13 @@ final class GCIBoard {
         moved.logicalSquare = square
         pieces[square] = moved
 
+        // Keeps the chess engine's own board in step with the fleet. `pieces`
+        // is the arcade-facing mirror; without this line only the mirror moved
+        // — the engine's search and its own `make(from:to:)` legality check
+        // kept believing this piece was still at its pre-descent square,
+        // forever, for the rest of the game. See ChessEngine.forceRelocate.
+        engine.forceRelocate(from: piece.logicalSquare, to: square)
+
         return crush
     }
 
