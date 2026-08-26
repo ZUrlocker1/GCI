@@ -1953,6 +1953,24 @@ final class DrawRuleTests: XCTestCase {
 
     /// A capture or pawn move makes earlier positions unreachable, so both the
     /// clock and the repetition table reset.
+    /// Deliberately shorter than the chess convention of 50 — an arcade game
+    /// cannot afford a hundred plies of shuffling.
+    func testQuietMoveLimitIsThirtyAndCapsGrinds() throws {
+        XCTAssertEqual(ChessEngine.quietMoveLimit, 30)
+
+        let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/8/q6K w - - 0 1"))
+        var plies = 0
+        while plies < 200 {
+            if engine.isMate || engine.isStalemate || engine.isDrawn { break }
+            guard let move = ChessEngine.searchBestMove(in: engine.position, depth: 2,
+                                                       avoiding: engine.recentBoards),
+                  engine.make(from: move.from, to: move.to) != nil else { break }
+            plies += 1
+        }
+        XCTAssertLessThanOrEqual(plies, ChessEngine.quietMoveLimit * 2 + 2,
+                                 "a grind should be capped near 60 plies")
+    }
+
     func testCaptureResetsTheClockAndTable() throws {
         let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/p7/R6K w - - 0 1"))
         XCTAssertNotNil(engine.make(from: "a1", to: "a2"))

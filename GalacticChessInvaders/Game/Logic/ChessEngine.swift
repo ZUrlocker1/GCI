@@ -59,8 +59,13 @@ final class ChessEngine {
     /// Both standard draw rules. GCI originally omitted them, but a depth-2
     /// engine with an overwhelming material edge cannot force mate: it shuffles,
     /// and without these the game never terminates. Observed running ~200 plies.
+    /// Shorter than the chess convention of 50: GCI is an arcade game and a
+    /// shuffling endgame is unwatchable long before a real match would be drawn.
+    /// Expected to come down further once the fleet provides its own time pressure.
+    static let quietMoveLimit = 30                          // full moves
+
     var isDrawnByRepetition: Bool { (positionCounts[position] ?? 0) >= 3 }
-    var isDrawnByMoveLimit: Bool { halfmoveClock >= 100 }   // 50 full moves
+    var isDrawnByMoveLimit: Bool { halfmoveClock >= Self.quietMoveLimit * 2 }
     var isDrawn: Bool { isDrawnByRepetition || isDrawnByMoveLimit }
 
     init() {
