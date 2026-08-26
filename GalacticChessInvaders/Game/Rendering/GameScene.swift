@@ -499,9 +499,15 @@ class GameScene: SKScene {
         bloomNode.addChild(node)
         boardNode = node
 
+        // The fleet sweeps the same lane the ship patrols, expressed relative to
+        // the board's origin. Anything narrower than this and a full formation has
+        // no room to move — it is exactly eight files wide at level start.
+        let laneLeft = Self.shipMargin - node.position.x
+        let laneRight = size.width - Self.shipMargin - node.position.x
+        let lane = laneLeft...laneRight
         let controller = FleetController(board: board, parent: node,
                                          squareSize: BoardNode.squareSize,
-                                         boardWidth: BoardNode.boardSize,
+                                         lateralBounds: lane,
                                          level: levels.parameters)
         fleet = controller
         controller.onRankDescended = { [weak self] moves in self?.applyFleetDescent(moves) }
@@ -1027,11 +1033,14 @@ class GameScene: SKScene {
         label.verticalAlignmentMode   = .center
         label.position = CGPoint(x: size.width / 2, y: size.height / 2)
         bloomNode.addChild(label)
+        // The fleet advances on SKActions, so it ignores the update-loop gate.
+        fleet?.setPaused(true)
         DiagnosticsLog.shared.log(.level, "State → PAUSED")
     }
 
     func hidePausedOverlay() {
         bloomNode.childNode(withName: "pausedLabel")?.removeFromParent()
+        fleet?.setPaused(false)
     }
 
     // MARK: - Game Over

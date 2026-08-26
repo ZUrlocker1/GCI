@@ -26,7 +26,11 @@ final class FleetController {
     private let fleetNode = SKNode()
     private unowned let board: GCIBoard
     private let squareSize: CGFloat
-    private let boardWidth: CGFloat
+    /// The lateral walls, in fleet-parent coordinates. This is the *playfield*,
+    /// not the board: a full 16-piece formation is exactly as wide as the eight
+    /// files, so bounding the sweep to the board leaves it nowhere to go — it
+    /// bounces on the spot and drops a half-rank every frame or two.
+    private let lateralBounds: ClosedRange<CGFloat>
 
     private var descent = FleetRules.DescentCounter()
     private var direction: CGFloat = 1        // +1 right, -1 left
@@ -41,11 +45,11 @@ final class FleetController {
     private static let sweepKey = "fleetSweep"
     private static let halfDropDuration: TimeInterval = 0.18
 
-    init(board: GCIBoard, parent: SKNode, squareSize: CGFloat, boardWidth: CGFloat,
-         level: LevelParameters) {
+    init(board: GCIBoard, parent: SKNode, squareSize: CGFloat,
+         lateralBounds: ClosedRange<CGFloat>, level: LevelParameters) {
         self.board = board
         self.squareSize = squareSize
-        self.boardWidth = boardWidth
+        self.lateralBounds = lateralBounds
         self.levelParameters = level
         fleetNode.zPosition = 5
         parent.addChild(fleetNode)
@@ -84,6 +88,13 @@ final class FleetController {
         fleetNode.removeAllActions()
     }
 
+    /// Freezes the sweep and drop where they are. The beat is gated on
+    /// `PlayingState` in the scene's update loop, but the fleet runs on SKActions
+    /// which keep ticking regardless — so pausing has to reach it explicitly.
+    func setPaused(_ paused: Bool) {
+        fleetNode.isPaused = paused
+    }
+
     func reset() {
         stop()
         fleetNode.removeAllChildren()
@@ -99,10 +110,10 @@ final class FleetController {
         guard isRunning, pieceCount > 0 else { return }
 
         let (minX, maxX) = localExtent()
-        // The parent may slide until the leading piece touches a board edge.
-        let lowerBound = -minX
-        let upperBound = boardWidth - maxX
-        guard upperBound > lowerBound else { return }   // fleet wider than the board
+        // The parent may slide until the leading piece touches a wall.
+        let lowerBound = lateralBounds.lowerBound - minX
+        let upperBound = lateralBounds.upperBound - maxX
+        guard upperBound > lowerBound else { return }   // fleet wider than the playfield
 
         let target = direction > 0 ? upperBound : lowerBound
         let distance = abs(target - fleetNode.position.x)
@@ -175,6 +186,14 @@ final class FleetController {
         crushes.forEach { onCrush?($0) }
         onRankDescended?(moved)
         breached.forEach { onBreach?($0) }
+    }
+
+    /// How far the fleet can travel on a leg. A full formation is exactly as wide
+    /// as the eight files, so this collapsing to zero is the failure mode that
+    /// makes the fleet bounce on the spot and plummet.
+    var legTravel: CGFloat {
+        let (minX, maxX) = localExtent()
+        return max(0, (lateralBounds.upperBound - maxX) - (lateralBounds.lowerBound - minX))
     }
 
     /// Horizontal span of the living formation, in fleet-local coordinates.
