@@ -24,11 +24,11 @@ struct LevelParameters {
     /// Half the fleet's lateral sweep, as a fraction of a square. Widens at
     /// Level 6 (see `FleetRules.wideSweepAmplitudeRatio`).
     let sweepAmplitudeRatio: CGFloat
-    /// §10.1 King Activated — Level 8 *only*. The black king gains a forcefield
+    /// §10.1 King Activated — Level 9 *only*. The black king gains a forcefield
     /// and its own heavy weapon for that wave and reverts afterwards, so the
     /// level has a character of its own rather than permanently buffing the
     /// most important target in the game.
-    var kingActivated: Bool { level == 8 }
+    var kingActivated: Bool { level == 9 }
     /// Diagonal invader fire (§21.3). Level 7 is its own wave, and it comes
     /// back for Blitz — but Levels 8 and 9 get it out of the way again, so
     /// CROSSFIRE stays that level's identity rather than becoming permanent
@@ -37,9 +37,11 @@ struct LevelParameters {
     /// Level 10 "Blitz": the sweep widens and quickens as the wave runs, and
     /// the beat clock is cut to 3s (`FleetRules.blitz*`).
     var blitz: Bool { level >= 10 }
-    /// §10.1 Armored Pawns, Level 9 onward: half of every regenerated pawn
-    /// arrives immune to laser fire for three chess turns.
-    var armoredPawns: Bool { level >= 9 }
+    /// §10.1 Armored Pawns: half of every regenerated pawn arrives immune to
+    /// laser fire for three chess turns. Level 8 is its own wave, and Blitz
+    /// carries it again — the same shape as Crossfire, and for the same reason:
+    /// a mechanic that never leaves stops being any level's identity.
+    var armoredPawns: Bool { level == 8 || level >= 10 }
     /// How many of the fleet's rear ranks march. Widens at Level 10, so more of
     /// Black's board keeps moving — and keeps being shootable.
     var formationRanks: Int {
@@ -91,8 +93,8 @@ final class LevelManager {
         // already have to. §10.1 puts them the other way round and gives both
         // names verbatim; only the order moved.
         case 7:  return ("CROSSFIRE",       "BISHOPS FIRE ON THE DIAGONAL")
-        case 8:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
-        case 9:  return ("ARMORED PAWNS",  "REGENERATED PAWNS SHRUG OFF LASERS")
+        case 8:  return ("ARMORED PAWNS",   "REGENERATED PAWNS SHRUG OFF LASERS")
+        case 9:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
         // The last wave. Named for both the chess variation and the Cray
         // Blitz that won the 1983 world computer championship.
         case 10: return ("BLITZ!",         "3-SECOND CLOCK · THE FLEET RUNS WILD")

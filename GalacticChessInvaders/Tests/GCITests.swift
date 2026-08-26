@@ -2512,21 +2512,42 @@ final class FleetRulesTests: XCTestCase {
         }
         XCTAssertTrue(LevelManager.parameters(for: 7).diagonalShots)
         XCTAssertFalse(LevelManager.parameters(for: 8).diagonalShots,
-                       "King Activated is its own level, not Crossfire again")
+                       "8 and 9 are their own waves, not Crossfire again")
         XCTAssertFalse(LevelManager.parameters(for: 9).diagonalShots)
         XCTAssertTrue(LevelManager.parameters(for: 10).diagonalShots,
                       "Blitz carries every complication")
     }
 
-    /// Crossfire before King Activated: the angles wave teaches the player to
-    /// watch the diagonals, and the king is more interesting once they must.
-    func testCrossfireComesBeforeKingActivated() {
+    /// The order of the three late waves, and the shape they share: each owns a
+    /// mechanic outright, and Blitz takes them back.
+    func testTheLateLaddersOrder() {
         XCTAssertEqual(LevelManager.announcement(for: 7)?.title, "CROSSFIRE")
-        XCTAssertEqual(LevelManager.announcement(for: 8)?.title, "KING ACTIVATED")
-        XCTAssertTrue(LevelManager.parameters(for: 7).diagonalShots)
-        XCTAssertFalse(LevelManager.parameters(for: 7).kingActivated)
-        XCTAssertTrue(LevelManager.parameters(for: 8).kingActivated)
-        XCTAssertFalse(LevelManager.parameters(for: 8).diagonalShots)
+        XCTAssertEqual(LevelManager.announcement(for: 8)?.title, "ARMORED PAWNS")
+        XCTAssertEqual(LevelManager.announcement(for: 9)?.title, "KING ACTIVATED")
+        XCTAssertEqual(LevelManager.announcement(for: 10)?.title, "BLITZ!")
+
+        let seven = LevelManager.parameters(for: 7)
+        XCTAssertTrue(seven.diagonalShots)
+        XCTAssertFalse(seven.armoredPawns)
+        XCTAssertFalse(seven.kingActivated)
+
+        let eight = LevelManager.parameters(for: 8)
+        XCTAssertTrue(eight.armoredPawns)
+        XCTAssertFalse(eight.diagonalShots)
+        XCTAssertFalse(eight.kingActivated)
+
+        let nine = LevelManager.parameters(for: 9)
+        XCTAssertTrue(nine.kingActivated)
+        XCTAssertFalse(nine.diagonalShots)
+        XCTAssertFalse(nine.armoredPawns)
+
+        // Blitz combines what the waves before it each owned alone — except
+        // King Activated, which stays one wave's character.
+        let ten = LevelManager.parameters(for: 10)
+        XCTAssertTrue(ten.diagonalShots)
+        XCTAssertTrue(ten.armoredPawns)
+        XCTAssertTrue(ten.blitz)
+        XCTAssertFalse(ten.kingActivated)
     }
 
     /// Level 10 is Blitz: 3-second clock, and the *opening* width is still
@@ -3207,19 +3228,23 @@ final class RegenerationTests: XCTestCase {
         XCTAssertEqual(queue.slotsUsed, 0, "and it never goes negative")
     }
 
-    /// §10.1: armor is Level 9 onward, and only ever on a regenerated pawn.
-    func testArmorIsLevelNineOnward() {
-        for n in 1...8 { XCTAssertFalse(level(n).armoredPawns, "level \(n)") }
-        for n in 9...12 { XCTAssertTrue(level(n).armoredPawns, "level \(n)") }
+    /// §10.1: armor is Level 8's own wave, back again for Blitz, and only ever
+    /// on a regenerated pawn.
+    func testArmorIsLevelEightAndBlitz() {
+        for n in 1...7 { XCTAssertFalse(level(n).armoredPawns, "level \(n)") }
+        XCTAssertTrue(level(8).armoredPawns)
+        XCTAssertFalse(level(9).armoredPawns, "King Activated is its own wave")
+        for n in 10...12 { XCTAssertTrue(level(n).armoredPawns, "level \(n)") }
         // Roughly half, per §10.1 — measured over enough draws to be sure it
         // is a coin and not a constant.
         var armored = 0
-        for _ in 0..<4000 where Regeneration.arrivesArmored(level: level(9)) { armored += 1 }
+        for _ in 0..<4000 where Regeneration.arrivesArmored(level: level(8)) { armored += 1 }
         XCTAssertGreaterThan(armored, 1700)
         XCTAssertLessThan(armored, 2300)
-        // And never before Level 9, however many times it is asked.
+        // And never on a level that has not earned it, however often asked.
         for _ in 0..<200 {
-            XCTAssertFalse(Regeneration.arrivesArmored(level: level(8)))
+            XCTAssertFalse(Regeneration.arrivesArmored(level: level(7)))
+            XCTAssertFalse(Regeneration.arrivesArmored(level: level(9)))
         }
     }
 
@@ -3775,11 +3800,11 @@ final class LevelAnnouncementTests: XCTestCase {
     /// The names the design doc gives verbatim (§10.1), wherever the level
     /// ladder has since put them.
     func testDocumentedNamesAreUsedVerbatim() {
-        XCTAssertEqual(LevelManager.announcement(for: 8)?.title, "KING ACTIVATED")
+        XCTAssertEqual(LevelManager.announcement(for: 9)?.title, "KING ACTIVATED")
         // Subtitle deviates from §10.1's "THE KING NOW ATTACKS": the king does
         // not move differently, it gains a forcefield and its own weapon.
-        XCTAssertEqual(LevelManager.announcement(for: 8)?.subtitle, "SHIELDED, AND ARMED")
-        XCTAssertEqual(LevelManager.announcement(for: 9)?.title, "ARMORED PAWNS")
+        XCTAssertEqual(LevelManager.announcement(for: 9)?.subtitle, "SHIELDED, AND ARMED")
+        XCTAssertEqual(LevelManager.announcement(for: 8)?.title, "ARMORED PAWNS")
         // The banners name the piece that shoots, which is the whole point of
         // arming a type rather than weighting a distribution.
         XCTAssertEqual(LevelManager.announcement(for: 2)?.subtitle, "PAWNS FIRE BACK")
@@ -3797,12 +3822,12 @@ final class LevelAnnouncementTests: XCTestCase {
 @MainActor
 final class KingActivatedTests: XCTestCase {
 
-    /// Level 8 only. The forcefield and the king's weapon are that wave's
+    /// Level 9 only. The forcefield and the king's weapon are that wave's
     /// character; leaving them on forever would permanently buff the single
     /// most important target in the game.
-    func testActivatesOnLevelEightOnly() {
+    func testActivatesOnLevelNineOnly() {
         for level in 1...15 {
-            XCTAssertEqual(LevelManager.parameters(for: level).kingActivated, level == 8,
+            XCTAssertEqual(LevelManager.parameters(for: level).kingActivated, level == 9,
                            "level \(level)")
         }
     }
@@ -3917,7 +3942,7 @@ final class KingActivatedTests: XCTestCase {
     /// The king's own weapon must out-class ordinary fleet fire on both axes,
     /// or "ARMED" means nothing.
     func testKingWeaponBeatsOrdinaryFleetFire() {
-        let level = LevelManager.parameters(for: 8)
+        let level = LevelManager.parameters(for: 9)
         XCTAssertGreaterThan(FleetRules.kingShotSpeedMultiplier, 1.0)
         XCTAssertGreaterThan(level.projectileSpeed * FleetRules.kingShotSpeedMultiplier,
                              level.projectileSpeed)

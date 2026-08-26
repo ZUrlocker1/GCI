@@ -261,12 +261,13 @@ left the game with no ending at all.
 | 5 | TRIPLE THREAT | Black moves three times |
 | 6 | WIDE ORBIT | Sweep widens to 1.5 squares |
 | 7 | CROSSFIRE | Bishops fire diagonals on their own cadence |
-| 8 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
-| 9 | ARMORED PAWNS | Half of every regenerated pawn arrives immune to lasers for three White moves |
-| 10 | BLITZ! | 3s clock, three marching ranks, and a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th |
+| 8 | ARMORED PAWNS | Half of every regenerated pawn arrives immune to lasers for three White moves |
+| 9 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
+| 10 | BLITZ! | 3s clock, three marching ranks, a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th — **and Crossfire and Armored Pawns both back** |
 
-Escalations persist except where a level's identity depends on not persisting:
-King Activated and Crossfire are their own waves (Blitz carries Crossfire again).
+Escalations persist except where a level's identity depends on not persisting.
+Levels 7–9 each own a mechanic outright and hand it back, and Blitz takes them
+all — except King Activated, which stays one wave's character.
 
 ### Combat, as it stands
 
@@ -341,7 +342,7 @@ promise Level 4's regeneration has to be built to keep.
 - **Defensive mode**: once the black king is Cracked or worse, pawns stop
   scattering along the rear rank and materialise directly in front of him.
   §23.9's rook and bishop defensive spawns are not built
-- **Armored pawns** (Level 9): half of every regenerated pawn arrives with its
+- **Armored pawns** (Level 8, and again at Blitz): half of every regenerated pawn arrives with its
   interior filled a translucent lighter red — outline untouched, so it reads as
   the same pawn wearing something rather than as a different piece — and immune
   to laser fire for three White moves. The sprites are hollow, so the fill is a
@@ -384,9 +385,10 @@ One line each; the reasoning is in the commits and the code.
 
 ### Deviations from the design doc
 
-- Crossfire is Level 7 and King Activated Level 8 — §10.1 has them the other
-  way round. Crossfire teaches the player to watch the angles, and the king is
-  a more interesting problem once they already have to
+- The late order is Crossfire, Armored Pawns, King Activated — §10.1 has King
+  Activated first and Armored Pawns last. Each of the three teaches something
+  the next one is more interesting for, and the king reads best as the last
+  thing before Blitz
 - King Activated is arcade, not chess. §10.1 asks for aggressive King *play*; that was
   built and reverted — it measured as invisible in a full position, because the
   king's move never outscores thirty alternatives until the fleet is nearly

@@ -616,7 +616,7 @@ class GameScene: SKScene {
     private func buildPlayfield(announceLevel: Bool = true) {
         hideBoard()
         board.setupStandardPosition()
-        // §10.1: at Level 8 the black king carries a forcefield worth 50%
+        // §10.1: at Level 9 the black king carries a forcefield worth 50%
         // more hits. Applied here so the extra HP is in place before any node
         // reads it.
         if levels.parameters.kingActivated { board.applyKingForcefield() }
