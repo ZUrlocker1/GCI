@@ -88,7 +88,7 @@ enum FleetRules {
 
     /// The two half-drops are deliberately uneven. An even 0.5/0.5 split parks
     /// the whole fleet on a rank boundary for several beats, which is the exact
-    /// ambiguity `sweepAmplitudeRatio` exists to prevent on the other axis —
+    /// ambiguity `baseSweepAmplitudeRatio` exists to prevent on the other axis —
     /// a piece halfway between two ranks belongs to neither. At 0.3 it reads as
     /// a piece leaning down off its own rank, which is unambiguous.
     static let firstDropRatio: CGFloat = 0.3
@@ -150,10 +150,20 @@ enum FleetRules {
     /// firing lanes past White's own pawns. Still under the 0.5 ceiling above,
     /// so a piece's centre never leaves its own file and the square it occupies
     /// stays unambiguous.
-    static let sweepAmplitudeRatio: CGFloat = 0.45
+    static let baseSweepAmplitudeRatio: CGFloat = 0.45
 
-    static func sweepAmplitude(squareSize: CGFloat) -> CGFloat {
-        squareSize * sweepAmplitudeRatio
+    /// The wide sweep from Level 6 (§ level table): 1.5 squares end to end.
+    ///
+    /// This deliberately breaks the sub-half-square rule above. At 0.75 a
+    /// piece's centre crosses into the neighbouring file, so its square really
+    /// does become ambiguous — that is the cost, taken knowingly. By Level 6
+    /// the player has had five waves to learn the board, the fleet is thinned,
+    /// and the point of the level is that the game stops respecting its own
+    /// limits. Levels 1-5 keep the readable width.
+    static let wideSweepAmplitudeRatio: CGFloat = 0.75
+
+    static func sweepAmplitude(squareSize: CGFloat, ratio: CGFloat) -> CGFloat {
+        squareSize * ratio
     }
 
     /// The square one rank toward White, or nil if already on rank 1.

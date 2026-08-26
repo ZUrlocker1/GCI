@@ -26,10 +26,12 @@ final class FleetController {
     private let fleetNode = SKNode()
     private unowned let board: GCIBoard
     private let squareSize: CGFloat
-    /// Half the total sweep width. The fleet oscillates between -amplitude and
-    /// +amplitude around true position, and never further: a piece that drifts
-    /// past half a square stops being readable as belonging to its file.
-    private let amplitude: CGFloat
+    /// Half the total sweep width. Read from the level rather than fixed —
+    /// Level 6 widens it deliberately (`FleetRules.wideSweepAmplitudeRatio`).
+    private var amplitude: CGFloat {
+        FleetRules.sweepAmplitude(squareSize: squareSize,
+                                  ratio: levelParameters.sweepAmplitudeRatio)
+    }
 
     /// Squares the fleet still owns. Descent walks these rather than every black
     /// piece: a piece that has played a chess move has left the formation and is
@@ -55,7 +57,6 @@ final class FleetController {
     init(board: GCIBoard, parent: SKNode, squareSize: CGFloat, level: LevelParameters) {
         self.board = board
         self.squareSize = squareSize
-        self.amplitude = FleetRules.sweepAmplitude(squareSize: squareSize)
         self.schedule = FleetRules.descentSchedule(for: level.level)
         self.levelParameters = level
         fleetNode.zPosition = 5

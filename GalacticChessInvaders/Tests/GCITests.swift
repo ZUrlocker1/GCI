@@ -2390,10 +2390,49 @@ final class FleetRulesTests: XCTestCase {
     /// The readability invariant: a piece that drifts half a square sits on a
     /// file boundary and its square becomes genuinely ambiguous.
     func testSweepStaysWithinTheOwnFile() {
-        XCTAssertLessThan(FleetRules.sweepAmplitudeRatio, 0.5)
-        let amplitude = FleetRules.sweepAmplitude(squareSize: BoardNode.squareSize)
+        XCTAssertLessThan(FleetRules.baseSweepAmplitudeRatio, 0.5)
+        let amplitude = FleetRules.sweepAmplitude(
+            squareSize: BoardNode.squareSize,
+            ratio: FleetRules.baseSweepAmplitudeRatio)
         XCTAssertLessThan(amplitude * 2, BoardNode.squareSize,
-                          "total sweep must stay under one file width")
+                          "the base sweep must stay under one file width")
+    }
+
+    /// Level 6's wide sweep breaks that rule on purpose — 1.5 squares end to
+    /// end, so a piece's centre does cross into the next file. The test exists
+    /// to make the trade deliberate rather than accidental.
+    func testWideSweepKnowinglyExceedsTheReadableWidth() {
+        XCTAssertGreaterThan(FleetRules.wideSweepAmplitudeRatio, 0.5)
+        XCTAssertEqual(FleetRules.wideSweepAmplitudeRatio * 2, 1.5, accuracy: 0.0001,
+                       "1.5 squares end to end")
+    }
+
+    /// The wide sweep arrives at Level 6 and never reverts.
+    func testSweepWidthEscalatesAtLevelSixAndStays() {
+        for level in 1...5 {
+            XCTAssertEqual(LevelManager.parameters(for: level).sweepAmplitudeRatio,
+                           FleetRules.baseSweepAmplitudeRatio, "level \(level)")
+        }
+        for level in 6...12 {
+            XCTAssertEqual(LevelManager.parameters(for: level).sweepAmplitudeRatio,
+                           FleetRules.wideSweepAmplitudeRatio, "level \(level)")
+        }
+    }
+
+    /// Level 4's banner promises "FASTER, HARDER FIRE"; it needs to be a step
+    /// the player can actually feel, not the +11% it used to be.
+    func testProjectileSpeedJumpsHardAtLevelFour() {
+        let three = LevelManager.parameters(for: 3).projectileSpeed
+        let four = LevelManager.parameters(for: 4).projectileSpeed
+        XCTAssertEqual(four / three, 1.3, accuracy: 0.01, "a 30% step at level 4")
+
+        // And it never goes backwards afterwards.
+        var previous = four
+        for level in 5...12 {
+            let speed = LevelManager.parameters(for: level).projectileSpeed
+            XCTAssertGreaterThan(speed, previous, "level \(level) must not slow down")
+            previous = speed
+        }
     }
 
     /// The same argument, on the other axis: an even 0.5/0.5 split would park the
