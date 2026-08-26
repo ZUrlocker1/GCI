@@ -49,6 +49,7 @@ class GameScene: SKScene {
     private var gameOverNode: GameOverNode?
     private var scorePops: ScorePopPool?
     private var explosions: ExplosionPool?
+    private var shatters: ShatterPool?
 
     /// §24.1's shake, applied to `bloomNode` rather than to a camera.
     ///
@@ -624,6 +625,7 @@ class GameScene: SKScene {
         laserPool = LaserPool(parent: bloomNode)
         scorePops = ScorePopPool(parent: bloomNode)
         explosions = ExplosionPool(parent: bloomNode)
+        shatters = ShatterPool(parent: bloomNode)
 
         // Countdown lives in the gutter left of the board (§19), with the
         // check/mate banner directly beneath it.
@@ -726,6 +728,7 @@ class GameScene: SKScene {
     func hideBoard() {
         scorePops?.reset()
         explosions?.reset()
+        shatters?.reset()
         shake = .none
         shakeElapsed = 0
         freezeRemaining = 0
@@ -785,6 +788,7 @@ class GameScene: SKScene {
             node.animateMove(to: move.to, point: point)
             pieceNodes[move.to] = node
         }
+        reabsorbStrays()
         refreshStatus()
     }
 
@@ -1198,6 +1202,47 @@ class GameScene: SKScene {
     /// it was drawn. Used both when a black piece plays chess — it stops being an
     /// invader — and when one dies, so the explosion does not ride the march.
     /// A no-op for pieces the fleet does not own.
+    /// Does a black piece standing on `square` belong in the formation?
+    ///
+    /// Measured against the fleet's own rearmost rank, falling back to the
+    /// rearmost black piece anywhere when the formation is empty — otherwise a
+    /// fleet that lost every member could never re-form, and the rule would
+    /// quietly switch itself off for the rest of the level.
+    private func marchesAfterMoving(to square: String) -> Bool {
+        let rear = fleet?.rearRank
+            ?? board.allPieces(color: .black).map { Self.rankIndex(of: $0.logicalSquare) }.max()
+        guard let rear else { return false }
+        return FleetRules.staysInFormation(afterMovingTo: square,
+                                           formationRearRank: rear,
+                                           ranks: levels.parameters.formationRanks)
+    }
+
+    /// Puts a stray black piece back in the formation, sliding it into step.
+    private func rejoinFleet(_ node: PieceNode, at square: String) {
+        guard let boardNode, let fleet, !fleet.contains(node),
+              let centre = boardNode.center(of: square) else { return }
+        // The bob owns `position` through a repeatForever; the slide has to.
+        node.stopIdleBob()
+        fleet.adopt(node, square: square, atLogicalCentre: centre,
+                    slidingFrom: node.position)
+        node.run(.sequence([.wait(forDuration: 0.2),
+                            .run { node.startIdleBob() }]))
+        DiagnosticsLog.shared.log(.fleet, "\(square) falls back into formation")
+    }
+
+    /// After a rank descent the formation has moved down onto the board, so any
+    /// stray black piece now inside its band is swept up by it. The fleet reads
+    /// as a body that reabsorbs stragglers rather than as a set that only ever
+    /// shrinks.
+    private func reabsorbStrays() {
+        guard let fleet else { return }
+        for (square, node) in pieceNodes
+        where node.piece.color == .black && !fleet.contains(node) {
+            guard marchesAfterMoving(to: square) else { continue }
+            rejoinFleet(node, at: square)
+        }
+    }
+
     private func detachFromFleet(_ node: PieceNode) {
         guard let boardNode, let fleet, fleet.contains(node) else { return }
         let drawn = fleet.screenPosition(of: node)
@@ -1329,15 +1374,22 @@ class GameScene: SKScene {
         // A parked black piece usually sits directly behind one of White's pawns
         // and is then nearly unshootable, so staying in the formation keeps it
         // moving and keeps it a target.
-        if outcome.moved.color == .black,
-           let fleet, let rear = fleet.rearRank,
-           FleetRules.staysInFormation(afterMovingTo: outcome.to,
-                                       formationRearRank: rear,
-                                       ranks: levels.parameters.formationRanks),
-           fleet.contains(node),
-           fleet.rekey(from: outcome.from, to: outcome.to) {
-            // Stays parented to the fleet; `animateMove` below still targets the
-            // logical square centre, which is what a member's local position is.
+        if outcome.moved.color == .black, let fleet, marchesAfterMoving(to: outcome.to) {
+            if fleet.contains(node) {
+                // Stays parented to the fleet; `animateMove` below still targets
+                // the logical square centre, which is a member's local position.
+                if !fleet.rekey(from: outcome.from, to: outcome.to) {
+                    detachFromFleet(node)
+                }
+            } else {
+                // Membership used to be one-way: `adopt` ran only at board build
+                // time, so a piece that stepped out of the band once was a
+                // civilian for the rest of the level however far back it came.
+                // That is worst for the king, which then parks behind White's
+                // own pawns where it is nearly unshootable — the exact problem
+                // the marching rule exists to prevent.
+                rejoinFleet(node, at: outcome.to)
+            }
         } else {
             detachFromFleet(node)
         }
@@ -1828,6 +1880,28 @@ class GameScene: SKScene {
         bloomNode.isPaused = true
     }
 
+    /// Where a round landed and which way it was going — enough to throw the
+    /// glass the right way. Carried into the hit handlers rather than stashed,
+    /// so a hit that arrives from somewhere without one (a chess capture) says
+    /// so in its type instead of silently reusing the last shot's heading.
+    struct Impact {
+        let point: CGPoint
+        /// Captured at the contact, not read back from the round: `deactivate`
+        /// clears its rotation, and every one of these call sites deactivates
+        /// before the handler runs. Read late, a player laser's glass sprayed
+        /// downward.
+        let heading: CGVector
+    }
+
+    /// Glass off a piece that took a hit and lived, thrown along the round's
+    /// own heading. A destroyed piece gets the burst instead — two effects on
+    /// the same frame would only muddy each other.
+    private func shatterGlass(_ impact: Impact?, color: SKColor) {
+        guard let impact else { return }
+        shatters?.shatter(at: bloomNode.convert(impact.point, from: self),
+                          color: color, along: impact.heading)
+    }
+
     /// A destroyed piece's position in `bloomNode`'s space — pieces live under
     /// the board or the fleet, both of which are inset within it.
     private func bloomPosition(of node: SKNode) -> CGPoint {
@@ -1897,6 +1971,7 @@ class GameScene: SKScene {
     /// The player's laser touched something. Always consumed on contact,
     /// whatever it hit — a laser doesn't pass through.
     private func resolvePlayerLaserHit(laser: LaserNode, node: SKNode, at point: CGPoint) {
+        let impact = Impact(point: point, heading: laser.travelDirection)
         laser.deactivate()
         guard let pieceNode = node as? PieceNode else { return }
         startShake(Juice.laserHit)
@@ -1907,7 +1982,7 @@ class GameScene: SKScene {
         if pieceNode.piece.color == .black {
             guard let result = CollisionResolver.playerLaserHitBlackPiece(
                 at: pieceNode.square, board: board) else { return }
-            handleBlackPieceHit(result, node: pieceNode)
+            handleBlackPieceHit(result, node: pieceNode, impact: impact)
         } else if pieceNode.piece.type == .king {
             // The player's own king is armoured against the player's own fire.
             // Shooting it is almost always a mistake — the ship sits directly
@@ -1921,7 +1996,7 @@ class GameScene: SKScene {
         } else {
             guard let result = CollisionResolver.playerLaserHitWhitePiece(
                 at: pieceNode.square, board: board) else { return }
-            handleWhitePieceHit(result, node: pieceNode)
+            handleWhitePieceHit(result, node: pieceNode, impact: impact)
         }
     }
 
@@ -1932,6 +2007,7 @@ class GameScene: SKScene {
         // shot carries 2 and was landing 1: the resolver hardcoded
         // `enemyShotDamage`, so "double damage" never reached the board.
         let damage = shot.state?.damage ?? ProjectileState.enemyShotDamage
+        let impact = Impact(point: point, heading: shot.travelDirection)
 
         if let ship, node === ship {
             shot.deactivate()
@@ -1950,7 +2026,7 @@ class GameScene: SKScene {
                 return
             }
             shot.deactivate()
-            handleWhitePieceHit(result, node: pieceNode)
+            handleWhitePieceHit(result, node: pieceNode, impact: impact)
         }
     }
 
@@ -1977,13 +2053,15 @@ class GameScene: SKScene {
         node.refresh(with: updated)
     }
 
-    private func handleBlackPieceHit(_ result: CollisionOutcome, node: PieceNode) {
+    private func handleBlackPieceHit(_ result: CollisionOutcome, node: PieceNode,
+                                     impact: Impact?) {
         guard case .blackPieceHit(let square, let type, let destroyed, let points, let comboBonus) = result
         else { return }
 
         if !destroyed {
             showDamage(on: node, at: square)
             node.applyHitFlash()
+            shatterGlass(impact, color: NeonPalette.magenta)
             // While the king's forcefield still holds, a hit reads as absorbed
             // rather than as damage — which is also literally true, since the
             // bonus HP is being spent and the sprite has not eroded yet.
@@ -2017,12 +2095,14 @@ class GameScene: SKScene {
                  banner: "BLACK KING DESTROYED")
     }
 
-    private func handleWhitePieceHit(_ result: CollisionOutcome, node: PieceNode) {
+    private func handleWhitePieceHit(_ result: CollisionOutcome, node: PieceNode,
+                                     impact: Impact?) {
         guard case .whitePieceHit(let square, let destroyed) = result else { return }
 
         if !destroyed {
             showDamage(on: node, at: square)
             node.applyHitFlash()
+            shatterGlass(impact, color: NeonPalette.cyan)
             AudioManager.shared.play(.pieceHitLight)
             return
         }

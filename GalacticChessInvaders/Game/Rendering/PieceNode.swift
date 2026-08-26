@@ -553,7 +553,11 @@ final class PieceNode: SKSpriteNode {
                        .repeatForever(.sequence([up, down]))]), withKey: Self.bobKey)
     }
 
-    private func stopIdleBob() {
+    /// Stops the bob so something else can own `position` for a moment — it is
+    /// a `repeatForever` of `moveBy` pairs, so a concurrent `move(to:)` would be
+    /// fighting it every frame. Internal now that a piece can slide back into
+    /// the fleet formation as well as move between squares.
+    func stopIdleBob() {
         removeAction(forKey: Self.bobKey)
     }
 

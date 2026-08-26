@@ -116,6 +116,15 @@ final class LaserNode: SKSpriteNode {
         addChild(missileRig)
     }
 
+    /// The unit vector this round is travelling along.
+    ///
+    /// Local +y is the tail (see `setDiagonal`), so the heading is the opposite
+    /// of the rotated +y axis. Read it *before* `deactivate`, which resets the
+    /// rotation — a spent round has no heading.
+    var travelDirection: CGVector {
+        CGVector(dx: sin(zRotation), dy: -cos(zRotation))
+    }
+
     /// §20 Phase 3.2 bitmask spec: player laser tests only pieces (not the
     /// ship, not enemy shots); enemy shots test only white pieces + ship.
     private var liveContactMask: UInt32 {
