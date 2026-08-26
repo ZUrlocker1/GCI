@@ -105,6 +105,7 @@ class GameScene: SKScene {
     private static let checkmateBonus = 300
     private static let endBannerName = "endBanner"
     private static let gutterNoticeName = "gutterNotice"
+    private static let levelAnnounceKey = "levelAnnounce"
     /// Gap between rounds in one beat's volley (§5.3 fires them as a group).
     private static let volleyStagger: TimeInterval = 0.18
     /// The Level 1 warning shot is once per level (§10.1).
@@ -645,6 +646,12 @@ class GameScene: SKScene {
         laserPool?.setPaused(true)
         ship?.direction = 0
 
+        // Skipping levels with `V` can arrive mid-banner, so clear any previous
+        // one rather than stacking illegibly on top of it.
+        enumerateChildNodes(withName: LevelBannerNode.nodeName) { node, _ in
+            node.removeFromParent()
+        }
+
         let banner = LevelBannerNode(title: announcement.title,
                                      subtitle: announcement.subtitle,
                                      sceneSize: size)
@@ -652,6 +659,9 @@ class GameScene: SKScene {
         DiagnosticsLog.shared.log(.level,
             "\(announcement.title) — \(announcement.subtitle)")
 
+        // Keyed, so a second announcement replaces this timer instead of
+        // running alongside it — otherwise the first one to elapse would clear
+        // the flag and start the beat while the newer banner was still up.
         run(.sequence([
             .wait(forDuration: LevelBannerNode.totalDuration),
             .run { [weak self] in
@@ -662,7 +672,7 @@ class GameScene: SKScene {
                 self.laserPool?.setPaused(false)
                 self.beginBeat()
             },
-        ]))
+        ]), withKey: Self.levelAnnounceKey)
     }
 
     private func refreshHUD() {
@@ -676,6 +686,11 @@ class GameScene: SKScene {
 
     func hideBoard() {
         removeEndBanner()
+        // A restart or level change can land mid-announcement.
+        removeAction(forKey: Self.levelAnnounceKey)
+        enumerateChildNodes(withName: LevelBannerNode.nodeName) { node, _ in
+            node.removeFromParent()
+        }
         for node in bloomNode.children where node.name == Self.gutterNoticeName {
             node.removeAllActions()
             node.removeFromParent()
