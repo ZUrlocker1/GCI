@@ -26,7 +26,7 @@ final class LaserNode: SKSpriteNode {
     init(owner: ProjectileState.Owner) {
         self.owner = owner
         let height: CGFloat = owner == .player ? 18 : 14
-        let tint = owner == .player ? NeonPalette.cyan : NeonPalette.magenta
+        let tint = owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight
         super.init(texture: Self.solidTexture, color: tint,
                    size: CGSize(width: Self.width, height: height))
         colorBlendFactor = 1.0
