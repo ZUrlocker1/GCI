@@ -380,6 +380,56 @@ final class GCIBoardTests: XCTestCase {
         XCTAssertEqual(board.piece(at: "a2")?.color, .black)
         XCTAssertNil(board.piece(at: "a8"), "the invader vacates its old square")
     }
+
+    /// Regression: `forcePlace` used to move only `pieces` (the arcade-facing
+    /// mirror), never the chess engine's own board. The engine went on
+    /// believing a descended piece was still at its pre-descent square forever
+    /// — so when it later proposed a move from that stale square, applying it
+    /// looked up whichever piece had since occupied that square for real (per
+    /// `pieces`, the correct side) and moved THAT one instead. Two pieces would
+    /// end up rendered on the same square — reported directly from playtest.
+    /// This pins the fix at the layer the bug actually lived: the engine's own
+    /// board must already agree with `pieces` the instant `forcePlace` returns.
+    func testForcePlaceKeepsTheChessEnginesOwnBoardInSync() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        let pawn = board.piece(at: "a7")!
+        _ = board.forcePlace(pawn, at: "a6")
+        board.forceTurn(.black)   // legalDestinations is turn-gated; isolate the square check
+
+        XCTAssertNil(board.currentPosition.board["a7"],
+                     "the engine's own board must also see the old square emptied")
+        XCTAssertEqual(board.currentPosition.board["a6"]?.kind, .pawn)
+        XCTAssertEqual(board.currentPosition.board["a6"]?.color, .black)
+
+        // The proof that matters: the engine now generates moves from the
+        // piece's REAL square, not its stale one. Before the fix, "a7" still
+        // looked to the engine like it held a movable pawn.
+        XCTAssertTrue(board.legalDestinations(from: "a7").isEmpty,
+                     "the engine must not still think a7 holds anything")
+        XCTAssertFalse(board.legalDestinations(from: "a6").isEmpty,
+                       "the engine must recognise the pawn at its real square")
+    }
+
+    /// The end-to-end version of the same regression: a piece that force-placed
+    /// onto a new square is the one that actually moves when the engine later
+    /// plays it — not whatever the engine's stale model would have picked from
+    /// the piece's *original* square.
+    func testAPieceMovedByForcePlaceIsPlayedFromItsNewSquareNotItsOld() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        _ = board.forcePlace(board.piece(at: "a7")!, at: "a6")
+        board.forceTurn(.black)
+
+        // Before the fix this succeeded: the engine's stale board still
+        // believed a7 held a movable black pawn.
+        XCTAssertNil(board.applyChessMove(from: "a7", to: "a5"),
+                     "a7 is empty on the real board; the engine must agree")
+
+        let outcome = board.applyChessMove(from: "a6", to: "a5")
+        XCTAssertNotNil(outcome, "the pawn's real, post-descent square must be playable")
+        XCTAssertEqual(board.piece(at: "a5")?.type, .pawn)
+    }
 }
 
 final class ChessEngineTests: XCTestCase {

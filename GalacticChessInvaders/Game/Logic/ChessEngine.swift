@@ -205,6 +205,27 @@ final class ChessEngine {
         // because no move was made.
     }
 
+    /// Relocates whatever piece sits on `from` to `to`, bypassing legality —
+    /// used by `GCIBoard.forcePlace` to keep the engine's own board in step
+    /// with the fleet's descent.
+    ///
+    /// Without this, `position` never learns about a fleet-driven move: it goes
+    /// on believing every descended piece still sits at its pre-descent square
+    /// forever. The search then proposes moves from squares that are actually
+    /// empty, and `engine.make` validates them against that same stale square —
+    /// so the move is accepted, but `GCIBoard.applyChessMove` looks up the
+    /// *mover* by reading `pieces[from]` on the real, correct board, where some
+    /// unrelated piece may since have descended into that square. The result is
+    /// that unrelated piece silently teleporting to wherever the stale move
+    /// intended, while the piece that actually should have moved is left
+    /// untouched — two pieces rendered on the same square, exactly the
+    /// "black pawn on top of a static piece" symptom this exists to prevent.
+    func forceRelocate(from: String, to: String) {
+        guard let piece = position.board[from] else { return }
+        position.board[from] = nil
+        position.board[to] = piece
+    }
+
     // MARK: - Search
 
     /// Narrows what the search may consider.
