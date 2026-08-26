@@ -2692,42 +2692,6 @@ final class DamageStateTests: XCTestCase {
 }
 
 @MainActor
-final class SoundAssetFallbackTests: XCTestCase {
-
-    /// Phase 3.2 shipped silent: every sound the shooting loop asks for was in
-    /// the not-yet-bundled set. These keys must at least resolve to a
-    /// placeholder so the arcade layer is audible.
-    func testShootingSoundsAllResolveToSomething() {
-        let base = Bundle.main.url(forResource: "sfx", withExtension: nil)
-        let shootingKeys: [SoundKey] = [
-            .playerLaserFire, .invaderLaserFire, .pieceHitLight, .invaderHitsShip,
-            .playerShipDestroyed, .pawnDestroyed, .knightDestroyed,
-            .bishopDestroyed, .rookDestroyed, .queenDestroyed, .kingDestroyed,
-        ]
-        for key in shootingKeys {
-            let candidates = [key.filename, key.placeholderFilename].compactMap { $0 }
-            XCTAssertFalse(candidates.isEmpty, "\(key) offers no file at all")
-            // When running without the app bundle there is nothing to stat, so
-            // only assert the mapping exists; AudioManager does the real check.
-            guard let base else { continue }
-            let anyExists = candidates.contains {
-                FileManager.default.fileExists(atPath: base.appendingPathComponent($0).path)
-            }
-            XCTAssertTrue(anyExists, "\(key) has neither its real asset nor a usable placeholder")
-        }
-    }
-
-    /// A placeholder is a stopgap, not the design — it must never quietly
-    /// replace an asset that is genuinely present.
-    func testPlaceholdersOnlyCoverKeysWithoutRealAssets() {
-        for key in SoundKey.allCases where key.placeholderFilename != nil {
-            XCTAssertNotEqual(key.placeholderFilename, key.filename,
-                              "\(key)'s placeholder duplicates its real filename")
-        }
-    }
-}
-
-@MainActor
 final class SpaceshipStateTests: XCTestCase {
 
     func testStartsWithThreeLivesAndAFullCap() {

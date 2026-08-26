@@ -32,7 +32,7 @@ struct GameSKViewRepresentable: NSViewRepresentable {
     var showsDrawCount: Bool = false
 
     func makeNSView(context: Context) -> SKView {
-        let view = SKView()
+        let view = KeyboardFocusedSKView()
         view.presentScene(GameScene.shared)
         applyOverlays(to: view)
         return view
@@ -49,6 +49,38 @@ struct GameSKViewRepresentable: NSViewRepresentable {
     }
 }
 
+
+/// An `SKView` that claims keyboard focus as soon as it has a window.
+///
+/// Without this the game view is not first responder at launch, so `keyDown`
+/// never reaches the scene: the title screen's "PRESS ANY KEY TO START" ignores
+/// every key, and the only way in is a mouse click — which incidentally moves
+/// focus here, which is why keys appear to start working afterwards.
+///
+/// The thief is the diagnostics sidebar. Its log is a *selectable* `NSTextView`,
+/// which accepts first responder, and the sidebar is on by default in debug
+/// builds — so AppKit hands it the initial focus and it silently swallows every
+/// keystroke. Reproduced in isolation with this exact arrangement (SKView +
+/// selectable NSTextView in a SwiftUI `HStack`): 0 keys reach the scene without
+/// this class, 1 with it.
+///
+/// `makeNSView` is too early — there is no window yet, so `makeFirstResponder`
+/// would run against nil. Claiming it again on the next run-loop turn covers
+/// SwiftUI installing its own first responder after this returns.
+final class KeyboardFocusedSKView: SKView {
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window else { return }
+        window.initialFirstResponder = self
+        window.makeFirstResponder(self)
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.window?.firstResponder !== self else { return }
+            self.window?.makeFirstResponder(self)
+        }
+    }
+}
 
 extension Notification.Name {
     static let gciToggleSidebar = Notification.Name("gciToggleSidebar")
