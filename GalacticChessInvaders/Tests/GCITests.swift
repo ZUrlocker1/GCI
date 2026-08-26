@@ -2904,14 +2904,17 @@ final class CollisionResolverTests: XCTestCase {
 @MainActor
 final class LevelAnnouncementTests: XCTestCase {
 
-    /// §12.11's layout caps: 18 characters of title, 22 of subtitle. Longer
-    /// text silently overflows the rules either side of it.
+    /// Layout limits, measured rather than taken from §12.11's nominal 18/22 —
+    /// that assumes a different type size. Press Start 2P advances one em per
+    /// character, so against `LevelBannerNode`'s 420pt rules the real ceilings
+    /// are 420/26 = 16 characters of title and 420/11 = 38 of subtitle.
+    /// Anything longer silently overhangs the rules either side.
     func testEveryAnnouncementFitsTheBannerLayout() {
         for level in 1...30 {
             guard let a = LevelManager.announcement(for: level) else { continue }
-            XCTAssertLessThanOrEqual(a.title.count, 18,
+            XCTAssertLessThanOrEqual(a.title.count, 16,
                                      "level \(level) title '\(a.title)' overflows")
-            XCTAssertLessThanOrEqual(a.subtitle.count, 22,
+            XCTAssertLessThanOrEqual(a.subtitle.count, 38,
                                      "level \(level) subtitle '\(a.subtitle)' overflows")
             XCTAssertFalse(a.title.isEmpty)
             XCTAssertFalse(a.subtitle.isEmpty)
