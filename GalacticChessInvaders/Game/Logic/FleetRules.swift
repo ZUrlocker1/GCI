@@ -105,7 +105,13 @@ enum FleetRules {
     /// never so fast that a rank costs fewer than four beats.
     static func descentSchedule(for level: Int) -> DescentSchedule {
         let grace = Swift.max(2, 7 - level)
-        return DescentSchedule(sweepBeats: Swift.max(1, grace / 2),
+        // sweepBeats 0: the fleet sweeps immediately. It used to hold still for
+        // the first few beats, which read nicely but made the opening
+        // unplayable — a stationary fleet sits squarely behind White's own
+        // pawns, and since a laser is consumed by the first thing it touches
+        // there is no lane to any black piece at all. The sweep is what shifts
+        // them off-centre far enough to be reachable past a pawn's edge.
+        return DescentSchedule(sweepBeats: 0,
                                graceBeats: grace,
                                beatsPerHalfDrop: Swift.max(2, 4 - (level - 1) / 2))
     }

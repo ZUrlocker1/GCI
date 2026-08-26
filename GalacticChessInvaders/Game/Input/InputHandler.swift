@@ -45,7 +45,10 @@ final class InputHandler {
         }
     }
 
-    private func isInfoShortcut(_ event: NSEvent) -> Bool {
+    /// True for I, ⌘I or ?. Exposed so the scene can honour the Info shortcut
+    /// ahead of its own state-specific key handling — while paused, any key
+    /// resumes, and Info has to be tested first or it can never fire there.
+    func isInfoShortcut(_ event: NSEvent) -> Bool {
         // charactersIgnoringModifiers so ⇧/ reports "?" and ⌘I reports "i".
         guard let characters = event.charactersIgnoringModifiers?.lowercased() else { return false }
         if characters == "?" { return true }

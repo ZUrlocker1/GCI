@@ -2331,22 +2331,23 @@ final class FleetRulesTests: XCTestCase {
                        "level 1: half a rank every 4 beats, a full rank every 8")
     }
 
-    /// The fleet holds its opening position outright, so a fresh board reads as
-    /// a chess position before anything starts moving.
-    func testTheFleetHoldsStillBeforeItSweeps() {
-        var schedule = FleetRules.descentSchedule(for: 1)
-        XCTAssertEqual(schedule.sweepBeats, 3)
-        XCTAssertFalse(schedule.isSweeping, "still at level start")
+    /// The fleet sweeps from the very first beat.
+    ///
+    /// It used to hold still for the opening few beats, which looked better but
+    /// made the start unplayable: a stationary fleet sits directly behind
+    /// White's own pawns, and a laser is consumed by the first thing it touches,
+    /// so no black piece was reachable at all until the player shot their own
+    /// pawns out of the way.
+    func testTheFleetSweepsImmediately() {
+        let schedule = FleetRules.descentSchedule(for: 1)
+        XCTAssertEqual(schedule.sweepBeats, 0)
+        XCTAssertTrue(schedule.isSweeping, "moving before the first beat resolves")
 
-        for _ in 1...2 { _ = schedule.registerBeat() }
-        XCTAssertFalse(schedule.isSweeping, "still holding after 2 beats")
-        _ = schedule.registerBeat()
-        XCTAssertTrue(schedule.isSweeping, "moving from beat 3")
-
-        // Movement always precedes ground being taken.
+        // Movement still precedes ground being taken, at every level.
         for level in 1...8 {
             let s = FleetRules.descentSchedule(for: level)
             XCTAssertLessThan(s.sweepBeats, s.graceBeats, "level \(level)")
+            XCTAssertTrue(s.isSweeping, "level \(level) sweeps from the start")
         }
     }
 

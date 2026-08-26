@@ -153,6 +153,13 @@ final class PieceNode: SKSpriteNode {
     func runDestructionAnimation(completion: @escaping () -> Void) {
         removeAction(forKey: Self.flickerKey)
         setCheckGlow(false)
+        // Drop the physics body immediately, not when the animation ends. The
+        // node lingers for 0.18s while it scales and fades, and a body left in
+        // place keeps generating contacts for a piece the board no longer has —
+        // so a laser hitting the corpse was consumed, scored nothing, and did
+        // no damage. With a 2-shot cap that also stalls the fire rate, which
+        // reads as shots randomly not counting.
+        physicsBody = nil
         run(SKAction.sequence([
             SKAction.group([
                 SKAction.scale(to: 1.35, duration: 0.18),
