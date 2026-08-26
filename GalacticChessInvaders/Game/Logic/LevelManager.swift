@@ -29,9 +29,11 @@ struct LevelParameters {
     /// level has a character of its own rather than permanently buffing the
     /// most important target in the game.
     var kingActivated: Bool { level == 7 }
-    /// Diagonal invader fire (§21.3), from Level 8 onward. Once it arrives it
-    /// stays: standing outside a file stops being enough cover.
-    var diagonalShots: Bool { level >= 8 }
+    /// Diagonal invader fire (§21.3). Level 8 is its own wave, and it comes
+    /// back for Blitz — but Level 9 gets it out of the way again, so CROSSFIRE
+    /// stays that level's identity rather than becoming permanent furniture.
+    /// Blitz can carry it because Blitz is meant to carry everything.
+    var diagonalShots: Bool { level == 8 || level >= 10 }
     /// Level 10 "Blitz": the sweep widens and quickens as the wave runs, and
     /// the beat clock is cut to 3s (`FleetRules.blitz*`).
     var blitz: Bool { level >= 10 }
