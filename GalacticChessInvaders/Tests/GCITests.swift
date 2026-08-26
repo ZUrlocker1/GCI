@@ -3257,6 +3257,31 @@ final class RegenerationTests: XCTestCase {
         XCTAssertNil(board.piece(at: "d5"))
     }
 
+    /// The regenerated pawn was permanently unshootable. Its node is built
+    /// without a body for the beam-in, and the completion called
+    /// `refresh(with:)` to finish it off — but refresh only rebuilds the body
+    /// when the *texture* changes, and a pawn arriving at full HP keeps the
+    /// texture it was made with. So the body stayed nil for the rest of the
+    /// wave and lasers passed through, which looks exactly like armor that
+    /// never expires.
+    func testARegeneratedPawnEndsUpShootable() {
+        let piece = Piece(type: .pawn, color: .black, square: "c7")
+        let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
+        XCTAssertNotNil(node.physicsBody, "an ordinary piece is solid from birth")
+
+        // What regeneration does: strip the body for the beam-in.
+        node.physicsBody = nil
+        // What used to be relied on to put it back, and does not.
+        node.refresh(with: piece)
+        XCTAssertNil(node.physicsBody,
+                     "refresh cannot restore it — the texture never changed")
+        // What actually does.
+        node.becomeSolid()
+        XCTAssertNotNil(node.physicsBody)
+        XCTAssertEqual(node.physicsBody?.categoryBitMask, PhysicsCategory.enemyPiece)
+        XCTAssertFalse(node.physicsBody?.isDynamic ?? true, "pieces stay static")
+    }
+
     /// §9: a pawn that came back is worth less than one off the starting board.
     func testARegeneratedPawnScoresLess() {
         var fresh = Piece(type: .pawn, color: .black, square: "a7")

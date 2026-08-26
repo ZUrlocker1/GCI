@@ -53,6 +53,10 @@ class GameScene: SKScene {
     /// "if the level ends while a regeneration timer is running, it is
     /// cancelled."
     private var regeneration = RegenerationQueue()
+    /// Squares whose pawn is still beaming in. It is on the board and in the
+    /// engine from the first frame — a white piece must not be able to move
+    /// onto the square — but it cannot be shot, so it must not shoot either.
+    private var materialising: Set<String> = []
     private var explosions: ExplosionPool?
     private var shatters: ShatterPool?
 
@@ -744,6 +748,7 @@ class GameScene: SKScene {
         explosions?.reset()
         shatters?.reset()
         regeneration.reset()
+        materialising.removeAll()
         shake = .none
         shakeElapsed = 0
         freezeRemaining = 0
@@ -1689,9 +1694,9 @@ class GameScene: SKScene {
                 note: "black king fires")
         }
 
-        let candidates = board.allPieces(color: .black).map {
-            FleetFiring.Candidate(square: $0.logicalSquare, type: $0.type)
-        }
+        let candidates = board.allPieces(color: .black)
+            .filter { !materialising.contains($0.logicalSquare) }
+            .map { FleetFiring.Candidate(square: $0.logicalSquare, type: $0.type) }
 
         // Crossfire: the bishops fire together on their own cadence, so two
         // diagonals cross in the same instant rather than one angled round
@@ -1911,6 +1916,7 @@ class GameScene: SKScene {
         }
         let armored = Regeneration.arrivesArmored(level: levels.parameters)
         guard let pawn = board.regeneratePawn(at: square, armored: armored) else { return }
+        materialising.insert(square)
 
         let node = PieceNode(piece: pawn, squareSize: BoardNode.squareSize)
         node.position = centre
@@ -1927,6 +1933,11 @@ class GameScene: SKScene {
                     tint: defensive ? NeonPalette.starBlueLight : NeonPalette.transporterGreen) {
             [weak self, weak node] in
             guard let self, let node, self.pieceNodes[square] === node else { return }
+            // The hitbox is the whole point of the materialisation: until this
+            // runs the pawn is on the board, in the engine and in the fleet,
+            // and completely immune to being shot.
+            node.becomeSolid()
+            self.materialising.remove(square)
             node.refresh(with: self.board.piece(at: square) ?? pawn)
             if armored { node.setArmored(true) }
             node.startIdleBob(phase: .random(in: 0...0.8))
