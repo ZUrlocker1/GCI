@@ -634,6 +634,7 @@ class GameScene: SKScene {
         // to happen — both of these run on SKActions and ignore the beat gate.
         fleet?.setPaused(true)
         laserPool?.setPaused(true)
+        ship?.direction = 0
 
         let banner = LevelBannerNode(title: announcement.title,
                                      subtitle: announcement.subtitle,
@@ -741,6 +742,17 @@ class GameScene: SKScene {
 
     // MARK: - Chess Beat
 
+    /// True when the beat must not advance at all: the game has been decided,
+    /// a wave-clear prompt is waiting, or a level banner is still playing.
+    ///
+    /// Every path that ends a game — `endGameIfDecided`, `winLevel`,
+    /// `loseGame` — sets `isEndingGame`, so gating on this one property covers
+    /// checkmate, draws, a captured or shot king, lives running out and a rank-1
+    /// breach alike.
+    private var isBeatSuspended: Bool {
+        isEndingGame || isAwaitingWaveContinue || isAnnouncingLevel
+    }
+
     /// True only when the player can legally act on the current beat.
     private var isAwaitingWhiteMove: Bool {
         turnTimer.isRunning
@@ -764,6 +776,9 @@ class GameScene: SKScene {
     /// Starts a beat. Check state is read once here, after Black has finished
     /// moving, which is what grants the 8-second extension (§25.4).
     private func beginBeat() {
+        // winLevel/loseGame stop the timer; without this guard any caller that
+        // runs afterwards silently restarts it and the game plays on.
+        guard !isBeatSuspended else { return }
         whiteHasMovedThisBeat = false
         let inCheck = board.turn == .white && board.isCheck
         turnTimer.start(level: levels.parameters, inCheck: inCheck,
@@ -777,7 +792,7 @@ class GameScene: SKScene {
 
     /// Beat expired: auto-move White if the player didn't move, then let Black reply.
     private func resolveBeat() async {
-        guard !isResolvingBeat else { return }
+        guard !isResolvingBeat, !isBeatSuspended else { return }
         isResolvingBeat = true
         defer { isResolvingBeat = false }
 
@@ -794,6 +809,12 @@ class GameScene: SKScene {
                 AudioManager.shared.play(.autoMoveTrigger)
                 apply(auto)
                 flashAuto(at: auto.to)
+                // `apply` can end the game outright — White's move may capture
+                // the black king, or deliver a mate that `refreshStatus` picks
+                // up. `endGameIfDecided` below would not catch a king *capture*,
+                // since that is not a chess-legal terminal state, so the beat
+                // has to stop here or it plays on over a finished game.
+                if isBeatSuspended { return }
             } else if endGameIfDecided() {
                 return
             }
@@ -801,7 +822,7 @@ class GameScene: SKScene {
 
         await playBlackMoves()
 
-        guard stateMachine.currentState is PlayingState else { return }
+        guard !isBeatSuspended, stateMachine.currentState is PlayingState else { return }
         if endGameIfDecided() { return }
         // The fleet descends on the chess beat, never on its wall bounces — so
         // the shuffle can be tuned for looks without changing how fast the board
@@ -1033,6 +1054,10 @@ class GameScene: SKScene {
                 break
             }
             apply(outcome)
+            // Black's move can end the game too — capturing the white king, or
+            // mating. Stop immediately rather than playing out the rest of the
+            // multi-move phase over a decided board.
+            if isBeatSuspended { return }
             // Exclude where it came from *and* where it landed: §25.5 forbids a
             // piece moving twice, and after moving it is sitting on `to`.
             usedSources.insert(outcome.from)
@@ -1416,7 +1441,12 @@ class GameScene: SKScene {
     /// the 2-laser cap allows it (§8.2). Held-key repeat is already filtered
     /// out in `InputHandler`, so this fires once per press.
     private func fireLaserFromShip() {
-        guard stateMachine.currentState is PlayingState, !isEndingGame,
+        // `isBeatSuspended` covers the level banner as well as a decided game.
+        // Firing during the banner was not merely an out-of-place sound: the
+        // laser pool is paused then, so the round was created, played its shot
+        // sound, and sat frozen at the ship holding a slot that could not
+        // resolve — two taps and the player started the level unable to fire.
+        guard stateMachine.currentState is PlayingState, !isBeatSuspended,
               let ship, let shipState, shipState.canFire,
               let laserPool, let laser = laserPool.nextAvailable(owner: .player)
         else { return }
@@ -1474,7 +1504,8 @@ class GameScene: SKScene {
             run(.sequence([
                 .wait(forDuration: delay),
                 .run { [weak self] in
-                    guard let self, self.stateMachine.currentState is PlayingState else { return }
+                    guard let self, !self.isBeatSuspended,
+                          self.stateMachine.currentState is PlayingState else { return }
                     self.fireInvaderShot(from: square, speed: level.projectileSpeed)
                 },
             ]))
@@ -1684,8 +1715,12 @@ class GameScene: SKScene {
         lastUpdateTime = currentTime
 
         if dt > 0, stateMachine.currentState is PlayingState {
-            let lane = Self.shipMargin...(size.width - Self.shipMargin)
-            ship?.update(deltaTime: dt, bounds: lane)
+            // Held still while a banner is up or the game is decided; §12.11
+            // has gameplay beginning once the announcement leaves.
+            if !isBeatSuspended {
+                let lane = Self.shipMargin...(size.width - Self.shipMargin)
+                ship?.update(deltaTime: dt, bounds: lane)
+            }
             shipState?.update(deltaTime: dt)
 
             // The end-of-game hold owns the beat while it runs.
@@ -1699,14 +1734,16 @@ class GameScene: SKScene {
             // White's move and no beat is running, start one. `resolveBeat` has
             // several early returns — pausing while Black was thinking used to
             // leave the game with no live beat and no way to move again.
-            if !isEndingGame, !isResolvingBeat, !isAnnouncingLevel,
+            if !isBeatSuspended, !isResolvingBeat,
                board.turn == .white, !turnTimer.isRunning {
                 beginBeat()
             }
 
             // The chess beat. Arcade action keeps running while it ticks —
-            // the game never pauses for chess (§3).
-            if turnTimer.update(deltaTime: dt) {
+            // the game never pauses for chess (§3). But once the game is
+            // decided the beat stops entirely: a timer left running would
+            // expire and resolve another beat over a finished board.
+            if !isBeatSuspended, turnTimer.update(deltaTime: dt) {
                 Task { await self.resolveBeat() }
             }
             // The countdown is the player's own clock, so it appears only while
