@@ -15,11 +15,11 @@ final class PieceNode: SKSpriteNode {
     private static let flickerKey = "criticalFlicker"
     private static let checkGlowKey = "checkGlow"
     private static let armorKey = "armor"
+    private static let armorFillName = "armorFill"
+    private static var silhouetteCache: [String: SKTexture] = [:]
     private static let chargeGlowName = "gunnerCharge"
     private static let ventName = "vent"
     private static let beamName = "beamIn"
-    /// §10.1's "heavy silver metallic outline".
-    private static let armorSilver = SKColor(red: 0.75, green: 0.78, blue: 0.82, alpha: 1)
     private static let bobKey = "idleBob"
     /// Small enough to read as breathing rather than hovering.
     private static let bobAmplitude: CGFloat = 2.0
@@ -388,54 +388,127 @@ final class PieceNode: SKSpriteNode {
 
     /// Dresses this pawn as armored, or strips the armor off.
     ///
-    /// The sprite is already an outline, so recolouring it silver *is* §10.1's
-    /// "heavy silver metallic outline" — no second shape, and it survives the
-    /// damage-state swaps and the wedge for free, since both read `color`.
-    /// A slow sheen keeps it from looking like a piece that has simply been
-    /// tinted the wrong colour.
+    /// The outline stays exactly as it was — Black's own magenta — and the
+    /// *interior* fills with a lighter translucent red. Recolouring the outline
+    /// silver, which is what §10.1's "heavy silver metallic outline" suggested
+    /// and what this did first, made the pawn read as some other piece rather
+    /// than as the same pawn wearing something. Filling it keeps the silhouette
+    /// and the colour language intact and still says, unmistakably, that this
+    /// one is different.
+    ///
+    /// The fill is a silhouette texture derived from the sprite's own outline
+    /// (`filledSilhouette`), drawn behind it so the outline stays crisp on top.
     func setArmored(_ armored: Bool) {
-        removeAction(forKey: Self.armorKey)
-        guard armored else {
-            color = baseColor
-            colorBlendFactor = Self.baseBlend
-            return
-        }
-        colorBlendFactor = 1
-        color = Self.armorSilver
-        run(.repeatForever(.sequence([
-            .colorize(with: .white, colorBlendFactor: 1, duration: 0.9),
-            .colorize(with: Self.armorSilver, colorBlendFactor: 1, duration: 0.9),
+        childNode(withName: Self.armorFillName)?.removeFromParent()
+        guard armored else { return }
+
+        let fill = SKSpriteNode(texture: Self.filledSilhouette(forTexture: piece.textureName),
+                                color: NeonPalette.armorFill, size: size)
+        fill.name = Self.armorFillName
+        fill.colorBlendFactor = 1
+        fill.alpha = 0.42
+        fill.zPosition = -0.4          // inside the outline, over the board
+        addChild(fill)
+        // A slow breath, so it reads as something holding rather than as a
+        // sprite that was simply drawn wrong.
+        fill.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0.28, duration: 0.8),
+            .fadeAlpha(to: 0.5, duration: 0.8),
         ])), withKey: Self.armorKey)
     }
 
-    /// A laser bounced off (§10.1). Yellow spark at the point of impact, one
-    /// white frame, and the outline flares — the armor visibly takes it, so a
+    /// A laser bounced off (§10.1): the fill flares white for a moment, so a
     /// no-damage hit cannot be mistaken for a miss.
     func flashArmorHit() {
-        removeAction(forKey: Self.armorKey)
-        run(.sequence([
-            .colorize(with: .white, colorBlendFactor: 1, duration: 0),
-            .wait(forDuration: 0.05),
-            .colorize(with: Self.armorSilver, colorBlendFactor: 1, duration: 0.12),
+        guard let fill = childNode(withName: Self.armorFillName) as? SKSpriteNode else { return }
+        fill.removeAction(forKey: Self.armorKey)
+        fill.run(.sequence([
+            .group([.colorize(with: .white, colorBlendFactor: 1, duration: 0),
+                    .fadeAlpha(to: 0.95, duration: 0)]),
+            .wait(forDuration: 0.06),
+            .group([.colorize(with: NeonPalette.armorFill, colorBlendFactor: 1,
+                              duration: 0.14),
+                    .fadeAlpha(to: 0.42, duration: 0.14)]),
             .run { [weak self] in self?.setArmored(true) },
         ]))
     }
 
-    /// §10.1's expiry: a hairline crack over half a second, then the silver
-    /// shatters away and the ordinary pawn is underneath.
+    /// §10.1's expiry: the fill cracks — a stutter — and then drains away,
+    /// leaving an ordinary pawn.
     func crackArmorAway(completion: @escaping () -> Void) {
-        removeAction(forKey: Self.armorKey)
-        run(.sequence([
-            // The crack: the sheen breaks into a stutter before it goes.
-            .repeat(.sequence([
-                .colorize(with: .white, colorBlendFactor: 1, duration: 0.04),
-                .colorize(with: Self.armorSilver, colorBlendFactor: 1, duration: 0.08),
-            ]), count: 4),
-            .run { [weak self] in
-                self?.setArmored(false)
-                completion()
-            },
+        guard let fill = childNode(withName: Self.armorFillName) else {
+            return completion()
+        }
+        fill.removeAction(forKey: Self.armorKey)
+        fill.run(.sequence([
+            .repeat(.sequence([.fadeAlpha(to: 0.9, duration: 0.05),
+                               .fadeAlpha(to: 0.2, duration: 0.08)]), count: 3),
+            .fadeOut(withDuration: 0.12),
+            .removeFromParent(),
         ]))
+        run(.sequence([.wait(forDuration: 0.51), .run(completion)]))
+    }
+
+    /// The piece's *interior* as a texture: every pixel enclosed by the outline,
+    /// plus the outline itself.
+    ///
+    /// The sprites are hollow — their alpha is the stroke and nothing else — so
+    /// there is no fill to tint. This finds one by flooding inward from the
+    /// image border: anything transparent the flood can reach is outside the
+    /// piece, and anything transparent it cannot reach is enclosed by the
+    /// outline, which is exactly the region wanted. Measured once per texture
+    /// and cached, like the ink bounds beside it.
+    private static func filledSilhouette(forTexture name: String) -> SKTexture {
+        if let cached = silhouetteCache[name] { return cached }
+        let texture = buildSilhouette(forTexture: name) ?? SKTexture(imageNamed: name)
+        silhouetteCache[name] = texture
+        return texture
+    }
+
+    private static func buildSilhouette(forTexture name: String) -> SKTexture? {
+        guard let image = SKTexture(imageNamed: name).cgImage() as CGImage?,
+              image.width > 0, image.height > 0 else { return nil }
+        let w = image.width, h = image.height
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let context = CGContext(
+            data: &pixels, width: w, height: h, bitsPerComponent: 8,
+            bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        // Flood the transparent region inward from every border pixel.
+        var outside = [Bool](repeating: false, count: w * h)
+        var stack: [Int] = []
+        func consider(_ index: Int) {
+            guard !outside[index], pixels[index * 4 + 3] <= 20 else { return }
+            outside[index] = true
+            stack.append(index)
+        }
+        for x in 0..<w { consider(x); consider((h - 1) * w + x) }
+        for y in 0..<h { consider(y * w); consider(y * w + w - 1) }
+        while let index = stack.popLast() {
+            let x = index % w, y = index / w
+            if x > 0 { consider(index - 1) }
+            if x < w - 1 { consider(index + 1) }
+            if y > 0 { consider(index - w) }
+            if y < h - 1 { consider(index + w) }
+        }
+
+        var fill = [UInt8](repeating: 0, count: w * h * 4)
+        for index in 0..<(w * h) where !outside[index] {
+            // Enclosed, or the outline itself: both belong to the silhouette.
+            fill[index * 4] = 255
+            fill[index * 4 + 1] = 255
+            fill[index * 4 + 2] = 255
+            fill[index * 4 + 3] = 255
+        }
+        guard let out = CGContext(
+            data: &fill, width: w, height: h, bitsPerComponent: 8,
+            bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )?.makeImage() else { return nil }
+        return SKTexture(cgImage: out)
     }
 
     /// Gives this piece a hitbox, for a node that was created without one.

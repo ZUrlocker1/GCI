@@ -35,6 +35,12 @@ enum NeonPalette {
     /// General UI chrome — HUD text, menu highlights, headings.
     static let orange = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
 
+    /// The fill inside an armored pawn (§10.1). The outline stays Black's own
+    /// magenta — recolouring it silver, which is what the doc's "heavy silver
+    /// metallic outline" suggested, made the piece read as a different piece
+    /// rather than as the same pawn wearing something.
+    static let armorFill = SKColor(red: 1.00, green: 0.42, blue: 0.48, alpha: 1)
+
     /// §23.9's standard transporter column: green-white. The defensive spawn
     /// uses `starBlueLight` instead, and the colour is the only thing telling
     /// the player whether the arriving pawn is random or shielding the king.
