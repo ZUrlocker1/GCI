@@ -1549,10 +1549,15 @@ class GameScene: SKScene {
             return
         }
 
-        // Paused: any key resumes. `X` is handled above and still restarts, so
-        // there is always a way out other than resuming.
+        // Paused: any key resumes — except the Info shortcut, which opens How
+        // To Play, and `X` (handled above), which restarts. Info has to be
+        // tested before the catch-all or it could never fire while paused.
         if stateMachine.currentState is PausedState {
-            stateMachine.enter(PlayingState.self)
+            if InputHandler.shared.isInfoShortcut(event) {
+                showHowToPlay()
+            } else {
+                stateMachine.enter(PlayingState.self)
+            }
             return
         }
 

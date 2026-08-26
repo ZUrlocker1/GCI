@@ -15,9 +15,11 @@ struct ProjectileState {
     let damage: Int
     let speed: CGFloat
 
-    /// §20 Phase 3.2 testing spec: "Player laser fires, travels 400 px/s".
+    /// §20 Phase 3.2 specs 400 px/s; running 30% above that (520) after
+    /// playtest — at 400 the shot lingers long enough to feel floaty, and the
+    /// 2-shot cap means a slow round also throttles the fire rate.
     /// Enemy shots use the level's own `projectileSpeed` instead (§21.1).
-    static let playerLaserSpeed: CGFloat = 400
+    static let playerLaserSpeed: CGFloat = 520
     static let playerLaserDamage = 2
     static let enemyShotDamage = 1
 }

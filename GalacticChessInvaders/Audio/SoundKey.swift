@@ -204,6 +204,11 @@ extension SoundKey {
         // loudness even when the level is modest.
         case .turnTimerWarning:                     return 0.28
         case .checkAlarm:                           return 0.40
+        // Fired several times a second, so the same reasoning applies twice
+        // over: at the default 0.8 it sat level with the music and dominated
+        // the mix purely through repetition.
+        case .playerLaserFire:                      return 0.34
+        case .invaderLaserFire:                     return 0.40
         default:                                    return 0.8
         }
     }
