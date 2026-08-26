@@ -2926,6 +2926,27 @@ final class LaserPhysicsTests: XCTestCase {
         XCTAssertFalse(laser.isActive, "nowhere to travel — nothing to fire")
     }
 
+    /// Glass has to fly the way the shot was going. The heading is read from
+    /// the round's rotation, and a player laser travels *up* — the naive
+    /// reading (rotation zero means downward) sprays it backwards.
+    func testTravelDirectionMatchesTheFlightPath() {
+        for owner in [ProjectileState.Owner.player, .enemy] {
+            for lean in [CGFloat(0), -0.6, 1.0] {
+                let laser = LaserNode(owner: owner)
+                laser.fire(from: .zero, damage: 1, speed: 200,
+                           travelDistance: 400, lean: lean)
+                let dy: CGFloat = owner == .player ? 400 : -400
+                let dx = lean * 400
+                let length = (dx * dx + dy * dy).squareRoot()
+                let heading = laser.travelDirection
+                XCTAssertEqual(heading.dx, dx / length, accuracy: 0.001,
+                               "\(owner) lean \(lean)")
+                XCTAssertEqual(heading.dy, dy / length, accuracy: 0.001,
+                               "\(owner) lean \(lean)")
+            }
+        }
+    }
+
     /// A round has to point along its own flight path. It did not: the old
     /// rotation turned an angled bolt 45° the *wrong* way, leaving a long thin
     /// slab travelling broadside — which read on screen as a purple paddle

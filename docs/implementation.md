@@ -291,6 +291,16 @@ King Activated and Crossfire are their own waves (Blitz carries Crossfire again)
   (17°–45°), the king more gently (9°–31°, on 45% of its rounds). A fixed 45°
   from the back rank crosses seven files before reaching White: measured, a
   third of shooter positions threw the round off the board, now 4%
+- **Formation membership goes both ways.** `adopt` used to run only at board
+  build time, so a black piece that stepped out of the marching band once was a
+  civilian for the rest of the level however far back it came — worst for the
+  king, which then parks behind White's own pawns where it is nearly
+  unshootable, the exact problem the marching rule exists to prevent. A piece
+  now rejoins on a chess move back into the band, and a rank descent sweeps up
+  any stray it has come down onto. Joining slides into place over 0.2s: the
+  fleet transform is shared, so a joining piece necessarily lands at whatever
+  offset the formation carries, and the slide is what makes that read as
+  falling in rather than teleporting
 - **A damaged piece keeps its identity.** The art erodes bottom-up, which takes
   the profile with it — so a Cracked pawn, bishop, queen and knight were all "a
   blob with debris" (rook and king survived only because crenellations and a
@@ -381,6 +391,13 @@ is answerable and tested in one place rather than scattered through the scene.
 - [x] **Hit freeze** (§24.2) — 4 frames for a king, 2 for a queen, none below.
       `bloomNode.isPaused` stops the playfield while the scene's own `update`
       keeps running to time it; the explosion lands *after* the pause
+- [x] **Shattered glass on a survivable hit** — `ShatterPool`, 14 pooled:
+      §24.5's impact flash plus 7 slivers thrown in a 150° cone along the
+      round's own heading, tumbling and falling. Pooled separately from the
+      destruction bursts, because these fire on every landed shot and would
+      otherwise starve the pool for the kills that matter. The heading is
+      captured at the contact — `deactivate` clears the round's rotation, and
+      every call site deactivates before the handler runs
 - [x] **Venting at ≤50% HP** — drifting embers in the piece's glow colour,
       one every 0.28s, self-removing. Deviates from §20's "smoke": grey is mud
       here. Flicker at Critical was already in place from 2.2

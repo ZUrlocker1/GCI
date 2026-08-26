@@ -85,6 +85,31 @@ final class FleetController {
         members[square] = node
     }
 
+    /// Adopts a piece that is already drawn somewhere else, sliding it into
+    /// formation instead of teleporting.
+    ///
+    /// The fleet transform is shared, so a joining piece necessarily lands at
+    /// whatever offset the formation currently carries — it cannot keep its own
+    /// position. The slide is what makes that read as falling in rather than as
+    /// a jump: the node starts at its old screen position expressed in fleet
+    /// space, and moves to the logical centre from there.
+    func adopt(_ node: SKNode, square: String, atLogicalCentre centre: CGPoint,
+               slidingFrom drawn: CGPoint, duration: TimeInterval = 0.2) {
+        adopt(node, square: square, atLogicalCentre: centre)
+        node.position = CGPoint(x: drawn.x - fleetNode.position.x,
+                                y: drawn.y - fleetNode.position.y)
+        let slide = SKAction.move(to: centre, duration: duration)
+        slide.timingMode = .easeOut
+        node.run(slide)
+    }
+
+    /// Is this node already marching?
+    func isMember(_ node: SKNode) -> Bool { node.parent === fleetNode }
+
+    /// The fleet's current sweep offset, for callers computing where a member
+    /// will end up on screen.
+    var sweepOffset: CGPoint { fleetNode.position }
+
     /// A piece that has played chess is no longer an invader: it stops sweeping
     /// and descending, and stands on its square like an ordinary chess piece.
     /// Returns the node so the caller can re-parent it onto the board.
