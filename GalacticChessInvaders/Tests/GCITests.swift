@@ -2641,6 +2641,52 @@ final class FleetControllerTests: XCTestCase {
         XCTAssertEqual(fleet.pieceCount, 15)
     }
 
+    /// Regression for two crashes, both "Attemped to add a SKNode which already
+    /// has a parent". Releasing by *square* silently did nothing when the key
+    /// named a different piece, leaving the node parented to the fleet — and
+    /// the caller then re-added it to the board, which throws.
+    ///
+    /// A rank descent re-keys `members[next] = node` as it walks the formation,
+    /// overwriting the entry of a black piece crushed on that square; the crush
+    /// callback runs afterwards, so the key is already wrong by then. Releasing
+    /// by identity cannot go stale that way.
+    func testReleaseByIdentityDetachesEvenWhenTheSquareKeyIsStale() throws {
+        let (fleet, board, _) = makeFleet()
+        let geometry = BoardNode()
+        var nodes: [String: PieceNode] = [:]
+        for piece in board.allPieces(color: .black) {
+            guard let centre = geometry.center(of: piece.logicalSquare) else { continue }
+            let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
+            fleet.adopt(node, square: piece.logicalSquare, atLogicalCentre: centre)
+            nodes[piece.logicalSquare] = node
+        }
+        let rook = try XCTUnwrap(nodes["a8"])
+        XCTAssertTrue(fleet.contains(rook))
+
+        // Make a8's key name someone else, exactly as a descent re-key would.
+        XCTAssertTrue(fleet.rekey(from: "b8", to: "a8"))
+
+        // The old key-based path would no-op here and leave the rook parented.
+        XCTAssertNil(fleet.release(square: "zz"), "an unknown square is still a no-op")
+        XCTAssertTrue(fleet.release(rook), "identity finds it regardless of the key")
+        XCTAssertNil(rook.parent, "must be unparented, or addChild throws")
+        XCTAssertFalse(fleet.contains(rook))
+
+        // And it is safe to re-add — the crash both reports hit.
+        let boardNode = BoardNode()
+        boardNode.addChild(rook)
+        XCTAssertNotNil(rook.parent)
+    }
+
+    /// Releasing a node the fleet never owned must not throw or half-detach it.
+    func testReleasingANonMemberIsHarmless() {
+        let (fleet, _, _) = makeFleet()
+        let stray = PieceNode(piece: Piece(type: .pawn, color: .white, square: "e2"),
+                              squareSize: BoardNode.squareSize)
+        XCTAssertFalse(fleet.release(stray), "not a member")
+        XCTAssertNil(stray.parent)
+    }
+
     func testResetEmptiesTheFormation() {
         let (fleet, board, _) = makeFleet()
         let geometry = BoardNode()

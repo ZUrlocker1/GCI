@@ -724,7 +724,7 @@ class GameScene: SKScene {
     /// HP check and no points, because the fleet took it rather than the player.
     private func applyCrush(_ crush: CrushEvent) {
         if let victim = pieceNodes.removeValue(forKey: crush.atSquare) {
-            detachFromFleet(victim, at: crush.atSquare)
+            detachFromFleet(victim)
             victim.runDestructionAnimation {}
         }
         AudioManager.shared.play(.pieceHitHeavy)
@@ -1107,10 +1107,13 @@ class GameScene: SKScene {
     /// it was drawn. Used both when a black piece plays chess — it stops being an
     /// invader — and when one dies, so the explosion does not ride the march.
     /// A no-op for pieces the fleet does not own.
-    private func detachFromFleet(_ node: PieceNode, at square: String) {
+    private func detachFromFleet(_ node: PieceNode) {
         guard let boardNode, let fleet, fleet.contains(node) else { return }
         let drawn = fleet.screenPosition(of: node)
-        fleet.release(square: square)
+        // By identity, not by `square`: the key can name a different piece by
+        // the time a crush callback runs, and a key-based release then left
+        // this node still parented — `addChild` below threw.
+        fleet.release(node)
         node.position = drawn
         boardNode.addChild(node)
     }
@@ -1199,7 +1202,7 @@ class GameScene: SKScene {
         // Use the captured square, not the destination — en passant differs.
         if let capturedSquare = outcome.capturedSquare,
            let victim = pieceNodes.removeValue(forKey: capturedSquare) {
-            detachFromFleet(victim, at: capturedSquare)
+            detachFromFleet(victim)
             victim.runDestructionAnimation {}
         }
 
@@ -1236,7 +1239,7 @@ class GameScene: SKScene {
             // Stays parented to the fleet; `animateMove` below still targets the
             // logical square centre, which is what a member's local position is.
         } else {
-            detachFromFleet(node, at: outcome.from)
+            detachFromFleet(node)
         }
         node.refresh(with: outcome.moved)
         node.animateMove(to: outcome.to, point: point)
@@ -1627,7 +1630,7 @@ class GameScene: SKScene {
         }
 
         pieceNodes.removeValue(forKey: square)
-        detachFromFleet(node, at: square)
+        detachFromFleet(node)
         node.runDestructionAnimation {}
         AudioManager.shared.play(destroyedSound(for: type))
         ScoreManager.shared.addPoints(points, source: "\(type.rawValue) (shot)")

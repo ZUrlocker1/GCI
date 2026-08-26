@@ -84,12 +84,32 @@ final class FleetController {
     /// on the board defuses the arcade pressure rather than just stacking with it.
     @discardableResult
     func release(square: String) -> SKNode? {
-        guard let node = members.removeValue(forKey: square) else { return nil }
+        guard let node = members[square] else { return nil }
+        release(node)
+        DiagnosticsLog.shared.log(.fleet, "\(square) left the formation")
+        return node
+    }
+
+    /// Releases by node identity rather than by square, dropping every
+    /// membership entry that points at it and always unparenting it.
+    ///
+    /// The square key cannot be trusted at the moment a piece leaves. A rank
+    /// descent re-keys `members[next] = node` as it walks the formation, which
+    /// overwrites the entry of a black piece being crushed on that very square
+    /// — and the crush callback only fires afterwards. The key then names the
+    /// *descending* piece, so a key-based release unparented the wrong node and
+    /// left the caller holding one that still had a parent, which crashed
+    /// SpriteKit on the next `addChild`. Identity cannot go stale that way.
+    @discardableResult
+    func release(_ node: SKNode) -> Bool {
+        let wasMember = node.parent === fleetNode
+        for (square, member) in members where member === node {
+            members[square] = nil
+        }
         node.removeAllActions()
         node.alpha = 1
         node.removeFromParent()
-        DiagnosticsLog.shared.log(.fleet, "\(square) left the formation")
-        return node
+        return wasMember
     }
 
     /// Moves an existing member to a new square without it leaving the
