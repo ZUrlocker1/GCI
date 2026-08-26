@@ -187,11 +187,17 @@ extension SoundKey {
         case .invaderLaserFire:     return "kenney-digital/lowDown.caf"
         case .pieceHitLight,
              .invaderHitsPiece:     return "kenney-sci-fi/impactMetal_004.caf"
-        case .pawnDestroyed, .knightDestroyed, .bishopDestroyed,
-             .rookDestroyed, .queenDestroyed:
-            return "kenney-sci-fi/impactMetal_004.caf"
-        case .kingDestroyed, .playerShipDestroyed:
-            return "gdc-bundle/DSGNBass_Bass Drop & Downer Slow 10_344 Audio_Bass Drops & Downers.caf"
+        // Destruction uses purpose-built synthesised explosions rather than a
+        // metal impact — see make_explosions.py. The impact stand-in read as a
+        // light "tink", which made a kill sound like a glancing hit. Sized to
+        // the piece: small pieces get out of the way, the king gets §12's
+        // ~2-second falling sweep.
+        case .pawnDestroyed, .knightDestroyed, .bishopDestroyed:
+            return "generated/explosion-small.caf"
+        case .rookDestroyed, .queenDestroyed:
+            return "generated/explosion-large.caf"
+        case .kingDestroyed:        return "generated/explosion-king.caf"
+        case .playerShipDestroyed:  return "generated/ship-destroyed.caf"
         case .invaderHitsShip:      return "gdc-bundle/Interface Deny Low Fat Dark.caf"
         default:                    return nil
         }

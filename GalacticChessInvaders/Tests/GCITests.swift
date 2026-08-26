@@ -2638,6 +2638,60 @@ final class LaserPhysicsTests: XCTestCase {
 }
 
 @MainActor
+final class DamageStateTests: XCTestCase {
+
+    /// §7.1's table, verbatim, as (piece, damage-taken, expected state). The
+    /// ratio approximation this replaced was a full stage late on rook, queen
+    /// and king — a rook's first hit still read as undamaged — so damage was
+    /// invisible on exactly the pieces the player shoots most.
+    func testDamageStatesMatchTheDesignTable() {
+        let expectations: [(PieceType, Int, DamageState)] = [
+            (.pawn, 0, .full), (.pawn, 1, .chipped),
+            (.knight, 1, .full), (.knight, 2, .chipped), (.knight, 4, .cracked), (.knight, 5, .critical),
+            (.bishop, 1, .full), (.bishop, 2, .chipped), (.bishop, 4, .cracked), (.bishop, 5, .critical),
+            (.rook, 1, .full), (.rook, 2, .chipped), (.rook, 4, .cracked), (.rook, 6, .critical),
+            (.queen, 2, .full), (.queen, 3, .chipped), (.queen, 6, .cracked), (.queen, 9, .critical),
+            (.king, 3, .full), (.king, 4, .chipped), (.king, 8, .cracked), (.king, 12, .critical),
+        ]
+        for (type, taken, expected) in expectations {
+            var piece = Piece(type: type, color: .black, square: "d5")
+            piece.applyDamage(taken)
+            XCTAssertEqual(piece.damageState, expected,
+                           "\(type) after \(taken) damage should be \(expected)")
+        }
+    }
+
+    /// The specific case that made the bug visible in playtest: one laser hit
+    /// on a rook must change its sprite. Under the old ratio buckets 8→6 HP
+    /// still resolved to `.full`, so the hit looked like it did nothing.
+    func testARooksFirstLaserHitChangesItsSprite() {
+        var rook = Piece(type: .rook, color: .black, square: "a8")
+        let before = rook.textureName
+        rook.applyDamage(ProjectileState.playerLaserDamage)
+        XCTAssertNotEqual(rook.textureName, before,
+                          "a hit that survives must still look different")
+        XCTAssertEqual(rook.damageState, .chipped)
+    }
+
+    /// Damage only ever gets worse, and a piece is never left in a state that
+    /// claims more health than it has.
+    func testDamageStatesProgressMonotonically() {
+        for type in PieceType.allCases {
+            let order: [DamageState] = [.full, .chipped, .cracked, .critical]
+            var piece = Piece(type: type, color: .white, square: "e1")
+            var lastIndex = 0
+            while piece.hp > 0 {
+                let index = order.firstIndex(of: piece.damageState)!
+                XCTAssertGreaterThanOrEqual(index, lastIndex,
+                                            "\(type) went backwards at \(piece.hp) HP")
+                lastIndex = index
+                piece.applyDamage(1)
+            }
+        }
+    }
+}
+
+@MainActor
 final class SoundAssetFallbackTests: XCTestCase {
 
     /// Phase 3.2 shipped silent: every sound the shooting loop asks for was in

@@ -1316,11 +1316,26 @@ class GameScene: SKScene {
         }
     }
 
+    /// Re-reads the damaged piece from the board and swaps the node onto its
+    /// eroded sprite.
+    ///
+    /// Without this a surviving piece kept its full-HP art until something else
+    /// happened to call `refresh` — in practice only a chess move — so hits
+    /// registered in the model and in the score but were invisible on the
+    /// board, and damage appeared to "arrive" later when the piece moved.
+    /// `refresh` is a no-op when the texture name hasn't changed, so calling it
+    /// on every hit costs nothing between damage stages.
+    private func showDamage(on node: PieceNode, at square: String) {
+        guard let updated = board.piece(at: square) else { return }
+        node.refresh(with: updated)
+    }
+
     private func handleBlackPieceHit(_ result: CollisionOutcome, node: PieceNode) {
         guard case .blackPieceHit(let square, let type, let destroyed, let points, let comboBonus) = result
         else { return }
 
         if !destroyed {
+            showDamage(on: node, at: square)
             node.applyHitFlash()
             AudioManager.shared.play(.pieceHitLight)
             return
@@ -1345,6 +1360,7 @@ class GameScene: SKScene {
         guard case .whitePieceHit(let square, let destroyed) = result else { return }
 
         if !destroyed {
+            showDamage(on: node, at: square)
             node.applyHitFlash()
             AudioManager.shared.play(.pieceHitLight)
             return
