@@ -18,6 +18,8 @@ final class LevelBannerNode: SKNode {
     static var totalDuration: TimeInterval { slideIn + hold + fadeOut }
 
     private static let font = "PressStart2P-Regular"
+    /// So the scene can clear a previous banner before showing another.
+    static let nodeName = "levelBanner"
 
     /// `title` is the mechanic name, `subtitle` the one-line explanation.
     ///
@@ -26,6 +28,7 @@ final class LevelBannerNode: SKNode {
     /// `LevelAnnouncementTests` enforces those.
     init(title: String, subtitle: String, sceneSize: CGSize) {
         super.init()
+        name = Self.nodeName
         zPosition = 22
 
         let centre = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
