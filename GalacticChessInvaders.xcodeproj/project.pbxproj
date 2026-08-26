@@ -45,6 +45,7 @@
 		501B3D6BAA54B7D6543315E0 /* chess-b-pawn-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */; };
 		56547221A27CECF071477604 /* chess-b-queen-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */; };
 		5C00B24FA3687609673B10AC /* chess-b-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */; };
+		5E5F85935F04C28062E9F04F /* Regeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58B64ABA847AF8604BB2BF /* Regeneration.swift */; };
 		5E76F03CD7162A626D28F7BD /* CollisionResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D61821669CACEBC196A65C /* CollisionResolver.swift */; };
 		605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB7404F3713FE581B43A87 /* ContentView.swift */; };
 		61169CA3823DC981272E489B /* ship-player.png in Resources */ = {isa = PBXBuildFile; fileRef = DFEC1D27CBD2B19429587528 /* ship-player.png */; };
@@ -158,6 +159,7 @@
 		470EE873AFB093DAA09877AD /* GCITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GCITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		48DB4E6155700677F3736099 /* TitleScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleScene.swift; sourceTree = "<group>"; };
 		49DEBFD146DE24F4E7A38593 /* ship-camel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel.png"; sourceTree = "<group>"; };
+		4B58B64ABA847AF8604BB2BF /* Regeneration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Regeneration.swift; sourceTree = "<group>"; };
 		5308FEB0B1858AC43F451354 /* LaserNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaserNode.swift; sourceTree = "<group>"; };
 		533060B476CEB068D8FE3931 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
 		5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-queen-d1.png"; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 				7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */,
 				D8C800709B09587557941485 /* Piece.swift */,
 				7C0C0E6B6868C3ACDC346F91 /* ProjectileState.swift */,
+				4B58B64ABA847AF8604BB2BF /* Regeneration.swift */,
 				321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */,
 				7F23F101018F26837A222949 /* SpaceshipState.swift */,
 				2CAF566BD8F26FECE2DB1C25 /* TurnTimer.swift */,
@@ -634,6 +637,7 @@
 				10EC7FDA96FB9D9DF9ED8846 /* Piece.swift in Sources */,
 				7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */,
 				8045F16B75DCA226FEFC2848 /* ProjectileState.swift in Sources */,
+				5E5F85935F04C28062E9F04F /* Regeneration.swift in Sources */,
 				24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */,
 				E417F771A182BF6A6C7A8D29 /* ScorePopPool.swift in Sources */,
 				92F5117575286012F40FFBAC /* SoundKey.swift in Sources */,

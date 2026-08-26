@@ -48,6 +48,11 @@ class GameScene: SKScene {
     private var collisionHandler: CollisionHandler?
     private var gameOverNode: GameOverNode?
     private var scorePops: ScorePopPool?
+    /// §23.9's pending regenerations. Lives here rather than in the board so it
+    /// is torn down with the level, which is exactly what the spec asks for:
+    /// "if the level ends while a regeneration timer is running, it is
+    /// cancelled."
+    private var regeneration = RegenerationQueue()
     private var explosions: ExplosionPool?
     private var shatters: ShatterPool?
 
@@ -733,6 +738,7 @@ class GameScene: SKScene {
         scorePops?.reset()
         explosions?.reset()
         shatters?.reset()
+        regeneration.reset()
         shake = .none
         shakeElapsed = 0
         freezeRemaining = 0
@@ -896,6 +902,10 @@ class GameScene: SKScene {
                 return
             }
         }
+
+        // §10.1 counts armor in White's moves, and by here White has moved this
+        // beat one way or the other — by hand or by auto-move.
+        advanceArmor()
 
         await playBlackMoves()
 
@@ -1851,6 +1861,84 @@ class GameScene: SKScene {
     /// A brief flare on the piece that just fired, so the player can see where a
     /// round came from. Without it a shot simply appears mid-board and the fleet
     /// gives no clue which piece is shooting at them.
+    // MARK: - Regeneration (§23.9) and armored pawns (§10.1)
+
+    /// A black piece just died: queue its replacement, if the level still has a
+    /// slot for one.
+    private func scheduleRegeneration(after type: PieceType) {
+        guard Regeneration.schedules(destroyed: type, color: .black,
+                                     level: levels.parameters,
+                                     slotsUsed: regeneration.slotsUsed) else { return }
+        regeneration.schedule()
+        DiagnosticsLog.shared.log(.fleet,
+            "regeneration queued (\(regeneration.slotsUsed)/\(levels.parameters.regenSlots))")
+    }
+
+    /// Materialises everything whose ten seconds are up.
+    private func advanceRegeneration(_ dt: TimeInterval) {
+        let due = regeneration.tick(dt)
+        guard due > 0 else { return }
+        for _ in 0..<due { materialisePawn() }
+    }
+
+    private func materialisePawn() {
+        guard let boardNode, let fleet else { return }
+        let king = board.allPieces(color: .black).first { $0.type == .king }
+        // §23.9's defensive mode: a badly hurt king gets a body in front of him
+        // instead of another pawn scattered along the back rank.
+        let defensive = king.map { Regeneration.isDefensive(kingDamage: $0.damageState) } ?? false
+        let occupied = Set(board.allPieces().map(\.logicalSquare))
+        guard let square = Regeneration.spawnSquare(defensive: defensive,
+                                                    kingSquare: king?.logicalSquare,
+                                                    rearRank: fleet.rearRank,
+                                                    occupied: occupied),
+              let centre = boardNode.center(of: square) else {
+            DiagnosticsLog.shared.log(.fleet, "regeneration had nowhere to land")
+            return
+        }
+        let armored = Regeneration.arrivesArmored(level: levels.parameters)
+        guard let pawn = board.regeneratePawn(at: square, armored: armored) else { return }
+
+        let node = PieceNode(piece: pawn, squareSize: BoardNode.squareSize)
+        node.position = centre
+        // No body until it has finished arriving — §23.9's "the piece cannot be
+        // shot while beaming in", and the shimmer is the only warning the
+        // player gets or needs.
+        node.physicsBody = nil
+        fleet.adopt(node, square: square, atLogicalCentre: centre)
+        pieceNodes[square] = node
+
+        // Green-white for a standard arrival, blue-white when it is shielding
+        // the king (§23.9) — the colour is the whole tell.
+        node.beamIn(duration: Regeneration.beamInDuration,
+                    tint: defensive ? NeonPalette.starBlueLight : NeonPalette.transporterGreen) {
+            [weak self, weak node] in
+            guard let self, let node, self.pieceNodes[square] === node else { return }
+            node.refresh(with: self.board.piece(at: square) ?? pawn)
+            if armored { node.setArmored(true) }
+            node.startIdleBob(phase: .random(in: 0...0.8))
+            self.refreshStatus()
+        }
+        AudioManager.shared.play(.pieceRegenerates)
+        DiagnosticsLog.shared.log(.fleet,
+            "\(defensive ? "defensive " : "")pawn beaming in at \(square)")
+    }
+
+    /// §10.1 counts armor in White's moves, so this runs once per completed
+    /// beat. Any pawn whose three turns are up cracks and loses its silver.
+    private func advanceArmor() {
+        for square in board.tickArmor() {
+            guard let node = pieceNodes[square] else { continue }
+            node.crackArmorAway { [weak self] in
+                guard let self else { return }
+                self.shatters?.shatter(at: self.bloomPosition(of: node),
+                                       color: .white,
+                                       along: CGVector(dx: 0, dy: 1), scale: 1.2)
+                AudioManager.shared.play(.armorBreaks)
+            }
+        }
+    }
+
     // MARK: - Juice (§24)
 
     /// Starts a shake, or replaces a weaker one already running. Never adds:
@@ -2114,6 +2202,21 @@ class GameScene: SKScene {
 
     private func handleBlackPieceHit(_ result: CollisionOutcome, node: PieceNode,
                                      impact: Impact?) {
+        // §10.1: the round hit armor and stopped. Loud and yellow on purpose —
+        // the player aimed correctly and needs to know that is not the problem.
+        if case .ricochet(let square) = result {
+            node.flashArmorHit()
+            if let impact {
+                shatters?.shatter(at: bloomNode.convert(impact.point, from: self),
+                                  color: NeonPalette.orange,
+                                  along: CGVector(dx: -impact.heading.dx,
+                                                  dy: -impact.heading.dy),
+                                  scale: 1.2)
+            }
+            AudioManager.shared.play(.armorRicochet)
+            DiagnosticsLog.shared.log(.hit, "armored pawn at \(square) shrugged it off")
+            return
+        }
         guard case .blackPieceHit(let square, let type, let destroyed, let points, let comboBonus) = result
         else { return }
 
@@ -2136,6 +2239,7 @@ class GameScene: SKScene {
 
         pieceNodes.removeValue(forKey: square)
         detachFromFleet(node)
+        scheduleRegeneration(after: type)
         celebrateDestruction(of: node, type: type,
                              points: ScoreManager.shared.scaled(points),
                              color: NeonPalette.magenta)
@@ -2252,6 +2356,9 @@ class GameScene: SKScene {
             return
         }
         advanceShake(dt)
+        if !isBeatSuspended, stateMachine.currentState is PlayingState {
+            advanceRegeneration(dt)
+        }
 
         if dt > 0, stateMachine.currentState is PlayingState {
             // Held still while a banner is up or the game is decided; §12.11
