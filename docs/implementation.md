@@ -283,6 +283,22 @@ was written. Fixed with `ChessEngine.forceRemove(at:)`, the same fix shape as
   asset, and a stand-in from the 12 bundled files is used only when the real
   one is absent. The startup log now reports how many keys are on placeholders,
   so a stopgap is never mistaken for finished sound design
+- **Damage was invisible until a piece moved.** Two causes, both fixed. The hit
+  path called `applyHitFlash()` but never `refresh(with:)`, so a surviving
+  piece kept its full-HP sprite until some *other* event happened to refresh it
+  — in practice only a chess move, which is why damage appeared to "arrive"
+  late. And `damageState` used remaining-HP ratio buckets rather than §7.1's
+  explicit table, which ran a full stage behind on rook, queen and king: a
+  rook's first hit (8→6 HP) still resolved to `.full`. Six of the twenty
+  reachable states disagreed with the doc, every one of them hiding damage.
+  Ruled out rasterization as a cause first — a texture swap inside a
+  `shouldRasterize` effect node does repaint, verified against a real render loop
+- **Real explosions.** Destruction was falling back to a metal-impact
+  placeholder, so a kill sounded like a glancing hit. `make_explosions.py`
+  synthesises four purpose-built sounds (decaying noise burst through a falling
+  low-pass, plus a pitch-dropping sine body), sized to the piece — the king
+  getting §12's ~2-second falling sweep. Committed as a script, so the assets
+  are reproducible rather than mystery binaries
 - Added `SHOOT` diagnostics for both fire paths. Their absence is why the
   playtest log gave no clue — the shooting loop was completely invisible in it
 

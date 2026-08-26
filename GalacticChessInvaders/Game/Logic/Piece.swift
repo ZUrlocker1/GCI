@@ -104,13 +104,35 @@ struct Piece {
 
     var isAlive: Bool { hp > 0 }
 
+    /// §7.1's explicit per-piece table, keyed on *damage taken* rather than a
+    /// remaining-HP ratio.
+    ///
+    /// The ratio approximation this replaces was a stage late on exactly the
+    /// pieces the player shoots most: a rook's first hit (8→6 HP, ratio 0.75)
+    /// still read as undamaged, and a king took three hits before showing
+    /// anything. Six of the twenty reachable states disagreed with the doc, all
+    /// in the direction of hiding damage.
     var damageState: DamageState {
-        let ratio = Double(hp) / Double(type.maxHP)
-        switch ratio {
-        case 0.75...:    return .full
-        case 0.50..<0.75: return .chipped
-        case 0.25..<0.50: return .cracked
-        default:          return .critical
+        let taken = type.maxHP - hp
+        switch type {
+        case .pawn:
+            return taken >= 1 ? .chipped : .full
+        case .knight, .bishop:
+            if taken >= 5 { return .critical }
+            if taken >= 4 { return .cracked }
+            return taken >= 2 ? .chipped : .full
+        case .rook:
+            if taken >= 6 { return .critical }
+            if taken >= 4 { return .cracked }
+            return taken >= 2 ? .chipped : .full
+        case .queen:
+            if taken >= 9 { return .critical }
+            if taken >= 6 { return .cracked }
+            return taken >= 3 ? .chipped : .full
+        case .king:
+            if taken >= 12 { return .critical }
+            if taken >= 8 { return .cracked }
+            return taken >= 4 ? .chipped : .full
         }
     }
 
