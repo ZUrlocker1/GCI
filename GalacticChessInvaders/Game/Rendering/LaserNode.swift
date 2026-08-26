@@ -28,6 +28,13 @@ final class LaserNode: SKSpriteNode {
     /// An angled round is longer and narrower than a straight bolt: its whole
     /// job is to read as travelling *along* a line the player has to judge.
     private static let diagonalSize = CGSize(width: 3.4, height: 22)
+    /// Slightly wider than a straight bolt's 4pt, so an angled shot is no
+    /// harder to land than a vertical one.
+    private static let diagonalHitRadius: CGFloat = 4.5
+
+    /// Whether the current body is the angled round's circle. Tracked because
+    /// `size` alone cannot tell the two apart on a re-fire.
+    private var bodyIsRound = false
 
     /// The angled round's dressing — a bright nose and a two-stage exhaust.
     /// Built once and shown or hidden per shot rather than created per shot
@@ -55,7 +62,9 @@ final class LaserNode: SKSpriteNode {
     /// and rebuilding a body silently drops the contact mask, which is why it
     /// is re-derived from `isActive` rather than copied.
     private func installBody(for size: CGSize) {
-        let body = SKPhysicsBody(rectangleOf: size)
+        let body = bodyIsRound
+            ? SKPhysicsBody(circleOfRadius: Self.diagonalHitRadius)
+            : SKPhysicsBody(rectangleOf: size)
         // MUST be dynamic. SpriteKit only evaluates a contact pair when at
         // least one body is dynamic — two static bodies never produce a
         // didBegin callback at all, which is exactly why nothing collided when
@@ -183,8 +192,15 @@ final class LaserNode: SKSpriteNode {
         let target = diagonal ? Self.diagonalSize
                               : CGSize(width: Self.width,
                                        height: owner == .player ? 18 : 14)
-        if size != target {
+        if size != target || diagonal != bodyIsRound {
             size = target
+            // An angled round gets a *round* body, so its hitbox cannot depend
+            // on the angle it happens to be travelling at. A rect aligned with
+            // the flight path presents only its 3.4pt width to whatever it is
+            // aimed at, and a bolt that thin grazes past corners the player
+            // reads as hits. The circle is both rotation-invariant and wider,
+            // which is the compensation an angled shot needs.
+            bodyIsRound = diagonal
             installBody(for: target)
         }
         color = diagonal ? NeonPalette.shotPurple
@@ -238,6 +254,7 @@ final class LaserNode: SKSpriteNode {
             ])))
         }
         // The body must follow, or a heavy round keeps a thin bolt's hitbox.
+        bodyIsRound = false
         installBody(for: size)
     }
 

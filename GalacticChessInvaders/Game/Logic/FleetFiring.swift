@@ -29,14 +29,11 @@ enum FleetFiring {
         Int.random(in: level.shotsPerTurn)
     }
 
-    /// §5.3 weights toward "front-rank pawns" — two separate biases, and the
-    /// earlier version only implemented the first:
-    ///
-    ///  * **front rank**: closer to White fires more often, so the threat comes
-    ///    from the pieces already bearing down on you;
-    ///  * **pawns**: the fleet's rank and file, and the pieces §5.3 names.
-    ///    Without this a back-rank rook outweighed an advanced pawn, which is
-    ///    backwards — the queen and king should not be the ones peppering you.
+    /// §5.3's "front rank" bias: the closer a gunner is to White, the more
+    /// often it fires, so the threat comes from the pieces already bearing down
+    /// on you. Which *types* are armed is `gunners(from:)`'s decision now, but
+    /// the pawn weight stays here — it still separates an advanced pawn from a
+    /// back-rank straggler in the fallback case, once the pawns are gone.
     static func weight(forRank rank: Int, type: PieceType) -> Int {
         // Rank 8 (home) scores 1, rank 2 scores 7. Rank 1 is a breach and ends
         // the level, so it never actually appears here.
@@ -44,6 +41,44 @@ enum FleetFiring {
         // A pawn is worth three of any other piece on the same rank.
         let typeWeight = type == .pawn ? 3 : 1
         return rankWeight * typeWeight
+    }
+
+    /// Pawns are the fleet's gunners, from Level 2 on ("PAWNS FIRE BACK").
+    ///
+    /// This replaces a weighting. §5.3 only ever asked for a *bias* toward
+    /// pawns, and the bias was real — 84% of shots at level start — but a
+    /// probability is invisible: to a player, 84% still reads as "anything can
+    /// shoot". A hard rule reads as a rule, and it is the only thing a level
+    /// banner can honestly promise. It also gives shooting a pawn a visible
+    /// consequence: it removes a gun.
+    ///
+    /// Fallback: with the pawns gone the fleet would fall silent for the rest
+    /// of the wave — exactly when the player is hunting the king and the
+    /// pressure should be at its highest — so everything left takes over, still
+    /// weighted forward. The banner promises pawns shoot, not that nothing else
+    /// ever will.
+    static func gunners(from candidates: [Candidate]) -> [Candidate] {
+        let pawns = candidates.filter { $0.type == .pawn }
+        return pawns.isEmpty ? candidates : pawns
+    }
+
+    /// At most half the gunners fire in one beat.
+    ///
+    /// Without this the charge-up telegraph eats itself: three shots from three
+    /// surviving pawns lights every pawn on the board, and a warning that
+    /// covers everything is not a warning. Capping keeps "these are about to
+    /// fire" distinguishable from "the rank exists" all the way down — and a
+    /// thinning fleet still gets harder, because each survivor fires more often.
+    static func volleySize(_ requested: Int, gunners: Int) -> Int {
+        guard gunners > 0, requested > 0 else { return 0 }
+        return max(1, min(requested, gunners / 2))
+    }
+
+    /// Crossfire's shooters: every live black bishop, on `bishopShotInterval`.
+    /// The piece that moves diagonally is the one that shoots diagonally, which
+    /// is a rule a player already knows before the banner explains it.
+    static func diagonalShooters(from candidates: [Candidate]) -> [String] {
+        candidates.filter { $0.type == .bishop }.map(\.square)
     }
 
     /// Picks up to `count` *distinct* pieces to fire from. Returns fewer when

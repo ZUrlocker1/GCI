@@ -42,9 +42,11 @@ enum CollisionResolver {
     }
 
     /// An invader shot is blocked by a white piece: 1 HP (§5.3, §7.2).
-    static func enemyShotHitWhitePiece(at square: String, board: GCIBoard) -> CollisionOutcome? {
+    static func enemyShotHitWhitePiece(at square: String,
+                                       damage: Int = ProjectileState.enemyShotDamage,
+                                       board: GCIBoard) -> CollisionOutcome? {
         guard let piece = board.piece(at: square), piece.color == .white else { return nil }
-        let destroyed = board.applyDamage(ProjectileState.enemyShotDamage, at: square)
+        let destroyed = board.applyDamage(damage, at: square)
         return .whitePieceHit(square: square, destroyed: destroyed)
     }
 }

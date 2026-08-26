@@ -179,7 +179,17 @@ enum FleetRules {
     /// Share of a volley that comes in angled once diagonals arrive. A mix is
     /// the point: all-diagonal is just a different fixed pattern to stand
     /// outside of, whereas mixed fire means no column is reliably safe.
-    static let diagonalShotShare = 0.4
+    /// Crossfire is the bishops' cadence, not a dice roll on somebody else's
+    /// shot: every second beat, every live black bishop fires at once. Two
+    /// crossing diagonals in the same instant is what the level is named for,
+    /// and a piece with its own weapon reads as a character where a 40% chance
+    /// of an angled pawn shot read as noise.
+    static let bishopShotInterval = 2
+
+    /// How long a gunner glows before its round leaves (§ the charge-up
+    /// telegraph). Long enough to see and act on, short enough that it is a
+    /// warning rather than a countdown.
+    static let chargeUpDelay: TimeInterval = 0.35
 
     /// Which way a diagonal shot leans: -1 left, +1 right, 0 for straight down.
     /// Aimed away from the board edge when the shooter is near one, so a

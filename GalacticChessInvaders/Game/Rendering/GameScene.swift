@@ -1557,37 +1557,95 @@ class GameScene: SKScene {
                             note: "black king fires")
         }
 
-        let count = FleetFiring.shotCount(for: level)
-        guard count > 0 else { return }
-
         let candidates = board.allPieces(color: .black).map {
             FleetFiring.Candidate(square: $0.logicalSquare, type: $0.type)
         }
-        let shooters = FleetFiring.chooseShooters(from: candidates, count: count)
+
+        // Crossfire: the bishops fire together on their own cadence, so two
+        // diagonals cross in the same instant rather than one angled round
+        // arriving at random.
+        if level.diagonalShots, beatsThisLevel % FleetRules.bishopShotInterval == 0 {
+            for square in FleetFiring.diagonalShooters(from: candidates) {
+                let lean = FleetRules.diagonalLean(fromFile: Self.fileIndex(of: square),
+                                                   isDiagonal: true)
+                scheduleInvaderShot(from: square, after: 0,
+                                    speed: FleetRules.diagonalShotSpeed,
+                                    lean: lean, sound: .crossfireLaserFire)
+            }
+        }
+
+        let gunners = FleetFiring.gunners(from: candidates)
+        let count = FleetFiring.volleySize(FleetFiring.shotCount(for: level),
+                                           gunners: gunners.count)
+        guard count > 0 else { return }
+        let shooters = FleetFiring.chooseShooters(from: gunners, count: count)
 
         // Spread the volley across a fraction of a second rather than firing it
         // in one instant. Same rate, but three simultaneous rounds read as one
         // event, and staggered ones read as three pieces choosing to shoot.
         for (index, square) in shooters.enumerated() {
-            let delay = Double(index) * Self.volleyStagger
-            let lean = FleetRules.diagonalLean(
-                fromFile: Self.fileIndex(of: square),
-                isDiagonal: level.diagonalShots
-                    && Double.random(in: 0..<1) < FleetRules.diagonalShotShare)
-            guard delay > 0 else {
-                fireInvaderShot(from: square, speed: level.projectileSpeed, lean: lean)
-                continue
-            }
-            run(.sequence([
-                .wait(forDuration: delay),
-                .run { [weak self] in
-                    guard let self, !self.isBeatSuspended,
-                          self.stateMachine.currentState is PlayingState else { return }
-                    self.fireInvaderShot(from: square, speed: level.projectileSpeed,
-                                         lean: lean)
-                },
-            ]))
+            scheduleInvaderShot(from: square, after: Double(index) * Self.volleyStagger,
+                                speed: level.projectileSpeed, lean: 0,
+                                sound: .invaderLaserFire)
         }
+    }
+
+    /// Charges a gunner up, then fires it.
+    ///
+    /// The charge-up is the whole point: a shot used to appear at the same
+    /// instant as its muzzle flare, so the flare was a record of what had
+    /// already happened rather than a warning. Now the piece glows for
+    /// `chargeUpDelay` first, and the glow is drawn along the line the round
+    /// will take — so at Crossfire the *angle* is readable before the missile
+    /// exists, which is the part the player actually has to plan around.
+    private func scheduleInvaderShot(from square: String, after delay: TimeInterval,
+                                     speed: CGFloat, lean: Int, sound: SoundKey) {
+        let charge = SKAction.run { [weak self] in
+            guard let self, self.isFiringLive else { return }
+            self.telegraphShot(at: square, lean: lean)
+        }
+        let fire = SKAction.run { [weak self] in
+            guard let self, self.isFiringLive else { return }
+            self.fireInvaderShot(from: square, speed: speed, lean: lean, sound: sound)
+        }
+        run(.sequence([.wait(forDuration: delay), charge,
+                       .wait(forDuration: FleetRules.chargeUpDelay), fire]))
+    }
+
+    /// Both halves of a scheduled shot check this: a volley is spread over most
+    /// of a second, and the game can be paused, lost or won inside that window.
+    private var isFiringLive: Bool {
+        !isBeatSuspended && stateMachine.currentState is PlayingState
+    }
+
+    /// The charge-up cue: the gunner brightens, and a tick grows out of it
+    /// along the line the shot will travel.
+    private func telegraphShot(at square: String, lean: Int) {
+        guard let node = pieceNodes[square] else { return }
+        let angled = lean != 0
+        let tint = angled ? NeonPalette.shotPurple : NeonPalette.magenta
+
+        let tick = SKShapeNode(rectOf: CGSize(width: 2.5, height: BoardNode.squareSize * 0.42),
+                               cornerRadius: 1.25)
+        tick.fillColor = tint
+        tick.strokeColor = .white
+        tick.lineWidth = 0.75
+        tick.glowWidth = 4
+        tick.zPosition = 2
+        // Grows out of the piece's foot, pointing where the round will go.
+        tick.zRotation = angled ? CGFloat(lean) * .pi / 4 : 0
+        tick.position = CGPoint(x: CGFloat(lean) * node.size.width * 0.22,
+                                y: -node.size.height * 0.42)
+        tick.setScale(0.2)
+        tick.alpha = 0
+        node.addChild(tick)
+        tick.run(.sequence([
+            .group([.scale(to: 1.0, duration: FleetRules.chargeUpDelay),
+                    .fadeAlpha(to: 0.95, duration: FleetRules.chargeUpDelay * 0.6)]),
+            .fadeOut(withDuration: 0.08),
+            .removeFromParent(),
+        ]))
+        node.flareGunner(tint: tint, duration: FleetRules.chargeUpDelay)
     }
 
     /// Spawns one invader round from `square`, if the piece is still there and a
@@ -1687,12 +1745,27 @@ class GameScene: SKScene {
     /// An invader shot touched something — either the ship, or a white piece
     /// blocking its lane.
     private func resolveEnemyShotHit(shot: LaserNode, node: SKNode) {
-        shot.deactivate()
+        // The round's own damage, not a constant. The activated king's heavy
+        // shot carries 2 and was landing 1: the resolver hardcoded
+        // `enemyShotDamage`, so "double damage" never reached the board.
+        let damage = shot.state?.damage ?? ProjectileState.enemyShotDamage
+
         if let ship, node === ship {
+            shot.deactivate()
             handleShipHit()
         } else if let pieceNode = node as? PieceNode, pieceNode.piece.color == .white {
             guard let result = CollisionResolver.enemyShotHitWhitePiece(
-                at: pieceNode.square, board: board) else { return }
+                at: pieceNode.square, damage: damage, board: board) else {
+                // The node's square no longer names a piece on the board — it
+                // is mid-move, or already dead. Deactivating here would delete
+                // the round in mid-air with no damage and no explosion, which
+                // is exactly what "it hit but nothing happened" looks like. Let
+                // it keep flying instead.
+                DiagnosticsLog.shared.log(.hit,
+                    "shot passed \(pieceNode.square) — no piece there on the board")
+                return
+            }
+            shot.deactivate()
             handleWhitePieceHit(result, node: pieceNode)
         }
     }

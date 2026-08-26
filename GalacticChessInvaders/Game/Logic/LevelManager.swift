@@ -78,7 +78,7 @@ final class LevelManager {
     static func announcement(for level: Int) -> (title: String, subtitle: String)? {
         switch max(1, level) {
         case 1:  return nil
-        case 2:  return ("FIRE POWER",     "BLACK SHOOTS BACK")
+        case 2:  return ("FIRE POWER",     "PAWNS FIRE BACK")
         case 3:  return ("DOUBLE TROUBLE", "BLACK MOVES TWICE")
         case 4:  return ("RELENTLESS",     "FASTER, HARDER FIRE")
         case 5:  return ("TRIPLE THREAT",  "BLACK MOVES THREE TIMES")
@@ -86,7 +86,7 @@ final class LevelManager {
         // §10.1 gives these two verbatim; the Armored Pawns subtitle is
         // shortened to fit the 22-character limit.
         case 7:  return ("KING ACTIVATED",  "SHIELDED, AND ARMED")
-        case 8:  return ("CROSSFIRE",       "SHOTS COME IN ANGLED")
+        case 8:  return ("CROSSFIRE",       "BISHOPS FIRE ON THE DIAGONAL")
         case 9:  return ("ARMORED PAWNS",  "BULLETS BOUNCE OFF")
         // The last wave. Named for both the chess variation and the Cray
         // Blitz that won the 1983 world computer championship.
