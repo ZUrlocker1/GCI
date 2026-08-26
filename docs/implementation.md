@@ -5,9 +5,12 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 
 ✅ done · 🟡 partial · ⬜ not started
 
-Ten levels play end to end; the one hole is **Level 9**, whose banner promises
-armored pawns and delivers nothing — it needs the pawn regeneration system
-(§6.x) that the mechanic hangs off.
+Ten levels play end to end. Two things are outstanding:
+
+- **Level 9** shows an ARMORED PAWNS banner and delivers nothing. The mechanic
+  hangs off pawn regeneration, which is not built
+- **Phase 3.3** — destruction currently plays a sound and removes the sprite.
+  No explosion, no score pop-up, no shake
 
 | Phase | Title | |
 |---|---|---|
@@ -16,7 +19,7 @@ armored pawns and delivers nothing — it needs the pawn regeneration system
 | 2.1 | Playfield: chess functional | 🟡 |
 | 2.2 | Playfield: Recharged visual treatment | ✅ |
 | 3.1 | Arcade layer: fleet movement | ✅ |
-| 3.2 | Arcade layer: shooting & collision | 🟡 |
+| 3.2 | Arcade layer: shooting & collision | ✅ |
 | 3.3 | Arcade layer: damage states & juice | ⬜ |
 | 4 | Basic sound effects | 🟡 |
 | 5 | Background music + settings | ⬜ |
@@ -211,7 +214,7 @@ The first build was unplayable. What got it there, in brief:
 
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 
-## Phase 3.2 — Shooting & Collision 🟡
+## Phase 3.2 — Shooting & Collision ✅
 
 The core shoot-em-up loop, and the phase that finally lets a run *end*.
 
@@ -269,77 +272,67 @@ left the game with no ending at all.
 Escalations persist except where a level's identity depends on not persisting:
 King Activated and Crossfire are their own waves (Blitz carries Crossfire again).
 
-### Who shoots, and how it is telegraphed
+### Who shoots, and how you can tell
 
-- Pawns are the only gunners from Level 2; bishops add diagonals at Crossfire.
-  This replaces §5.3's *weighting* toward pawns — which was real (84% of shots)
-  but invisible, since a probability reads as "anything can shoot". A rule is
-  something a banner can promise and a player can act on
-- Fallbacks: with no pawns left everything remaining takes over, or the fleet
-  goes silent exactly when the player is hunting the king; and at most half the
-  gunners fire per beat, or the charge-up lights the whole rank and says nothing
-- Every shot charges up for 0.35s first — the piece lights from within (a
-  tinted additive copy of its own texture, so no new shape appears; the first
-  attempt was a ring behind the sprite, which was the check halo) and a tick
-  grows along the line the round will take, so at Crossfire the *angle* is
-  readable before the missile exists
-- Every gunner charges up, the king included — a round that appears with no
-  telegraph has no visible source, because the fleet keeps sweeping while the
-  shot falls straight, so the shooter has slid out from behind it by the time
-  the eye arrives
-- Bishops lean toward one of White's actual pieces, clamped to 17°–45°. A fixed
-  45° from the back rank crosses seven files before reaching White: measured, a
-  third of shooter positions sent the round off the board entirely, now 4%
+- **Pawns are the only gunners** from Level 2; bishops add diagonals at
+  Crossfire. This replaces §5.3's *weighting* toward pawns — real (84% of
+  shots) but invisible, since a probability reads as "anything can shoot". A
+  rule is something a banner can promise and a player can act on
+- Two fallbacks: with no pawns left everything remaining takes over, or the
+  fleet goes silent exactly when the player is hunting the king; and at most
+  half the gunners fire per beat, or the charge-up lights the whole rank
+- **Every shot charges up for 0.35s first**, the king's included. The piece
+  lights from within — a tinted additive copy of its own texture, so no new
+  shape appears — and a tick grows along the line the round will take, so at
+  Crossfire the *angle* is readable before the missile exists. A round with no
+  telegraph has no visible source: the fleet keeps sweeping while the shot
+  falls straight, so the shooter has slid out from behind it by the time the
+  eye arrives
+- **Angled fire aims.** Bishops lean toward one of White's actual pieces
+  (17°–45°), the king more gently (9°–31°, on 45% of its rounds). A fixed 45°
+  from the back rank crosses seven files before reaching White: measured, a
+  third of shooter positions threw the round off the board, now 4%
+- **A damaged piece keeps its identity.** The art erodes bottom-up, which takes
+  the profile with it — so a Cracked pawn, bishop, queen and knight were all "a
+  blob with debris" (rook and king survived only because crenellations and a
+  cross are top-of-piece features). A full-height slice of one side, 34% of the
+  ink width, is now drawn from the undamaged texture underneath the damage. No
+  new art: every damage state shares the full sprite's canvas, so a sub-texture
+  lands exactly where that part of the piece was — pinned by a test, since a
+  re-export that broke it would misalign every damaged piece silently. The
+  surviving side is the one the shot missed, from the contact point, fixed by
+  the first hit; a centre hit tosses a coin. Compound hitbox, so the wedge is
+  hittable without the empty two thirds between it and the top
 
 ### Playtest fixes
 
+One line each; the reasoning is in the commits and the code.
+
 - **No collisions at all** — every physics body was static, and SpriteKit needs
-  one dynamic body in a pair to report a contact. The laser is now the dynamic
-  half. Verified against a real render loop (0 contacts vs 1)
-- **A damaged piece keeps its identity.** The art erodes bottom-up, which takes
-  the profile with it — and the profile is where identity lives, so a Cracked
-  pawn, bishop, queen and knight were all "a blob with debris" (only the rook
-  and king survived, their crenellations and cross being top-of-piece
-  features). A full-height slice of one side, 34% of the ink width, is now
-  drawn from the *undamaged* texture underneath the damage: the silhouette
-  comes back while two thirds of the piece is still visibly gone. No new art —
-  every damage state shares the full sprite's canvas, so a sub-texture lands
-  exactly where that part of the piece was, and a test pins that invariant
-  against a re-export. The surviving side is the side the shot *missed*, taken
-  from the physics contact point, fixed by the first hit so it cannot jump; a
-  clean centre hit tosses a coin. The hitbox is compound rather than one box
-  around both, or it would also cover the empty two thirds between them
-- **Hitboxes follow the art** — the box was the sprite's full frame, but damage
-  sprites erode bottom-up (ink fills ~84% → ~27% of the box), so shots died in
-  blank space under a damaged piece. `PieceNode` measures and caches ink bounds
-  per texture. A rectangle over those bounds, not an alpha body: these outlines
-  cover ~10% of their box and an alpha body would be hollow
-- **Damage was invisible** — the hit path never called `refresh(with:)`, and
-  `damageState` used HP ratios rather than §7.1's table, running a full stage
-  behind on rook, queen and king. Six of twenty states disagreed with the doc,
-  every one hiding damage
-- **Enemy shots spawned off-target** — they used board-local coordinates, but
-  lasers live in `bloomNode`. Now via `laserOrigin(forFleetSquare:)`
-- **Angled rounds flew broadside** — `zRotation` turns a node's own axes, so a
-  45° rotation left the bolt perpendicular to its own travel; on screen, a
-  purple paddle sliding sideways. Aimed from the travel vector now, and dressed
-  as a missile with a nose and exhaust. Angled rounds also carry a circular
-  hitbox, so the angle cannot change how hard they are to land
-- **A hit that resolved to nothing deleted the round in mid-air** — the shot was
-  deactivated before the board lookup, so a contact with a stale square gave no
-  damage and no explosion. It keeps flying now
+  one dynamic body in a pair to report a contact
+- **Hitboxes followed the frame, not the art** — shots died in blank space under
+  a damaged piece. Ink bounds are measured and cached per texture
+- **Damage was invisible** — the hit path never refreshed the sprite, and
+  `damageState` used HP ratios rather than §7.1's table, hiding a stage on the
+  big pieces
+- **Enemy shots spawned off-target** — board-local coordinates for a node living
+  in `bloomNode`
+- **Angled rounds flew broadside** — `zRotation` turns a node's own axes, so the
+  bolt ended up perpendicular to its own travel. Aimed from the travel vector
+  now, dressed as a missile, with a circular hitbox so the angle cannot matter
+- **A hit that resolved to nothing deleted the round in mid-air** — deactivated
+  before the board lookup
 - **Heavy shots landed light** — the resolver hardcoded `enemyShotDamage`, so
-  the king's double-damage round had always done 1
-- **Game kept playing after a win** — `isBeatSuspended` now gates every path
-  that could restart the beat
-- **Two crashes, same cause** — releasing a fleet member by square no-oped on a
-  stale key, leaving the node parented; SpriteKit then trapped on `addChild`.
-  Released by identity now
-- **`applyDamage` never told the chess engine** — same class as `forcePlace`.
-  Latent since the field was written; a laser kill was the first thing to
-  exercise it. Fixed with `ChessEngine.forceRemove(at:)`
-- **The sounds were never missing, only never copied** — `assets/sfx/` had the
-  full converted library; only 16 files had reached `Resources/sfx/`
+  the king's double-damage round always did 1
+- **Play continued after a win** — `isBeatSuspended` now gates every path that
+  could restart the beat
+- **Two crashes, one cause** — releasing a fleet member by square no-oped on a
+  stale key. Released by identity now
+- **`applyDamage` never told the chess engine** — same class as `forcePlace`,
+  latent since the field was written
+- **The sounds were never missing, only never copied** into `Resources/sfx/`
+- **Messages stacked** — the reveal banner was only cleared on teardown, so the
+  wave-clear overlay landed on top of it
 
 ### Deviations from the design doc
 
