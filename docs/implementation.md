@@ -185,6 +185,20 @@ Get the black fleet sweeping and descending alongside the chess game. No shootin
 - [x] Fleet log lines: sweep, half-drop, logical descent, breach
 - [x] Playtested, then reworked (see below)
 
+### 3.1 first-playtest bugs
+
+Two bugs surfaced before the readability rework below even started:
+
+- [x] **Sweep was bounded by the board, not the playfield.** A full 16-piece
+      formation is exactly as wide as the eight files, so there was no room to
+      move at all — the fleet travelled a few pixels, hit a wall, and dropped a
+      half-rank every second or two, reaching rank 1 in ~20 seconds. Rebounded
+      to the same lane the ship patrols instead
+- [x] **Pausing didn't pause the fleet.** The chess beat and the ship are gated
+      on `PlayingState` in the update loop, but the fleet advances on
+      `SKAction`s, which keep ticking through a state change regardless.
+      `showPausedOverlay`/`hidePausedOverlay` now call `fleet.setPaused(_:)`
+
 ### 3.1 rework after playtest
 
 The first build was unplayable: the fleet drifted three files off true and fell a
@@ -227,8 +241,21 @@ rank every few seconds. Two rules came out of it, both now pinned by tests.
       — things that march, things that sit — beat one hybrid one, and engaging
       Black on the board now defuses arcade pressure instead of stacking with it
 - [x] Fixed `GCIBoard.forcePlace` silently overwriting a same-colour occupant
-- [x] Tuning pass: fleet sweep/step pace ×0.7 (`FleetRules.sweepSpeedScale`),
-      grid and deployment-band alpha ×1.3
+- [x] Tuning pass: fleet sweep/step pace ×0.7, grid and deployment-band alpha ×1.3
+
+### 3.1 descent-jump bug, and further tuning
+
+- [x] **Eliminated a "jump up then down" on every rank descent.**
+      `applyFullRankDescent` bumped the fleet *parent's* position by
+      `+squareSize` to undo the two half-drops, but never moved the piece's own
+      *local* position — which is supposed to always equal its logical square's
+      centre. The two cancelled out on screen for exactly one rank, then the
+      error compounded: the piece visibly jumped a full square up the instant a
+      rank landed, right before the next drop pulled it back down. Fixed by
+      moving the child by the same amount the parent is about to be moved back
+- [x] Further tuning, direct user feedback: sweep amplitude ratio 0.4 → 0.35
+      (0.8 → 0.7 of a square total), sweep/step pace ×0.7 → ×0.63 (another 10%
+      slower), grid stroke and deployment-band alpha another ×1.4 brighter
 
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 
