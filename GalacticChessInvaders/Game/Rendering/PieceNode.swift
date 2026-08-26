@@ -14,6 +14,7 @@ final class PieceNode: SKSpriteNode {
     private static let danger  = SKColor(red: 1.00, green: 0.16, blue: 0.10, alpha: 1)
     private static let flickerKey = "criticalFlicker"
     private static let checkGlowKey = "checkGlow"
+    private static let chargeGlowName = "gunnerCharge"
     private static let bobKey = "idleBob"
     /// Small enough to read as breathing rather than hovering.
     private static let bobAmplitude: CGFloat = 2.0
@@ -231,19 +232,22 @@ final class PieceNode: SKSpriteNode {
             return
         }
         guard childNode(withName: key) == nil else { return }
-        let ring = SKShapeNode(circleOfRadius: squareSize * 0.42)
+        // Tight to the king rather than filling the square. At 0.42 it was
+        // wider than the check halo (0.40) and read as a drawn circle sitting
+        // on the board; close in, thin and dim, it reads as a field the piece
+        // is wearing. `flareForcefield` is what makes it visible, on each hit
+        // it absorbs — at rest it should be easy to overlook.
+        let ring = SKShapeNode(circleOfRadius: squareSize * 0.33)
         ring.name = key
         ring.strokeColor = NeonPalette.cyan
-        // Thin at rest so it reads as a field rather than a drawn circle;
-        // `flareForcefield` thickens and brightens it on each absorbed hit.
-        ring.lineWidth = 1
-        ring.glowWidth = 4
-        ring.fillColor = NeonPalette.cyan.withAlphaComponent(0.05)
+        ring.lineWidth = 0.8
+        ring.glowWidth = 2.5
+        ring.fillColor = NeonPalette.cyan.withAlphaComponent(0.03)
         ring.zPosition = -1
         addChild(ring)
         ring.run(.repeatForever(.sequence([
-            .group([.fadeAlpha(to: 0.45, duration: 0.7), .scale(to: 1.06, duration: 0.7)]),
-            .group([.fadeAlpha(to: 0.95, duration: 0.7), .scale(to: 1.00, duration: 0.7)]),
+            .group([.fadeAlpha(to: 0.30, duration: 0.9), .scale(to: 1.03, duration: 0.9)]),
+            .group([.fadeAlpha(to: 0.65, duration: 0.9), .scale(to: 1.00, duration: 0.9)]),
         ])))
     }
 
@@ -253,31 +257,43 @@ final class PieceNode: SKSpriteNode {
         guard let ring = childNode(withName: "forcefield") as? SKShapeNode else { return }
         ring.removeAction(forKey: "flare")
         ring.run(.sequence([
-            .run { ring.lineWidth = 3; ring.glowWidth = 12; ring.strokeColor = .white },
+            .run { ring.lineWidth = 2.5; ring.glowWidth = 10; ring.strokeColor = .white },
             .wait(forDuration: 0.09),
-            .run { ring.lineWidth = 1; ring.glowWidth = 4; ring.strokeColor = NeonPalette.cyan },
+            .run { ring.lineWidth = 0.8; ring.glowWidth = 2.5; ring.strokeColor = NeonPalette.cyan },
         ]), withKey: "flare")
     }
 
-    /// This gunner is charging a round. A soft ring that swells under the piece
-    /// for the length of the charge-up, so a shooter is identifiable at a glance
-    /// even where the board is crowded and the little muzzle tick is hard to
-    /// pick out. Self-removing, and it never touches `color` — a piece can be in
-    /// check, damaged and charging all at once.
+    /// This gunner is charging a round: the piece lights up from the inside.
+    ///
+    /// A copy of the piece's own texture, tinted and additively blended over
+    /// the sprite, so what brightens is the silhouette itself — no new shape
+    /// appears. The first version was a swelling ring behind the piece, which
+    /// was very nearly the check halo (`startCheckGlow`, also a pulsing ring
+    /// behind the sprite): two unrelated states drawn the same way. Ring
+    /// vocabulary is spoken for — check, the king's shield, deflection — so a
+    /// gunner charging has to look like something else entirely.
+    ///
+    /// Never touches `color`: a piece can be in check, damaged and charging at
+    /// the same time, and `color` already belongs to the check glow and the hit
+    /// flash.
     func flareGunner(tint: SKColor, duration: TimeInterval) {
-        let ring = SKShapeNode(circleOfRadius: squareSize * 0.30)
-        ring.strokeColor = tint
-        ring.lineWidth = 2
-        ring.glowWidth = 6
-        ring.fillColor = .clear
-        ring.zPosition = -1          // behind the sprite: a glow, not a badge
-        ring.alpha = 0
-        ring.setScale(0.5)
-        addChild(ring)
-        ring.run(.sequence([
-            .group([.scale(to: 1.15, duration: duration),
-                    .fadeAlpha(to: 0.85, duration: duration * 0.7)]),
-            .fadeOut(withDuration: 0.1),
+        childNode(withName: Self.chargeGlowName)?.removeFromParent()
+        let glow = SKSpriteNode(texture: texture, size: size)
+        glow.name = Self.chargeGlowName
+        glow.color = tint
+        glow.colorBlendFactor = 1
+        glow.blendMode = .add        // burns the existing outline brighter
+        glow.zPosition = 1           // over the sprite, exactly on top of it
+        glow.alpha = 0
+        addChild(glow)
+        // Swells to the shot and drops away with it, so the brightest instant
+        // is the moment the round leaves. The slight scale-up spreads the same
+        // silhouette a few points past its own edge — still the piece's shape,
+        // never a ring.
+        glow.run(.sequence([
+            .group([.fadeAlpha(to: 0.9, duration: duration * 0.85),
+                    .scale(to: 1.06, duration: duration * 0.85)]),
+            .fadeOut(withDuration: 0.12),
             .removeFromParent(),
         ]))
     }

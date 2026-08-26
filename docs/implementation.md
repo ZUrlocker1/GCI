@@ -278,9 +278,14 @@ King Activated and Crossfire are their own waves (Blitz carries Crossfire again)
 - Fallbacks: with no pawns left everything remaining takes over, or the fleet
   goes silent exactly when the player is hunting the king; and at most half the
   gunners fire per beat, or the charge-up lights the whole rank and says nothing
-- Every shot charges up for 0.35s first — the gunner glows and a tick grows
-  along the line the round will take, so at Crossfire the *angle* is readable
-  before the missile exists
+- Every shot charges up for 0.35s first — the piece lights from within (a
+  tinted additive copy of its own texture, so no new shape appears; the first
+  attempt was a ring behind the sprite, which was the check halo) and a tick
+  grows along the line the round will take, so at Crossfire the *angle* is
+  readable before the missile exists
+- Bishops lean toward one of White's actual pieces, clamped to 17°–45°. A fixed
+  45° from the back rank crosses seven files before reaching White: measured, a
+  third of shooter positions sent the round off the board entirely, now 4%
 
 ### Playtest fixes
 
