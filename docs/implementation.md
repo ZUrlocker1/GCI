@@ -296,6 +296,19 @@ King Activated and Crossfire are their own waves (Blitz carries Crossfire again)
 - **No collisions at all** — every physics body was static, and SpriteKit needs
   one dynamic body in a pair to report a contact. The laser is now the dynamic
   half. Verified against a real render loop (0 contacts vs 1)
+- **A damaged piece keeps its identity.** The art erodes bottom-up, which takes
+  the profile with it — and the profile is where identity lives, so a Cracked
+  pawn, bishop, queen and knight were all "a blob with debris" (only the rook
+  and king survived, their crenellations and cross being top-of-piece
+  features). A full-height slice of one side, 34% of the ink width, is now
+  drawn from the *undamaged* texture underneath the damage: the silhouette
+  comes back while two thirds of the piece is still visibly gone. No new art —
+  every damage state shares the full sprite's canvas, so a sub-texture lands
+  exactly where that part of the piece was, and a test pins that invariant
+  against a re-export. The surviving side is the side the shot *missed*, taken
+  from the physics contact point, fixed by the first hit so it cannot jump; a
+  clean centre hit tosses a coin. The hitbox is compound rather than one box
+  around both, or it would also cover the empty two thirds between them
 - **Hitboxes follow the art** — the box was the sprite's full frame, but damage
   sprites erode bottom-up (ink fills ~84% → ~27% of the box), so shots died in
   blank space under a damaged piece. `PieceNode` measures and caches ink bounds

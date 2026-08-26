@@ -145,6 +145,12 @@ struct Piece {
         "chess-\(color.atlasPrefix)-\(type.atlasName)\(damageState.textureSuffix)"
     }
 
+    /// The undamaged art for this piece, whatever state it is in — the source
+    /// the surviving wedge is cut from.
+    var fullTextureName: String {
+        "chess-\(color.atlasPrefix)-\(type.atlasName)"
+    }
+
     /// Apply damage, returns true if piece is now destroyed
     @discardableResult
     mutating func applyDamage(_ amount: Int) -> Bool {

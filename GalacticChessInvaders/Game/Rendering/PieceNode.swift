@@ -21,6 +21,16 @@ final class PieceNode: SKSpriteNode {
     private static let bobHalfPeriod: TimeInterval = 0.8
     private static let baseBlend: CGFloat = 0.22
 
+    /// The wedge is part of the piece, so it takes every tint the piece takes —
+    /// the check glow, the hit flash, the base colour. Overriding here rather
+    /// than touching all six call sites means a new one cannot forget.
+    override var color: SKColor {
+        didSet { wedgeNode?.color = color }
+    }
+    override var colorBlendFactor: CGFloat {
+        didSet { wedgeNode?.colorBlendFactor = colorBlendFactor }
+    }
+
     private(set) var piece: Piece
     private let squareSize: CGFloat
     private let baseColor: SKColor
@@ -51,6 +61,28 @@ final class PieceNode: SKSpriteNode {
     /// from the bottom-left. Computed once per sprite and cached: 36 sprites,
     /// each scanned a single time, and never during a frame that matters.
     private static var inkBoundsCache: [String: CGRect] = [:]
+    private static var wedgeCache: [String: SKTexture] = [:]
+
+    /// Which side of a damaged piece survives, and how much of it.
+    ///
+    /// The damage art erodes bottom-up, which takes the profile with it — and
+    /// the profile is where a piece's identity lives. A Cracked pawn, bishop,
+    /// queen and knight are all "a small blob with debris"; only the rook and
+    /// king survive, because crenellations and a cross happen to be top-of-
+    /// piece features. Keeping a full-height slice of one side gives the
+    /// silhouette back without pretending the piece is whole: two thirds of it
+    /// is still visibly gone.
+    enum SurvivingSide { case left, right }
+    static let wedgeShare: CGFloat = 0.34
+
+    /// Fixed for the life of the piece once its first hit lands — the wedge
+    /// must not jump sides when a piece moves or takes another hit.
+    private(set) var survivingSide: SurvivingSide?
+    private var wedgeNode: SKSpriteNode?
+
+    /// A hit landing this close to the middle cannot say which side it took
+    /// off, as a fraction of the half-width.
+    private static let centreHitFraction: CGFloat = 0.2
 
     /// Fits the collision box to the sprite's visible ink rather than its whole
     /// frame.
@@ -65,6 +97,52 @@ final class PieceNode: SKSpriteNode {
     /// these are neon outlines covering only ~10% of their box even intact, so
     /// an alpha body would be hollow and shots would sail through the middle of
     /// a healthy piece.
+    /// The horizontal slice of the *undamaged* texture that survives, in
+    /// normalized texture coordinates. Nil while the piece is whole.
+    private var wedgeSpan: (x0: CGFloat, x1: CGFloat)? {
+        guard piece.damageState != .full, let side = survivingSide else { return nil }
+        let ink = Self.inkBounds(forTexture: piece.fullTextureName)
+        let width = ink.width * Self.wedgeShare
+        switch side {
+        case .left:  return (ink.minX, ink.minX + width)
+        case .right: return (ink.maxX - width, ink.maxX)
+        }
+    }
+
+    /// Shows, moves or removes the surviving slice of the whole piece.
+    ///
+    /// A sub-texture of the full-HP art rather than new artwork: every damage
+    /// state shares the full sprite's canvas, so a slice cut from it lands
+    /// exactly where that part of the piece would have been.
+    private func updateWedge() {
+        guard let span = wedgeSpan else {
+            wedgeNode?.removeFromParent()
+            wedgeNode = nil
+            return
+        }
+        let key = "\(piece.fullTextureName)|\(span.x0)"
+        let slice = Self.wedgeCache[key] ?? {
+            let cut = SKTexture(rect: CGRect(x: span.x0, y: 0,
+                                             width: span.x1 - span.x0, height: 1),
+                                in: SKTexture(imageNamed: piece.fullTextureName))
+            Self.wedgeCache[key] = cut
+            return cut
+        }()
+
+        let node = wedgeNode ?? {
+            let fresh = SKSpriteNode()
+            fresh.zPosition = -0.5      // under the damaged art, over the board
+            addChild(fresh)
+            wedgeNode = fresh
+            return fresh
+        }()
+        node.texture = slice
+        node.size = CGSize(width: (span.x1 - span.x0) * size.width, height: size.height)
+        node.position = CGPoint(x: ((span.x0 + span.x1) / 2 - 0.5) * size.width, y: 0)
+        node.color = color
+        node.colorBlendFactor = colorBlendFactor
+    }
+
     private func rebuildPhysicsBody() {
         let unit = Self.inkBounds(forTexture: piece.textureName)
         let boxWidth = size.width, boxHeight = size.height
@@ -82,7 +160,25 @@ final class PieceNode: SKSpriteNode {
 
         // Contact detection only — no physical push. The laser side owns
         // contactTestBitMask, so this only needs the right categoryBitMask.
-        let body = SKPhysicsBody(rectangleOf: bodySize, center: centre)
+        //
+        // Compound when a wedge is showing, rather than one box around both:
+        // what the player can see, the player can hit, but a single rectangle
+        // spanning the eroded top *and* a full-height slice would also cover
+        // the empty two thirds between them — which is the bug the ink-bounds
+        // measurement fixed in the first place.
+        let top = SKPhysicsBody(rectangleOf: bodySize, center: centre)
+        let body: SKPhysicsBody
+        if let span = wedgeSpan {
+            let full = Self.inkBounds(forTexture: piece.fullTextureName)
+            let wedge = SKPhysicsBody(
+                rectangleOf: CGSize(width: (span.x1 - span.x0) * boxWidth,
+                                    height: full.height * boxHeight),
+                center: CGPoint(x: ((span.x0 + span.x1) / 2 - 0.5) * boxWidth,
+                                y: (0.5 - full.midY) * boxHeight))
+            body = SKPhysicsBody(bodies: [top, wedge])
+        } else {
+            body = top
+        }
         body.isDynamic = false
         body.categoryBitMask = piece.color == .white
             ? PhysicsCategory.friendlyPiece : PhysicsCategory.enemyPiece
@@ -197,6 +293,22 @@ final class PieceNode: SKSpriteNode {
 
     // MARK: - Damage
 
+    /// Records where a shot struck, in this node's own coordinates, so the
+    /// surviving side can be the one the shot did *not* take off. Only the
+    /// first hit decides; a clean centre hit tosses a coin.
+    func noteHit(atLocalX x: CGFloat) {
+        guard survivingSide == nil else { return }
+        let half = size.width / 2
+        let offset = half > 0 ? x / half : 0
+        if offset < -Self.centreHitFraction {
+            survivingSide = .right          // struck on the left, so the right stands
+        } else if offset > Self.centreHitFraction {
+            survivingSide = .left
+        } else {
+            survivingSide = Bool.random() ? .left : .right
+        }
+    }
+
     /// Re-reads `piece` and refreshes the texture and flicker to match it.
     /// Keys off `textureName`, so promotions (type change) and damage both apply.
     func refresh(with updated: Piece) {
@@ -207,6 +319,7 @@ final class PieceNode: SKSpriteNode {
         let next = SKTexture(imageNamed: updated.textureName)
         texture = next
         size = Self.fit(next, in: squareSize)
+        updateWedge()
         // The eroded art is a different shape, so the hitbox has to follow it.
         rebuildPhysicsBody()
 
