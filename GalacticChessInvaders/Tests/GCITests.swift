@@ -3081,42 +3081,37 @@ final class LaserPhysicsTests: XCTestCase {
 @MainActor
 final class JuiceTests: XCTestCase {
 
-    /// §24.1's table, plus the officers. Taken literally the doc lists only the
-    /// queen and king, and each dies at most once a wave — a player could clear
-    /// a whole level and never see the board move, which is what happened.
-    /// Pawns stay silent: they die constantly, and always shaking is never
-    /// shaking.
-    func testShakeScalesWithWhatWasDestroyed() {
+    /// Three events shake the board and nothing else does. The scarcity is the
+    /// point: a shake that turns up on every rook is scenery, and then the two
+    /// kills that decide a wave are no longer announced by it.
+    func testOnlyTheQueenAndKingShakeTheBoard() {
         XCTAssertEqual(Juice.shake(forDestroying: .king), Juice.heavy)
         XCTAssertEqual(Juice.shake(forDestroying: .queen), Juice.light)
-        for type in [PieceType.knight, .bishop, .rook] {
-            XCTAssertEqual(Juice.shake(forDestroying: type), Juice.small, "\(type)")
+        for type in [PieceType.pawn, .knight, .bishop, .rook] {
+            XCTAssertEqual(Juice.shake(forDestroying: type), .none, "\(type)")
         }
-        XCTAssertEqual(Juice.shake(forDestroying: .pawn), .none,
-                       "pawns die constantly; always shaking is never shaking")
-        // §24.1's durations, verbatim.
+        XCTAssertEqual(Juice.shipDestroyed, Juice.medium, "and losing a life")
+        // §24.1's durations.
         XCTAssertEqual(Juice.shake(forDestroying: .king).duration, 0.6)
-        XCTAssertEqual(Juice.shake(forDestroying: .queen).duration, 0.2)
         XCTAssertEqual(Juice.shipDestroyed.duration, 0.4)
-        XCTAssertEqual(Juice.laserHit.duration, 0.05)
         // Ordered, so "heavy" is always felt as more than "light".
-        let tiers = [Juice.micro, Juice.small, Juice.light, Juice.medium, Juice.heavy]
+        let tiers = [Juice.light, Juice.medium, Juice.heavy]
         for pair in zip(tiers, tiers.dropFirst()) {
             XCTAssertLessThan(pair.0.amplitude, pair.1.amplitude)
             XCTAssertLessThanOrEqual(pair.0.duration, pair.1.duration)
         }
     }
 
-    /// Every tier has to be visible at all. The first pass was measured after
-    /// the fact at 1.5pt over three frames for a laser hit — below anyone's
-    /// threshold, and the reason the feature read as unimplemented.
-    func testEveryShakeIsAboveThePerceptibleFloor() {
-        for (name, shake) in [("micro", Juice.micro), ("small", Juice.small),
-                              ("light", Juice.light), ("medium", Juice.medium),
+    /// Rare means each one has to land hard. A first pass measured after the
+    /// fact at 1.5pt over three frames was below anyone's threshold, and read
+    /// as the feature not existing.
+    func testEveryShakeIsUnmistakable() {
+        for (name, shake) in [("light", Juice.light), ("medium", Juice.medium),
                               ("heavy", Juice.heavy)] {
-            XCTAssertGreaterThanOrEqual(shake.amplitude, 3, name)
+            // A fifth of a square, minimum, and long enough to register.
+            XCTAssertGreaterThanOrEqual(shake.amplitude, BoardNode.squareSize / 5, name)
             let frames = shake.duration / Juice.frameDuration
-            XCTAssertGreaterThanOrEqual(frames, 5, "\(name) lasts \(frames) frames")
+            XCTAssertGreaterThanOrEqual(frames, 12, "\(name) lasts \(frames) frames")
         }
         // The board is 512pt centred in a 960pt scene, so it has 224pt of
         // margin: nothing here can shake an edge into view.
@@ -3159,18 +3154,27 @@ final class JuiceTests: XCTestCase {
         XCTAssertEqual(Juice.amplitude(.none, elapsed: 0), 0)
     }
 
-    /// §24.2: 2–4 frames on a big kill, none on a small one.
+    /// §24.2's hit freeze, on the three events big enough to earn one.
+    ///
+    /// The doc asks for 2–4 frames. Two is 33ms, which is under the threshold
+    /// at which a pause registers as anything — so the floor here is 4, and the
+    /// king is well past the doc's ceiling because its death already carries a
+    /// 0.6s shake and a white flash that 67ms of stillness vanishes underneath.
     func testHitFreezeIsForBigKillsOnly() {
-        XCTAssertEqual(Juice.freezeFrames(forDestroying: .king), 4)
-        XCTAssertEqual(Juice.freezeFrames(forDestroying: .queen), 2)
+        XCTAssertEqual(Juice.freezeFrames(forDestroying: .king), 10)
+        XCTAssertEqual(Juice.freezeFrames(forDestroying: .queen), 4)
+        XCTAssertEqual(Juice.shipLossFreezeFrames, 6, "the player's own death")
         for type in [PieceType.pawn, .knight, .bishop, .rook] {
             XCTAssertEqual(Juice.freezeFrames(forDestroying: type), 0, "\(type)")
         }
-        for type in PieceType.allCases {
-            let frames = Juice.freezeFrames(forDestroying: type)
-            XCTAssertTrue(frames == 0 || (2...4).contains(frames), "\(type): \(frames)")
+        // Every freeze that happens at all is long enough to feel, and short
+        // enough not to read as a hang.
+        for frames in [Juice.freezeFrames(forDestroying: .king),
+                       Juice.freezeFrames(forDestroying: .queen),
+                       Juice.shipLossFreezeFrames] {
+            XCTAssertTrue((4...12).contains(frames), "\(frames) frames")
         }
-        XCTAssertEqual(Juice.freezeDuration(forDestroying: .king), 4.0 / 60, accuracy: 0.0001)
+        XCTAssertEqual(Juice.freezeDuration(forDestroying: .king), 10.0 / 60, accuracy: 0.0001)
         XCTAssertEqual(Juice.freezeDuration(forDestroying: .pawn), 0)
     }
 
