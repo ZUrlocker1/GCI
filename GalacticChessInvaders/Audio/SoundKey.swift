@@ -192,7 +192,12 @@ extension SoundKey {
              .criticalCrackleLow, .criticalCrackleEerie: return 0.25
         case .kingDestroyed, .bombShockwave:        return 1.0
         case .pieceSelected, .whitePieceMoves,
-             .blackPieceMoves, .turnTimerWarning:   return 0.5
+             .blackPieceMoves:                      return 0.5
+        // These two repeat — the countdown twice a beat, the alarm on every
+        // re-entry into check — so they are mixed well down. Repetition reads as
+        // loudness even when the level is modest.
+        case .turnTimerWarning:                     return 0.28
+        case .checkAlarm:                           return 0.40
         default:                                    return 0.8
         }
     }

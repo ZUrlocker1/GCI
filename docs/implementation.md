@@ -82,8 +82,16 @@ Deviations
   clears the table. Measured over 60 engine games: median 76 plies, max 269, none
   unfinished. Endings observed: 58 mate, 1 repetition, 1 fifty-move
 - Stalemate ends the game as a draw. Note it is *not* what a queen chasing a bare
-  king produces — that side is in check with legal moves available, which is a
-  repetition draw, not stalemate
+  king produces — that side is in check with legal moves available
+- **A depth-2 engine cannot convert a won endgame, and this is accepted.** Queen
+  vs bare king ends on the fifty-move rule 19 times in 20, never by mate.
+  Threefold rarely fires there because a roaming queen almost never repeats a
+  whole position — 100 plies produced 99 distinct ones. Two fixes were measured
+  and both rejected: an endgame mop-up evaluation changed nothing, and depth 3
+  also converted nothing while costing 145ms per search against a 50ms budget.
+  Real conversion needs a mating algorithm, which an arcade opponent does not
+  warrant. Phase 3.2 makes it moot — lives and the fleet will end runs long
+  before a chess grind matters
 - Own negamax instead of `GKMinmaxStrategist` (`GKGameModel` fights Swift 6
   concurrency)
 - Engine variation: positional term + repetition penalty + random tie-break among
@@ -141,6 +149,11 @@ guideline, above the 40pt tap target.
       and failing silently)
 - [x] Chess set wired: select, move ×2, capture, illegal, check alarm, promotion,
       auto-move, countdown tick, victory / game-over stings, UI click
+- [x] Mix — effects sit just under the music (loudest 0.66 vs 0.75). They had
+      defaulted to 0.8–1.0, i.e. *over* the track. Tuned via one gain and a
+      ceiling in `AudioManager`, so per-key balance is preserved. The check alarm
+      and countdown tick are mixed further down and the alarm has a 3s cooldown —
+      both repeat, and repetition reads as loudness
 - [ ] Arcade SFX (laser, impacts, destruction, fleet, raiders) — arrive with 3.x
 - [ ] 8 sounds still need generating with jsfxr (marked `generated/` in `SoundKey`)
 - [ ] **Bundle size**: only the 12 wired files are bundled (7.7MB). All 49

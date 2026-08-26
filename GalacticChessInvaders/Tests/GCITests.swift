@@ -2144,3 +2144,45 @@ final class ReviewFixTests: XCTestCase {
         ScoreManager.shared.resetForNewGame()
     }
 }
+
+// MARK: - Audio mix
+
+@MainActor
+final class AudioMixTests: XCTestCase {
+
+    /// Effects used to default to 0.8 and 1.0 against music at 0.75, so they sat
+    /// *over* the track. They now sit just under it, with each key keeping its
+    /// own relative balance.
+    func testEverySoundSitsUnderTheMusic() {
+        for key in SoundKey.allCases {
+            XCTAssertLessThan(AudioManager.volume(for: key), AudioManager.musicVolume,
+                              "\(key) is at or above the music level")
+        }
+    }
+
+    /// Under, but only slightly — the effects should still carry.
+    func testLoudestEffectIsCloseToTheMusic() {
+        let loudest = SoundKey.allCases.map(AudioManager.volume(for:)).max() ?? 0
+        XCTAssertGreaterThan(loudest, AudioManager.musicVolume * 0.85,
+                             "effects have been cut too far, not just placed under")
+    }
+
+    /// Both repeat — the countdown twice a beat, the alarm on every re-entry into
+    /// check — and repetition reads as loudness. They are mixed below the moves
+    /// they punctuate.
+    func testRepeatingSoundsAreMixedBelowOneShots() {
+        XCTAssertLessThan(AudioManager.volume(for: .turnTimerWarning),
+                          AudioManager.volume(for: .whitePieceMoves))
+        XCTAssertLessThan(AudioManager.volume(for: .checkAlarm),
+                          AudioManager.volume(for: .pieceHitHeavy))
+        XCTAssertLessThan(AudioManager.volume(for: .checkAlarm),
+                          AudioManager.musicVolume * 0.6)
+    }
+
+    func testRelativeBalanceIsPreserved() {
+        XCTAssertLessThan(AudioManager.volume(for: .pieceSelected),
+                          AudioManager.volume(for: .kingDestroyed))
+        XCTAssertLessThan(AudioManager.volume(for: .ambientSpaceLoop),
+                          AudioManager.volume(for: .whitePieceMoves))
+    }
+}

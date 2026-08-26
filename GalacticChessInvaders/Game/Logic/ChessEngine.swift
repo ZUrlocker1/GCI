@@ -325,6 +325,14 @@ final class ChessEngine {
         return score
     }
 
+    // An endgame "mop-up" term — driving the losing king to the edge and closing
+    // with your own — was tried here and removed. It is the textbook fix for a
+    // flat evaluation in a won endgame, but measured over 20 queen-vs-king games
+    // it changed nothing: 19 of 20 still ended on the fifty-move rule. Depth 3
+    // was tried too: also no conversions, and 145ms per search against a 50ms
+    // budget. Converting these endgames needs a real mating algorithm, which is
+    // far more than an arcade opponent warrants.
+
     /// Positional preference in centipawns.
     ///
     /// Without this, material-only evaluation scored every quiet move identically,
