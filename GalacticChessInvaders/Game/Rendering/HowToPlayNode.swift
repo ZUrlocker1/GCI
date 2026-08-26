@@ -82,16 +82,16 @@ final class HowToPlayNode: SKNode {
                   size: 12, maxW: Self.lw, x: x, y: 548)
 
         // — CONTROLS —
-        heading("CONTROLS", Self.cyan, x: x, y: 428)
-        chip("← →",   "Move your ship",                    x: x, y: 408)
-        chip("SPACE",  "Fire laser",                        x: x, y: 364)
-        chip("CLICK",  "Pick piece, then new square",        x: x, y: 320)
-        chip("▼ 5s",   "Turn timer — CPU moves if stall",   x: x, y: 276)
+        heading("CONTROLS", Self.cyan, x: x, y: 413)
+        chip("← →",   "Move your ship",                    x: x, y: 393)
+        chip("SPACE",  "Fire laser",                        x: x, y: 349)
+        chip("CLICK",  "Pick piece, then new square",        x: x, y: 305)
+        chip("▼ 5s",   "Turn timer — CPU moves if stall",   x: x, y: 261)
 
         // — HISTORY —
-        heading("HISTORY", Self.magenta, x: x, y: 218)
+        heading("HISTORY", Self.magenta, x: x, y: 203)
         multiline("GCI began as a prototype in 1983 on the Apple II, written in TASC compiled BASIC. Now, with the help of Claude, you can experience a modern recharged version.",
-                  size: 12, maxW: Self.lw, x: x, y: 204)
+                  size: 12, maxW: Self.lw, x: x, y: 189)
     }
 
     // MARK: - Right column
@@ -124,9 +124,9 @@ final class HowToPlayNode: SKNode {
         hint.position = CGPoint(x: Self.lx + 122, y: 39)
         addChild(hint)
 
-        // Lower right, mirroring the left margin. Sized down a little because
-        // Press Start 2P is wide and this is the longest line on the screen.
-        let copyright = label("Copyright (C) 1983-2026 M. Zack Urlocker", 9, .white, .right)
+        // Lower right, mirroring the left margin, and matched to the resume
+        // hint's size so the two footer lines read as a pair.
+        let copyright = label("Copyright (C) 1983-2026 M. Zack Urlocker", 10, .white, .right)
         copyright.verticalAlignmentMode = .center
         copyright.position = CGPoint(x: w - Self.lx, y: 39)
         addChild(copyright)
