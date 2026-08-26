@@ -2220,6 +2220,7 @@ final class AudioMixTests: XCTestCase {
 
 // MARK: - Fleet (Phase 3.1)
 
+@MainActor
 final class FleetRulesTests: XCTestCase {
 
     /// The whole illusion: the fleet drops visually twice per rank, and the board
@@ -2367,6 +2368,37 @@ final class FleetControllerTests: XCTestCase {
         return (fleet, board, parent)
     }
 
+    /// Regression: the parent's compensating +squareSize was applied without
+    /// ever moving the child by the matching amount, so a piece's local position
+    /// stayed pinned to its old square. The two cancelled out for exactly one
+    /// rank, then the error compounded — the piece visibly jumped up a full
+    /// square the instant the rank landed, right before the next drop pulled it
+    /// back down. This pins the fix at the controller level, where the bug
+    /// actually lived (FleetRules' pure position math was never wrong).
+    func testDescentLeavesNoNetScreenJump() throws {
+        let (fleet, board, parent) = makeFleet()
+        let geometry = BoardNode()
+        var nodes: [String: PieceNode] = [:]
+        for piece in board.allPieces(color: .black) {
+            guard let centre = geometry.center(of: piece.logicalSquare) else { continue }
+            let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
+            fleet.adopt(node, square: piece.logicalSquare, atLogicalCentre: centre)
+            nodes[piece.logicalSquare] = node
+        }
+
+        let before = try XCTUnwrap(nodes["e7"])
+        let screenBefore = fleet.screenPosition(of: before)
+
+        // Drive one full rank descent directly, bypassing the animated timers.
+        fleet.applyFullRankDescentForTesting()
+
+        // e7's piece is now keyed at e6; the node is the same instance.
+        let screenAfter = fleet.screenPosition(of: before)
+        XCTAssertEqual(screenAfter.y, screenBefore.y - BoardNode.squareSize, accuracy: 0.5,
+                       "should land exactly one rank lower on screen, with no extra jump")
+        _ = parent
+    }
+
     /// One SKAction on one parent has to move the whole formation (§18), so every
     /// black piece must actually be a child of it.
     func testFleetHoldsEveryBlackPieceUnderOneParent() throws {
@@ -2400,7 +2432,7 @@ final class FleetControllerTests: XCTestCase {
     /// The answer is a fixed sub-file amplitude, independent of piece count.
     func testSweepWidthIsSubFileAndIndependentOfPieceCount() {
         let (fleet, board, _) = makeFleet()
-        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.8, accuracy: 0.001)
+        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.7, accuracy: 0.001)
 
         let geometry = BoardNode()
         for piece in board.allPieces(color: .black) {
@@ -2409,7 +2441,7 @@ final class FleetControllerTests: XCTestCase {
                             square: piece.logicalSquare, atLogicalCentre: centre)
             }
         }
-        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.8, accuracy: 0.001,
+        XCTAssertEqual(fleet.sweepWidth, BoardNode.squareSize * 0.7, accuracy: 0.001,
                        "a full formation shuffles exactly as far as a lone piece")
         XCTAssertFalse(fleet.isOffTruePosition, "a fresh fleet starts on its squares")
     }

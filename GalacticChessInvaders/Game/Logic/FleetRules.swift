@@ -116,7 +116,7 @@ enum FleetRules {
     ///
     /// Must stay below 0.5: at exactly half a square a piece sits on the boundary
     /// between two files and its square becomes genuinely ambiguous.
-    static let sweepAmplitudeRatio: CGFloat = 0.4
+    static let sweepAmplitudeRatio: CGFloat = 0.35
 
     static func sweepAmplitude(squareSize: CGFloat) -> CGFloat {
         squareSize * sweepAmplitudeRatio
@@ -159,7 +159,7 @@ enum FleetRules {
     /// at full speed it read as twitchy rather than deliberate. Kept as a scale
     /// rather than folded into the per-level numbers so the table still matches
     /// the document it came from.
-    static let sweepSpeedScale: CGFloat = 0.7
+    static let sweepSpeedScale: CGFloat = 0.63
 
     /// Points per second for a level, after thinning is taken into account.
     static func sweepSpeed(level: LevelParameters, piecesRemaining: Int) -> CGFloat {

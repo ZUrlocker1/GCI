@@ -34,8 +34,15 @@ if [ -f "$PBXPROJ" ]; then
   fi
 fi
 
-# Filters the @Observable macro noise that appears when swift-plugin-server is
-# unavailable to the CLI, then reports only real diagnostics.
+# swift-plugin-server (used to expand @Observable) is flaky in this environment
+# and used to be treated as cosmetic noise — filtered out on the assumption that
+# the rest of the diagnostics were still trustworthy. They are not: verified by
+# deliberately breaking a reference elsewhere in the same compile and finding
+# the run still reported clean. Once the plugin fails, the compiler appears to
+# stop surfacing at least some real diagnostics for the rest of the module, so
+# this state can no longer be filtered past — it has to fail the whole run.
+PLUGIN_SERVER_FLAKY=0
+
 run_pass() {
   local label="$1"; shift
   echo "$label" >&2
@@ -47,6 +54,10 @@ run_pass() {
     -target arm64-apple-macos14.0 \
     -module-cache-path "$MODCACHE" \
     "$@" 2>&1 || true)
+
+  if echo "$output" | grep -q "swift-plugin-server\|malformed response"; then
+    PLUGIN_SERVER_FLAKY=1
+  fi
 
   echo "$output" \
     | grep -v "ObservationMacros\|swift-plugin-server\|malformed response\|externalMacro\|@attached" \
@@ -71,6 +82,16 @@ if [ -n "$TESTS" ]; then
   TEST_OUT=$(run_pass "Typechecking $(echo "$TESTS" | wc -w | tr -d ' ') test files…" \
     -F "$XCTEST_F" -I "$XCTEST_I" $SOURCES .build/tc/*.swift)
   FILTERED="$FILTERED$TEST_OUT"
+fi
+
+if [ "$PLUGIN_SERVER_FLAKY" -eq 1 ]; then
+  echo "✗ swift-plugin-server failed to expand a macro (@Observable) during this"
+  echo "  run. That has been observed to silently suppress OTHER, unrelated"
+  echo "  diagnostics for the rest of the module — a broken reference can pass"
+  echo "  as \"no errors\". This run cannot be trusted. Re-run; if it recurs,"
+  echo "  restart the toolchain (or use xcodebuild once its own arm64e mismatch"
+  echo "  is resolved) before relying on a clean result."
+  exit 1
 fi
 
 if [ -z "$FILTERED" ]; then
