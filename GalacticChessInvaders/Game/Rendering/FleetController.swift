@@ -91,6 +91,22 @@ final class FleetController {
         return node
     }
 
+    /// Moves an existing member to a new square without it leaving the
+    /// formation — a black piece shuffling around its home ranks (§FleetRules
+    /// .staysInFormation). The node keeps its fleet parent, so the caller still
+    /// animates it to the *logical* square centre and the parent transform
+    /// supplies the sweep, exactly as for any other member.
+    ///
+    /// Returns false when the square isn't a member, so the caller can fall
+    /// back to detaching.
+    @discardableResult
+    func rekey(from: String, to square: String) -> Bool {
+        guard let node = members.removeValue(forKey: from) else { return false }
+        members[square] = node
+        DiagnosticsLog.shared.log(.fleet, "\(from) stays in formation at \(square)")
+        return true
+    }
+
     func contains(_ node: SKNode) -> Bool { node.parent === fleetNode }
 
     var pieceCount: Int { fleetNode.children.count }
