@@ -210,18 +210,35 @@ enum FleetRules {
     /// `targetFile`/`targetRank` name a white piece to lean toward; a target on
     /// or above the shooter's own rank cannot be aimed at and leans at random.
     static func diagonalSlope(fromFile file: Int, rank: Int,
-                              towardFile targetFile: Int, rank targetRank: Int)
-        -> CGFloat
+                              towardFile targetFile: Int, rank targetRank: Int,
+                              minSlope: CGFloat = minDiagonalSlope,
+                              maxSlope: CGFloat = maxDiagonalSlope) -> CGFloat
     {
         let drop = rank - targetRank
-        guard drop > 0 else { return Bool.random() ? maxDiagonalSlope : -maxDiagonalSlope }
+        guard drop > 0 else { return Bool.random() ? maxSlope : -maxSlope }
         let wanted = CGFloat(targetFile - file) / CGFloat(drop)
         // A target directly below cannot say which way to lean; away from the
         // nearer edge keeps the round over the board for longer.
-        guard wanted != 0 else { return file < 4 ? minDiagonalSlope : -minDiagonalSlope }
+        guard wanted != 0 else { return file < 4 ? minSlope : -minSlope }
         let sign: CGFloat = wanted < 0 ? -1 : 1
-        return sign * min(maxDiagonalSlope, max(minDiagonalSlope, abs(wanted)))
+        return sign * min(maxSlope, max(minSlope, abs(wanted)))
     }
+
+    // MARK: - The activated king's weapon
+
+    /// How often the king's heavy round leans rather than firing straight down.
+    ///
+    /// The king moves one square in *any* direction, so a weapon that only ever
+    /// fires straight ahead reads as the wrong piece's. Not every shot, though:
+    /// straight-down has to stay the king's default or the angled ones stop
+    /// being a variation on anything.
+    static let kingShotAngleShare = 0.45
+
+    /// A shallower band than the bishops'. Crossfire is *about* the diagonal, so
+    /// a bishop commits to one; the king only inflects, and a near-45° round
+    /// from the king would read as a bishop's shot fired by the wrong piece.
+    static let kingMinSlope: CGFloat = 0.15   // ~9° off vertical
+    static let kingMaxSlope: CGFloat = 0.6    // ~31°
 
     // MARK: - Sweep width
 

@@ -1564,12 +1564,19 @@ class GameScene: SKScene {
         if level.kingActivated,
            beatsThisLevel % FleetRules.kingShotInterval == 0,
            let king = blackKing() {
-            fireInvaderShot(from: king.logicalSquare,
-                            speed: level.projectileSpeed * FleetRules.kingShotSpeedMultiplier,
-                            damage: FleetRules.kingShotDamage,
-                            heavy: true,
-                            sound: .kingLaserFire,
-                            note: "black king fires")
+            // Charged up like every other gunner, rather than appearing out of
+            // nowhere. Without the telegraph the round had no visible source:
+            // the fleet keeps sweeping while a shot falls straight, so by the
+            // time the eye found the missile the king had already slid out
+            // from behind it and the shot read as coming from off to one side.
+            scheduleInvaderShot(
+                from: king.logicalSquare, after: 0,
+                speed: level.projectileSpeed * FleetRules.kingShotSpeedMultiplier,
+                lean: kingLean(from: king.logicalSquare),
+                sound: .kingLaserFire,
+                damage: FleetRules.kingShotDamage,
+                heavy: true,
+                note: "black king fires")
         }
 
         let candidates = board.allPieces(color: .black).map {
@@ -1604,6 +1611,20 @@ class GameScene: SKScene {
         }
     }
 
+    /// The king inflects rather than committing: most rounds go straight down,
+    /// and the rest lean gently toward one of White's pieces. A king that
+    /// always fired straight ahead read as the wrong piece's weapon — the king
+    /// is the one piece that moves in every direction.
+    private func kingLean(from square: String) -> CGFloat {
+        guard Double.random(in: 0..<1) < FleetRules.kingShotAngleShare else { return 0 }
+        guard let target = board.allPieces(color: .white).randomElement() else { return 0 }
+        return FleetRules.diagonalSlope(
+            fromFile: Self.fileIndex(of: square), rank: Self.rankIndex(of: square),
+            towardFile: Self.fileIndex(of: target.logicalSquare),
+            rank: Self.rankIndex(of: target.logicalSquare),
+            minSlope: FleetRules.kingMinSlope, maxSlope: FleetRules.kingMaxSlope)
+    }
+
     /// The angle this bishop should fire at: leaning toward one of White's own
     /// pieces, picked fresh each time so the pair does not fire the same shape
     /// every beat. With nothing left to aim at, lean over the ship's lane —
@@ -1632,14 +1653,18 @@ class GameScene: SKScene {
     /// will take — so at Crossfire the *angle* is readable before the missile
     /// exists, which is the part the player actually has to plan around.
     private func scheduleInvaderShot(from square: String, after delay: TimeInterval,
-                                     speed: CGFloat, lean: CGFloat, sound: SoundKey) {
+                                     speed: CGFloat, lean: CGFloat, sound: SoundKey,
+                                     damage: Int = ProjectileState.enemyShotDamage,
+                                     heavy: Bool = false,
+                                     note: String? = nil) {
         let charge = SKAction.run { [weak self] in
             guard let self, self.isFiringLive else { return }
-            self.telegraphShot(at: square, lean: lean)
+            self.telegraphShot(at: square, lean: lean, heavy: heavy)
         }
         let fire = SKAction.run { [weak self] in
             guard let self, self.isFiringLive else { return }
-            self.fireInvaderShot(from: square, speed: speed, lean: lean, sound: sound)
+            self.fireInvaderShot(from: square, speed: speed, damage: damage,
+                                 heavy: heavy, lean: lean, sound: sound, note: note)
         }
         run(.sequence([.wait(forDuration: delay), charge,
                        .wait(forDuration: FleetRules.chargeUpDelay), fire]))
@@ -1653,10 +1678,12 @@ class GameScene: SKScene {
 
     /// The charge-up cue: the gunner brightens, and a tick grows out of it
     /// along the line the shot will travel.
-    private func telegraphShot(at square: String, lean: CGFloat) {
+    private func telegraphShot(at square: String, lean: CGFloat, heavy: Bool = false) {
         guard let node = pieceNodes[square] else { return }
         let angled = lean != 0
-        let tint = angled ? NeonPalette.shotPurple : NeonPalette.magenta
+        // The king's charge is white, matching the round it is about to throw.
+        let tint = heavy ? SKColor.white
+                 : angled ? NeonPalette.shotPurple : NeonPalette.magenta
 
         let tick = SKShapeNode(rectOf: CGSize(width: 2.5, height: BoardNode.squareSize * 0.42),
                                cornerRadius: 1.25)
