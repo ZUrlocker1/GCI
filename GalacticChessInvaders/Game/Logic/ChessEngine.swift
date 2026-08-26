@@ -61,8 +61,10 @@ final class ChessEngine {
     /// and without these the game never terminates. Observed running ~200 plies.
     /// Shorter than the chess convention of 50: GCI is an arcade game and a
     /// shuffling endgame is unwatchable long before a real match would be drawn.
-    /// Expected to come down further once the fleet provides its own time pressure.
-    static let quietMoveLimit = 30                          // full moves
+    /// Measured over 60 normal games: the peak quiet run is a median of 4 full
+    /// moves and a 90th percentile of 9, so 20 caps a grind at 40 plies while
+    /// touching 1 game in 60. Below about 15 it starts cutting real play short.
+    static let quietMoveLimit = 20                          // full moves
 
     var isDrawnByRepetition: Bool { (positionCounts[position] ?? 0) >= 3 }
     var isDrawnByMoveLimit: Bool { halfmoveClock >= Self.quietMoveLimit * 2 }

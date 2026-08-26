@@ -42,6 +42,7 @@ class GameScene: SKScene {
     private var turnTimerNode: TurnTimerNode?
     private var statusNode: GameStatusNode?
     private var testModeLabel: SKLabelNode?
+    private var fleet: FleetController?
     private var gameOverNode: GameOverNode?
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
@@ -397,7 +398,7 @@ class GameScene: SKScene {
             turnTimer.pause()
             ship?.direction = 0
             isPaused = true
-            AudioManager.shared.pauseMusic()
+            // Music keeps playing — the info screen is a glance, not a break.
         }
         DiagnosticsLog.shared.log(.info, "game paused")
     }
@@ -411,7 +412,6 @@ class GameScene: SKScene {
         if stateMachine.currentState is PlayingState {
             isPaused = false
             turnTimer.resume()
-            AudioManager.shared.resumeMusic()
             // Discard the frame the pause spanned so the beat doesn't jump.
             lastUpdateTime = 0
         }
@@ -499,7 +499,22 @@ class GameScene: SKScene {
         bloomNode.addChild(node)
         boardNode = node
 
+        let controller = FleetController(board: board, parent: node,
+                                         squareSize: BoardNode.squareSize,
+                                         boardWidth: BoardNode.boardSize,
+                                         level: levels.parameters)
+        fleet = controller
+        controller.onRankDescended = { [weak self] moves in self?.applyFleetDescent(moves) }
+        controller.onCrush = { [weak self] crush in self?.applyCrush(crush) }
+        controller.onBreach = { [weak self] square in
+            // Phase 3.2 turns this into a lose condition; for now the fleet halts
+            // rather than marching off the bottom of the board.
+            DiagnosticsLog.shared.log(.fleet, "breach — black reached rank 1 at \(square)")
+            self?.fleet?.stop()
+        }
+
         for piece in board.allPieces() { addPieceNode(piece) }
+        controller.start()
 
         let player = SpaceshipNode()
         player.position = CGPoint(x: size.width / 2, y: Self.shipLaneY)
@@ -546,6 +561,8 @@ class GameScene: SKScene {
     }
 
     func hideBoard() {
+        fleet?.reset()
+        fleet = nil
         hideGameOverOverlay()
         boardNode?.clearCheckPaths()
         boardNode?.removeFromParent()
@@ -573,6 +590,29 @@ class GameScene: SKScene {
         lastStatus = .none
         lastTickedSecond = -1
         turnTimer.stop()
+    }
+
+    /// A full-rank descent moved every black piece, so the node map is re-keyed
+    /// and each sprite slides to its new logical centre. The moves arrive lowest
+    /// rank first, so no piece overwrites one that has not moved yet.
+    private func applyFleetDescent(_ moves: [(from: String, to: String)]) {
+        guard let boardNode else { return }
+        for move in moves {
+            guard let node = pieceNodes.removeValue(forKey: move.from),
+                  let point = boardNode.center(of: move.to) else { continue }
+            node.animateMove(to: move.to, point: point)
+            pieceNodes[move.to] = node
+        }
+        refreshStatus()
+    }
+
+    /// A descending black piece landed on a white one: it is gone instantly, no
+    /// HP check and no points, because the fleet took it rather than the player.
+    private func applyCrush(_ crush: CrushEvent) {
+        if let victim = pieceNodes.removeValue(forKey: crush.atSquare) {
+            victim.runDestructionAnimation {}
+        }
+        AudioManager.shared.play(.pieceHitHeavy)
     }
 
     // MARK: - Chess Beat
@@ -802,7 +842,13 @@ class GameScene: SKScene {
         guard let boardNode, let point = boardNode.center(of: piece.logicalSquare) else { return }
         let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
         node.position = point
-        boardNode.addChild(node)
+        // Black pieces belong to the fleet so one action sweeps them all; their
+        // local position stays the logical square centre.
+        if piece.color == .black, let fleet {
+            fleet.adopt(node, atLogicalCentre: point)
+        } else {
+            boardNode.addChild(node)
+        }
         pieceNodes[piece.logicalSquare] = node
         // Staggered so the board breathes rather than pulsing as one block.
         node.startIdleBob(phase: TimeInterval.random(in: 0...0.8))

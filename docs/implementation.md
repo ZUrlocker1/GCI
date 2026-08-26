@@ -11,7 +11,7 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 | 1 | Chess logic | ✅ |
 | 2.1 | Playfield: chess functional | 🟡 |
 | 2.2 | Playfield: Recharged visual treatment | ✅ |
-| 3.1 | Arcade layer: fleet movement | ⬜ |
+| 3.1 | Arcade layer: fleet movement | 🟡 |
 | 3.2 | Arcade layer: shooting & collision | ⬜ |
 | 3.3 | Arcade layer: damage states & juice | ⬜ |
 | 4 | Basic sound effects | 🟡 |
@@ -79,11 +79,12 @@ Deviations
   a bare king, so it shuffles: one playtest ran ~200 plies. Threefold repetition
   is keyed on the whole position (side to move, castling rights and the
   en-passant square all count); a capture or pawn move resets the clock and
-  clears the table. The quiet-move draw is set to **30 moves, not the standard
+  clears the table. The quiet-move draw is set to **20 moves, not the standard
   50** — this is an arcade game and a shuffling endgame is unwatchable long
-  before a real match would be drawn. Caps a grind at 60 plies instead of 100,
-  while 28 of 30 normal games still end in mate. Likely to come down again once
-  the fleet supplies its own time pressure. Measured over 60 engine games: median 76 plies, max 269, none
+  before a real match would be drawn. Caps a grind at 40 plies instead of 100.
+  Measured over 60 normal games the peak quiet run is a median of 4 full moves
+  and a 90th percentile of 9, so 20 touches 1 game in 60; below ~15 it starts
+  cutting real play short. Measured over 60 engine games: median 76 plies, max 269, none
   unfinished. Endings observed: 58 mate, 1 repetition, 1 fifty-move
 - Stalemate ends the game as a draw. Note it is *not* what a queen chasing a bare
   king produces — that side is in check with legal moves available
@@ -164,22 +165,24 @@ guideline, above the 40pt tap target.
       referenced would be 91MB, dominated by three long uncompressed GDC stems —
       trim or convert to AAC before ship
 
-## Phase 3.1 — Fleet Movement ⬜
+## Phase 3.1 — Fleet Movement 🟡
 
 Get the black fleet sweeping and descending alongside the chess game. No shooting.
 
-- [ ] `FleetRules.swift` — pure two-step descent counter, logical rank descent,
-      speed scaling by pieces remaining (§21.2 table: 1.0× at 16 → 2.5× at 1)
-- [ ] `FleetController.swift` — lateral sweep as **one `SKAction` on the fleet
-      parent**, so 16 pieces move at zero per-piece cost; calls `FleetRules` at
-      wall bounces
-- [ ] Two half-drops per rank: the first is visual only, the second updates
-      logical squares via `GCIBoard.forcePlace` — this is what makes the fleet
-      and the chess position diverge and re-sync
-- [ ] Crush events when a descending black piece lands on a white one
-- [ ] Fleet sweeps must **not** trigger extra black chess moves — the beat owns
-      chess timing (§3)
-- [ ] Fleet log lines: sweep, half-drop, logical descent, speed change
+- [x] `FleetRules.swift` — two-step descent counter, rank descent, descent
+      ordering, speed scaling (§21.2: 1.0× at 16 → 2.5× at 1)
+- [x] `FleetController.swift` — sweep as one `SKAction` on the fleet parent, so
+      16 pieces move at the cost of one; speed and extent recomputed per leg so
+      the fleet accelerates as it thins without rebuilding a repeating action
+- [x] Two half-drops per rank; only the second calls `forcePlace`. The parent is
+      raised a rank at the same moment, or the fleet would appear to fall twice
+- [x] Black pieces re-parented to the fleet, positioned at their *logical* square
+      centre — the parent transform supplies the visual offset
+- [x] Crush events, emitted **before** the descent re-key: the victim is still
+      keyed at that square, and reversing the order destroys the arriving piece
+- [x] Fleet log lines: sweep, half-drop, logical descent, breach
+- [ ] Not verified on screen — sweep speed, drop timing and formation spacing
+      have never been seen running
 
 Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
 

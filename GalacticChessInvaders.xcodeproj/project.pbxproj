@@ -30,6 +30,7 @@
 		3203C80A87E53941D3CA57FE /* chess-w-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 9AB88E2F8252175EF285AF23 /* chess-w-rook-d2.png */; };
 		346FAE43588F07BD3A9E0EE8 /* chess-w-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F7658142CFF640B25888ADBB /* chess-w-knight-d2.png */; };
 		368610872B731D709369E6BC /* Chess.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11C903C797D394A807E396 /* Chess.swift */; };
+		3A13D4F27754EBE3F1990D3E /* FleetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386C3750928FB14BC1D27D55 /* FleetController.swift */; };
 		3B7526683C16F26D1662024F /* chess-w-queen-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 4653CBF5CC5AE085AA7195D2 /* chess-w-queen-d2.png */; };
 		3D123DD84E9772D4FA235EA8 /* chess-w-rook.png in Resources */ = {isa = PBXBuildFile; fileRef = 14C2C8B3CAA40DB1FA83AA1E /* chess-w-rook.png */; };
 		3D8737E689E8D78A3C2D0D04 /* ChessFEN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416A804FC2359078E164449E /* ChessFEN.swift */; };
@@ -43,7 +44,6 @@
 		5C00B24FA3687609673B10AC /* chess-b-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */; };
 		605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB7404F3713FE581B43A87 /* ContentView.swift */; };
 		61169CA3823DC981272E489B /* ship-player.png in Resources */ = {isa = PBXBuildFile; fileRef = DFEC1D27CBD2B19429587528 /* ship-player.png */; };
-		63D5A3F3C96B0C6DBB65926B /* FleetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E018947B59E7F356E2FDF88 /* FleetController.swift */; };
 		761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */; };
 		7705CF0A074223E6B67350F7 /* sfx in Resources */ = {isa = PBXBuildFile; fileRef = 998968842203016A0E563C6A /* sfx */; };
 		7A28A7F7E08CDA7442C26B99 /* chess-b-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */; };
@@ -76,6 +76,7 @@
 		CED029BF45680E976218AD47 /* chess-w-queen.png in Resources */ = {isa = PBXBuildFile; fileRef = 83910C58D45F81C5E632B8BD /* chess-w-queen.png */; };
 		D27B42151BC5A3E38E5C3E27 /* ship-escort.png in Resources */ = {isa = PBXBuildFile; fileRef = E3453ECB5D3C283EB99A0D7E /* ship-escort.png */; };
 		D3641D21830DBEB3CE620C6B /* PressStart2P-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */; };
+		D96554076A4F6BFF8CB7D2D2 /* FleetRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A14B880553E1506AF871A55 /* FleetRules.swift */; };
 		DE340400464B4B709FE0F477 /* LogTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284B42A60842EE3D06208D3 /* LogTextView.swift */; };
 		DEE6A588A0E118BDB71E32F6 /* chess-w-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */; };
 		DF73E7ACF955B7FBAAA31DFA /* ChessRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5CBD6F2CC804D886BB6FCB2 /* ChessRules.swift */; };
@@ -128,6 +129,7 @@
 		2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-rook-d2.png"; sourceTree = "<group>"; };
 		321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreManager.swift; sourceTree = "<group>"; };
 		358C1653386A6A77FA844C99 /* chess-w-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop.png"; sourceTree = "<group>"; };
+		386C3750928FB14BC1D27D55 /* FleetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetController.swift; sourceTree = "<group>"; };
 		3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverNode.swift; sourceTree = "<group>"; };
 		3958B7024DAADC15E5C557B9 /* LevelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelManager.swift; sourceTree = "<group>"; };
 		3B7548E55F1B1E37D9A6AA88 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
@@ -149,7 +151,6 @@
 		6804169215469385E2B6893E /* chess-w-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop-d1.png"; sourceTree = "<group>"; };
 		69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToPlayNode.swift; sourceTree = "<group>"; };
 		6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-pawn-d2.png"; sourceTree = "<group>"; };
-		6E018947B59E7F356E2FDF88 /* FleetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetController.swift; sourceTree = "<group>"; };
 		6E7E3382582F0A404A28305F /* chess-b-king-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king-d1.png"; sourceTree = "<group>"; };
 		7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsCategory.swift; sourceTree = "<group>"; };
 		741746F275F1126EB8D73A8C /* CheckPathNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckPathNode.swift; sourceTree = "<group>"; };
@@ -162,6 +163,7 @@
 		8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		978A170453B8B07C0F41C526 /* chess-b-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d1.png"; sourceTree = "<group>"; };
 		998968842203016A0E563C6A /* sfx */ = {isa = PBXFileReference; lastKnownFileType = folder; name = sfx; path = GalacticChessInvaders/Resources/sfx; sourceTree = SOURCE_ROOT; };
+		9A14B880553E1506AF871A55 /* FleetRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetRules.swift; sourceTree = "<group>"; };
 		9AB88E2F8252175EF285AF23 /* chess-w-rook-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-rook-d2.png"; sourceTree = "<group>"; };
 		9C108816F834B07B96432B59 /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
 		9E4CEB8824CBC0835DD19E03 /* chess-w-king-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-king-d1.png"; sourceTree = "<group>"; };
@@ -287,7 +289,7 @@
 			children = (
 				A00359D531409FD8FEF80590 /* ChessEngine.swift */,
 				9C108816F834B07B96432B59 /* DiagnosticsLog.swift */,
-				6E018947B59E7F356E2FDF88 /* FleetController.swift */,
+				9A14B880553E1506AF871A55 /* FleetRules.swift */,
 				3B7548E55F1B1E37D9A6AA88 /* GameState.swift */,
 				9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */,
 				3958B7024DAADC15E5C557B9 /* LevelManager.swift */,
@@ -370,6 +372,7 @@
 			children = (
 				C108E7EAE6358A3CF47A3F77 /* BoardNode.swift */,
 				741746F275F1126EB8D73A8C /* CheckPathNode.swift */,
+				386C3750928FB14BC1D27D55 /* FleetController.swift */,
 				3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */,
 				8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */,
 				FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */,
@@ -569,7 +572,8 @@
 				DF73E7ACF955B7FBAAA31DFA /* ChessRules.swift in Sources */,
 				605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */,
 				89F9459783A37520E9B6A7D3 /* DiagnosticsLog.swift in Sources */,
-				63D5A3F3C96B0C6DBB65926B /* FleetController.swift in Sources */,
+				3A13D4F27754EBE3F1990D3E /* FleetController.swift in Sources */,
+				D96554076A4F6BFF8CB7D2D2 /* FleetRules.swift in Sources */,
 				F9929020CEFD54511CD99A8E /* GCIBoard.swift in Sources */,
 				46AAE105A315B67E0A9A7C86 /* GalacticChessInvadersApp.swift in Sources */,
 				091CA81733FCE104AD2D88E9 /* GameAction.swift in Sources */,

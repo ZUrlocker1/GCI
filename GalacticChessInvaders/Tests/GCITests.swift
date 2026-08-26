@@ -1956,7 +1956,7 @@ final class DrawRuleTests: XCTestCase {
     /// Deliberately shorter than the chess convention of 50 — an arcade game
     /// cannot afford a hundred plies of shuffling.
     func testQuietMoveLimitIsThirtyAndCapsGrinds() throws {
-        XCTAssertEqual(ChessEngine.quietMoveLimit, 30)
+        XCTAssertEqual(ChessEngine.quietMoveLimit, 20)
 
         let engine = try XCTUnwrap(ChessEngine(fen: "7k/8/8/8/8/8/8/q6K w - - 0 1"))
         var plies = 0
@@ -2202,5 +2202,116 @@ final class AudioMixTests: XCTestCase {
                           AudioManager.volume(for: .kingDestroyed))
         XCTAssertLessThan(AudioManager.volume(for: .ambientSpaceLoop),
                           AudioManager.volume(for: .whitePieceMoves))
+    }
+}
+
+// MARK: - Fleet (Phase 3.1)
+
+final class FleetRulesTests: XCTestCase {
+
+    /// The whole illusion: the fleet drops visually twice per rank, and the board
+    /// only catches up on the second drop.
+    func testEverySecondBounceCompletesARank() {
+        var counter = FleetRules.DescentCounter()
+        var pattern: [Bool] = []
+        for _ in 0..<10 { pattern.append(counter.registerBounce()) }
+        XCTAssertEqual(pattern, [false, true, false, true, false,
+                                 true, false, true, false, true])
+    }
+
+    func testDescendingASquare() {
+        XCTAssertEqual(FleetRules.descended("e5"), "e4")
+        XCTAssertEqual(FleetRules.descended("a2"), "a1")
+        XCTAssertNil(FleetRules.descended("h1"), "rank 1 is the bottom")
+    }
+
+    /// A piece must vacate before the one above arrives, or the upper overwrites
+    /// the lower and a black piece silently vanishes.
+    func testDescentOrderIsLowestRankFirst() {
+        XCTAssertEqual(FleetRules.descentOrder(["d5", "d4", "d7", "d2"]),
+                       ["d2", "d4", "d5", "d7"])
+    }
+
+    @MainActor
+    func testSpeedScalesWithPiecesRemaining() {
+        for (remaining, expected) in [(16, 1.0), (12, 1.2), (8, 1.5), (4, 2.0), (1, 2.5)] {
+            XCTAssertEqual(FleetRules.speedMultiplier(piecesRemaining: remaining),
+                           CGFloat(expected), accuracy: 0.001, "\(remaining) pieces")
+        }
+        let level1 = LevelManager.parameters(for: 1)
+        XCTAssertEqual(FleetRules.sweepSpeed(level: level1, piecesRemaining: 16), 40)
+        XCTAssertEqual(FleetRules.sweepSpeed(level: level1, piecesRemaining: 1), 100)
+    }
+
+    @MainActor
+    func testAFullDescentMovesEveryBlackPieceExactlyOneRank() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        let before = board.allPieces(color: .black).map(\.logicalSquare)
+
+        for square in FleetRules.descentOrder(before) {
+            guard let piece = board.piece(at: square),
+                  let next = FleetRules.descended(square) else { continue }
+            _ = board.forcePlace(piece, at: next)
+        }
+
+        let after = Set(board.allPieces(color: .black).map(\.logicalSquare))
+        XCTAssertEqual(after.count, 16, "a piece was overwritten during descent")
+        XCTAssertEqual(after, Set(before.compactMap(FleetRules.descended)))
+        XCTAssertEqual(board.allPieces(color: .white).count, 16)
+    }
+}
+
+@MainActor
+final class FleetControllerTests: XCTestCase {
+
+    private func makeFleet() -> (FleetController, GCIBoard, SKNode) {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        let parent = SKNode()
+        let fleet = FleetController(board: board, parent: parent,
+                                    squareSize: BoardNode.squareSize,
+                                    boardWidth: BoardNode.boardSize,
+                                    level: LevelManager.parameters(for: 1))
+        return (fleet, board, parent)
+    }
+
+    /// One SKAction on one parent has to move the whole formation (§18), so every
+    /// black piece must actually be a child of it.
+    func testFleetHoldsEveryBlackPieceUnderOneParent() throws {
+        let (fleet, board, parent) = makeFleet()
+        let geometry = BoardNode()
+        for piece in board.allPieces(color: .black) {
+            let node = PieceNode(piece: piece, squareSize: BoardNode.squareSize)
+            fleet.adopt(node, atLogicalCentre: try XCTUnwrap(geometry.center(of: piece.logicalSquare)))
+        }
+        XCTAssertEqual(fleet.pieceCount, 16)
+        XCTAssertEqual(parent.children.count, 1, "the fleet is a single node")
+        XCTAssertEqual(parent.children[0].children.count, 16)
+    }
+
+    /// Local position stays the logical square centre; the parent transform
+    /// supplies the sweep. Conflating them is what would desync board and screen.
+    func testPieceLocalPositionIsItsLogicalCentre() throws {
+        let (fleet, _, _) = makeFleet()
+        let geometry = BoardNode()
+        let centre = try XCTUnwrap(geometry.center(of: "a7"))
+        let node = PieceNode(piece: Piece(type: .pawn, color: .black, square: "a7"),
+                             squareSize: BoardNode.squareSize)
+        fleet.adopt(node, atLogicalCentre: centre)
+        XCTAssertEqual(node.position, centre)
+    }
+
+    func testResetEmptiesTheFormation() {
+        let (fleet, board, _) = makeFleet()
+        let geometry = BoardNode()
+        for piece in board.allPieces(color: .black) {
+            if let centre = geometry.center(of: piece.logicalSquare) {
+                fleet.adopt(PieceNode(piece: piece, squareSize: BoardNode.squareSize),
+                            atLogicalCentre: centre)
+            }
+        }
+        fleet.reset()
+        XCTAssertEqual(fleet.pieceCount, 0)
     }
 }
