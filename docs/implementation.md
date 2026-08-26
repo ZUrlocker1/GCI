@@ -321,8 +321,11 @@ the wedge is hittable without also covering the gap between it and the top.
 One system: armor arrives *only* through regeneration, so Level 9's banner is a
 promise Level 4's regeneration has to be built to keep.
 
-- **Regeneration** from Level 4: ten seconds after a black piece dies, a pawn
-  takes its place, capped by the level's slot count (2 at Level 4, rising to 9).
+- **Regeneration** from Level 4: a pawn replaces a dead black piece after 1.5
+  beats — 6s at most levels, 4.5s at Blitz — capped by the level's slot count
+  (2 at Level 4, rising to 9). §23.9's flat 10s was written before the beat
+  settled at 4, and two and a half turns is long enough that the kill which
+  caused it has left the player's head.
   A slot is spent when the timer is *set*, not when it lands, or a two-slot wave
   could queue twenty at once. A level ending cancels everything pending, which
   falls out of the queue living on the scene rather than needing its own rule.
@@ -427,13 +430,15 @@ the board" is answerable and tested in one place.
       averages half the amplitude and looks like blur. Applied to `bloomNode`
       rather than a camera, since a camera also changes how a mouse point maps
       into the scene and click-to-select depends on that
-- [x] **Hit freeze** (§24.2) — 10 frames for a king, 6 for a life lost, 4 for a
-      queen, none below. Past the doc's 2–4: two frames is 33ms, under the
-      threshold at which a pause registers, and the king's death already carries
-      a 0.6s shake and a white flash that 67ms of stillness vanishes underneath.
-      The playfield *and* the starfield pause — they are siblings, and stars
-      still scrolling is most of what gives a hitstop away — while the scene's
-      own `update` keeps running to time it. The explosion lands after the pause
+- [x] **Hit freeze** (§24.2) — the king's alone, 10 frames. §24.2 grades it
+      across the queen and the flagship too; tried and cut, because those
+      already shake and the two compete for the same job — a queen's 67ms was
+      real input latency that then vanished underneath the shake behind it. On
+      the king the contrast earns its keep and makes that death the one moment
+      the game stops, which is why it is well past the doc's 2–4 ceiling. The
+      playfield *and* the starfield pause — they are siblings, and stars still
+      scrolling is most of what gives a hitstop away — while the scene's own
+      `update` keeps running to time it. The explosion lands after the pause
 - [x] **The spaceship explodes when it is hit** — §8.4 and §24.1's medium shake,
       both specified and never built: losing a life had been a sound, a hidden
       sprite and a HUD icon going out. Glass in two opposed sprays, since the

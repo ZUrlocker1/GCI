@@ -88,27 +88,22 @@ enum Juice {
 
     // MARK: - Hit freeze (§24.2)
 
-    /// The pause before the explosion on a high-value kill. Small hits get
-    /// none: a freeze on every pawn would read as the game stuttering.
+    /// The pause before the explosion, and only the king gets one.
     ///
-    /// §24.2 asks for 2–4 frames. Two is 33ms — under the threshold at which a
-    /// pause registers as anything, so the queen's freeze was doing nothing.
-    /// The king's is longer than the doc's ceiling on purpose: its death is the
-    /// level's climax, arriving with a 0.6s shake, a white flash and a 2.4x
-    /// burst, and 67ms of stillness disappears underneath all that. A sixth of
-    /// a second does not.
+    /// §24.2 grades it across the queen and the flagship too. Tried and cut:
+    /// those events already carry a shake, and freeze and shake compete for the
+    /// same job. A queen's 67ms was real input latency in the middle of a fight
+    /// and then vanished underneath the shake that followed it.
+    ///
+    /// Kept for the king because there it earns the contrast: a sixth of a
+    /// second of *total* stillness and then the heaviest shake in the game
+    /// lands far harder than either alone, and it makes the king's death the
+    /// one moment where the game stops. That is worth more as a unique event
+    /// than as the top of a graded scale — which is also why it is well past
+    /// the doc's 2–4 frame ceiling.
     static func freezeFrames(forDestroying type: PieceType) -> Int {
-        switch type {
-        case .king:  return 10      // 167ms
-        case .queen: return 4       // 67ms
-        default:     return 0
-        }
+        type == .king ? 10 : 0      // 167ms
     }
-
-    /// Losing a life. Not in §24.2's list, which names only pieces — but this
-    /// is the player's own death, and it should land at least as hard as the
-    /// queen's.
-    static let shipLossFreezeFrames = 6     // 100ms
 
     static let frameDuration: TimeInterval = 1.0 / 60
 
@@ -116,9 +111,6 @@ enum Juice {
         TimeInterval(freezeFrames(forDestroying: type)) * frameDuration
     }
 
-    static var shipLossFreezeDuration: TimeInterval {
-        TimeInterval(shipLossFreezeFrames) * frameDuration
-    }
 
     // MARK: - Score pop (§24.3)
 

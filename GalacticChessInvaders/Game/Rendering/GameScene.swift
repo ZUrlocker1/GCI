@@ -1869,9 +1869,11 @@ class GameScene: SKScene {
         guard Regeneration.schedules(destroyed: type, color: .black,
                                      level: levels.parameters,
                                      slotsUsed: regeneration.slotsUsed) else { return }
-        regeneration.schedule()
+        let delay = Regeneration.delay(for: levels.parameters)
+        regeneration.schedule(after: delay)
         DiagnosticsLog.shared.log(.fleet,
-            "regeneration queued (\(regeneration.slotsUsed)/\(levels.parameters.regenSlots))")
+            "regen queued — pawn in \(String(format: "%.1f", delay))s "
+            + "(slot \(regeneration.slotsUsed)/\(levels.parameters.regenSlots))")
     }
 
     /// Materialises everything whose ten seconds are up.
@@ -1893,7 +1895,8 @@ class GameScene: SKScene {
                                                     rearRank: fleet.rearRank,
                                                     occupied: occupied),
               let centre = boardNode.center(of: square) else {
-            DiagnosticsLog.shared.log(.fleet, "regeneration had nowhere to land")
+            DiagnosticsLog.shared.log(.fleet,
+                "regen skipped — no free square on rank \(fleet.rearRank)")
             return
         }
         let armored = Regeneration.arrivesArmored(level: levels.parameters)
@@ -1921,7 +1924,9 @@ class GameScene: SKScene {
         }
         AudioManager.shared.play(.pieceRegenerates)
         DiagnosticsLog.shared.log(.fleet,
-            "\(defensive ? "defensive " : "")pawn beaming in at \(square)")
+            "regen beaming in at \(square) — \(armored ? "ARMORED" : "plain")"
+            + "\(defensive ? ", defending the king" : "")"
+            + ", live in \(String(format: "%.1f", Regeneration.beamInDuration))s")
     }
 
     /// §10.1 counts armor in White's moves, so this runs once per completed
@@ -2296,9 +2301,7 @@ class GameScene: SKScene {
         ship?.direction = 0
 
         let lastLife = shipState.lives == 0
-        freeze(Juice.shipLossFreezeDuration) { [weak self] in
-            self?.blowUpSpaceship(final: lastLife)
-        }
+        blowUpSpaceship(final: lastLife)
 
         guard !lastLife else {
             AudioManager.shared.play(.playerShipDestroyed)

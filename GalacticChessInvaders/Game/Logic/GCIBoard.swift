@@ -209,7 +209,8 @@ final class GCIBoard {
         pieces[square] = pawn
         engine.forceAdd(pawn.type, color: .black, at: square)
         DiagnosticsLog.shared.log(.fleet,
-            "regenerated \(armored ? "ARMORED " : "")pawn at \(square)")
+            "regen materialised at \(square)"
+            + (armored ? " with \(Regeneration.armorTurns) turns of armor" : ""))
         return pawn
     }
 
@@ -225,7 +226,7 @@ final class GCIBoard {
             pieces[square] = updated
             if !updated.isArmored {
                 expired.append(square)
-                DiagnosticsLog.shared.log(.fleet, "armor spent at \(square)")
+                DiagnosticsLog.shared.log(.fleet, "armor spent at \(square) — now shootable")
             }
         }
         return expired
