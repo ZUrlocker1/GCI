@@ -3563,7 +3563,6 @@ class GameScene: SKScene {
         framesThisInterval = 0
         timeThisInterval = 0
         DiagnosticsLog.shared.nodeCount = countAllNodes()
-        #endif
     }
 
     /// Catches a piece that is on the board with no hitbox and no beam-in
