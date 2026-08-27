@@ -662,7 +662,10 @@ class GameScene: SKScene {
         }
 
         for piece in board.allPieces() { addPieceNode(piece) }
-        refreshKingForcefield()
+        // Not here: the board is built before the KING ACTIVATED banner runs,
+        // and a shield already sitting on the king while the announcement is
+        // still explaining that he is about to get one reads as a mistake.
+        // `beginBeat` raises it, once play actually starts.
         controller.start()
 
         let player = SpaceshipNode()
@@ -907,6 +910,12 @@ class GameScene: SKScene {
         // winLevel/loseGame stop the timer; without this guard any caller that
         // runs afterwards silently restarts it and the game plays on.
         guard !isBeatSuspended else { return }
+        // Every route into live play passes through here — the banner ending,
+        // the update loop's own restart invariant, a resume from pause — so
+        // this is the one place the shield can be raised without missing a
+        // path or beating the announcement to it. `setForcefield` is
+        // idempotent, so running it every beat costs nothing.
+        refreshKingForcefield()
         whiteHasMovedThisBeat = false
         let inCheck = board.turn == .white && board.isCheck
         turnTimer.start(level: levels.parameters, inCheck: inCheck,
@@ -2316,7 +2325,16 @@ class GameScene: SKScene {
 
     /// Shows the shield ring only while the black king still has bonus HP, so
     /// the ring going out is the moment the king becomes killable.
+    /// The shield is raised only once play has actually begun.
+    ///
+    /// It used to appear during the KING ACTIVATED banner, which reads oddly:
+    /// the announcement is still explaining that the king is about to be
+    /// shielded while the shield is already sitting there. `isBeatSuspended`
+    /// covers the banner, so gating on it also keeps the ring off during the
+    /// end-of-game reveal, where a shield on a king that has just fallen would
+    /// be worse still.
     private func refreshKingForcefield() {
+        guard !isBeatSuspended else { return }
         guard levels.parameters.kingActivated,
               let king = board.allPieces(color: .black).first(where: { $0.type == .king }),
               let node = pieceNodes[king.logicalSquare] else { return }
