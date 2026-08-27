@@ -231,6 +231,14 @@ extension SoundKey {
         case .pieceHitLight, .invaderHitsPiece:     return 0.62
         case .pieceSelected, .whitePieceMoves,
              .blackPieceMoves:                      return 0.5
+        // A ricochet repeats for as long as the player keeps firing at an
+        // armored pawn, which is the same repetition problem as the countdown
+        // and the alarm below. It also measures far quieter than it sounds:
+        // effective RMS 0.065 against a 0.104 piece hit, but a peak of 0.83 —
+        // a crest factor of 8.4 where its neighbours sit near 4. A sharp
+        // metallic transient is heard at its peak, not its average. 30% down
+        // from the 0.8 default.
+        case .armorRicochet:                        return 0.56
         // These two repeat — the countdown twice a beat, the alarm on every
         // re-entry into check — so they are mixed well down. Repetition reads as
         // loudness even when the level is modest.
