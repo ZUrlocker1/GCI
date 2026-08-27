@@ -429,11 +429,13 @@ turn, so the board pulses together; a raider ignores that entirely.
 - 220 px/s, and the constraint is the ship's 294: a scout the player cannot
   outrun can only be hit by already standing under it. Closing at 74 px/s means
   a missed pass is recoverable
-- **A raider is never on screen more than 60% of the time.** §21.1's interval
-  tightens to 6s against a 4.9s crossing, which is 94% — always there, and a
-  raider that is always there is scenery rather than an event. The interval is
-  stretched to whatever the cap needs (8.2s from Level 5), derived from the
-  crossing time so changing the scout's speed cannot silently break it
+- **At least seven seconds of clear sky between crossings.** §21.1's interval
+  tightens to 6s against a 4.9s crossing, so scouts ran nose to tail. The gap is
+  what the player feels, not the share of time one is up: capping the *share* at
+  60% still left only 3.3s of quiet, which reads as a stream rather than a raid
+  you get a breather from. The interval is stretched to one crossing plus the
+  gap (11.9s from Level 4), derived from the crossing so changing the scout's
+  speed cannot silently close it again
 - The warble is a genuine looping player, owned by the controller rather than
   the node: it is an `AVAudioPlayer`, so `isPaused` and `removeAllActions` do
   nothing to it and every path that should silence it says so explicitly
