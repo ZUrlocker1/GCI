@@ -2016,6 +2016,8 @@ class GameScene: SKScene {
         guard color == .white, let shipState, shipState.grantRapidFire() else { return }
         flashGutterNotice("RAPID FIRE \(shipState.laserCap)",
                           color: NeonPalette.transporterGreen)
+        // The notice is gone in a second; the hull is the standing reminder.
+        ship?.setRapidFire(stacks: shipState.laserCap - SpaceshipState.baseLaserCap)
         DiagnosticsLog.shared.log(.promote,
             "rapid fire — \(shipState.laserCap) lasers")
     }
