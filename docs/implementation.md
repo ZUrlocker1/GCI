@@ -432,6 +432,13 @@ promise Level 4's regeneration has to be built to keep.
   pawn's beam-in and the Nuke's shrapnel both captured a square and acted on it
   later, and the fleet descends on the beat, so by then the square belonged to
   something else. Carry the node and read `node.square` when the work runs
+- **A pool must outlive the thing it serves.** `reset()` hides a pool's nodes; it
+  does not unparent them. The laser, score-pop, explosion and shatter pools were
+  rebuilt by `buildPlayfield` — once per level *and* once per skip — while their
+  nodes hang off `bloomNode`, which is not rebuilt. Every level orphaned 288
+  nodes, 40 of them carrying physics bodies, and left them in the scene graph to
+  be walked every frame for the rest of the run. They are built once with the
+  scene now
 - **A beam-in is tracked by node, not by square.** An arriving pawn has no
   physics body until it lands (§23.9), and its square can change underneath it —
   the fleet descends on the beat and a beam-in lasts 1.8s. Keyed by square, the
@@ -991,9 +998,23 @@ is genuinely outstanding:
 
 ## Potential optimizations
 
-Nothing here is a known problem. Measured 27 Aug 2026 on an M4 (10 cores) with
-Activity Monitor: **36–38% steady, 48% at the highest levels**, with no observed
-lag or dropped input at any point.
+**One real problem was here and is fixed.** The object pools were rebuilt per
+level while their nodes stayed parented to a `bloomNode` that was not, so every
+level — and every `V` skip — orphaned 288 nodes and 40 physics bodies into the
+scene graph. Playing for five minutes across several levels took CPU from 38% to
+70%, and skipping to Level 8 or 10 multiplied it. The pools are built once with
+the scene now.
+
+Two pieces of instrumentation were also lying. The FPS readout sampled a single
+frame every 250ms, so it swung between 75 and 17 on a game that played smoothly;
+it averages every frame in the window now. And the diagnostics log's text view
+called `isScrolledToBottom`, which reads `textView.bounds` and makes TextKit lay
+out the whole document — up to sixty times a second, at a cost that grew as the
+log filled. It flushes at 10Hz now, appending exactly the same text.
+
+Everything below is what is left, and none of it is a known problem. Measured
+27 Aug 2026 on an M4 (10 cores) with Activity Monitor: **36–38% steady, 48% at
+the highest levels**, with no observed lag or dropped input at any point.
 
 That number is per *core*, not per machine, so it is 3.6–4.8% of an M4 — an
 unremarkable figure for a 60fps SpriteKit scene running a full-screen Core Image

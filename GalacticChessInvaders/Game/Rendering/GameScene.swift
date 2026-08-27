@@ -293,7 +293,28 @@ class GameScene: SKScene {
         collisionHandler = handler
 
         setupBloomNode()
+        setupPools()
         setupStarfield()
+    }
+
+    /// The object pools, built once for the life of the scene.
+    ///
+    /// They used to be rebuilt by `buildPlayfield`, which runs for every level
+    /// *and* every skip — while their nodes are parented to `bloomNode`, which
+    /// is not rebuilt. Resetting a pool hides its nodes; it does not unparent
+    /// them. So each level orphaned a full set and left it in the scene graph
+    /// for the rest of the run: roughly 400 nodes, 40 of them carrying physics
+    /// bodies, all still walked every frame. That is the whole of "the CPU
+    /// climbs the longer you play".
+    ///
+    /// Building them once is the right shape regardless: a pool exists so that
+    /// allocation happens away from play, and rebuilding one per level is the
+    /// opposite of that.
+    private func setupPools() {
+        laserPool = LaserPool(parent: bloomNode)
+        scorePops = ScorePopPool(parent: bloomNode)
+        explosions = ExplosionPool(parent: bloomNode)
+        shatters = ShatterPool(parent: bloomNode)
     }
 
     private func setupBloomNode() {
@@ -830,7 +851,6 @@ class GameScene: SKScene {
         bloomNode.addChild(player)
         ship = player
 
-        laserPool = LaserPool(parent: bloomNode)
         let raiderController = RaiderController(parent: bloomNode, sceneWidth: size.width,
                                                 boardBottomY: Self.boardBottomY)
         raiderController.onScoutFire = { [weak self] point in self?.fireScoutShot(from: point) }
@@ -844,9 +864,6 @@ class GameScene: SKScene {
                                level: levels.level,
                                kindsSeen: raiderKindsSeen)
         raiders = raiderController
-        scorePops = ScorePopPool(parent: bloomNode)
-        explosions = ExplosionPool(parent: bloomNode)
-        shatters = ShatterPool(parent: bloomNode)
 
         // Countdown lives in the gutter left of the board (§19), with the
         // check/mate banner directly beneath it.
@@ -986,8 +1003,9 @@ class GameScene: SKScene {
         hasFiredWarningShot = false
         beatsThisLevel = 0
         isAnnouncingLevel = false
+        // Reset, never discarded: the pools outlive the level, and dropping the
+        // reference would leave their nodes parented to `bloomNode` forever.
         laserPool?.deactivateAll()
-        laserPool = nil
         fleet?.reset()
         fleet = nil
         hideGameOverOverlay()
@@ -1935,7 +1953,9 @@ class GameScene: SKScene {
     /// the position has settled, so a shot never races a chess move landing on
     /// the same square.
     private func fireFleetShots() {
-        guard laserPool != nil else { return }
+        // The board, not the laser pool: the pool now outlives the level, so its
+        // presence no longer means a wave is in progress.
+        guard boardNode != nil else { return }
         let level = levels.parameters
 
         // §10.1: Level 1 schedules nothing, but the black king fires one slow
@@ -3489,12 +3509,29 @@ class GameScene: SKScene {
 
     /// Four times a second is plenty for a readout, and it keeps both the node
     /// walk and the SwiftUI invalidation out of the per-frame path.
+    /// Frames seen since the last publish, and the real time they took.
+    private var framesThisInterval = 0
+    private var timeThisInterval: TimeInterval = 0
+
     private func publishStats(dt: TimeInterval, now: TimeInterval) {
         #if DEBUG
-        guard dt > 0, now - lastStatsUpdate >= Self.statsInterval else { return }
+        guard dt > 0 else { return }
+        framesThisInterval += 1
+        timeThisInterval += dt
+        guard now - lastStatsUpdate >= Self.statsInterval else { return }
         lastStatsUpdate = now
         auditHitboxes()
-        DiagnosticsLog.shared.fps = (1.0 / dt).rounded()
+        // Averaged over the interval, not sampled from one frame.
+        //
+        // A single sample every 250ms is a wildly noisy estimator: it reads 75
+        // off a short frame and 17 off one long one, while the other fourteen
+        // frames in that quarter-second were fine — which is exactly how a
+        // readout can swing from 75 to 17 on a game that plays smoothly. An
+        // average over every frame in the window says what the player felt.
+        DiagnosticsLog.shared.fps =
+            (Double(framesThisInterval) / max(timeThisInterval, 0.0001)).rounded()
+        framesThisInterval = 0
+        timeThisInterval = 0
         DiagnosticsLog.shared.nodeCount = countAllNodes()
         #endif
     }
