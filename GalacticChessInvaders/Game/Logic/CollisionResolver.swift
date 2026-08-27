@@ -28,6 +28,36 @@ enum CollisionResolver {
     /// delivers checkmate doesn't formally end play until it resolves, so
     /// there's a real window where the king is already checkmated but still
     /// standing — killing it there is both a kill and a checkmate.
+    /// §13.2's Nuke reaching a black piece. Destroys outright rather than
+    /// dealing an HP number — a blast that leaves a rook standing is not a nuke,
+    /// and "the nearest pieces die" is a rule the player can read off the screen
+    /// in one go.
+    ///
+    /// Armor still stops it (§10.1). Armor is absolute against everything the
+    /// trigger can do, and the whole point of Level 8 is asking the player to
+    /// solve something with the board instead; a power-up that walked through it
+    /// would take that level's identity away.
+    ///
+    /// The king is damaged, never destroyed. `targets(from:)` avoids him unless
+    /// he is the last piece standing, so this is the floor rather than the plan.
+    static func shockwaveHitBlackPiece(at square: String, board: GCIBoard) -> CollisionOutcome? {
+        guard let piece = board.piece(at: square), piece.color == .black else { return nil }
+        guard !piece.isArmored else { return .ricochet(square: square) }
+
+        guard piece.type != .king else {
+            // Floored at 1 HP: the blast can bring the king to the brink and no
+            // further. Winning a wave has to stay something the player aimed at.
+            let damage = max(0, min(Shockwave.kingDamage, piece.hp - 1))
+            if damage > 0 { _ = board.applyDamage(damage, at: square) }
+            return .blackPieceHit(square: square, type: .king, destroyed: false,
+                                  points: 0, doubleCheckmateBonus: false)
+        }
+        let destroyed = board.applyDamage(piece.hp, at: square)
+        return .blackPieceHit(square: square, type: piece.type, destroyed: destroyed,
+                              points: destroyed ? piece.shootValue : 0,
+                              doubleCheckmateBonus: false)
+    }
+
     static func playerLaserHitBlackPiece(at square: String, board: GCIBoard) -> CollisionOutcome? {
         guard let piece = board.piece(at: square), piece.color == .black else { return nil }
         // §10.1: armor is absolute while it lasts. Only a chess capture

@@ -4782,6 +4782,99 @@ final class PowerUpTests: XCTestCase {
         XCTAssertEqual(state.remaining, 0)
     }
 
+    // MARK: - Nuke targeting (§13.2)
+
+    private func candidate(_ square: String, _ distance: Double, king: Bool = false)
+        -> (square: String, distance: Double, isKing: Bool) {
+        (square, distance, king)
+    }
+
+    /// Nearest first, and never more than three.
+    func testTheBlastTakesTheThreeNearestPieces() {
+        let taken = Shockwave.targets(from: [
+            candidate("a1", 400), candidate("b2", 10), candidate("c3", 250),
+            candidate("d4", 60), candidate("e5", 120),
+        ])
+        XCTAssertEqual(taken, ["b2", "d4", "e5"])
+        XCTAssertLessThanOrEqual(taken.count, Shockwave.maxTargets)
+    }
+
+    /// One is the floor wherever there is anything at all to hit — there is no
+    /// radius limit, because a Nuke that sometimes does nothing visible is the
+    /// problem the whole redesign exists to fix.
+    func testTheBlastAlwaysTakesAtLeastOneIfAnythingIsLeft() {
+        XCTAssertEqual(Shockwave.targets(from: [candidate("h8", 9_000)]), ["h8"])
+        XCTAssertTrue(Shockwave.targets(from: []).isEmpty, "and nothing from nothing")
+    }
+
+    /// The king is passed over while anything else is on the board, however
+    /// close he is: the rarest power-up must not be spent on the one target it
+    /// cannot kill.
+    func testTheKingIsPassedOverWhileAnythingElseStands() {
+        let taken = Shockwave.targets(from: [
+            candidate("e8", 5, king: true), candidate("a7", 300),
+        ])
+        XCTAssertEqual(taken, ["a7"])
+    }
+
+    /// Unless he is all that is left, at which point he is the only thing to
+    /// hit. He is damaged, never destroyed — that is `shockwaveHitBlackPiece`.
+    func testTheKingIsTakenOnlyWhenHeIsAlone() {
+        XCTAssertEqual(Shockwave.targets(from: [candidate("e8", 40, king: true)]), ["e8"])
+    }
+
+    /// A blast that catches the king leaves him alive on 1 HP at worst. Winning
+    /// a wave has to stay something the player aimed at.
+    func testTheBlastCannotKillTheKing() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        // Strip the board to the king, so the targeting has nothing else.
+        for piece in board.allPieces(color: .black) where piece.type != .king {
+            _ = board.applyDamage(piece.hp, at: piece.logicalSquare)
+        }
+        guard let king = board.allPieces(color: .black).first else {
+            return XCTFail("the king should be all that is left")
+        }
+        // Enough blasts to kill anything.
+        for _ in 0..<20 {
+            _ = CollisionResolver.shockwaveHitBlackPiece(at: king.logicalSquare, board: board)
+        }
+        guard let survivor = board.piece(at: king.logicalSquare) else {
+            return XCTFail("the blast destroyed the king")
+        }
+        XCTAssertEqual(survivor.type, .king)
+        XCTAssertEqual(survivor.hp, 1, "brought to the brink and no further")
+    }
+
+    /// Everything else the blast reaches dies outright, whatever its HP — a
+    /// shockwave that leaves a rook standing is not a shockwave.
+    func testTheBlastDestroysAnyOtherPieceOutright() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        for square in ["a8", "d8", "b8", "a7"] {
+            guard let before = board.piece(at: square) else {
+                return XCTFail("\(square) should be occupied")
+            }
+            XCTAssertGreaterThan(before.hp, ProjectileState.playerLaserDamage,
+                                 "\(square) must need more than one laser hit")
+            let result = CollisionResolver.shockwaveHitBlackPiece(at: square, board: board)
+            guard case .blackPieceHit(_, _, let destroyed, let points, _) = result else {
+                return XCTFail("expected a hit at \(square)")
+            }
+            XCTAssertTrue(destroyed, "\(square) survived a nuke")
+            XCTAssertEqual(points, before.shootValue)
+            XCTAssertNil(board.piece(at: square))
+        }
+    }
+
+    /// White is never touched: §13.2's ring is Black's problem alone.
+    func testTheBlastIgnoresWhitePieces() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        XCTAssertNil(CollisionResolver.shockwaveHitBlackPiece(at: "e1", board: board))
+        XCTAssertNotNil(board.piece(at: "e1"))
+    }
+
     // MARK: - Spread Fire geometry (§13.2)
 
     /// The pool has to cover a full spray plus the player's own manual cap. An

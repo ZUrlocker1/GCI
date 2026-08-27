@@ -81,9 +81,59 @@ enum PowerUp: String, CaseIterable {
         }
     }
 
-    /// §13.2's Spread Scout is "visibly wider" — a fat squat disc with five
-    /// exhaust ports. The only one whose silhouette changes proportion.
-    var widthMultiplier: Double { self == .gatling ? 1.4 : 1.0 }
+    /// The sprite each carrier flies, all of them already in `GCI.spriteatlas`.
+    ///
+    /// These were sitting in the atlas unused while the specials were being
+    /// drawn as shape overlays on the plain scout — a hexagonal grid, some
+    /// spikes, a row of exhaust ports. Purpose-built art beats anything sketched
+    /// over a disc at 30 points tall, and it was already there.
+    ///
+    /// The Nuke flies §6.4's Mutant Camel rather than `ship-scout-bomb`. The
+    /// bomb sprite is a competent red mine and the camel is a Jeff Minter
+    /// tribute with legs, and one of those is the right thing to see swooping at
+    /// you carrying a nuclear weapon.
+    var spriteName: String {
+        switch self {
+        case .rapidFire: return "ship-scout"
+        case .shield:    return "ship-scout-repair"
+        case .freeze:    return "ship-scout-ice"
+        case .gatling:   return "ship-scout-spread"
+        case .nuke:      return "ship-camel"
+        }
+    }
+
+    /// Against the standard 30pt scout height.
+    ///
+    /// Not 1.0 for everything, because the sprites do not fill their canvases
+    /// equally: the plain scout is a wide 280×144 disc, and the four specials
+    /// are compact shapes on 200×200 squares. Scaled by canvas alone the
+    /// specials present *half* the target the green scout does, which is the
+    /// wrong way round — they are rarer and more valuable, so they must not also
+    /// be harder to hit by accident of how the art was cropped.
+    ///
+    /// Measured instead: each multiplier is the one that makes the sprite's
+    /// visible ink cover the same area as the scout's 49.6 × 21.2pt.
+    ///
+    /// | carrier | × | visible ink | vs scout |
+    /// |---|---|---|---|
+    /// | green | 1.00 | 49.6 × 21.2 | 1.00 |
+    /// | repair | 1.15 | 34.5 × 29.3 | 0.96 |
+    /// | ice | 1.40 | 35.7 × 29.4 | 1.00 |
+    /// | spread | 1.50 | 38.2 × 28.4 | 1.03 |
+    /// | camel | 1.50 | 49.4 × 36.6 | 1.71 |
+    ///
+    /// The camel is the deliberate exception — §6.4 makes it the larger of the
+    /// two tribute ships, and a nuke carrier that reads as *big* is worth more
+    /// than one that reads as consistent.
+    var heightMultiplier: Double {
+        switch self {
+        case .rapidFire: return 1.0
+        case .shield:    return 1.15
+        case .freeze:    return 1.4
+        case .gatling:   return 1.5
+        case .nuke:      return 1.5
+        }
+    }
 
     /// §13.3's flash at the destroy position, and the standing line in the
     /// player's alley while the effect is up.
@@ -183,6 +233,47 @@ enum PowerUps {
     /// The level a power-up is first offered, for the record and for tests.
     static func firstLevel(offering powerUp: PowerUp) -> Int? {
         (1...LevelManager.finalLevel).first { roster(forLevel: $0).contains(powerUp) }
+    }
+}
+
+/// §13.2's Nuke: which pieces the shockwave claims.
+///
+/// The doc's version only cleared projectiles in flight, which is invisible —
+/// the player saw a large ring and then an absence, and read it as some buff
+/// they could not identify. Deleting things is not an effect you can see. So the
+/// ring now also detonates the pieces it passes over, and the kills are the
+/// visible half while the projectile clear stays the useful half.
+@MainActor
+enum Shockwave {
+
+    /// At most three, and at least one wherever there is anything to hit.
+    ///
+    /// There is deliberately no radius limit. A cap on range would make the
+    /// reward depend on where the bomb scout happened to die — which the player
+    /// only partly controls, since the scout is swooping — and a Nuke that
+    /// sometimes does nothing visible is the problem this was built to fix. The
+    /// ring simply keeps expanding until it has found its targets.
+    static let maxTargets = 3
+
+    /// What the blast does to the black king, which it can never destroy.
+    ///
+    /// Half a rook. Enough that catching the king in a blast is worth something,
+    /// far from enough to end a wave with it — the king has 16 HP, or 24 with
+    /// Level 9's forcefield.
+    static let kingDamage = 6
+
+    /// Which pieces the blast claims, nearest first.
+    ///
+    /// Non-kings fill every slot before the king is considered at all, so the
+    /// rarest power-up in the game is never spent on the one target it cannot
+    /// kill. The king is only ever the target when he is the last black piece
+    /// standing — at which point hitting him is the only thing left to do.
+    static func targets(from candidates: [(square: String, distance: Double, isKing: Bool)])
+        -> [String] {
+        let ordered = candidates.sorted { $0.distance < $1.distance }
+        let others = ordered.filter { !$0.isKing }
+        guard others.isEmpty else { return others.prefix(maxTargets).map(\.square) }
+        return ordered.first.map { [$0.square] } ?? []
     }
 }
 

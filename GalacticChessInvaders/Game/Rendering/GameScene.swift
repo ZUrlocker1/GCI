@@ -2532,7 +2532,18 @@ class GameScene: SKScene {
     }
 
     /// §13.2's Nuke: a ring that clears every enemy round it passes over, and
-    /// leaves pieces and raiders alone.
+    /// detonates the nearest black pieces on the way.
+    ///
+    /// The doc's version only cleared projectiles, which is invisible — the
+    /// player saw a big ring and then an absence, and read it as some buff they
+    /// could not identify. Deleting things is not an effect you can see. The
+    /// kills are what make the ring legible; the projectile clear is what makes
+    /// it useful, and it stays.
+    ///
+    /// Each victim gets a fragment thrown at it from the blast centre, timed to
+    /// arrive exactly when the ring does. Without it the ring and the explosions
+    /// are two things that happen near each other; with it there is a line drawn
+    /// from cause to effect, which is the whole difference.
     private func detonate(at point: CGPoint) {
         let reach = (size.width * size.width + size.height * size.height).squareRoot()
         let duration: TimeInterval = 0.4
@@ -2562,6 +2573,102 @@ class GameScene: SKScene {
             },
             .removeFromParent(),
         ]))
+
+        throwFragments(from: point, ringReach: reach, ringDuration: duration)
+    }
+
+    /// Picks the blast's victims and sends a fragment to each.
+    private func throwFragments(from point: CGPoint, ringReach: CGFloat,
+                                ringDuration: TimeInterval) {
+        var candidates: [(square: String, distance: Double, isKing: Bool)] = []
+        var found: [String: (at: CGPoint, distance: CGFloat)] = [:]
+        for (square, node) in pieceNodes where node.piece.color == .black {
+            let at = bloomPosition(of: node)
+            let dx = at.x - point.x, dy = at.y - point.y
+            let distance = (dx * dx + dy * dy).squareRoot()
+            candidates.append((square, Double(distance), node.piece.type == .king))
+            found[square] = (at, distance)
+        }
+
+        let victims = Shockwave.targets(from: candidates)
+        guard !victims.isEmpty else {
+            DiagnosticsLog.shared.log(.raider, "nuke — nothing in reach")
+            return
+        }
+
+        for square in victims {
+            guard let target = found[square] else { continue }
+            // The fragment travels at the ring's own speed, so it lands on the
+            // frame the ring reaches the piece. Floored, because a piece almost
+            // on top of the blast would otherwise be hit before anything has
+            // been drawn at all.
+            let travel = max(0.09, ringDuration
+                             * TimeInterval(min(1, target.distance / ringReach)))
+            launchFragment(from: point, to: target.at, duration: travel, square: square)
+        }
+
+        // The king was passed over. Say so on his own shield rather than
+        // silently, or the blast looks like it missed the most obvious target on
+        // the board — which is exactly what it did, on purpose.
+        if let king = candidates.first(where: { $0.isKing }),
+           let furthest = victims.compactMap({ found[$0]?.distance }).max(),
+           CGFloat(king.distance) <= furthest,
+           let node = pieceNodes[king.square] {
+            node.flareForcefield()
+            AudioManager.shared.play(.shieldAbsorbsHit)
+        }
+
+        DiagnosticsLog.shared.log(.raider, "nuke takes " + victims.joined(separator: " "))
+    }
+
+    /// One piece of shrapnel, with a fading streak behind it.
+    private func launchFragment(from origin: CGPoint, to target: CGPoint,
+                                duration: TimeInterval, square: String) {
+        let path = CGMutablePath()
+        path.move(to: origin)
+        path.addLine(to: target)
+        let streak = SKShapeNode(path: path)
+        streak.strokeColor = NeonPalette.crimson
+        streak.lineWidth = 1.5
+        streak.glowWidth = 3
+        streak.alpha = 0
+        streak.zPosition = 13
+        bloomNode.addChild(streak)
+        streak.run(.sequence([
+            .fadeAlpha(to: 0.55, duration: duration * 0.4),
+            .fadeOut(withDuration: duration * 0.6 + 0.1),
+            .removeFromParent(),
+        ]))
+
+        let fragment = SKShapeNode(circleOfRadius: 3.5)
+        fragment.position = origin
+        fragment.fillColor = .white
+        fragment.strokeColor = NeonPalette.crimson
+        fragment.lineWidth = 1.5
+        fragment.glowWidth = 4
+        fragment.zPosition = 15
+        bloomNode.addChild(fragment)
+        let fly = SKAction.move(to: target, duration: duration)
+        fly.timingMode = .linear      // matches the ring, which expands linearly
+        fragment.run(.sequence([
+            fly,
+            .run { [weak self] in self?.applyShockwave(at: square) },
+            .removeFromParent(),
+        ]))
+    }
+
+    /// A fragment landed. Routed through the ordinary black-piece hit handler,
+    /// so the explosion, the score, the regeneration slot and the king's own win
+    /// check all behave exactly as they do for a laser.
+    private func applyShockwave(at square: String) {
+        // The piece may be gone already — another fragment took it, or a chess
+        // move did, in the fraction of a second this was in the air.
+        guard let node = pieceNodes[square],
+              let result = CollisionResolver.shockwaveHitBlackPiece(at: square, board: board)
+        else { return }
+        explosions?.burst(at: bloomPosition(of: node), color: NeonPalette.crimson,
+                          scale: 1.2)
+        handleBlackPieceHit(result, node: node, impact: nil)
     }
 
     private func clearEnemyRounds(within radius: CGFloat, of centre: CGPoint) {

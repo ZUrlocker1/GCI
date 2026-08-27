@@ -37,7 +37,6 @@ final class RaiderNode: SKSpriteNode {
     private static let crossKey = "cross"
     private static let damagedKey = "damaged"
     private static let hullName = "hull"
-    private static let markingsName = "markings"
 
     /// Fired as the scout reaches its firing point, with its current position.
     var onFire: ((CGPoint) -> Void)?
@@ -53,16 +52,20 @@ final class RaiderNode: SKSpriteNode {
     /// never has to remember which of the pooled nodes was which.
     private(set) var powerUp: PowerUp = .rapidFire
 
-    /// The unscaled silhouette, kept so each launch resizes from the source
-    /// rather than compounding the last crossing's multipliers.
-    private let baseSize: CGSize
+    /// A carrier's sprite scaled to its own display height, measured from the
+    /// texture so each launch resizes from the source rather than compounding
+    /// the last crossing's multipliers.
+    private static func size(for powerUp: PowerUp) -> CGSize {
+        let source = SKTexture(imageNamed: powerUp.spriteName).size()
+        let height = displayHeight * CGFloat(powerUp.heightMultiplier)
+        let scale = source.height > 0 ? height / source.height : 1
+        return CGSize(width: source.width * scale, height: height)
+    }
 
     init() {
-        let texture = SKTexture(imageNamed: "ship-scout")
-        let source = texture.size()
-        let scale = source.height > 0 ? Self.displayHeight / source.height : 1
-        baseSize = CGSize(width: source.width * scale, height: Self.displayHeight)
-        super.init(texture: texture, color: NeonPalette.acidGreen, size: baseSize)
+        let texture = SKTexture(imageNamed: PowerUp.rapidFire.spriteName)
+        super.init(texture: texture, color: NeonPalette.acidGreen,
+                   size: Self.size(for: .rapidFire))
         colorBlendFactor = 0.55      // the carrier's colour over the sprite's outline
         zPosition = 8                // over the fleet, under the HUD
         isHidden = true
@@ -72,8 +75,9 @@ final class RaiderNode: SKSpriteNode {
         // — but a *ship* passing in front of them has to occlude them or it
         // reads as a decal rather than as something flying over. Grey-green so
         // it stays a machine and does not compete with the acid outline.
-        let hull = SKSpriteNode(texture: Silhouette.filled(forTexture: "ship-scout"),
-                                color: Self.hullGrey, size: size)
+        let hull = SKSpriteNode(
+            texture: Silhouette.filled(forTexture: PowerUp.rapidFire.spriteName),
+            color: Self.hullGrey, size: size)
         hull.name = Self.hullName
         hull.colorBlendFactor = 1
         hull.alpha = 0.96
@@ -106,11 +110,8 @@ final class RaiderNode: SKSpriteNode {
     /// while aiming dead centre.
     private func dress(as powerUp: PowerUp) {
         self.powerUp = powerUp
-        let width = baseSize.width * CGFloat(powerUp.widthMultiplier)
-        // The Spread Scout is "fat and squat" (§13.2), not merely wide: without
-        // losing a little height it reads as a scout that has been stretched.
-        let height = baseSize.height * (powerUp == .gatling ? 0.85 : 1)
-        size = CGSize(width: width, height: height)
+        texture = SKTexture(imageNamed: powerUp.spriteName)
+        size = Self.size(for: powerUp)
         color = powerUp.tint
         // The specials wear their colour nearly solid; the green scout keeps the
         // lighter 0.55 blend it was built with. At 0.55 a special's tint is
@@ -121,6 +122,7 @@ final class RaiderNode: SKSpriteNode {
         colorBlendFactor = powerUp == .rapidFire ? 0.55 : 0.85
 
         if let hull = childNode(withName: Self.hullName) as? SKSpriteNode {
+            hull.texture = Silhouette.filled(forTexture: powerUp.spriteName)
             hull.size = size
             // A special's hull takes a wash of its own colour, so the ship reads
             // as its type even where the outline is thin. The green scout keeps
@@ -130,101 +132,7 @@ final class RaiderNode: SKSpriteNode {
                 : powerUp.tint.blended(toward: Self.hullGrey, by: 0.72)
         }
 
-        childNode(withName: Self.markingsName)?.removeFromParent()
-        if let markings = Self.markings(for: powerUp, in: size) {
-            markings.name = Self.markingsName
-            markings.zPosition = 0.1     // over the outline
-            addChild(markings)
-        }
-
         physicsBody = Self.body(for: size)
-    }
-
-    /// §13.2's silhouette cues, drawn rather than authored as sprites.
-    ///
-    /// Five new ship sprites would be the better answer and are not in the
-    /// atlas. These are built from the shapes each description turns on — the
-    /// hexagonal grid, the crystalline facets, the sea-mine spikes, the row of
-    /// exhaust ports — which is enough to tell them apart in the half-second
-    /// the player has to decide whether to give chase. The green scout has none:
-    /// it is the plain disc every other reading is relative to.
-    private static func markings(for powerUp: PowerUp, in size: CGSize) -> SKNode? {
-        guard powerUp != .rapidFire else { return nil }
-        let node = SKNode()
-        let tint = powerUp.tint
-        func add(_ path: CGPath, width: CGFloat = 1.1, fill: SKColor = .clear) {
-            let shape = SKShapeNode(path: path)
-            shape.strokeColor = tint
-            shape.fillColor = fill
-            shape.lineWidth = width
-            shape.glowWidth = 0.6
-            shape.isAntialiased = true
-            node.addChild(shape)
-        }
-        let h = size.height, w = size.width
-
-        switch powerUp {
-        case .rapidFire:
-            return nil
-
-        case .shield:
-            // "A visible hexagonal grid overlay — looks armoured."
-            for dx in [-w * 0.20, 0, w * 0.20] {
-                add(hexagon(radius: h * 0.21, at: CGPoint(x: dx, y: 0)), width: 0.9)
-            }
-
-        case .freeze:
-            // "Hexagonal facets, like a geometric snowflake."
-            add(hexagon(radius: h * 0.34, at: .zero), width: 1.0)
-            let spokes = CGMutablePath()
-            for index in 0..<6 {
-                let angle = CGFloat(index) * .pi / 3
-                spokes.move(to: .zero)
-                spokes.addLine(to: CGPoint(x: cos(angle) * h * 0.34,
-                                           y: sin(angle) * h * 0.34))
-            }
-            add(spokes, width: 0.8)
-
-        case .nuke:
-            // "Jagged protrusions like a sea mine."
-            let spikes = CGMutablePath()
-            for index in 0..<10 {
-                let angle = CGFloat(index) * .pi / 5
-                let outer = CGPoint(x: cos(angle) * w * 0.50, y: sin(angle) * h * 0.52)
-                let side = CGFloat.pi / 22
-                spikes.move(to: CGPoint(x: cos(angle - side) * w * 0.30,
-                                        y: sin(angle - side) * h * 0.26))
-                spikes.addLine(to: outer)
-                spikes.addLine(to: CGPoint(x: cos(angle + side) * w * 0.30,
-                                           y: sin(angle + side) * h * 0.26))
-            }
-            add(spikes, width: 1.0)
-
-        case .gatling:
-            // "Five visible exhaust ports across its front edge" — front being
-            // the underside, which is the edge it fires from and the edge the
-            // player is looking up at.
-            for index in 0..<5 {
-                let x = (CGFloat(index) - 2) * w * 0.155
-                add(CGPath(ellipseIn: CGRect(x: x - h * 0.06, y: -h * 0.34,
-                                             width: h * 0.12, height: h * 0.12),
-                           transform: nil),
-                    width: 0.9, fill: tint.withAlphaComponent(0.55))
-            }
-        }
-        return node
-    }
-
-    private static func hexagon(radius: CGFloat, at centre: CGPoint) -> CGPath {
-        let path = CGMutablePath()
-        for index in 0..<6 {
-            let angle = CGFloat(index) * .pi / 3 + .pi / 6
-            let point = CGPoint(x: centre.x + cos(angle) * radius,
-                                y: centre.y + sin(angle) * radius)
-            index == 0 ? path.move(to: point) : path.addLine(to: point)
-        }
-        path.closeSubpath()
-        return path
     }
 
     // MARK: - Crossing
@@ -274,7 +182,6 @@ final class RaiderNode: SKSpriteNode {
             withKey: Self.crossKey)
 
         flyVertically(flight, duration: duration, entryY: y, bounds: bounds)
-        if powerUp != .rapidFire { markingsPulse(powerUp) }
     }
 
     /// The vertical half of the path, running alongside the crossing.
@@ -325,17 +232,6 @@ final class RaiderNode: SKSpriteNode {
             climb.timingMode = .easeOut    // and hangs at the bottom of the arc
             run(.sequence([dive, climb]))
         }
-    }
-
-    /// A slow breath on the markings, so a special reads as *carrying* something
-    /// rather than as a recoloured scout. Slow enough not to add to the noise.
-    private func markingsPulse(_ powerUp: PowerUp) {
-        guard let markings = childNode(withName: Self.markingsName) else { return }
-        let period: TimeInterval = powerUp == .freeze ? 0.9 : 0.5
-        markings.run(.repeatForever(.sequence([
-            .fadeAlpha(to: 0.35, duration: period),
-            .fadeAlpha(to: 1.0, duration: period),
-        ])))
     }
 
     /// Takes a hit. Returns true if that destroyed it.

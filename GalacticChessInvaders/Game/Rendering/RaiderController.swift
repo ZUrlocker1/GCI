@@ -191,6 +191,10 @@ final class RaiderController {
         scout.cross(fromX: fromX, toX: toX, y: entryY, firing: firing,
                     powerUp: powerUp, flight: flight, bounds: bounds)
         setWarble(true)
+        // §6.4's Mutant Camel announces itself. It is the only carrier with a
+        // voice, which is most of why it works as the nuke ship: you hear the
+        // thing coming before you have picked it out of the board.
+        if powerUp == .nuke { AudioManager.shared.play(.camelHonk) }
 
         DiagnosticsLog.shared.log(.raider,
             "\(powerUp.shipName) scout \(firing ? "firing" : "warning") pass")
