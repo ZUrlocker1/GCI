@@ -1024,6 +1024,14 @@ FPS reported as swinging 75 → 19, node count **42,170**.
       250ms, which reads 75 off a short frame and 19 off a long one while the
       other fourteen were fine — the reason a smooth-feeling game reported wild
       swings. It averages every frame in the window now
+- [x] **`bloomNode.shouldRasterize` is off.** §18.9 asked for it, written before
+      there was anything moving inside the node. Rasterizing caches an effect
+      node's output and invalidates it whenever the subtree changes — and every
+      moving thing in the game is a child of this one, so the cache was
+      invalidated every frame and never once read. The `CIFilter` forces an
+      offscreen pass either way; rasterizing only added a retained buffer and the
+      bookkeeping to discard it. Visually identical, since rasterization is
+      purely a caching strategy
 - [x] **Log messages are `@autoclosure`.** Every call site interpolates a string
       and there are eighty of them, the hot ones firing on every shot and every
       hit. As a plain `String` parameter that interpolation ran *before* the
@@ -1059,14 +1067,6 @@ laptop look worse than the thing that ships:
 
 None of these is a known problem, and at 60fps steady none of them is why the
 frame rate moves. Ordered by expected return.
-
-**`bloomNode.shouldRasterize = true`** (`GameScene.setupBloomNode`). Rasterizing
-caches an `SKEffectNode`'s output and re-renders when the subtree changes — and
-every moving thing in the game is a child of this node, so the cache is never
-hit. Applying the `CIFilter` forces an offscreen pass either way, so what
-rasterizing adds is a retained buffer and invalidation bookkeeping that never pay
-off: a real but probably modest win. Flipping it is visually identical, which
-makes it the safest thing on the list.
 
 **`ignoresSiblingOrder` is not set on the view.** With explicit `zPosition`
 everywhere — which this codebase has — setting it lets SpriteKit reorder draws
