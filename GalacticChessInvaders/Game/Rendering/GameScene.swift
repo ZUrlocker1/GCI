@@ -549,12 +549,13 @@ class GameScene: SKScene {
 
     /// A brief label in the gutter slot AUTO MODE uses, for developer actions
     /// that happen once rather than toggling.
-    private func flashGutterNotice(_ text: String) {
+    private func flashGutterNotice(_ text: String,
+                                   color: SKColor = NeonPalette.alertOrange) {
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
         label.name = Self.gutterNoticeName
         label.text = text
         label.fontSize = 9
-        label.fontColor = NeonPalette.alertOrange
+        label.fontColor = color
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         // Sits just under the AUTO MODE slot so both can show at once.
@@ -1480,7 +1481,10 @@ class GameScene: SKScene {
             pieceNodes[rookMove.to] = rook
         }
 
-        if outcome.promotedTo != nil { AudioManager.shared.play(.pawnPromotion) }
+        if outcome.promotedTo != nil {
+            AudioManager.shared.play(.pawnPromotion)
+            grantRapidFire(for: outcome.moved.color)
+        }
 
         // The black king falling by chess capture is a win exactly like being
         // shot or checkmated (§25.2) — refreshStatus below would only ever see
@@ -1988,6 +1992,25 @@ class GameScene: SKScene {
             .fadeAlpha(to: 0.2, duration: 0.28), .fadeAlpha(to: 1.0, duration: 0.28),
         ])))
         bloomNode.addChild(label)
+    }
+
+    /// §7.2's promotion reward: one more laser in the air at a time.
+    ///
+    /// §7.2 also has the promotion destroy the nearest black piece with a
+    /// targeting beam. Not built, deliberately — a free kill handed over for
+    /// reaching rank 8 is a large and arbitrary second prize on top of a reward
+    /// that is already substantial, and it would take the decision of *what to
+    /// shoot* away from the player at the exact moment they earned more shots.
+    ///
+    /// Black never collects this. Its pawns promote by reaching rank 1, which
+    /// is a breach and ends the run, so the case is unreachable — but the guard
+    /// costs nothing and says so.
+    private func grantRapidFire(for color: PieceColor) {
+        guard color == .white, let shipState, shipState.grantRapidFire() else { return }
+        flashGutterNotice("RAPID FIRE \(shipState.laserCap)",
+                          color: NeonPalette.transporterGreen)
+        DiagnosticsLog.shared.log(.promote,
+            "rapid fire — \(shipState.laserCap) lasers")
     }
 
     /// A black piece just died: queue its replacement, if the level still has a

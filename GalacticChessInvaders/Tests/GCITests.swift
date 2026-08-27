@@ -3189,6 +3189,54 @@ final class LaserPhysicsTests: XCTestCase {
 }
 
 @MainActor
+final class PromotionRewardTests: XCTestCase {
+
+    /// §7.2: +1 per promotion, stacking, hard cap 6, and it does not carry
+    /// between waves.
+    func testRapidFireStacksToTheCapAndResetsEachLevel() {
+        let state = SpaceshipState()
+        XCTAssertEqual(state.laserCap, SpaceshipState.baseLaserCap)
+
+        var granted = 0
+        for _ in 0..<10 where state.grantRapidFire() { granted += 1 }
+        XCTAssertEqual(state.laserCap, SpaceshipState.maxLaserCap)
+        XCTAssertEqual(granted, SpaceshipState.maxLaserCap - SpaceshipState.baseLaserCap,
+                       "it refuses once capped, so the caller can stay quiet")
+        XCTAssertFalse(state.grantRapidFire(), "and keeps refusing")
+
+        state.resetForNewLevel()
+        XCTAssertEqual(state.laserCap, SpaceshipState.baseLaserCap,
+                       "earned again each wave, or an early promotion coasts")
+    }
+
+    /// The cap is concurrency, not ammunition: a slot frees when its round
+    /// lands or leaves. That is why the reward only pays when shots are missing.
+    func testTheCapLimitsRoundsInTheAirNotShotsFired() {
+        let state = SpaceshipState()
+        XCTAssertTrue(state.canFire)
+        state.laserFired(); state.laserFired()
+        XCTAssertFalse(state.canFire, "two in the air at the base cap")
+
+        state.grantRapidFire()
+        XCTAssertTrue(state.canFire, "a third slot, with the same two in flight")
+        state.laserFired()
+        XCTAssertFalse(state.canFire)
+
+        state.laserResolved()
+        XCTAssertTrue(state.canFire, "a landed round gives its slot straight back")
+    }
+
+    /// Firing cannot exceed the cap even if something asks it to.
+    func testActiveLasersNeverExceedTheCap() {
+        let state = SpaceshipState()
+        for _ in 0..<20 { state.laserFired() }
+        XCTAssertEqual(state.activeLasers, state.laserCap)
+        for _ in 0..<20 { state.laserResolved() }
+        XCTAssertEqual(state.activeLasers, 0, "and never goes negative")
+    }
+}
+
+@MainActor
 final class RegenerationTests: XCTestCase {
 
     private func level(_ n: Int) -> LevelParameters { LevelManager.parameters(for: n) }

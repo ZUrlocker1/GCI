@@ -13,6 +13,9 @@ final class SpaceshipState {
     /// Up to 2 lasers in flight at once (§8.2). Promotions raise this in a
     /// later phase; nothing here assumes it is fixed.
     static let baseLaserCap = 2
+    /// §7.2's ceiling on promotion stacking. Six rounds in the air is already
+    /// a near-continuous stream at the player's laser speed.
+    static let maxLaserCap = 6
     /// Invincibility flash after a respawn (§8.4).
     static let invincibilityDuration: TimeInterval = 2.0
     /// §8.2's three lives, named so the HUD can show the right number before a
@@ -67,9 +70,30 @@ final class SpaceshipState {
     }
 
     /// Lives carry across levels (§8.5); everything else resets.
+    /// §7.2's promotion reward: one more round allowed in the air at a time.
+    ///
+    /// The cap is *concurrency*, not ammunition or a cooldown — `canFire` is
+    /// `activeLasers < laserCap`, and a slot frees the moment its round lands
+    /// or leaves the screen. So this only pays when the player is *missing*: at
+    /// two, a shot that flies the full board locks a slot for 1.2 seconds. That
+    /// is the right shape for a reward, because missing is what happens at
+    /// range and under pressure.
+    ///
+    /// Returns false when already at the ceiling, so the caller can stay quiet
+    /// rather than announcing a reward that did not happen.
+    @discardableResult
+    func grantRapidFire() -> Bool {
+        guard laserCap < Self.maxLaserCap else { return false }
+        laserCap += 1
+        return true
+    }
+
     func resetForNewLevel() {
         activeLasers = 0
         isInvincible = false
         invincibilityRemaining = 0
+        // §7.2: the stack does not carry between waves. Earned again or not at
+        // all — otherwise a run that promoted early would coast on it.
+        laserCap = Self.baseLaserCap
     }
 }

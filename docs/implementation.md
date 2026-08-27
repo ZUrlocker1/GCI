@@ -8,12 +8,10 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 Ten levels play end to end, each with a mechanic of its own. What is left, in
 the order it is worth doing rather than the order §20 numbers it:
 
-1. **The pawn promotion power-up** (7.2) — the only thing in the design that
-   makes the *player* stronger rather than the fleet, and the last piece of 7.2
-2. **Raiders** (6.x) — the last unbuilt gameplay system, and the only remaining
+1. **Raiders** (6.x) — the last unbuilt gameplay system, and the only remaining
    source of pressure that is not the fleet. `raiderInterval` is already in the
    level table, and every sprite is already in the atlas
-3. **Music and settings** (5), then polish and release (8, 9) — craft work that
+2. **Music and settings** (5), then polish and release (8, 9) — craft work that
    interacts with nothing and can happen whenever
 
 §20's phase numbers were a plan written before any of this existed. They are a
@@ -33,7 +31,7 @@ checklist, not a running order.
 | 6.1 | Raiders: scout & basic escort | ⬜ |
 | 6.2 | Raiders: flagship, variants, special scouts | ⬜ |
 | 7.1 | Level escalation: chess AI | ⬜ |
-| 7.2 | Level escalation: arcade mechanics | 🟡 — the promotion power-up outstanding |
+| 7.2 | Level escalation: arcade mechanics | ✅ |
 | 8 | Visual polish | ⬜ |
 | 9 | Mac hardening & App Store release | ⬜ |
 
@@ -282,6 +280,14 @@ all — except King Activated, which stays one wave's character.
 
 ### Combat, as it stands
 
+**Promoting a pawn is the player's only reward** (§7.2). Reaching rank 8 raises
+the laser cap by one, stacking to six, reset at each wave. The cap is
+*concurrency* — `canFire` is `activeLasers < laserCap` and a slot frees the
+moment its round lands — so it pays only when shots are missing, which is what
+happens at range and under pressure: 1.7 shots/second at two, 5.0 at six. It is
+also the one mechanic that needs the chess half and the arcade half at the same
+time, since the pawn has to be walked up the board while the player dodges.
+
 **Who shoots.** Pawns are the fleet's gunners from Level 2; bishops add
 diagonals at Crossfire, and the black king its own heavy weapon at King
 Activated. Arming a *type* replaces §5.3's weighting toward pawns: the weighting
@@ -426,6 +432,11 @@ One line each; the reasoning is in the commits and the code.
   built and reverted — it measured as invisible in a full position, because the
   king's move never outscores thirty alternatives until the fleet is nearly
   cleared, and it read as chess rather than arcade
+- Promotion does **not** destroy the nearest black piece. §7.2 and §24.9 give it
+  a targeting beam that does; a free kill for reaching rank 8 is a large and
+  arbitrary second prize on top of a reward that is already substantial, and it
+  takes the decision of what to shoot away from the player at the moment they
+  earned more shots
 - Crossfire is Levels 7 and 10, not "8 onward" (§21.3), and it is the bishops'
   cadence rather than a 40% roll on a pawn's shot
 - **Fleet rush is cut** (§7.2: "one random piece jumps 2 ranks forward after
