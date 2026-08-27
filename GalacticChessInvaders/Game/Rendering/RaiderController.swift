@@ -126,7 +126,7 @@ final class RaiderController {
         setWarble(true)
 
         DiagnosticsLog.shared.log(.raider,
-            firing ? "scout \(leftToRight ? "→" : "←")" : "scout warning pass")
+            firing ? "scout firing pass" : "scout warning pass")
     }
 
     func setPaused(_ paused: Bool) {
