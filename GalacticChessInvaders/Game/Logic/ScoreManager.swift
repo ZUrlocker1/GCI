@@ -23,7 +23,20 @@ final class ScoreManager {
     private let highScoreKey = "GCI_HighScores"
     private let maxHighScores = 10
 
+    /// Bumping the app's version starts the table over.
+    ///
+    /// A test build is a fresh look at the game, and carrying a previous
+    /// version's scores into it means whoever built it never sees what a new
+    /// player sees. The scores are placeholders either way, so there is nothing
+    /// worth preserving across a version.
+    private let versionKey = "GCI_HighScoresVersion"
+
     private init() {
+        let built = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        if UserDefaults.standard.string(forKey: versionKey) != built {
+            UserDefaults.standard.removeObject(forKey: highScoreKey)
+            UserDefaults.standard.set(built, forKey: versionKey)
+        }
         loadHighScores()
         if highScores.isEmpty { seedDefaultScores() }
     }
@@ -112,14 +125,17 @@ final class ScoreManager {
         DiagnosticsLog.shared.log(.score, "High score submitted: \(entry.initials) \(entry.score) L\(entry.level)")
     }
 
-    /// Wipes the table completely, including what is persisted. Bound to the `X`
-    /// restart so a polluted table can be cleared without deleting preferences
-    /// by hand. Deliberately leaves it empty rather than reseeding, so it is
-    /// obvious the wipe happened.
+    /// Resets the table to its seeded placeholders, including what is persisted.
+    /// Bound to the `X` restart so a polluted table can be cleared without
+    /// deleting preferences by hand.
+    ///
+    /// Reseeds rather than emptying. An empty table made the wipe obvious, but a
+    /// clean slate should look like a fresh install does — a first-time player
+    /// never sees an empty table, so neither should anyone testing.
     func clearHighScores() {
-        highScores = []
         UserDefaults.standard.removeObject(forKey: highScoreKey)
-        DiagnosticsLog.shared.log(.score, "high score table cleared")
+        seedDefaultScores()
+        DiagnosticsLog.shared.log(.score, "high score table reset")
     }
 
     private func saveHighScores() {

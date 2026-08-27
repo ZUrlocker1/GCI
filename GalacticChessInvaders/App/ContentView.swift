@@ -2,21 +2,20 @@ import SwiftUI
 import SpriteKit
 
 struct ContentView: View {
-    @State private var showSidebar = true
+    // Closed by default. The panel ships — a tester who wants to look behind
+    // the scenes, or send a log back, can open it with `L` — but nobody should
+    // meet the game for the first time next to a wall of green text.
+    @State private var showSidebar = false
 
     var body: some View {
         HStack(spacing: 0) {
             GameSKViewRepresentable(showsDrawCount: showSidebar)
 
-            #if DEBUG
             DiagnosticsSidebarView(isExpanded: $showSidebar)
-            #endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .gciToggleSidebar)) { _ in
-            #if DEBUG
             showSidebar.toggle()
             DiagnosticsLog.shared.log(.startup, "Sidebar \(showSidebar ? "shown" : "hidden")")
-            #endif
         }
     }
 }
@@ -43,9 +42,7 @@ struct GameSKViewRepresentable: NSViewRepresentable {
     }
 
     private func applyOverlays(to view: SKView) {
-        #if DEBUG
         view.showsDrawCount = showsDrawCount
-        #endif
     }
 }
 
@@ -88,7 +85,6 @@ extension Notification.Name {
 
 // MARK: - Diagnostics Sidebar
 
-#if DEBUG
 struct DiagnosticsSidebarView: View {
     @Binding var isExpanded: Bool
     private let log = DiagnosticsLog.shared
@@ -213,4 +209,3 @@ struct DiagnosticsSidebarView: View {
         NSPasteboard.general.setString(text, forType: .string)
     }
 }
-#endif

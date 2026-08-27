@@ -657,7 +657,9 @@ class GameScene: SKScene {
         stateMachine.enter(TitleState.self)
     }
 
-    /// Where the `P` test key is up to in `PowerUp.allCases`.
+    /// Where the `P` test key is up to in `PowerUp.allCases`. Reset with the
+    /// level, so every wave starts the cycle at Rapid Fire rather than wherever
+    /// the last one left off.
     private var testPowerUpCursor = 0
 
     /// Hidden developer aid: grant the next power-up outright.
@@ -1008,6 +1010,7 @@ class GameScene: SKScene {
         gatlingCooldown = 0
         gatlingPhase = 0
         isFireHeld = false
+        testPowerUpCursor = 0
         ship?.removeShield()
         shake = .none
         shakeElapsed = 0
@@ -1028,7 +1031,9 @@ class GameScene: SKScene {
         isAnnouncingLevel = false
         // Reset, never discarded: the pools outlive the level, and dropping the
         // reference would leave their nodes parented to `bloomNode` forever.
+        // Which also means any pause applied to them has to be lifted here.
         laserPool?.deactivateAll()
+        laserPool?.setPaused(false)
         fleet?.reset()
         fleet = nil
         hideGameOverOverlay()
@@ -3536,8 +3541,10 @@ class GameScene: SKScene {
     private var framesThisInterval = 0
     private var timeThisInterval: TimeInterval = 0
 
+    /// Not debug-only. The diagnostics panel ships closed but available, so the
+    /// figures behind it have to be real — and `auditHitboxes` repairs a class of
+    /// bug that is otherwise silent. Four times a second either way.
     private func publishStats(dt: TimeInterval, now: TimeInterval) {
-        #if DEBUG
         guard dt > 0 else { return }
         framesThisInterval += 1
         timeThisInterval += dt

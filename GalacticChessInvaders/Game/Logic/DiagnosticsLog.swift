@@ -54,11 +54,10 @@ final class DiagnosticsLog {
     var fps: Double = 60.0
     var nodeCount: Int = 0
     var isEnabled: Bool = {
-        #if DEBUG
+        // On in release builds too. The panel is closed unless someone presses
+        // `L`, and a tester who can send back a log is worth far more than the
+        // handful of string appends it costs.
         return true
-        #else
-        return false
-        #endif
     }()
     var logInput: Bool = false
 

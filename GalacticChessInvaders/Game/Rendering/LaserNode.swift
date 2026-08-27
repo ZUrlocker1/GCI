@@ -197,6 +197,16 @@ final class LaserNode: SKSpriteNode {
               sparesFriendlies: Bool = false, fadesOut: Bool = false) {
         guard speed > 0, travelDistance > 0 else { return }
         state = ProjectileState(owner: owner, damage: damage, speed: speed)
+        // A round that has just been told to fly must be able to.
+        //
+        // The pool is paused wholesale while a level banner is up, and unpaused
+        // by a delayed action that bails if the announcement was cancelled —
+        // press `X` during a banner and nothing ever unpauses it. That was
+        // invisible while the pool was rebuilt every level; now that it outlives
+        // the level, a stale pause outlives it too, and every shot afterwards
+        // appears at the ship, plays its sound and sits there. Cleared here so no
+        // path can hand out a round that cannot move.
+        isPaused = false
         // Before the masks are read below.
         self.sparesFriendlies = sparesFriendlies
         position = origin
