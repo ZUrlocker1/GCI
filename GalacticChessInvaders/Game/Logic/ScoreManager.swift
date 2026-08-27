@@ -67,6 +67,16 @@ final class ScoreManager {
         // The scene logs the level line, including this multiplier.
     }
 
+    /// Puts the multiplier back to Level 1's without touching the score.
+    ///
+    /// Only the `V` skip needs this, wrapping from the last level round to the
+    /// first: the ladder starts again but the run does not, so a test pass can
+    /// loop without losing the total it has been watching.
+    func restartLadder() {
+        currentLevel = 1
+        multiplier = 1.0
+    }
+
     func resetForNewGame() {
         currentScore = 0
         currentLevel = 1

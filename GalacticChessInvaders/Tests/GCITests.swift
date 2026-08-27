@@ -2582,6 +2582,29 @@ final class FleetRulesTests: XCTestCase {
         XCTAssertEqual(LevelManager.announcement(for: 10)?.title, "BLITZ!")
     }
 
+    /// The `V` skip wraps rather than stopping at the top: a test pass wants to
+    /// walk the ladder round and round, and the score it has been watching
+    /// should survive the wrap.
+    func testTheLadderRestartsWithoutResettingTheRun() {
+        let levels = LevelManager()
+        for _ in 1..<LevelManager.finalLevel { levels.advance() }
+        XCTAssertTrue(levels.isFinalLevel)
+        levels.reset()
+        XCTAssertEqual(levels.level, 1)
+
+        let score = ScoreManager.shared
+        score.resetForNewGame()
+        for _ in 0..<4 { score.advanceLevel() }
+        score.addPoints(100)
+        let banked = score.currentScore
+        XCTAssertGreaterThan(score.multiplier, 1.0)
+
+        score.restartLadder()
+        XCTAssertEqual(score.multiplier, 1.0, "the ladder starts again")
+        XCTAssertEqual(score.currentScore, banked, "the run does not")
+        score.resetForNewGame()
+    }
+
     /// Clearing the last wave wins the run rather than rolling into an
     /// eleventh level that has no design.
     func testFinalLevelEndsTheRun() {
