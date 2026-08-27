@@ -645,12 +645,26 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       discarded is content above 22 kHz that nothing can hear. Verified rather
       than assumed: duration, peak and RMS across four slices of the envelope are
       identical to four decimal places. Resources are 10.3 MB, from 15.1
-- [ ] **Six more GDC sounds are 96 kHz stereo** (`EffectiveTrailer_Booms`,
-      `Button Arp Twinkle`, `Interface Arp Reveal Down Long`, `Interface Sci-Fi
-      Ping Down`, `Interface Deny Low Fat Dark`, `DSGNErie_NoiseBoxHit_10`). The
-      same resample takes them from 2.5 MB to about 1.1 MB. Downmixing the lot to
-      mono — which every kenney file already is, and which the game never pans —
-      would roughly halve that again
+- [x] **Every GDC sound resampled to 44.1 kHz, and five downmixed to mono.**
+      Which five was measured, not assumed: for each stereo file, the RMS of the
+      side signal `(L−R)/2` against the mid `(L+R)/2` says how much width there
+      actually is.
+
+      | sound | side/mid | kept |
+      |---|---|---|
+      | nuke shockwave | 1.87 | **stereo** |
+      | UI button click | 0.55 | **stereo** |
+      | armor ricochet | 0.32 | **stereo** |
+      | game-over sting | 0.013 | mono |
+      | level clear | 0.006 | mono |
+      | promotion, illegal move, sci-fi ping | 0.000 | mono |
+
+      Three of the eight carry real width and keep it — the nuke's most of all,
+      which is §13.2 delivered rather than a coincidence: it asks for "a resonant
+      wave of sound that sweeps across the stereo field". The other five measure
+      at or near zero, so they were mono already and the second channel was
+      storing a duplicate. Each conversion was checked for unchanged duration and
+      RMS before it replaced the original
 
 ## Phase 6.1 — Raiders: Scout ✅
 
