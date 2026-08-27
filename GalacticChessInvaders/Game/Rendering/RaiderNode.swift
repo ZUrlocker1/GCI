@@ -37,6 +37,7 @@ final class RaiderNode: SKSpriteNode {
     private static let crossKey = "cross"
     private static let damagedKey = "damaged"
     private static let hullName = "hull"
+    private static let markingsName = "markings"
 
     /// Fired as the scout reaches its firing point, with its current position.
     var onFire: ((CGPoint) -> Void)?
@@ -132,7 +133,84 @@ final class RaiderNode: SKSpriteNode {
                 : powerUp.tint.blended(toward: Self.hullGrey, by: 0.72)
         }
 
+        childNode(withName: Self.markingsName)?.removeFromParent()
+        if let markings = Self.markings(for: powerUp, in: size) {
+            markings.name = Self.markingsName
+            markings.zPosition = 0.1     // over the outline
+            addChild(markings)
+            markingsPulse(powerUp)
+        }
+
         physicsBody = Self.body(for: size)
+    }
+
+    /// §13.2's silhouette cues, drawn over the plain scout disc.
+    ///
+    /// Only for the two carriers that kept the disc. The Spread Scout and the
+    /// Camel fly purpose-built art from the atlas and need nothing drawn on top;
+    /// the Repair and Ice scouts were tried that way and looked better as they
+    /// were, so their hexagonal grid and crystalline facets stay.
+    private static func markings(for powerUp: PowerUp, in size: CGSize) -> SKNode? {
+        guard powerUp == .shield || powerUp == .freeze else { return nil }
+        let node = SKNode()
+        let tint = powerUp.tint
+        func add(_ path: CGPath, width: CGFloat = 1.1) {
+            let shape = SKShapeNode(path: path)
+            shape.strokeColor = tint
+            shape.fillColor = .clear
+            shape.lineWidth = width
+            shape.glowWidth = 0.6
+            shape.isAntialiased = true
+            node.addChild(shape)
+        }
+        let h = size.height, w = size.width
+
+        switch powerUp {
+        case .shield:
+            // "A visible hexagonal grid overlay — looks armoured."
+            for dx in [-w * 0.20, 0, w * 0.20] {
+                add(hexagon(radius: h * 0.21, at: CGPoint(x: dx, y: 0)), width: 0.9)
+            }
+
+        case .freeze:
+            // "Hexagonal facets, like a geometric snowflake."
+            add(hexagon(radius: h * 0.34, at: .zero), width: 1.0)
+            let spokes = CGMutablePath()
+            for index in 0..<6 {
+                let angle = CGFloat(index) * .pi / 3
+                spokes.move(to: .zero)
+                spokes.addLine(to: CGPoint(x: cos(angle) * h * 0.34,
+                                           y: sin(angle) * h * 0.34))
+            }
+            add(spokes, width: 0.8)
+
+        default:
+            return nil
+        }
+        return node
+    }
+
+    private static func hexagon(radius: CGFloat, at centre: CGPoint) -> CGPath {
+        let path = CGMutablePath()
+        for index in 0..<6 {
+            let angle = CGFloat(index) * .pi / 3 + .pi / 6
+            let point = CGPoint(x: centre.x + cos(angle) * radius,
+                                y: centre.y + sin(angle) * radius)
+            index == 0 ? path.move(to: point) : path.addLine(to: point)
+        }
+        path.closeSubpath()
+        return path
+    }
+
+    /// A slow breath on the markings, so a special reads as *carrying* something
+    /// rather than as a recoloured scout. Slow enough not to add to the noise.
+    private func markingsPulse(_ powerUp: PowerUp) {
+        guard let markings = childNode(withName: Self.markingsName) else { return }
+        let period: TimeInterval = powerUp == .freeze ? 0.9 : 0.5
+        markings.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0.35, duration: period),
+            .fadeAlpha(to: 1.0, duration: period),
+        ])))
     }
 
     // MARK: - Crossing
@@ -158,26 +236,39 @@ final class RaiderNode: SKSpriteNode {
         physicsBody?.categoryBitMask = PhysicsCategory.raider
 
         let speed = RaiderRules.scoutSpeed * CGFloat(powerUp.speedMultiplier)
-        let distance = abs(toX - fromX)
-        let duration = TimeInterval(distance / speed)
-        let travel = SKAction.moveTo(x: toX, duration: duration)
-        travel.timingMode = .linear
+        let span = toX - fromX
+        let duration = TimeInterval(abs(span) / speed)
 
-        var sequence: [SKAction] = [travel]
+        // The horizontal path, built as legs so a raider that turns around can
+        // turn to *face* the way it is going. One `moveTo` for the whole
+        // crossing cannot: the sprite would fly the second half backwards.
+        var cursor = fromX
+        var sequence: [SKAction] = []
+        func leg(to target: CGFloat, thenFire: Bool = false) {
+            let facingRight = target > cursor
+            sequence.append(.run { [weak self] in self?.face(right: facingRight) })
+            sequence.append(.moveTo(x: target,
+                                    duration: TimeInterval(abs(target - cursor) / speed)))
+            if thenFire {
+                sequence.append(.run { [weak self] in
+                    guard let self else { return }
+                    self.onFire?(CGPoint(x: self.position.x, y: self.position.y))
+                })
+            }
+            cursor = target
+        }
+
         if firing {
             // Split the crossing so the shot leaves from wherever the scout has
             // got to, rather than from a position decided in advance.
-            let fraction = RaiderRules.fireFraction()
-            let firingX = fromX + (toX - fromX) * fraction
-            sequence = [
-                .moveTo(x: firingX, duration: duration * TimeInterval(fraction)),
-                .run { [weak self] in
-                    guard let self else { return }
-                    self.onFire?(CGPoint(x: self.position.x, y: self.position.y))
-                },
-                .moveTo(x: toX, duration: duration * TimeInterval(1 - fraction)),
-            ]
+            leg(to: fromX + span * RaiderRules.fireFraction(), thenFire: true)
         }
+        if let feint = RaiderRules.feint(span: span, from: cursor, to: toX) {
+            leg(to: feint.turn)
+            leg(to: feint.back)
+        }
+        leg(to: toX)
+
         run(.sequence(sequence + [.run { [weak self] in self?.finish() }]),
             withKey: Self.crossKey)
 
@@ -234,6 +325,16 @@ final class RaiderNode: SKSpriteNode {
         }
     }
 
+    /// Points the sprite the way it is travelling.
+    ///
+    /// The camel is drawn facing right and has legs, so a camel crossing
+    /// right-to-left rear-first looks like a bug rather than a raid. Every other
+    /// carrier is a symmetrical disc, for which this is a no-op — which is why
+    /// it is applied to all of them rather than special-cased.
+    private func face(right: Bool) {
+        xScale = right ? 1 : -1
+    }
+
     /// Takes a hit. Returns true if that destroyed it.
     func takeHit() -> Bool {
         guard isCrossing else { return false }
@@ -265,6 +366,7 @@ final class RaiderNode: SKSpriteNode {
 
     func stop() {
         removeAllActions()
+        xScale = 1
         isCrossing = false
         isHidden = true
         physicsBody?.categoryBitMask = PhysicsCategory.none

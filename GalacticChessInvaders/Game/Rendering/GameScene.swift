@@ -96,6 +96,81 @@ class GameScene: SKScene {
     private var freezeRemaining: TimeInterval = 0
     private var afterFreeze: (() -> Void)?
 
+    // MARK: - Slow motion (§13.2's Nuke)
+
+    /// How long the blast's slow motion has left, in real seconds.
+    private var slowMoRemaining: TimeInterval = 0
+    private var appliedTimeScale: Double = 1
+    /// Long enough for the ring to cross the board and the fragments to land
+    /// inside it; short enough that it is a moment rather than an interlude.
+    static let slowMoDuration: TimeInterval = 1.3
+    /// Roughly a third speed. Deeper than this and the ship stops answering the
+    /// keys in a way that reads as a hang rather than as an effect.
+    static let slowMoFloor: Double = 0.3
+    /// The share of the window spent at full slow before the ramp back begins.
+    static let slowMoHold = 0.45
+
+    /// The curve, as a pure function of how far into the window we are, so the
+    /// shape can be checked without a running scene.
+    static func slowMoScale(elapsed: TimeInterval) -> Double {
+        guard elapsed > 0 else { return slowMoFloor }
+        guard elapsed < slowMoDuration else { return 1 }
+        let hold = slowMoDuration * slowMoHold
+        guard elapsed > hold else { return slowMoFloor }
+        let progress = (elapsed - hold) / (slowMoDuration - hold)
+        return slowMoFloor + (1 - slowMoFloor) * progress * progress
+    }
+
+    /// The clock everything else runs on: 1 normally, less during a blast.
+    ///
+    /// Holds at the floor and then accelerates back rather than easing out of
+    /// it. Coming *out* of slow motion is the part that sells it — a linear
+    /// return reads as the game recovering from a stall, where lingering low and
+    /// then snapping back reads as a decision.
+    private var timeScale: Double {
+        guard slowMoRemaining > 0 else { return 1 }
+        return Self.slowMoScale(elapsed: Self.slowMoDuration - slowMoRemaining)
+    }
+
+    /// Slows the SKAction world to match. `dt` covers everything the update loop
+    /// drives — the ship, the beat, the raider clock — but the fleet's sweep,
+    /// the lasers, the explosions and the blast's own ring are all actions, and
+    /// `speed` is the only thing that reaches them.
+    private func applyTimeScale() {
+        let scale = timeScale
+        guard abs(scale - appliedTimeScale) > 0.001 else { return }
+        appliedTimeScale = scale
+        bloomNode.speed = CGFloat(scale)
+        starfieldNode.speed = CGFloat(scale)
+        if scale >= 1 { endSlowMotionAudio() }
+    }
+
+    /// Drops the world into slow motion. Called by the Nuke, and deliberately
+    /// not by anything else: it is what makes that one power-up a set piece.
+    private func beginSlowMotion() {
+        slowMoRemaining = Self.slowMoDuration
+        applyTimeScale()
+        // Same trick as Time Freeze, at a shallower depth so the two are not
+        // mistaken for each other — that one stops the world, this one leans on
+        // it. §13.2 sanctions `rate` for exactly this.
+        AudioManager.shared.setMusicRate(0.7)
+    }
+
+    private func endSlowMotionAudio() {
+        // Back to whatever the world is actually doing: a Time Freeze may still
+        // be running underneath, and it owns 0.5 until it expires.
+        AudioManager.shared.setMusicRate(powerUps.isFrozen ? 0.5 : 1.0)
+    }
+
+    private func cancelSlowMotion() {
+        guard slowMoRemaining > 0 || appliedTimeScale != 1 else { return }
+        slowMoRemaining = 0
+        appliedTimeScale = 1
+        bloomNode.speed = 1
+        starfieldNode.speed = 1
+        endSlowMotionAudio()
+    }
+
     /// §13's power-ups. The clock and the shield charge; everything the effects
     /// actually *do* to the world lives in the Power-Ups section below.
     private var powerUps = PowerUpState()
@@ -886,6 +961,7 @@ class GameScene: SKScene {
         // §13.2: neither the shield nor a running clock carries to the next
         // level. Lifting the effect first puts the world back before the state
         // that describes it is thrown away.
+        cancelSlowMotion()
         if let running = powerUps.cancel() { lift(running) }
         powerUps.reset()
         gatlingCooldown = 0
@@ -1737,6 +1813,7 @@ class GameScene: SKScene {
         // when it happens. Releasing the trigger while paused would otherwise
         // never be seen, and the hose would still be running on resume.
         isFireHeld = false
+        cancelSlowMotion()
         DiagnosticsLog.shared.log(.level, "PAUSED")
     }
 
@@ -2545,8 +2622,12 @@ class GameScene: SKScene {
     /// are two things that happen near each other; with it there is a line drawn
     /// from cause to effect, which is the whole difference.
     private func detonate(at point: CGPoint) {
+        beginSlowMotion()
         let reach = (size.width * size.width + size.height * size.height).squareRoot()
-        let duration: TimeInterval = 0.4
+        // Twice the 0.4s it opened at, and then the slow-motion clock stretches
+        // it again — a shockwave that crosses the board in a third of a second
+        // is over before the eye has found it.
+        let duration: TimeInterval = 0.85
         let ring = SKShapeNode(circleOfRadius: 1)
         ring.position = point
         ring.fillColor = .clear
@@ -3277,8 +3358,15 @@ class GameScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         stateMachine.update(deltaTime: currentTime)
 
-        let dt = lastUpdateTime > 0 ? currentTime - lastUpdateTime : 0
+        let realDt = lastUpdateTime > 0 ? currentTime - lastUpdateTime : 0
         lastUpdateTime = currentTime
+
+        // §13.2's Nuke runs in slow motion. The countdown burns *real* time —
+        // scaled time would slow its own ending and it would never finish — and
+        // everything after this line runs on the scaled clock.
+        if slowMoRemaining > 0 { slowMoRemaining = max(0, slowMoRemaining - realDt) }
+        applyTimeScale()
+        let dt = realDt * timeScale
 
         // §24.2's hit freeze: the playfield stops, this loop does not — it is
         // what has to notice the freeze is over. Everything below is skipped,
@@ -3333,7 +3421,9 @@ class GameScene: SKScene {
             // The end-of-game hold owns the beat while it runs.
             if advanceReveal(dt) {
                 turnTimerNode?.isHidden = true
-                publishStats(dt: dt, now: currentTime)
+                // Real time, not scaled: the FPS readout measures the frame,
+                // not the game clock.
+                publishStats(dt: realDt, now: currentTime)
                 return
             }
 
@@ -3372,7 +3462,7 @@ class GameScene: SKScene {
             }
         }
 
-        publishStats(dt: dt, now: currentTime)
+        publishStats(dt: realDt, now: currentTime)
     }
 
     /// Four times a second is plenty for a readout, and it keeps both the node

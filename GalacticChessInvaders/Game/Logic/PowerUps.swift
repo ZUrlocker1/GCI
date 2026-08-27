@@ -92,13 +92,17 @@ enum PowerUp: String, CaseIterable {
     /// bomb sprite is a competent red mine and the camel is a Jeff Minter
     /// tribute with legs, and one of those is the right thing to see swooping at
     /// you carrying a nuclear weapon.
+    ///
+    /// Repair and Ice stay on the plain scout disc with `RaiderNode`'s drawn
+    /// overlays — the hexagonal grid and the crystalline facets. Their atlas
+    /// sprites were tried and are still there (`ship-scout-repair`,
+    /// `ship-scout-ice`); the drawn versions read better in play, which is the
+    /// only test that counts.
     var spriteName: String {
         switch self {
-        case .rapidFire: return "ship-scout"
-        case .shield:    return "ship-scout-repair"
-        case .freeze:    return "ship-scout-ice"
-        case .gatling:   return "ship-scout-spread"
-        case .nuke:      return "ship-camel"
+        case .rapidFire, .shield, .freeze: return "ship-scout"
+        case .gatling:                     return "ship-scout-spread"
+        case .nuke:                        return "ship-camel"
         }
     }
 
@@ -116,22 +120,19 @@ enum PowerUp: String, CaseIterable {
     ///
     /// | carrier | × | visible ink | vs scout |
     /// |---|---|---|---|
-    /// | green | 1.00 | 49.6 × 21.2 | 1.00 |
-    /// | repair | 1.15 | 34.5 × 29.3 | 0.96 |
-    /// | ice | 1.40 | 35.7 × 29.4 | 1.00 |
+    /// | green, repair, ice | 1.00 | 49.6 × 21.2 | 1.00 |
     /// | spread | 1.50 | 38.2 × 28.4 | 1.03 |
     /// | camel | 1.50 | 49.4 × 36.6 | 1.71 |
     ///
-    /// The camel is the deliberate exception — §6.4 makes it the larger of the
-    /// two tribute ships, and a nuke carrier that reads as *big* is worth more
-    /// than one that reads as consistent.
+    /// Repair and Ice are the plain scout disc, so they need no correction. The
+    /// camel is the deliberate exception — §6.4 makes it the larger of the two
+    /// tribute ships, and a nuke carrier that reads as *big* is worth more than
+    /// one that reads as consistent.
     var heightMultiplier: Double {
         switch self {
-        case .rapidFire: return 1.0
-        case .shield:    return 1.15
-        case .freeze:    return 1.4
-        case .gatling:   return 1.5
-        case .nuke:      return 1.5
+        case .rapidFire, .shield, .freeze: return 1.0
+        case .gatling:                     return 1.5
+        case .nuke:                        return 1.5
         }
     }
 

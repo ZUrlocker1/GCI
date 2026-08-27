@@ -4875,6 +4875,86 @@ final class PowerUpTests: XCTestCase {
         XCTAssertNotNil(board.piece(at: "e1"))
     }
 
+    // MARK: - The blast's slow motion (§13.2)
+
+    /// Holds at the floor, then accelerates back to normal — never the other way
+    /// round, and never past 1.
+    func testTheSlowMotionRampHoldsThenAccelerates() {
+        XCTAssertEqual(GameScene.slowMoScale(elapsed: 0), GameScene.slowMoFloor)
+        let hold = GameScene.slowMoDuration * GameScene.slowMoHold
+        XCTAssertEqual(GameScene.slowMoScale(elapsed: hold * 0.99),
+                       GameScene.slowMoFloor, accuracy: 0.001,
+                       "it must not start climbing during the hold")
+        XCTAssertEqual(GameScene.slowMoScale(elapsed: GameScene.slowMoDuration), 1)
+
+        var previous = 0.0
+        for step in 0...130 {
+            let scale = GameScene.slowMoScale(elapsed: Double(step) / 100)
+            XCTAssertGreaterThanOrEqual(scale, previous, "the ramp went backwards")
+            XCTAssertLessThanOrEqual(scale, 1)
+            XCTAssertGreaterThanOrEqual(scale, GameScene.slowMoFloor)
+            previous = scale
+        }
+    }
+
+    /// Accelerating back rather than easing out: the second half of the ramp has
+    /// to cover more ground than the first, or it reads as the game recovering
+    /// from a stall instead of as a decision.
+    func testTheRampAcceleratesRatherThanEases() {
+        let hold = GameScene.slowMoDuration * GameScene.slowMoHold
+        let midpoint = hold + (GameScene.slowMoDuration - hold) / 2
+        let halfway = GameScene.slowMoScale(elapsed: midpoint)
+        let span = 1 - GameScene.slowMoFloor
+        XCTAssertLessThan(halfway - GameScene.slowMoFloor, span / 2,
+                          "less than half the recovery by the halfway point")
+    }
+
+    /// A blast is a moment, not an interlude — and the world has to be running
+    /// normally again by the end of it.
+    func testTheSlowMotionIsOverInUnderTwoSeconds() {
+        XCTAssertLessThan(GameScene.slowMoDuration, 2)
+        XCTAssertGreaterThan(GameScene.slowMoDuration, 0.8)
+        XCTAssertEqual(GameScene.slowMoScale(elapsed: GameScene.slowMoDuration + 5), 1)
+    }
+
+    // MARK: - The feint (§6.3)
+
+    /// Roughly one crossing in five doubles back.
+    func testAboutOneCrossingInFiveDoublesBack() {
+        var feints = 0
+        for _ in 0..<4_000 where RaiderRules.feint(span: 1_000, from: 0, to: 1_000) != nil {
+            feints += 1
+        }
+        let rate = Double(feints) / 4_000
+        XCTAssertEqual(rate, RaiderRules.feintChance, accuracy: 0.04,
+                       "measured \(rate)")
+    }
+
+    /// It turns somewhere in the middle and comes back a little way — never past
+    /// where it came in, which would read as a second entrance.
+    func testTheFeintTurnsMidCrossingAndNeverBacksPastTheEntry() {
+        for _ in 0..<2_000 {
+            guard let feint = RaiderRules.feint(span: 1_000, from: 0, to: 1_000)
+            else { continue }
+            XCTAssertGreaterThan(feint.turn, 0)
+            XCTAssertLessThan(feint.turn, 1_000, "it must turn before it exits")
+            XCTAssertLessThan(feint.back, feint.turn, "it has to come back")
+            XCTAssertGreaterThanOrEqual(feint.back, 0, "never past the entry")
+        }
+    }
+
+    /// And the same in the other direction, where every comparison flips.
+    func testTheFeintWorksRightToLeft() {
+        for _ in 0..<2_000 {
+            guard let feint = RaiderRules.feint(span: -1_000, from: 1_000, to: 0)
+            else { continue }
+            XCTAssertLessThan(feint.turn, 1_000)
+            XCTAssertGreaterThan(feint.turn, 0)
+            XCTAssertGreaterThan(feint.back, feint.turn, "back is rightward here")
+            XCTAssertLessThanOrEqual(feint.back, 1_000, "never past the entry")
+        }
+    }
+
     // MARK: - Spread Fire geometry (§13.2)
 
     /// The pool has to cover a full spray plus the player's own manual cap. An
