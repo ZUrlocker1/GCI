@@ -8,6 +8,10 @@ final class HowToPlayNode: SKNode {
     private static let font    = "PressStart2P-Regular"
     /// The scene hit-tests for this to open the link.
     static let musicLinkName = "musicLink"
+    /// The link's target, in this node's coordinates — the overlay sits at the
+    /// scene's origin, so they are the scene's coordinates too. The hosting
+    /// `SKView` reads it to lay a cursor rect over the word.
+    private(set) var linkRect: CGRect = .zero
 
     // Hardcoded layout coordinates derived from 960×700 scene with 36px HUD at top.
     // All y values are scene-space (0 = bottom, 700 = top).
@@ -166,7 +170,10 @@ final class HowToPlayNode: SKNode {
 
         // A padded, invisible target over the word — five characters at 10pt is
         // a 50×10 click box otherwise. Added last so `atPoint` returns it.
-        let hit = SKShapeNode(rect: CGRect(x: linkX - 6, y: creditY - 8, width: linkW + 12, height: 24))
+        // Stored as well as drawn, so the cursor rect and the click target are
+        // the same rectangle rather than two that have to be kept in step.
+        linkRect = CGRect(x: linkX - 6, y: creditY - 8, width: linkW + 12, height: 24)
+        let hit = SKShapeNode(rect: linkRect)
         hit.fillColor = .clear
         hit.strokeColor = .clear
         hit.name = Self.musicLinkName

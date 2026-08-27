@@ -67,6 +67,24 @@ struct GameSKViewRepresentable: NSViewRepresentable {
 final class KeyboardFocusedSKView: SKView {
     override var acceptsFirstResponder: Bool { true }
 
+    /// A pointing hand over the Zudio link on the info panel.
+    ///
+    /// A cursor rect rather than tracking the pointer in `mouseMoved`: AppKit
+    /// owns the cursor while it is inside the rect, so it survives the scene
+    /// redrawing underneath it and needs no per-frame work. The scene invalidates
+    /// these whenever the panel opens or closes; the window re-asks on resize,
+    /// which is what keeps the rect right when the scene is scaled to fit.
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        guard let scene = scene as? GameScene,
+              let rect = scene.pointerCursorRect else { return }
+        let a = convert(CGPoint(x: rect.minX, y: rect.minY), from: scene)
+        let b = convert(CGPoint(x: rect.maxX, y: rect.maxY), from: scene)
+        addCursorRect(CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
+                             width: abs(b.x - a.x), height: abs(b.y - a.y)),
+                      cursor: .pointingHand)
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard let window else { return }
