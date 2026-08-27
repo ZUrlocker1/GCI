@@ -143,7 +143,9 @@ GCI/
 
 ### Player Ship
 - Arrow keys / WASD: move. Space: fire.
-- Laser cap: 2 (normal), +1 per pawn promotion (stacks, hard cap 6), resets each level
+- Laser cap: 2 (normal), +1 per green Raider Scout shot down (stacks, hard cap 6),
+  resets each level. Promotion grants a queen and nothing else — see
+  `docs/implementation.md` §13 for why the arcade half of that reward moved
 - Click piece → click destination: chess move
 - 3 lives; 2-second respawn invincibility after death
 

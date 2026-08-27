@@ -14,6 +14,10 @@ enum GameAction {
 
     // Shooting
     case fireLaser
+    /// The fire key was released. Ordinary fire is one shot per press and does
+    /// not need this; §13.2's Spread Fire does, because it sprays for as long as
+    /// the player holds the key down.
+    case stopFiring
 
     // Chess input
     case selectPieceAt(boardSquare: String)   // algebraic e.g. "e2"

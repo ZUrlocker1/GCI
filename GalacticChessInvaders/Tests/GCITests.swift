@@ -4763,61 +4763,69 @@ final class PowerUpTests: XCTestCase {
         XCTAssertEqual(state.remaining, 0)
     }
 
-    // MARK: - Gatling geometry
+    // MARK: - Spread Fire geometry (§13.2)
 
-    /// The pool has to cover a full Gatling barrage: five rounds per volley,
-    /// each in the air for as long as its own angle takes to fly its range out.
-    /// An under-sized pool does not fail loudly — it silently drops arms of the
-    /// spread and the barrage just looks thinner.
-    func testTheLaserPoolCoversAFullGatlingBarrage() {
-        let inFlight = GameScene.gatlingLeans
-            .map { Double(GameScene.gatlingReach * (1 + $0 * $0).squareRoot()
-                          / ProjectileState.playerLaserSpeed) }
-            .reduce(0, +) / GameScene.gatlingInterval
-        XCTAssertGreaterThan(LaserPool.playerCapacity, Int(inFlight.rounded(.up)))
-        // And not wildly over-sized either: every node carries a physics body
-        // the scene walks every frame.
-        XCTAssertLessThan(LaserPool.playerCapacity, Int(inFlight.rounded(.up)) * 3)
+    /// The pool has to cover a full spray plus the player's own manual cap. An
+    /// under-sized pool does not fail loudly — it silently drops rounds and the
+    /// spray just looks thinner than it should.
+    func testTheLaserPoolCoversAFullSprayPlusManualFire() {
+        // Worst case is a round at the end of the sweep, which flies furthest.
+        let path = GameScene.gatlingReach
+            * (1 + GameScene.gatlingMaxLean * GameScene.gatlingMaxLean).squareRoot()
+        let inFlight = Double(path / ProjectileState.playerLaserSpeed)
+            / GameScene.gatlingInterval
+        let needed = Int(inFlight.rounded(.up)) + SpaceshipState.maxLaserCap
+        XCTAssertGreaterThanOrEqual(LaserPool.playerCapacity, needed)
+        // And not wildly over: every node carries a physics body the scene walks.
+        XCTAssertLessThanOrEqual(LaserPool.playerCapacity, needed * 2)
+    }
+
+    /// One stream, not five. The fixed five-way fan is what made this
+    /// uncontrollable — five arms covering the board at once left nothing to
+    /// aim — so the sweep has to be a single oscillating angle.
+    func testTheSprayIsOneStreamSweptThroughTwentyDegrees() {
+        let degrees = atan(GameScene.gatlingMaxLean) * 180 / .pi
+        XCTAssertEqual(Double(degrees), 20, accuracy: 0.2)
+    }
+
+    /// The sweep has to be dense enough to read as a ribbon rather than a row of
+    /// separate shots. Consecutive rounds leave under 4° apart at the fire rate
+    /// and period actually configured.
+    func testConsecutiveRoundsLeaveCloseEnoughToReadAsARibbon() {
+        let roundsPerHalfSweep = (GameScene.gatlingSweepPeriod / 2)
+            / GameScene.gatlingInterval
+        XCTAssertGreaterThan(roundsPerHalfSweep, 8, "any sparser reads as scatter")
+        let arc = atan(GameScene.gatlingMaxLean) * 2 * 180 / .pi
+        XCTAssertLessThan(Double(arc) / roundsPerHalfSweep, 4.0,
+                          "degrees between consecutive rounds")
+    }
+
+    /// The spray must not span the board: it is aimed by the sweep, and a fan
+    /// that covers everything at once is what the five-stream version got wrong.
+    func testTheSprayDoesNotSpanTheBoard() {
+        let widest = GameScene.gatlingMaxLean * GameScene.gatlingReach * 2
+        XCTAssertLessThan(widest, BoardNode.boardSize,
+                          "the full arc is \(Int(widest))pt across")
+        XCTAssertGreaterThan(widest, BoardNode.squareSize * 2,
+                             "and still wide enough to be a spray")
     }
 
     /// The barrage must not reach the whole board. Uncapped, it cleared
     /// everything from the ship's rank to the eighth wherever the fleet was, so
     /// collecting it ended the wave rather than rewarding the player.
-    func testTheBarrageDoesNotReachTheWholeBoard() {
+    func testTheSprayDoesNotReachTheWholeBoard() {
         XCTAssertLessThan(GameScene.gatlingReach, BoardNode.boardSize,
-                          "a barrage that spans the board leaves nothing to play for")
+                          "a spray that spans the board leaves nothing to play for")
         // Far enough to matter once the fleet has descended a rank or two.
         XCTAssertGreaterThanOrEqual(GameScene.gatlingReach, BoardNode.squareSize * 4)
     }
 
-    /// Total rounds a barrage puts up. The number that actually decides how much
-    /// of the board it clears, and the one that was 600.
-    func testABarrageIsAHundredAndFortyRoundsNotSixHundred() {
-        let volleys = (PowerUp.gatling.duration ?? 0) / GameScene.gatlingInterval
-        let rounds = Int(volleys.rounded()) * GameScene.gatlingLeans.count
-        XCTAssertEqual(rounds, 140)
-    }
-
-    /// Centre, ±8°, ±16°. Stored as slopes because `LaserNode.fire` takes
-    /// sideways travel per unit of forward travel, not an angle — so the angles
-    /// are worth checking rather than trusting the constants to be right.
-    func testTheSpreadIsCentrePlusMinusEightAndSixteen() {
-        let degrees = GameScene.gatlingLeans
-            .map { (atan($0) * 180 / .pi).rounded() }
-            .sorted()
-        XCTAssertEqual(degrees, [-16, -8, 0, 8, 16])
-    }
-
-    /// The fan must stay narrower than the board, or where the ship is standing
-    /// stops mattering and the barrage clears the position by itself. §13.2's
-    /// own ±40° put a single round 518pt sideways over a 618pt climb — wider
-    /// than the whole 512pt board.
-    func testTheSpreadIsNarrowerThanTheBoard() {
-        let reach: CGFloat = 700 - 82
-        let widest = (GameScene.gatlingLeans.map(abs).max() ?? 0) * reach
-        XCTAssertLessThan(widest * 2, BoardNode.boardSize,
-                          "the full fan is \(Int(widest * 2))pt across")
-        XCTAssertGreaterThan(widest, BoardNode.squareSize,
-                             "and still wide enough to be a spread")
+    /// Total rounds a spray can put up. The number that actually decides how
+    /// much of the board it clears, and the one that was 600.
+    func testASprayIsUnderAHundredRoundsNotSixHundred() {
+        let rounds = Int(((PowerUp.gatling.duration ?? 0)
+                          / GameScene.gatlingInterval).rounded())
+        XCTAssertEqual(rounds, 84)
+        XCTAssertLessThan(rounds, 140, "and fewer than the five-way version fired")
     }
 }

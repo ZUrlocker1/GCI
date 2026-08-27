@@ -183,9 +183,9 @@ Deviations
       belongs to the kill, not the effect
 - [x] **Pause is Escape only.** `P` was one of §5's two pause keys and is now
       this test key; nothing user-facing named it, so nothing had to change on
-      screen. Escape always pauses rather than first cancelling a chess
-      selection as §5 suggests — now that it is the only pause key, one that
-      sometimes needs two presses would be worse than one that never does
+      screen. Escape always pauses: §5's "cancel the chess selection first" was
+      never built and is not wanted — clicking a different square already
+      deselects, with a sound to confirm it
 - [x] The log names the test keys on its first line, so they are written down
       somewhere they will actually be seen. Startup logging was trimmed at the
       same time: the app-launch and state-transition lines said nothing a
@@ -517,7 +517,9 @@ One line each; the reasoning is in the commits and the code.
 - Friendly fire on your own king deflects rather than killing it
 - Destruction uses the kenney `explosionCrunch` ladder, graduated by length, in
   place of §12.12's gdc-bundle files (28 MB for four sounds, no better)
-- Pause is Escape, not §5's "Escape and `P`". `P` is the power-up test key
+- Pause is Escape, not §5's "Escape and `P`". `P` is the power-up test key, and
+  Escape always pauses rather than first cancelling a chess selection — clicking
+  another square already deselects
 
 ### Not yet verified in the running app
 
@@ -684,7 +686,7 @@ same answer every run.
 | 3 | repair, green-cyan hexes | Shield — absorbs one lethal hit, + 0.8s grace |
 | 4 | ice, pale blue, 0.6× speed | Time Freeze — 3s where only the player moves |
 | 5 | green scout | Rapid Fire, because it is the generally useful one |
-| 6 | spread, orange, 1.4× wide | Gatling — 15s of uncapped 5-way auto-fire at 8/s |
+| 6 | spread, orange, 1.4× wide | Spread Fire — 7s of uncapped swept spray, held |
 | 7 | bomb, crimson spikes, 2 HP | Nuke — a ring that clears every enemy round in flight |
 | 8 | green, then spread | two offers |
 | 9, 10 | green, then spread, then ice | three offers |
@@ -737,41 +739,64 @@ randomised per crossing, so a learned shape still has to be read.
   the chess turn timer, and drops the music to `rate = 0.5` — §13.2's one
   sanctioned use of `rate`. The player's own movement, fire and rounds in flight
   are untouched, which is the whole effect
-- **Gatling** took three passes to get down to a reward rather than an ending.
-  §13.2's version — fifteen seconds of ±20°/±40° at eight volleys a second,
-  flying the full height of the screen — swept **244% of the board area**: it
-  covered the whole position twice over, wherever the ship happened to be
-  standing, so collecting it ended the wave. Narrowing the fan alone still left
-  84%. What it is now:
+- **Spread Fire is a swept hose, not a fan** — Missile Command's spray. One
+  stream, twelve rounds a second, the angle oscillating through ±20° on a 1.8s
+  sweep, and it fires **only while the player holds the fire key**.
 
-  | | §13.2 | narrowed | now |
-  |---|---|---|---|
-  | duration | 15s | 15s | **7s** |
-  | volleys/sec | 8 | 8 | **4** |
-  | spread | ±20°, ±40° | ±8°, ±16° | ±8°, ±16° |
-  | range | full screen | full screen | **6 squares** |
-  | rounds fired | 600 | 600 | **140** |
-  | board area swept | 244% | 84% | **32%** |
+  It took three passes to get here, and the first two were the wrong axis.
+  §13.2's version was five simultaneous streams at fixed angles, auto-firing for
+  fifteen seconds and flying the full height of the screen: it swept **244% of
+  the board area**, covering the whole position twice over wherever the ship
+  happened to be, so collecting it ended the wave. Narrowing the fan to ±8°/±16°
+  still left 84%, and cutting the duration and rate still left 32% — because a
+  fixed fan means every angle is covered at once and there is nothing to aim.
 
-  The range cap is what changed its character rather than just its size: rounds
-  burn out at rank 5.4, so the barrage clears the pieces actually threatening
-  the ship and leaves the back ranks to be earned the ordinary way. They fade
-  over their last 0.18s — every other laser in the game expires off-screen, so
-  this is the only one that would otherwise blink out in plain view
-- **Barrage rounds pass through White's own pieces.** The ship auto-fires these
-  and the player aims none of them, so ordinary friendly fire made the reward
-  demolish White's position as a side effect of being used. Done by dropping
-  `friendlyPiece` from the round's contact mask rather than by ignoring the hit:
-  a round that will do nothing should fly through, not be consumed by a piece it
-  left unharmed
-- **Gatling** fires outside `SpaceshipState` entirely rather than raising the
-  cap. The cap counts rounds in flight and frees a slot as each resolves; a
-  barrage borrowing those slots would leave the count wherever the last volley
-  stranded it and the player would come out of the barrage unable to fire. The
-  player laser pool is 32: measured, a volley is 3.77 round-seconds over a 384pt
-  range, so four a second put 15.1 in the air. It was briefly 72, sized for the
-  uncut barrage — an under-sized pool does not fail loudly, it silently drops
-  arms of the spread and the barrage just looks thinner
+  | | §13.2 | narrowed | cut back | now |
+  |---|---|---|---|---|
+  | streams | 5 fixed | 5 fixed | 5 fixed | **1 swept** |
+  | duration | 15s | 15s | 7s | 7s |
+  | rounds/sec | 40 | 40 | 20 | **12** |
+  | angle | ±20°, ±40° | ±8°, ±16° | ±8°, ±16° | **±20° swept** |
+  | range | full screen | full screen | 6 squares | 6 squares |
+  | rounds fired | 600 | 600 | 140 | **84** |
+
+  A single sweeping stream is a different weapon rather than a smaller one: only
+  one round is ever on its way to a given place, so the player is pointing a hose
+  instead of standing behind a wall of fire, and ±20° can be generous precisely
+  because coverage now costs time
+- **Only while the trigger is held.** §13.2 has the ship auto-fire for the
+  duration, which sounds generous and plays badly: the power-up took the trigger
+  away at the exact moment it handed over the firepower, so the most powerful
+  thing in the game was also the one moment the player was not shooting. Needed
+  a new `GameAction.stopFiring` on the fire key's release — ordinary fire is one
+  shot per press and never needed it. Cleared on pause, on death and on a level
+  change, since a key-up that lands while the scene is not listening is lost and
+  the hose would still be running on resume
+- The sweep's phase advances whether or not the trigger is down, so releasing and
+  pressing again picks the hose up where it had got to rather than restarting the
+  arc from centre. The period is chosen against the fire rate rather than by
+  feel: at twelve rounds a second, 1.8s puts 10.8 rounds in each half-sweep,
+  which is 3.7° and about 24pt apart at full reach — dense enough to read as a
+  ribbon rather than a row of separate shots
+- **The range cap survives from the cut-back pass** and still does most of the
+  work: rounds burn out at rank 5.4, so the spray clears the pieces actually
+  threatening the ship and leaves the back ranks to be earned the ordinary way.
+  They fade over their last 0.18s — every other laser in the game expires
+  off-screen, so this is the only one that would otherwise blink out in view
+- **Spray rounds pass through White's own pieces.** There are a great many of
+  them and the sweep aims them rather than the player, so ordinary friendly fire
+  made the reward demolish White's position as a side effect of being used. Done
+  by dropping `friendlyPiece` from the round's contact mask rather than by
+  ignoring the hit: a round that will do nothing should fly through, not be
+  consumed by a piece it left unharmed
+- **Spread Fire fires outside `SpaceshipState` entirely** rather than raising the
+  cap. The cap counts rounds in flight and frees a slot as each resolves; a spray
+  borrowing those slots would leave the count wherever the last round stranded it
+  and the player would come out of the power-up unable to fire. The player laser
+  pool is 24: measured, a round is in the air 0.79s over its 384pt range, so
+  twelve a second put 9.4 up at once, plus the manual cap of 6. It has been 72
+  and 32 on the way here — an under-sized pool does not fail loudly, it silently
+  drops rounds and the spray just looks thinner than it should
 - **Nuke** expands a magenta-to-white ring over 0.4s, clearing enemy rounds as
   it reaches them with a spark at each. Pieces and raiders are untouched
 - **Shield** is a hexagon, not a circle, so it can never be confused with the

@@ -102,7 +102,7 @@ final class InputHandler {
         case 124:       // → arrow
             return isDown ? .moveRight : .stopMoving
         case 49:        // Space
-            return isDown ? .fireLaser : nil
+            return isDown ? .fireLaser : .stopFiring
         // Escape only. §5 gives pause both Escape and P; P is now the hidden
         // power-up test key, and the scene's handler claims it ahead of this
         // one. Escape is the sole pause key, so it always pauses rather than
