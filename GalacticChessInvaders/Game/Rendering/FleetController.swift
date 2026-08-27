@@ -60,8 +60,22 @@ final class FleetController {
     var onBreach: BreachHandler?
     var onRankDescended: DescentHandler?
 
+    /// One container per rank slot, all children of `fleetNode`, carrying the
+    /// *horizontal* sweep and nothing else. Vertical drops and the descent
+    /// stay on `fleetNode`, so the trickiest existing machinery is untouched.
+    ///
+    /// Slot 0 is the formation's rear. Nothing ever re-parents on a descent:
+    /// every member moves down one rank together, so the *set* in each slot is
+    /// unchanged and only its absolute rank shifts. That is what makes per-rank
+    /// sweeping a contained change rather than a rewrite of the descent.
+    private var rankNodes: [SKNode] = []
+    /// Sweep direction per slot, since the ranks are no longer in step.
+    private var directions: [CGFloat] = []
+    private static let rankSlots = 8
+
     private static let sweepKey = "fleetSweep"
     private static let telegraphKey = "fleetTelegraph"
+    private static let staggerKey = "rankStagger"
     private static let halfDropDuration: TimeInterval = 0.18
 
     init(board: GCIBoard, parent: SKNode, squareSize: CGFloat, level: LevelParameters) {
@@ -71,6 +85,30 @@ final class FleetController {
         self.levelParameters = level
         fleetNode.zPosition = 5
         parent.addChild(fleetNode)
+        buildRankNodes()
+    }
+
+    private func buildRankNodes() {
+        rankNodes = (0..<Self.rankSlots).map { _ in
+            let node = SKNode()
+            fleetNode.addChild(node)
+            return node
+        }
+        directions = Array(repeating: 1, count: Self.rankSlots)
+    }
+
+    /// Which container a square belongs to, counted forward from the
+    /// formation's rear. Clamped, so a straggler rejoining from behind the
+    /// fleet lands in the rear slot rather than off the end.
+    private func slot(forSquare square: String) -> Int {
+        let rank = Int(String(square.suffix(1))) ?? rearRank
+        return max(0, min(Self.rankSlots - 1, rearRank - rank))
+    }
+
+    /// Blitz gives each rank its own phase; everywhere else the fleet is one
+    /// body, which is what makes it a fleet.
+    private var phaseLag: CGFloat {
+        levelParameters.blitz ? FleetRules.rankPhaseLag : 0
     }
 
     // MARK: - Membership
@@ -81,7 +119,7 @@ final class FleetController {
         node.removeFromParent()
         node.position = centre
         node.alpha = 1
-        fleetNode.addChild(node)
+        rankNodes[slot(forSquare: square)].addChild(node)
         members[square] = node
     }
 
@@ -96,15 +134,23 @@ final class FleetController {
     func adopt(_ node: SKNode, square: String, atLogicalCentre centre: CGPoint,
                slidingFrom drawn: CGPoint, duration: TimeInterval = 0.2) {
         adopt(node, square: square, atLogicalCentre: centre)
-        node.position = CGPoint(x: drawn.x - fleetNode.position.x,
-                                y: drawn.y - fleetNode.position.y)
+        let carried = sweepOffset(of: node)
+        node.position = CGPoint(x: drawn.x - carried.x, y: drawn.y - carried.y)
         let slide = SKAction.move(to: centre, duration: duration)
         slide.timingMode = .easeOut
         node.run(slide)
     }
 
     /// Is this node already marching?
-    func isMember(_ node: SKNode) -> Bool { node.parent === fleetNode }
+    func isMember(_ node: SKNode) -> Bool { contains(node) }
+
+    /// Everything between this node and the board: its rank's sweep plus the
+    /// fleet's own drop.
+    private func sweepOffset(of node: SKNode) -> CGPoint {
+        let rank = node.parent?.position ?? .zero
+        return CGPoint(x: rank.x + fleetNode.position.x,
+                       y: rank.y + fleetNode.position.y)
+    }
 
     /// The fleet's current sweep offset, for callers computing where a member
     /// will end up on screen.
@@ -171,18 +217,33 @@ final class FleetController {
     func rekey(from: String, to square: String) -> Bool {
         guard let node = members.removeValue(forKey: from) else { return false }
         members[square] = node
+        // A piece that changed rank has to change rhythm with it, or it marches
+        // visibly out of step with the rank it is standing in.
+        let destination = rankNodes[slot(forSquare: square)]
+        if node.parent !== destination {
+            node.removeFromParent()
+            destination.addChild(node)
+        }
         DiagnosticsLog.shared.log(.fleet, "\(from)-\(square) in formation")
         return true
     }
 
-    func contains(_ node: SKNode) -> Bool { node.parent === fleetNode }
+    func contains(_ node: SKNode) -> Bool {
+        guard let parent = node.parent else { return false }
+        return rankNodes.contains { $0 === parent }
+    }
 
-    var pieceCount: Int { fleetNode.children.count }
+    /// Marching pieces, not scene-graph children: only `PieceNode`s count, so
+    /// anything else that ends up parented here cannot inflate the number the
+    /// sweep speed is derived from.
+    var pieceCount: Int {
+        rankNodes.reduce(0) { $0 + $1.children.filter { $0 is PieceNode }.count }
+    }
 
     /// Where a fleet piece actually appears, for hit detection and projectiles.
     func screenPosition(of node: SKNode) -> CGPoint {
-        CGPoint(x: node.position.x + fleetNode.position.x,
-                y: node.position.y + fleetNode.position.y)
+        let carried = sweepOffset(of: node)
+        return CGPoint(x: node.position.x + carried.x, y: node.position.y + carried.y)
     }
 
     // MARK: - Sweep
@@ -193,12 +254,41 @@ final class FleetController {
     func start() {
         guard !isRunning else { return }
         isRunning = true
-        if schedule.isSweeping { beginLeg() }
+        if schedule.isSweeping { beginSweep() }
+    }
+
+    /// Sets every rank marching, each one lagging the rank behind it.
+    ///
+    /// The lag is applied as a staggered *start* rather than a phase offset in
+    /// a shared clock: every rank runs the same leg at the same speed, so once
+    /// they are staggered they stay that way, and there is no shared clock to
+    /// drift against. At `phaseLag == 0` every stagger is zero and all eight
+    /// ranks move as one — which is the fleet's original behaviour, exactly.
+    private func beginSweep() {
+        let cycle = legDuration * 2          // left and back is one full cycle
+        for slot in rankNodes.indices {
+            let stagger = TimeInterval(phaseLag / (2 * .pi)) * cycle * TimeInterval(slot)
+            guard stagger > 0 else { beginLeg(slot: slot); continue }
+            rankNodes[slot].run(.sequence([
+                .wait(forDuration: stagger),
+                .run { [weak self] in self?.beginLeg(slot: slot) },
+            ]), withKey: Self.staggerKey)
+        }
+    }
+
+    /// How long one leg takes at the current speed — only used to size the
+    /// stagger, so an estimate from the opening speed is enough.
+    private var legDuration: TimeInterval {
+        let speed = FleetRules.sweepSpeed(level: levelParameters,
+                                          piecesRemaining: max(1, pieceCount))
+        guard speed > 0 else { return 1 }
+        return TimeInterval(amplitude * 2 / speed)
     }
 
     func stop() {
         isRunning = false
         fleetNode.removeAllActions()
+        rankNodes.forEach { $0.removeAllActions() }
     }
 
     /// Freezes the sweep and drop where they are. The beat is gated on
@@ -214,6 +304,7 @@ final class FleetController {
         fleetNode.alpha = 1
         fleetNode.removeAllChildren()
         fleetNode.position = .zero
+        buildRankNodes()
         schedule.reset()
         direction = 1
         ranksDescended = 0
@@ -227,17 +318,22 @@ final class FleetController {
     func snapToTruePosition(duration: TimeInterval = 0.3) {
         isRunning = false
         fleetNode.removeAllActions()
+        rankNodes.forEach { $0.removeAllActions() }
         fleetNode.alpha = 1
         let settle = SKAction.move(to: .zero, duration: duration)
         settle.timingMode = .easeOut
         fleetNode.run(settle)
+        // Every rank has its own offset now, so every rank has to come home.
+        rankNodes.forEach { $0.run(settle) }
     }
 
     /// One left-or-right leg of the shuffle. Speed is recomputed per leg, so the
     /// fleet accelerates as it is thinned without rebuilding a repeating action.
     /// Reaching the end of a leg only reverses direction — it never descends.
-    private func beginLeg() {
-        guard isRunning, pieceCount > 0 else { return }
+    private func beginLeg(slot: Int) {
+        guard isRunning, pieceCount > 0, rankNodes.indices.contains(slot) else { return }
+        let rankNode = rankNodes[slot]
+        let direction = directions[slot]
 
         let target = direction > 0 ? amplitude : -amplitude
         var speed = FleetRules.sweepSpeed(level: levelParameters,
@@ -247,7 +343,7 @@ final class FleetController {
         }
         guard speed > 0 else { return }
 
-        if abs(speed - lastLoggedSpeed) > 0.5 {
+        if slot == 0, abs(speed - lastLoggedSpeed) > 0.5 {
             lastLoggedSpeed = speed
             DiagnosticsLog.shared.log(.fleet,
                 "sweep \(Int(speed))px/s, \(pieceCount) pieces")
@@ -257,20 +353,22 @@ final class FleetController {
         // and holds, so it marches instead of drifting. Overall pace is unchanged
         // — the hold is sized from the same points-per-second.
         let steps = FleetRules.sweepSteps
-        let delta = (target - fleetNode.position.x) / CGFloat(steps)
+        let delta = (target - rankNode.position.x) / CGFloat(steps)
         let hold = TimeInterval(abs(delta) / speed)
         let step = SKAction.sequence([.moveBy(x: delta, y: 0, duration: 0),
                                       .wait(forDuration: hold)])
         let turn = SKAction.run { [weak self] in
             guard let self else { return }
             // Land exactly on the amplitude: eight divisions of a float would
-            // otherwise let the fleet creep off true over a long level.
-            self.fleetNode.position.x = target
-            if self.direction < 0 { self.registerLeftEdgeArrival() }
-            self.direction *= -1
-            self.beginLeg()
+            // otherwise let the rank creep off true over a long level.
+            rankNode.position.x = target
+            // Counted from the rear rank alone. Every rank arriving at its own
+            // left edge would multiply Blitz's widening by eight.
+            if slot == 0, direction < 0 { self.registerLeftEdgeArrival() }
+            self.directions[slot] = -direction
+            self.beginLeg(slot: slot)
         }
-        fleetNode.run(.sequence([.repeat(step, count: steps), turn]), withKey: Self.sweepKey)
+        rankNode.run(.sequence([.repeat(step, count: steps), turn]), withKey: Self.sweepKey)
     }
 
     /// Blitz's escalation, driven by laps rather than by the clock so the
@@ -303,7 +401,7 @@ final class FleetController {
         let step = schedule.registerBeat()
         if wasHolding, schedule.isSweeping {
             DiagnosticsLog.shared.log(.fleet, "sweep begins")
-            beginLeg()
+            beginSweep()
         }
         switch step {
         case .none:
@@ -409,12 +507,15 @@ final class FleetController {
     /// test pins it, because the failure is silent and ruins readability.
     var sweepWidth: CGFloat { amplitude * 2 }
 
-    /// How far the formation currently sits from its true squares.
-    var lateralOffset: CGFloat { fleetNode.position.x }
+    /// How far the formation currently sits from its true squares — the widest
+    /// any single rank has strayed.
+    var lateralOffset: CGFloat {
+        rankNodes.map { abs($0.position.x + fleetNode.position.x) }.max() ?? 0
+    }
 
     /// True while the formation is drawn anywhere other than on its own squares —
     /// mid-shuffle, or resting on a half-rank.
     var isOffTruePosition: Bool {
-        abs(fleetNode.position.x) > 1 || abs(fleetNode.position.y) > 1
+        abs(fleetNode.position.y) > 1 || lateralOffset > 1
     }
 }

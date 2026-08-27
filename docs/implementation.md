@@ -263,7 +263,7 @@ left the game with no ending at all.
 | 7 | CROSSFIRE | Bishops fire diagonals on their own cadence |
 | 8 | ARMORED PAWNS | Half of every regenerated pawn arrives immune to lasers for three White moves |
 | 9 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
-| 10 | BLITZ! | 3s clock, three marching ranks, a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th — **and Crossfire and Armored Pawns both back** |
+| 10 | BLITZ! | ranks sweep out of phase with each other (`FleetRules.rankPhaseLag`), plus: 3s clock, three marching ranks, a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th — **and Crossfire and Armored Pawns both back** |
 
 Escalations persist except where a level's identity depends on not persisting.
 Levels 7–9 each own a mechanic outright and hand it back, and Blitz takes them
@@ -455,6 +455,16 @@ the board" is answerable and tested in one place.
       sprite and a HUD icon going out. Glass in two opposed sprays, since the
       ship is coming apart rather than being shot through. The last life gets the
       heavy shake and white flash otherwise reserved for a king
+- [x] **Per-rank sweep at Blitz** — each rank lags the rank behind it, so a
+      wave travels down the formation instead of the whole fleet moving as one
+      body. `FleetRules.rankPhaseLag` is the entire feature and it is a dial:
+      `.pi/4` ships (neighbouring ranks stay within half a square, files still
+      read), `.pi` is the counter-march (twice the shear, expect the grid to
+      stop reading), `0` restores the single-body sweep exactly. Built as one
+      container per rank slot carrying only horizontal movement — drops and the
+      rank descent stay on the fleet node, and nothing re-parents on a descent
+      because every member moves down together, so the set in each slot never
+      changes
 - [x] **Venting at ≤50% HP** — drifting embers in the piece's glow colour, one
       every 0.28s, self-removing. Deviates from §20's "smoke": grey is mud here.
       Flicker at Critical was already in place from 2.2

@@ -54,7 +54,11 @@ final class ScoreManager {
         // truncating quietly paid 37 on every scaled capture.
         let points = scaled(base)
         currentScore += points
-        DiagnosticsLog.shared.log(.score, "\(source.isEmpty ? "" : "\(source) ")+\(points) (×\(multiplier)) → \(currentScore)")
+        // No running total: the HUD is showing it, and repeating it on every
+        // line makes the one number that matters here — what this kill paid —
+        // the hardest thing to find.
+        DiagnosticsLog.shared.log(.score,
+            "\(source.isEmpty ? "" : "\(source) ")+\(points) (×\(multiplier))")
     }
 
     func advanceLevel() {
