@@ -78,6 +78,9 @@ final class RaiderController {
     /// raiders a wave sees depends on how long the player takes to hit them,
     /// which is the right thing for it to depend on.
     private var remaining: [PowerUp] = []
+    /// The level's roster as it started, kept alongside `remaining` so the `R`
+    /// test key has something to walk after the clock has gone quiet.
+    private var fullRoster: [PowerUp] = []
     /// Where the `R` test key is up to. Its own cursor rather than the roster
     /// itself, so walking the list to look at something never reorders what the
     /// clock will actually send.
@@ -93,6 +96,7 @@ final class RaiderController {
         scouts.forEach { $0.stop() }
         setWarble(false)
         remaining = PowerUps.roster(forLevel: level)
+        fullRoster = remaining
         rosterCount = remaining.count
         summonCursor = 0
         self.kindsSeen = kindsSeen
@@ -196,21 +200,27 @@ final class RaiderController {
     ///
     /// Successive presses walk the level's whole list — green, then spread, then
     /// ice on Level 9 — and wrap, so every raider a level can send is reachable
-    /// without having to shoot the one in front of it first. The cursor is
-    /// separate from the roster, so looking at the third raider does not change
-    /// what the clock sends next or what a kill advances past.
+    /// without having to shoot the one in front of it first.
     ///
-    /// Returns what went up, or nil if there is nothing to send: the roster is
-    /// exhausted, or one is already crossing.
+    /// It walks `fullRoster`, not `remaining`, which makes it a genuine
+    /// override: the level's raids normally end once the player brings one down
+    /// (`RaiderRules.endsAfterAKill`), and a test key that went quiet at exactly
+    /// the same moment would be useless for the case it exists to test —
+    /// checking a power-up you have *already* collected once this wave. Its own
+    /// cursor, too, so walking the list never reorders what the clock sends next
+    /// or what a kill advances past.
+    ///
+    /// Returns what went up, or nil if there is nothing to send: the level has
+    /// no roster at all, or one is already crossing.
     @discardableResult
     func summonNext() -> PowerUp? {
-        guard !remaining.isEmpty,
+        guard !fullRoster.isEmpty,
               let scout = scouts.first(where: { !$0.isCrossing }),
               onScreen < RaiderRules.maxScoutsOnScreen else { return nil }
-        let index = summonCursor % remaining.count
+        let index = summonCursor % fullRoster.count
         summonCursor = index + 1
-        launch(scout, carrying: remaining[index])
-        return remaining[index]
+        launch(scout, carrying: fullRoster[index])
+        return fullRoster[index]
     }
 
     func setPaused(_ paused: Bool) {
