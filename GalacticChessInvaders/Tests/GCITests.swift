@@ -4776,13 +4776,26 @@ final class PowerUpTests: XCTestCase {
                              "a starved pool silently drops arms of the spread")
     }
 
-    /// §13.2's centre, ±20°, ±40°. Stored as slopes because `LaserNode.fire`
-    /// takes sideways travel per unit of forward travel, not an angle — so the
-    /// angles are worth checking rather than trusting the constants to be right.
-    func testTheSpreadIsCentrePlusMinusTwentyAndForty() {
+    /// Centre, ±8°, ±16°. Stored as slopes because `LaserNode.fire` takes
+    /// sideways travel per unit of forward travel, not an angle — so the angles
+    /// are worth checking rather than trusting the constants to be right.
+    func testTheSpreadIsCentrePlusMinusEightAndSixteen() {
         let degrees = GameScene.gatlingLeans
             .map { (atan($0) * 180 / .pi).rounded() }
             .sorted()
-        XCTAssertEqual(degrees, [-40, -20, 0, 20, 40])
+        XCTAssertEqual(degrees, [-16, -8, 0, 8, 16])
+    }
+
+    /// The fan must stay narrower than the board, or where the ship is standing
+    /// stops mattering and the barrage clears the position by itself. §13.2's
+    /// own ±40° put a single round 518pt sideways over a 618pt climb — wider
+    /// than the whole 512pt board.
+    func testTheSpreadIsNarrowerThanTheBoard() {
+        let reach: CGFloat = 700 - 82
+        let widest = (GameScene.gatlingLeans.map(abs).max() ?? 0) * reach
+        XCTAssertLessThan(widest * 2, BoardNode.boardSize,
+                          "the full fan is \(Int(widest * 2))pt across")
+        XCTAssertGreaterThan(widest, BoardNode.squareSize,
+                             "and still wide enough to be a spread")
     }
 }

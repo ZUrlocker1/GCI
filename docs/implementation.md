@@ -686,6 +686,18 @@ randomised per crossing, so a learned shape still has to be read.
   the chess turn timer, and drops the music to `rate = 0.5` — §13.2's one
   sanctioned use of `rate`. The player's own movement, fire and rounds in flight
   are untouched, which is the whole effect
+- **Gatling** is centre, ±8°, ±16° — much narrower than §13.2's ±20°/±40°, and
+  narrower than its own fallback of ±15°/±30°. At ±40° a round covered 518pt of
+  lateral travel climbing a 618pt board, wider than the entire 512pt board, so
+  fifteen seconds of it swept the position clear wherever the ship stood and
+  where the player aimed stopped mattering. The fan is now about five squares
+  wide at the top of the board
+- **Barrage rounds pass through White's own pieces.** The ship auto-fires these
+  and the player aims none of them, so ordinary friendly fire made the reward
+  demolish White's position as a side effect of being used. Done by dropping
+  `friendlyPiece` from the round's contact mask rather than by ignoring the hit:
+  a round that will do nothing should fly through, not be consumed by a piece it
+  left unharmed
 - **Gatling** fires outside `SpaceshipState` entirely rather than raising the
   cap. The cap counts rounds in flight and frees a slot as each resolves; a
   barrage borrowing those slots would leave the count wherever the last volley

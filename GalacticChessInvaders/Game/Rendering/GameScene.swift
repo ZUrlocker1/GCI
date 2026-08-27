@@ -2353,9 +2353,22 @@ class GameScene: SKScene {
     /// ended, and the player would come out of fifteen glorious seconds unable
     /// to fire. Barrage rounds are simply not the ship's rounds.
     static let gatlingInterval: TimeInterval = 1.0 / 8
-    /// Centre, ±20°, ±40° (§13.2), as slopes — `LaserNode.fire` takes sideways
-    /// travel per unit of forward travel, not an angle.
-    static let gatlingLeans: [CGFloat] = [0, 0.364, -0.364, 0.839, -0.839]
+    /// Centre, ±8°, ±16°, as slopes — `LaserNode.fire` takes sideways travel per
+    /// unit of forward travel, not an angle.
+    ///
+    /// §13.2 specifies ±20°/±40° and flags its own doubt about it ("if
+    /// playtesting shows it trivialises too much, narrow the spread"). It did:
+    /// at ±40° a round covered 518pt of lateral travel on its way up a 618pt
+    /// board — wider than the entire 512pt board — so fifteen seconds of it
+    /// swept the whole position clear regardless of where the ship was standing,
+    /// and where the player aimed stopped mattering.
+    ///
+    /// Narrower than the doc's own fallback of ±15°/±30°, because the problem
+    /// was not the exact angle but that the fan covered everything: at ±16° the
+    /// outermost round travels 177pt sideways, so the whole spread is about five
+    /// squares wide at the top of the board. Still unmistakably a spread, and
+    /// still something the player has to point at a target.
+    static let gatlingLeans: [CGFloat] = [0, 0.1405, -0.1405, 0.2867, -0.2867]
 
     private func advanceGatling(_ dt: TimeInterval) {
         guard powerUps.isGatling, !isShipDown, !isBeatSuspended,
@@ -2369,10 +2382,13 @@ class GameScene: SKScene {
         for lean in Self.gatlingLeans {
             guard let laser = laserPool.nextAvailable(owner: .player) else { break }
             laser.onDeactivate = nil
+            // Barrage rounds pass straight through White's pieces. The player
+            // is not aiming these — the ship auto-fires them — so friendly fire
+            // would make the reward demolish their own position for them.
             laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
                        speed: ProjectileState.playerLaserSpeed,
                        travelDistance: reach, lean: lean,
-                       tint: NeonPalette.orange)
+                       tint: NeonPalette.orange, sparesFriendlies: true)
         }
         AudioManager.shared.play(.playerLaserFire)
     }

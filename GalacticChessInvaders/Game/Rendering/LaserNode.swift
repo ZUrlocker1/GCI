@@ -140,12 +140,25 @@ final class LaserNode: SKSpriteNode {
         owner == .player ? PhysicsCategory.playerLaser : PhysicsCategory.enemyShot
     }
 
+    /// Set on a round that must not touch White's own pieces.
+    ///
+    /// §13.2's Gatling Barrage sprays five rounds at once without the player
+    /// aiming any of them, so ordinary friendly fire would have the power-up
+    /// demolish White's position as a side effect of being used. Handled by
+    /// dropping `friendlyPiece` from the contact mask rather than by ignoring
+    /// the hit in the resolver: a round that is not going to do anything should
+    /// fly *through*, not be consumed by a piece it left unharmed.
+    private var sparesFriendlies = false
+
     private var liveContactMask: UInt32 {
-        owner == .player
-            ? (PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece
-               | PhysicsCategory.enemyShot | PhysicsCategory.raider)
-            : (PhysicsCategory.friendlyPiece | PhysicsCategory.ship
-               | PhysicsCategory.playerLaser)
+        guard owner == .player else {
+            return PhysicsCategory.friendlyPiece | PhysicsCategory.ship
+                 | PhysicsCategory.playerLaser
+        }
+        var mask = PhysicsCategory.enemyPiece | PhysicsCategory.enemyShot
+                 | PhysicsCategory.raider
+        if !sparesFriendlies { mask |= PhysicsCategory.friendlyPiece }
+        return mask
     }
 
     @available(*, unavailable)
@@ -179,9 +192,12 @@ final class LaserNode: SKSpriteNode {
     /// `tint` overrides the round's own colour — a raider's shot is acid green
     /// (§12) whoever's pool it came out of.
     func fire(from origin: CGPoint, damage: Int, speed: CGFloat,
-              travelDistance: CGFloat, lean: CGFloat = 0, tint: SKColor? = nil) {
+              travelDistance: CGFloat, lean: CGFloat = 0, tint: SKColor? = nil,
+              sparesFriendlies: Bool = false) {
         guard speed > 0, travelDistance > 0 else { return }
         state = ProjectileState(owner: owner, damage: damage, speed: speed)
+        // Before the masks are read below.
+        self.sparesFriendlies = sparesFriendlies
         position = origin
         isHidden = false
         // Only a live laser tests for contacts, so a parked one sitting on top
