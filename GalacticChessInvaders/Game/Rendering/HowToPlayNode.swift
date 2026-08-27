@@ -110,7 +110,17 @@ final class HowToPlayNode: SKNode {
 
         // — SCORING —
         heading("SCORING", Self.magenta, x: x, y: 310)
-        scoringGrid(x: x, topY: 274)
+        scoringGrid(x: x, topY: 280)
+
+        // — DEBUG KEYS —
+        // Deliberately plain, and last. The panel ships, so these are reachable
+        // by anyone — but they are a way to look behind the game, not part of
+        // playing it, and the layout should say so.
+        heading("DEBUG KEYS", Self.cyan.withAlphaComponent(0.55), x: x, y: 150)
+        let keys = label("L  log   ·   A  auto   ·   P  power-up   ·   R  raider   ·   V  level",
+                         11, SKColor.white.withAlphaComponent(0.6), .left)
+        keys.position = CGPoint(x: x, y: 132)
+        addChild(keys)
     }
 
     // MARK: - Footer
@@ -141,8 +151,11 @@ final class HowToPlayNode: SKNode {
             ("bishop","50"), ("pawn",    "25"),
         ]
         let colW: CGFloat = 200
-        let rowH: CGFloat = 60
-        let iconH: CGFloat = 40
+        // 44 rather than 60. The icons are 34pt tall, so this leaves 10pt
+        // between rows — enough to read as a grid, and it reclaims 48pt for the
+        // debug key line underneath.
+        let rowH: CGFloat = 44
+        let iconH: CGFloat = 34
 
         for (i, (piece, pts)) in items.enumerated() {
             let col = CGFloat(i % 2)
