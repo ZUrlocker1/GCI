@@ -10,14 +10,23 @@ import SpriteKit
 @MainActor
 final class RaiderNode: SKSpriteNode {
 
-    private static let displayHeight: CGFloat = 40
+    /// A quarter smaller than the first pass, which read as *bigger* than the
+    /// chess pieces it flies past — wrong for something that is meant to be a
+    /// passing bonus rather than part of the fleet.
+    private static let displayHeight: CGFloat = 30
     private static let crossKey = "cross"
+    private static let woopKey = "woop"
+    /// A two-tone every 0.85s: the file is 0.72s, so they read as separate
+    /// woops rather than as a continuous tone.
+    private static let woopInterval: TimeInterval = 0.85
 
     /// Fired as the scout reaches its firing point, with its current position.
     var onFire: ((CGPoint) -> Void)?
     /// Fired when the crossing finishes or the scout is destroyed — either way
     /// the slot is free again.
     var onExit: (() -> Void)?
+
+    private static let hullGrey = SKColor(red: 0.20, green: 0.30, blue: 0.24, alpha: 1)
 
     private(set) var isCrossing = false
     private(set) var hp = 0
@@ -31,6 +40,18 @@ final class RaiderNode: SKSpriteNode {
         colorBlendFactor = 0.55      // acid green over the sprite's own outline
         zPosition = 8                // over the fleet, under the HUD
         isHidden = true
+
+        // A solid hull behind the outline. Every piece on this board is a
+        // hollow outline, which is right for chess pieces standing on squares
+        // — but a *ship* passing in front of them has to occlude them or it
+        // reads as a decal rather than as something flying over. Grey-green so
+        // it stays a machine and does not compete with the acid outline.
+        let hull = SKSpriteNode(texture: Silhouette.filled(forTexture: "ship-scout"),
+                                color: Self.hullGrey, size: size)
+        hull.colorBlendFactor = 1
+        hull.alpha = 0.96
+        hull.zPosition = -0.1        // under this node's outline, still over the board
+        addChild(hull)
 
         let body = SKPhysicsBody(rectangleOf: size)
         body.isDynamic = false
@@ -84,6 +105,12 @@ final class RaiderNode: SKSpriteNode {
             .moveBy(x: 0, y: 4, duration: 0.5),
             .moveBy(x: 0, y: -4, duration: 0.5),
         ])))
+
+        // Woop. Woop. Woop.
+        run(.repeatForever(.sequence([
+            .run { AudioManager.shared.play(.scoutEnterLoop) },
+            .wait(forDuration: Self.woopInterval),
+        ])), withKey: Self.woopKey)
     }
 
     /// Takes a hit. Returns true if that destroyed it.

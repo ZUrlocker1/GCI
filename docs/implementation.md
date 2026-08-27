@@ -407,17 +407,24 @@ The only things in the game that run on a real-time clock rather than the chess
 beat. Everything else — sweep, descent, fire, regeneration — is paced off the
 turn, so the board pulses together; a raider ignores that entirely.
 
-- **Raider Scout**, from Level 1: crosses at rank 4–5 on §21.1's `raiderInterval`
-  (20s, tightening to a 6s floor), fires one acid-green shot straight down, 1 HP,
-  100 points. Two on screen at once, and a spawn blocked by that cap stays due
-  rather than being skipped
-- **The first scout of a level does not fire** (§6's Galaga precedent) — the
-  player sees the attack pattern before being shot at. The height is fixed for
-  the level too, so a crossing teaches you where the next one will be
-- 300 px/s, derived rather than chosen: a crossing has to be short against the
-  interval or the scout is simply always there. It is 4.1s, which is 21% of
-  Level 1's interval and 69% of Level 10's, and fast enough that hitting one
-  needs leading
+- **Raider Scout** on §21.1's `raiderInterval` (20s, tightening to a 6s floor):
+  one acid-green shot straight down, 1 HP, 100 points, a two-tone woop every
+  0.85s while it crosses. Two on screen at once; a spawn blocked by the cap
+  stays due rather than being skipped
+- **Levels 1–3 fly it over the board**, above every piece, where Space
+  Invaders' mystery ship belongs. From Level 4 it drops into §6's rank 4–5,
+  which is a real escalation — down there it is firing into traffic. Fixed for
+  the level either way, so one crossing teaches where the next will be
+- **The first scout of a level does not fire** (§6's Galaga precedent), and on
+  Levels 1–2 it does not arrive at all until the fleet's rear rank is down to
+  half: the first one should be a reward for making progress, not one more
+  thing to parse on an untouched board
+- 300 px/s, derived rather than chosen — a crossing has to be short against the
+  interval or the scout is simply always there. It is 4.1s, and fast enough that
+  hitting one needs leading
+- Solid grey-green hull under the outline. Every piece on the board is a hollow
+  outline, which is right for pieces standing on squares; a ship passing in
+  front of them has to occlude them or it reads as a decal
 - `RaiderController` is the architecture the rest of 6.x hangs off — pool, cap
   and clock. §6.1's separate `Raiders.spriteatlas` is not built: the sprites are
   already in `GCI.spriteatlas`, and a second atlas costs a texture binding for

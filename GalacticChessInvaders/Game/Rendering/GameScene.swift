@@ -682,7 +682,8 @@ class GameScene: SKScene {
         raiderController.onExit = { [weak self] node, destroyed in
             self?.resolveRaiderExit(node, destroyed: destroyed)
         }
-        raiderController.reset(interval: levels.parameters.raiderInterval)
+        raiderController.reset(interval: levels.parameters.raiderInterval,
+                               level: levels.level)
         raiders = raiderController
         scorePops = ScorePopPool(parent: bloomNode)
         explosions = ExplosionPool(parent: bloomNode)
@@ -792,7 +793,7 @@ class GameScene: SKScene {
         shatters?.reset()
         regeneration.reset()
         materialising.removeAll()
-        raiders?.reset(interval: levels.parameters.raiderInterval)
+        raiders?.reset(interval: levels.parameters.raiderInterval, level: levels.level)
         for side in [PieceColor.black, .white] { setRespawnWarning(side, on: false) }
         shake = .none
         shakeElapsed = 0
@@ -2015,6 +2016,16 @@ class GameScene: SKScene {
 
     // MARK: - Raiders (§6)
 
+    /// How many black pieces still stand on the fleet's rear rank — the gate
+    /// early levels hold the scout behind.
+    private var rearRankPieces: Int {
+        guard let fleet else { return 0 }
+        let rear = fleet.rearRank
+        return board.allPieces(color: .black)
+            .filter { Self.rankIndex(of: $0.logicalSquare) == rear }
+            .count
+    }
+
     /// §6: "one projectile straight down from its current x-position", acid
     /// green, behaving like a black-piece shot — it damages white pieces and
     /// kills the ship. It comes out of the enemy pool for exactly that reason.
@@ -2606,7 +2617,8 @@ class GameScene: SKScene {
         // whole point of them (§6) — but they still hold during a banner or
         // once the game is decided.
         if !isBeatSuspended, stateMachine.currentState is PlayingState {
-            raiders?.update(deltaTime: dt, interval: levels.parameters.raiderInterval)
+            raiders?.update(deltaTime: dt, interval: levels.parameters.raiderInterval,
+                            level: levels.level, rearRankPieces: rearRankPieces)
         }
 
         if dt > 0, stateMachine.currentState is PlayingState {

@@ -56,7 +56,7 @@ enum SoundKey: String, CaseIterable {
     case fleetHeartbeat         // — generate with jsfxr (sub-bass double-thump, ~70 Hz)
 
     // ── Raider ships ──────────────────────────────────────────────────────────
-    case scoutEnterLoop         // spaceEngine_000.ogg       (kenney-sci-fi) — loop
+    case scoutEnterLoop         // twoTone1.ogg              (kenney-digital) — repeated
     case scoutLaserFire         // laserSmall_004.ogg        (kenney-sci-fi)
     case escortDetaches         // phaserUp3.ogg             (kenney-digital)
     case escortDives            // phaserDown2.ogg           (kenney-digital)
@@ -154,7 +154,10 @@ extension SoundKey {
         case .fleetRankDrop:            return "gdc-bundle/DSGNBass_Bass Drop & Downer Fast 12_344 Audio_Bass Drops & Downers Vol 2.caf"
         case .fleetHeartbeat:           return "generated/fleet-heartbeat.caf"
         // Raiders
-        case .scoutEnterLoop:           return "kenney-sci-fi/spaceEngine_000.caf"
+        // Repeated on a cadence rather than looped: a two-tone every 0.85s is
+        // the "woop woop woop" a mystery ship wants, where a sustained engine
+        // hum just sat under the mix.
+        case .scoutEnterLoop:           return "kenney-digital/twoTone1.caf"
         case .scoutLaserFire:           return "kenney-sci-fi/laserSmall_004.caf"
         case .escortDetaches:           return "kenney-digital/phaserUp3.caf"
         case .escortDives:              return "kenney-digital/phaserDown2.caf"
