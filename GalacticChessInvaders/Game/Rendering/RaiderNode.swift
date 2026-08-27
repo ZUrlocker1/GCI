@@ -389,10 +389,12 @@ final class RaiderNode: SKSpriteNode {
         guard isCrossing else { return false }
         hp -= 1
         guard hp <= 0 else {
-            // Unreachable today: every carrier has 1 HP, so the guard above
-            // always falls through. Kept for §6.1's Flagship, which has two and
-            // is the one ship large and slow enough for a survivable hit to read
-            // as a mechanic rather than as a miss.
+            // Unreachable: every carrier has 1 HP, so the guard above always
+            // falls through, and §6.1's Flagship — the one ship large and slow
+            // enough for a survivable hit to read as a mechanic rather than as a
+            // miss — is cut. Kept because `takeHit` returning a Bool is what the
+            // collision handler asks it, and a version that could only ever
+            // answer one way would be lying about the question.
             removeAction(forKey: Self.damagedKey)
             run(.repeat(.sequence([
                 .colorize(with: .white, colorBlendFactor: 1, duration: 0.06),

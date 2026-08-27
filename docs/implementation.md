@@ -11,11 +11,11 @@ notice, in the order they are worth doing:
 
 1. **Music and a settings screen** (5) — one track plays everywhere and there is
    no way to change the volume. Blocked only on choosing tracks
-2. **The rest of the raiders** (6.x) — the Scout and every power-up carrier fly;
-   the diving family (Escort, Flagship, Kamikaze) does not. Every sprite is
-   already in the atlas
-3. **Polish and release** (8, 9) — attract mode, a fourth starfield tier, then
+2. **Polish and release** (8, 9) — attract mode, a fourth starfield tier, then
    balance, icon, DMG and notarization
+
+The raiders are done and the rest of §6 is **cut** — no Escort, Flagship,
+Kamikaze or Llama. Gameplay is feature-complete; what is left is production.
 
 Full detail in **[Roadmap — what is left](#roadmap--what-is-left)** near the end
 of this file. §20's phase numbers were a plan written before any of this
@@ -32,8 +32,8 @@ existed; they are a checklist, not a running order.
 | 3.3 | Arcade layer: damage states & juice | ✅ |
 | 4 | Basic sound effects | 🟡 |
 | 5 | Background music + settings | ⬜ |
-| 6.1 | Raiders: scout & basic escort | 🟡 — Scout done, Escort next |
-| 6.2 | Raiders: flagship, variants, special scouts | 🟡 — special scouts and power-ups done |
+| 6.1 | Raiders: scout & basic escort | ✅ — Scout built, Escort cut |
+| 6.2 | Raiders: flagship, variants, special scouts | ✅ — special scouts built, Flagship and variants cut |
 | 7.1 | Level escalation: chess AI | ✅ — built with the level ladder |
 | 7.2 | Level escalation: arcade mechanics | ✅ |
 | 8 | Visual polish | 🟡 — score pops, banners, high scores, end screens done |
@@ -681,9 +681,9 @@ turn, so the board pulses together; a raider ignores that entirely.
 
 Hidden `R` sends the next raider in on demand — see Phase 2.1's dev aids.
 
-**Not built:** Galaxian Escort, Flagship, Kamikaze, King Protection Mode, the
-Minter tribute ships. All of them plug into `RaiderController`'s existing pool,
-cap, clock, roster and flight-path model; none needs new architecture.
+**Cut, not pending:** the Galaxian Escort, the Flagship, the Kamikaze and Paired
+and Looping variants, King Protection Mode, and the Llama. See "Cut from §6 and
+§7" in the roadmap for why. The Mutant Camel is built, as the Nuke's carrier.
 
 ## Phase 6.2 — Special Scouts & Power-Ups ✅
 
@@ -1028,28 +1028,27 @@ The largest single gap, and the only one a player would notice immediately.
 - [ ] **Music ducking** under priority SFX. `AudioManager.duckMusic` exists and
       is not called from anywhere
 
-### Raiders — the rest of §6 (§20 Phases 6.1, 6.2)
+### Cut from §6 and §7 — not building these
 
-The Scout and all five power-up carriers are done. What is left is the dive
-family, which needs a genuinely new motion model — everything built so far
-crosses the screen horizontally.
+Decided rather than deferred. The raider system has enough in it: five carriers,
+five power-ups, five flight paths and a roster that changes every level.
 
-- [ ] **Galaxian Escort** — peels off the fleet's rear rank, curved dive at the
-      ship's *last known* position, fires at the apex, exits. Reaching the
-      bottom strip costs a life. 150 pts
-- [ ] **Galaxian Flagship** — 2 HP, flanked by two Escorts that must die first,
-      immune while they live (white flash + clang so the rule teaches itself)
-- [ ] **Escort variants** — Kamikaze (fast, silent, straight at the ship),
-      Paired, Looping
-- [ ] **King Protection Mode** (§6.3) — raiders actively plug an open lane to the
-      black king. The most interesting unbuilt idea in the doc: it makes a clean
-      shot at the king something the game contests rather than something the
-      player waits for
-- [ ] **Minter tribute ships** (§6.4) — Llama on even level clears, Mutant Camel
-      on every third, flying across the score tally. Sprites are already in the
-      atlas; both sounds still need generating
-- [ ] `RaiderController`'s pool, cap, clock, roster and flight-path model are the
-      seam all of the above plug into — none of it needs new architecture
+- **Galaxian Escort, Flagship, Kamikaze, Paired and Looping Escorts** (§6.1,
+  §6.3). The whole dive family, which would have needed a new motion model —
+  everything built crosses the screen horizontally. What they were for, a raider
+  that comes *at* the player rather than past them, the Bomb Scout's swoop
+  already does
+- **King Protection Mode** (§6.3) — raiders plugging an open lane to the black
+  king. The best unbuilt idea in the doc, and it goes with the dive family it was
+  written for
+- **The Llama** (§6.4). The Mutant Camel flies as the Nuke carrier, so the Minter
+  homage is paid; a second tribute ship on the score tally would be repeating a
+  joke that has already landed. `ship-llama` stays in the atlas
+- **Fleet rush** (§7.2) — one random piece jumping two ranks after each descent.
+  Cut long before the others, for its own reasons, recorded under deviations
+- `RaiderController`'s pool, cap, clock, roster and flight-path model would have
+  carried all of it. It is a seam that will not now be used, which is the right
+  outcome to record rather than quietly leave open
 
 ### Gameplay decisions still open
 
@@ -1060,16 +1059,20 @@ yet.
       right when a promotion granted it and is arguable now that a scout does.
       Carrying it over would make the green scout the most valuable raider in the
       game, which may be the point or may be too much
-- [ ] **Levels 7–10 and the one-kill rule.** Raids currently end for the wave
-      once the player brings one down, at every level. By the late levels a
-      player is fast enough that this can happen very early and leave a long
-      quiet stretch — worth revisiting once those levels have been played
-      properly
+- [ ] **Level 7 goes quiet after one kill.** The rule is now roster exhaustion,
+      not a flat one-kill: raids stop when the level has nothing left to offer,
+      and the roster loses one entry per kill. Levels 8, 9 and 10 solved
+      themselves when they gained second, third and fourth offers — they need
+      2, 3 and 4 kills, at a 15s or 12s gap rather than 22s.
+
+      That leaves **Level 7** as the only late level with a single offer, so a
+      quick Nuke kill leaves Crossfire silent for the rest of a long, hard wave.
+      Either give it a second entry — bomb then green is the obvious pairing, and
+      it would give the Nuke a companion the way Blitz does — or leave it, on the
+      grounds that Crossfire is busy enough without raiders. Not decided
 - [ ] **Level 11+.** Level 10 (Blitz) is deliberately the last wave and clearing
       it wins the run. A twelfth mechanic would need a reason to exist beyond
       "harder"
-- [ ] **Fleet rush stays cut** (§7.2). Recorded under deviations with the
-      reasoning; listed here so it is a decision rather than an oversight
 
 ### Visual polish (§20 Phase 8)
 

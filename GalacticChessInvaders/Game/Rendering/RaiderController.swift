@@ -208,7 +208,7 @@ final class RaiderController {
     ///
     /// It walks `fullRoster`, not `remaining`, which makes it a genuine
     /// override: the level's raids normally end once the player brings one down
-    /// (`RaiderRules.endsAfterAKill`), and a test key that went quiet at exactly
+    /// once its roster is exhausted, and a test key that went quiet at exactly
     /// the same moment would be useless for the case it exists to test —
     /// checking a power-up you have *already* collected once this wave. Its own
     /// cursor, too, so walking the list never reorders what the clock sends next
