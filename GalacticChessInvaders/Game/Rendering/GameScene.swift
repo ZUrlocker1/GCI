@@ -333,7 +333,16 @@ class GameScene: SKScene {
 
     private func setupBloomNode() {
         bloomNode = SKEffectNode()
-        bloomNode.shouldRasterize = true
+        // Not rasterized. Rasterizing caches an effect node's rendered output
+        // and invalidates it whenever the subtree changes — and every moving
+        // thing in the game is a child of this node, so the cache is invalidated
+        // every frame and never once read. Applying the CIFilter forces an
+        // offscreen pass either way; what rasterizing added on top was a
+        // retained buffer and the bookkeeping to throw it away again.
+        //
+        // Apple's own guidance is to rasterize only when contents rarely change.
+        // §18.9 asked for it, written before there was anything moving inside.
+        bloomNode.shouldRasterize = false
         bloomNode.filter = CIFilter(name: "CIBloom", parameters: [
             "inputRadius": 6.0,
             "inputIntensity": 0.9

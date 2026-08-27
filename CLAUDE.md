@@ -104,7 +104,9 @@ GCI/
 
 ### Performance Rules
 - **Object pools** for lasers, score pop-ups, reticles — zero allocation during gameplay
-- **Single SKEffectNode** parent for all bloom content (`shouldRasterize = true`)
+- **Single SKEffectNode** parent for all bloom content. `shouldRasterize` is
+  **off**: the subtree changes every frame, so the cache is invalidated before it
+  is ever read and only costs a retained buffer
 - **Texture atlases** — use `GCI.spriteatlas` for all piece/ship sprites
 - **Delta-time movement** — all positions updated via `dt` parameter in `update(_:)`
 - **Never** mutate `node.position` in `update()` — use `SKAction` for all animation
