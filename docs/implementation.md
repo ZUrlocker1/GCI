@@ -996,7 +996,7 @@ is genuinely outstanding:
 - Starfield is ~170 batched sprites in one draw call; `SKShapeNode` cannot batch
   and would have cost one draw call each
 
-## Performance — done, and still open
+## Performance
 
 ### Done
 
@@ -1048,8 +1048,18 @@ FPS reported as swinging 75 → 19, node count **42,170**.
       2000-line cap, up to sixty times a second, at a cost that grew as the log
       filled. Identical text, six times fewer forced layouts
 
-**Result:** node count now stays under 900 across a session — flat, so the leak
-is gone — and CPU went from 38→84% to 38→58%.
+**Result.** Node count stays under 900 across a session — flat, so the leak is
+gone. CPU went from **38% rising to 84%** to **55% or less even on Level 10**,
+with FPS 45–63 and no visual change from dropping rasterization.
+
+| | before | after |
+|---|---|---|
+| CPU | 38% → 84% | ≤55% |
+| nodes | 42,170 | <900 |
+| FPS (averaged) | reported 75 → 19 | 45–63 |
+
+That is measured on a **Debug** build with the diagnostics sidebar open, which is
+the worst case and not what ships.
 
 Two caveats on any further measurement, because both make a Debug build on a
 laptop look worse than the thing that ships:
@@ -1063,36 +1073,29 @@ laptop look worse than the thing that ships:
   share of a slower core, so a percentage that drifts upward over ten minutes is
   not necessarily more work
 
-### Still open
+### Considered and not needed
 
-None of these is a known problem, and at 60fps steady none of them is why the
-frame rate moves. Ordered by expected return.
+Each was investigated and left alone. Recorded so they are decisions rather than
+oversights, and so the next person does not re-derive them.
 
-**`ignoresSiblingOrder` is not set on the view.** With explicit `zPosition`
-everywhere — which this codebase has — setting it lets SpriteKit reorder draws
-within a z-layer to batch by texture. Turn on `showsDrawCount` (it is wired to
-the sidebar) and see whether the count actually drops before keeping it.
-
-**Per-frame `SKLabelNode.text` writes.** `TurnTimerNode.refresh` writes both its
-labels every frame while White may move, interpolating a fresh `String` for the
-digits, so a value that changes once a second is rebuilt sixty times.
-`syncPowerUpAlley` does the same for up to three lines. Guarding each write on an
-actual change is a few lines.
-
-**`childNode(withName:)` in the per-frame path.** Five lookups a frame between
-`syncPowerUpAlley`, its countdown bar and `syncRespawnWarnings`, each a linear
-scan of `bloomNode`'s children. Holding the references removes roughly 500 string
-comparisons a frame.
-
-**`rearRankPieces` runs every frame on every level.** Passed as an argument to
-`raiders?.update(...)`, so it is evaluated unconditionally: two array allocations
-plus a string parse per piece, 60 times a second, and it is only *used* on Levels
-1–2 where `waitsForThinnedRearRank` is true.
-
-**CIBloom is a full-screen Core Image pass every frame.** The alternative is
-pre-blurred additive sprite copies per glowing node, which trades GPU fill for
-draw calls and node count. That is a large change to the look as well as the
-cost, so it is a last resort.
+- **`ignoresSiblingOrder`** is not set on the view. With explicit `zPosition`
+  everywhere it would let SpriteKit reorder draws within a z-layer to batch by
+  texture. Not worth it unless `showsDrawCount` (wired to the sidebar) shows a
+  count worth cutting
+- **Per-frame `SKLabelNode.text` writes.** `TurnTimerNode.refresh` writes both
+  labels every frame while White may move, so a value that changes once a second
+  is rebuilt sixty times; `syncPowerUpAlley` does the same for up to three lines.
+  Guarding each write on an actual change is a few lines, and worth doing if that
+  code is touched anyway — but it is not why anything is slow
+- **`childNode(withName:)` in the per-frame path** — five lookups a frame, each a
+  linear scan of `bloomNode`'s children
+- **`rearRankPieces` runs every frame on every level.** Passed as an argument to
+  `raiders?.update(...)`, so it is evaluated unconditionally: two array
+  allocations plus a string parse per piece, and it is only *used* on Levels 1–2
+- **CIBloom is a full-screen Core Image pass every frame.** The alternative is
+  pre-blurred additive sprite copies per glowing node, trading GPU fill for draw
+  calls and node count. A large change to the look as well as the cost, and the
+  look is the game's whole identity
 
 **Already handled, for the record:** the starfield is ~196 sprites sharing one
 texture in a single draw call; `Silhouette`'s flood fill is measured once per
