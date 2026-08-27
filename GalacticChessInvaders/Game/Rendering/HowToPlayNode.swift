@@ -63,11 +63,14 @@ final class HowToPlayNode: SKNode {
     private func buildHeader(w: CGFloat, h: CGFloat) {
         let hud = Self.hudBase
 
-        let title = label("HOW TO PLAY", 30, Self.cyan, .center)
+        // The game's name leads; "HOW TO PLAY" is what the panel is, not what it
+        // is about. 30pt over 23 characters is 690pt against 880pt of usable
+        // width, so it fits with room either side.
+        let title = label("GALACTIC CHESS INVADERS", 30, Self.cyan, .center)
         title.position = CGPoint(x: w / 2, y: hud - 36)
         addChild(title)
 
-        let sub = label("GALACTIC CHESS INVADERS", 14, Self.cyan.withAlphaComponent(0.65), .center)
+        let sub = label("HOW TO PLAY", 14, Self.cyan.withAlphaComponent(0.65), .center)
         sub.position = CGPoint(x: w / 2, y: hud - 68)
         addChild(sub)
 
