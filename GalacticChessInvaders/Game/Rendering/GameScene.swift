@@ -3627,11 +3627,18 @@ class GameScene: SKScene {
 
     override func keyDown(with event: NSEvent) {
         // X: hard restart — from How To Play, Pause, or straight out of play.
-        // Deliberately does not touch the high score table.
+        // It also puts the high score table back to ZACK/BEN/STEVE/WOZ/NOLAN,
+        // which is the whole point of a clean slate: the title screen it drops
+        // you on is where the table is displayed, so the reset is visible the
+        // moment it happens.
+        //
+        // Here rather than in `resetToTitle`, which is also the ordinary way
+        // back from game over — that path must leave the table alone.
         if howToPlayNode != nil
             || stateMachine.currentState is PausedState
             || stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "x" {
+            ScoreManager.shared.clearHighScores()
             resetToTitle()
             return
         }
