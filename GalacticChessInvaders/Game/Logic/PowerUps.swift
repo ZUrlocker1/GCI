@@ -93,18 +93,13 @@ enum PowerUp: String, CaseIterable {
     /// tribute with legs, and one of those is the right thing to see swooping at
     /// you carrying a nuclear weapon.
     ///
-    /// Repair and Ice stay on the plain scout disc with `RaiderNode`'s drawn
-    /// overlays — the hexagonal grid and the crystalline facets. Their atlas
-    /// sprites were tried and are still there (`ship-scout-repair`,
-    /// `ship-scout-ice`); the drawn versions read better in play, which is the
-    /// only test that counts.
-    var spriteName: String {
-        switch self {
-        case .rapidFire, .shield, .freeze: return "ship-scout"
-        case .gatling:                     return "ship-scout-spread"
-        case .nuke:                        return "ship-camel"
-        }
-    }
+    /// Every other carrier stays on the plain scout disc with `RaiderNode`'s
+    /// drawn overlays — the hexagonal grid, the crystalline facets, the row of
+    /// exhaust ports. All three have purpose-built sprites in the atlas
+    /// (`ship-scout-repair`, `-ice`, `-spread`, and `-bomb` besides) and all
+    /// three were tried that way; the drawn versions read better in play, which
+    /// is the only test that counts. The sprites stay in the atlas, unused.
+    var spriteName: String { self == .nuke ? "ship-camel" : "ship-scout" }
 
     /// Against the standard 30pt scout height.
     ///
@@ -118,21 +113,28 @@ enum PowerUp: String, CaseIterable {
     /// Measured instead: each multiplier is the one that makes the sprite's
     /// visible ink cover the same area as the scout's 49.6 × 21.2pt.
     ///
-    /// | carrier | × | visible ink | vs scout |
-    /// |---|---|---|---|
-    /// | green, repair, ice | 1.00 | 49.6 × 21.2 | 1.00 |
-    /// | spread | 1.50 | 38.2 × 28.4 | 1.03 |
-    /// | camel | 1.50 | 49.4 × 36.6 | 1.71 |
+    /// Both are applied to the sprite scaled to the standard 30pt height, so
+    /// equal multipliers preserve its aspect and unequal ones distort on
+    /// purpose.
     ///
-    /// Repair and Ice are the plain scout disc, so they need no correction. The
-    /// camel is the deliberate exception — §6.4 makes it the larger of the two
-    /// tribute ships, and a nuke carrier that reads as *big* is worth more than
-    /// one that reads as consistent.
+    /// The Spread Scout is the distortion: §13.2 calls it "visibly wider", a
+    /// "fat, squat disc", so it is 1.4 wide against 0.85 tall. The camel takes
+    /// 1.5 on both — §6.4 makes it the larger of the two tribute ships, and a
+    /// nuke carrier that reads as *big* is worth more than one that reads as
+    /// consistent.
     var heightMultiplier: Double {
         switch self {
-        case .rapidFire, .shield, .freeze: return 1.0
-        case .gatling:                     return 1.5
-        case .nuke:                        return 1.5
+        case .gatling: return 0.85
+        case .nuke:    return 1.5
+        default:       return 1.0
+        }
+    }
+
+    var widthMultiplier: Double {
+        switch self {
+        case .gatling: return 1.4
+        case .nuke:    return 1.5
+        default:       return 1.0
         }
     }
 

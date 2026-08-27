@@ -58,9 +58,12 @@ final class RaiderNode: SKSpriteNode {
     /// the last crossing's multipliers.
     private static func size(for powerUp: PowerUp) -> CGSize {
         let source = SKTexture(imageNamed: powerUp.spriteName).size()
-        let height = displayHeight * CGFloat(powerUp.heightMultiplier)
-        let scale = source.height > 0 ? height / source.height : 1
-        return CGSize(width: source.width * scale, height: height)
+        // Both multipliers apply to the sprite at the standard height, so the
+        // Spread Scout's 1.4 × 0.85 squashes it the way §13.2 asks and the
+        // camel's 1.5 × 1.5 simply makes it bigger.
+        let unit = source.height > 0 ? displayHeight / source.height : 1
+        return CGSize(width: source.width * unit * CGFloat(powerUp.widthMultiplier),
+                      height: displayHeight * CGFloat(powerUp.heightMultiplier))
     }
 
     init() {
@@ -146,18 +149,17 @@ final class RaiderNode: SKSpriteNode {
 
     /// §13.2's silhouette cues, drawn over the plain scout disc.
     ///
-    /// Only for the two carriers that kept the disc. The Spread Scout and the
-    /// Camel fly purpose-built art from the atlas and need nothing drawn on top;
-    /// the Repair and Ice scouts were tried that way and looked better as they
-    /// were, so their hexagonal grid and crystalline facets stay.
+    /// Every carrier but the camel, which flies art of its own and needs nothing
+    /// drawn on top. All three of these have atlas sprites too and were tried
+    /// with them; the drawn versions won.
     private static func markings(for powerUp: PowerUp, in size: CGSize) -> SKNode? {
-        guard powerUp == .shield || powerUp == .freeze else { return nil }
+        guard powerUp != .rapidFire, powerUp != .nuke else { return nil }
         let node = SKNode()
         let tint = powerUp.tint
-        func add(_ path: CGPath, width: CGFloat = 1.1) {
+        func add(_ path: CGPath, width: CGFloat = 1.1, fill: SKColor = .clear) {
             let shape = SKShapeNode(path: path)
             shape.strokeColor = tint
-            shape.fillColor = .clear
+            shape.fillColor = fill
             shape.lineWidth = width
             shape.glowWidth = 0.6
             shape.isAntialiased = true
@@ -183,6 +185,18 @@ final class RaiderNode: SKSpriteNode {
                                            y: sin(angle) * h * 0.34))
             }
             add(spokes, width: 0.8)
+
+        case .gatling:
+            // "Five visible exhaust ports across its front edge" — front being
+            // the underside, which is the edge it fires from and the edge the
+            // player is looking up at.
+            for index in 0..<5 {
+                let x = (CGFloat(index) - 2) * w * 0.155
+                add(CGPath(ellipseIn: CGRect(x: x - h * 0.06, y: -h * 0.34,
+                                             width: h * 0.12, height: h * 0.12),
+                           transform: nil),
+                    width: 0.9, fill: tint.withAlphaComponent(0.55))
+            }
 
         default:
             return nil
