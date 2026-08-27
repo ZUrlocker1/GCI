@@ -1538,6 +1538,22 @@ class GameScene: SKScene {
     }
 
 
+    /// How far the PAUSED banner sits above centre, and how far its hint sits
+    /// below the banner.
+    ///
+    /// Pausing over a reveal banner used to bury it: both are centred, so
+    /// "PAUSED" landed exactly on "BLACK KING DESTROYED" and neither could be
+    /// read. Lifted clear, both are legible at once — which matters most in the
+    /// case the player is most likely to pause in.
+    ///
+    /// The numbers are computed, not judged by eye. Press Start 2P draws about
+    /// 0.7em of cap height and `.center` alignment centres that box on the
+    /// node, so the 30pt reveal banner reaches 10.5pt above centre. At this
+    /// lift the hint's lower edge lands at 22 — nearly 12pt of daylight — and
+    /// the 36pt title clears it by another 9.
+    static let pauseLift: CGFloat = 52
+    static let pauseHintGap: CGFloat = 26
+
     func showPausedOverlay() {
         // Phase 0: simple "PAUSED" label; proper pause menu in Phase 5
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
@@ -1547,7 +1563,8 @@ class GameScene: SKScene {
         label.fontColor = .white
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode   = .center
-        label.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        label.position = CGPoint(x: size.width / 2,
+                                 y: size.height / 2 + Self.pauseLift)
         bloomNode.addChild(label)
 
         // Say how to get out, the same way the title screen does — "any key"
@@ -1559,7 +1576,8 @@ class GameScene: SKScene {
         hint.fontColor = NeonPalette.cyan
         hint.horizontalAlignmentMode = .center
         hint.verticalAlignmentMode   = .center
-        hint.position = CGPoint(x: size.width / 2, y: size.height / 2 - 34)
+        hint.position = CGPoint(x: size.width / 2,
+                                y: size.height / 2 + Self.pauseLift - Self.pauseHintGap)
         hint.run(.repeatForever(.sequence([
             .fadeAlpha(to: 0.35, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
         ])))
