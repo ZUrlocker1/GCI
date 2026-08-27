@@ -265,7 +265,21 @@ class GameScene: SKScene {
 
     // MARK: - Lifecycle
 
+    /// Guards against `didMove` running twice.
+    ///
+    /// The scene is a singleton and `presentScene` is called from
+    /// `makeNSView`, so anything that makes SwiftUI rebuild the representable —
+    /// a window rebuild, a move to another display — presents the *same* scene
+    /// again and SpriteKit calls this again. Nothing in `setupScene` was
+    /// idempotent: it built a second `bloomNode` (a second full-screen CIBloom
+    /// pass), a second starfield and a second set of pools, and left the first
+    /// of each parented to the scene doing nothing but costing frames.
+    private var isSceneBuilt = false
+
     override func didMove(to view: SKView) {
+        guard !isSceneBuilt else { return }
+        isSceneBuilt = true
+
         setupScene()
         setupInputHandler()
         setupStateMachine()
