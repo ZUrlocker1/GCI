@@ -5,11 +5,19 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 
 ✅ done · 🟡 partial · ⬜ not started
 
-Ten levels play end to end, each with a mechanic of its own. The nearest gap is
-**Phase 7.2**, which is two items short of complete: the fleet rush, and the
-pawn promotion power-up — the only thing in the whole design that makes the
-*player* stronger rather than the fleet. After that, **music and settings (5)**,
-then **raiders (6.x)**, which is the largest unbuilt system.
+Ten levels play end to end, each with a mechanic of its own. What is left, in
+the order it is worth doing rather than the order §20 numbers it:
+
+1. **The pawn promotion power-up** (7.2) — the only thing in the design that
+   makes the *player* stronger rather than the fleet, and the last piece of 7.2
+2. **Raiders** (6.x) — the last unbuilt gameplay system, and the only remaining
+   source of pressure that is not the fleet. `raiderInterval` is already in the
+   level table, and every sprite is already in the atlas
+3. **Music and settings** (5), then polish and release (8, 9) — craft work that
+   interacts with nothing and can happen whenever
+
+§20's phase numbers were a plan written before any of this existed. They are a
+checklist, not a running order.
 
 | Phase | Title | |
 |---|---|---|
@@ -25,7 +33,7 @@ then **raiders (6.x)**, which is the largest unbuilt system.
 | 6.1 | Raiders: scout & basic escort | ⬜ |
 | 6.2 | Raiders: flagship, variants, special scouts | ⬜ |
 | 7.1 | Level escalation: chess AI | ⬜ |
-| 7.2 | Level escalation: arcade mechanics | 🟡 — fleet rush and the promotion power-up outstanding |
+| 7.2 | Level escalation: arcade mechanics | 🟡 — the promotion power-up outstanding |
 | 8 | Visual polish | ⬜ |
 | 9 | Mac hardening & App Store release | ⬜ |
 
@@ -409,6 +417,14 @@ One line each; the reasoning is in the commits and the code.
   cleared, and it read as chess rather than arcade
 - Crossfire is Levels 7 and 10, not "8 onward" (§21.3), and it is the bishops'
   cadence rather than a 40% roll on a pawn's shot
+- **Fleet rush is cut** (§7.2: "one random piece jumps 2 ranks forward after
+  each full-rank descent"). It was written when the fleet's only vertical
+  movement was the descent. There are now four other ways a black piece changes
+  rank — a chess move out of formation, a rejoin, a crush, a regeneration
+  beaming in — and the pieces are large enough that a fifth, unannounced,
+  two-rank jump would read as a glitch rather than as pressure. It also
+  shortens the run to a rank-1 breach in a way the player cannot see coming,
+  which is the one lose condition that should never feel arbitrary
 - Level 4 fires +30%, not §21.1's +11% — its banner already promised "FASTER,
   HARDER FIRE"
 - Level 6's wide sweep knowingly breaks the sub-half-square readability rule.
