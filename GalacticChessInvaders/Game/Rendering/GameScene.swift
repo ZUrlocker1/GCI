@@ -625,6 +625,14 @@ class GameScene: SKScene {
 
     func showHowToPlay() {
         guard howToPlayNode == nil else { return }
+
+        // A level banner underneath shows through the panel's 0.97 ground and
+        // is still counting down when the panel closes. End it rather than
+        // stack on it — properly, via `endLevelAnnouncement`, because the
+        // announcement is holding the fleet and the laser pool.
+        endLevelAnnouncement()
+        removeEndBanner()
+
         let overlay = HowToPlayNode(sceneSize: size)
         overlay.position = .zero
         overlay.zPosition = 20
@@ -964,6 +972,21 @@ class GameScene: SKScene {
             node.removeFromParent()
         }
         isAnnouncingLevel = false
+    }
+
+    /// Ends the announcement early, doing everything its timer would have done.
+    ///
+    /// `dismissLevelBanner` on its own is not enough. The announcement pauses
+    /// the fleet and the laser pool, and the keyed timer it cancels is the only
+    /// thing that hands them back — cutting the banner without this is exactly
+    /// how the lasers ended up frozen once already.
+    private func endLevelAnnouncement() {
+        guard isAnnouncingLevel else { return }
+        dismissLevelBanner()
+        guard stateMachine.currentState is PlayingState else { return }
+        fleet?.setPaused(false)
+        laserPool?.setPaused(false)
+        beginBeat()
     }
 
     private func announceLevelThenBegin() {
