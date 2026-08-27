@@ -280,6 +280,18 @@ all — except King Activated, which stays one wave's character.
 
 ### Combat, as it stands
 
+**White's auto-move pushes pawns.** Promotion is worth reaching, and a depth-2
+search can never see it coming — a pawn on rank 2 is six moves from rank 8, so
+the reward is invisible and the engine advances a pawn only by accident. A
+White-pawn advancement term in the evaluation (rank², `pawnAdvanceStep`) lays a
+gradient the shallow search can climb. It has to be in the *evaluation*: a bonus
+on the root move was tried and measured at 3% of games promoting, no better than
+none, because the search still sees Black take the pawn on the reply. Measured
+with the eval term: 7% on a full board, and **97% once Black is thinned to a
+king and four pieces** — which is what GCI becomes as soon as the player starts
+shooting — in a median of eight White moves, losing no material. Never set for
+Black, which promotes by reaching rank 1, i.e. by breaching.
+
 **Promoting a pawn is the player's only reward** (§7.2). Reaching rank 8 raises
 the laser cap by one, stacking to six, reset at each wave. The cap is
 *concurrency* — `canFire` is `activeLasers < laserCap` and a slot frees the

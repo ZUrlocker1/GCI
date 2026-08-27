@@ -938,8 +938,12 @@ class GameScene: SKScene {
             let target = selectedSquare
             clearSelection()
             isEngineThinking = true
+            // White's auto-move leans toward pushing a pawn (§7.2's promotion
+            // reward). Black's does not, and must not: Black promotes by
+            // reaching rank 1, which is a breach, so the same bias would push
+            // Black toward ending the run by a route the player cannot read.
             let auto = await board.makeEngineMove(
-                constraints: .init(restrictedTo: target),
+                constraints: .init(restrictedTo: target, favoursPawnAdvance: true),
                 annotation: "auto")
             isEngineThinking = false
 
@@ -1577,8 +1581,11 @@ class GameScene: SKScene {
     /// node, so the 30pt reveal banner reaches 10.5pt above centre. At this
     /// lift the hint's lower edge lands at 22 — nearly 12pt of daylight — and
     /// the 36pt title clears it by another 9.
-    static let pauseLift: CGFloat = 52
-    static let pauseHintGap: CGFloat = 26
+    /// Raised by 5 over the hint, which stays put: `pauseHintGap` moves with
+    /// the lift so the extra separation lands between the two lines rather than
+    /// pushing the pair up the screen.
+    static let pauseLift: CGFloat = 57
+    static let pauseHintGap: CGFloat = 31
 
     func showPausedOverlay() {
         // Phase 0: simple "PAUSED" label; proper pause menu in Phase 5

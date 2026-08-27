@@ -3188,6 +3188,49 @@ final class LaserPhysicsTests: XCTestCase {
     }
 }
 
+final class PawnAdvanceBiasTests: XCTestCase {
+
+    /// A thinned board, which is what GCI becomes once the player starts
+    /// shooting. White's auto-move should walk a pawn; Black's search, which
+    /// never gets the flag, should not.
+    private let thinned = Chess.FEN.position(
+        from: "4k3/pp6/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 1")!
+
+    private func pawnMoveShare(biased: Bool, samples: Int = 40) -> Int {
+        var pawnMoves = 0
+        for _ in 0..<samples {
+            let constraints = ChessEngine.SearchConstraints(favoursPawnAdvance: biased)
+            guard let move = ChessEngine.searchBestMove(in: thinned, depth: 2,
+                                                        constraints: constraints),
+                  let from = Chess.Square(coordinate: move.from),
+                  thinned.board[from]?.kind == .pawn else { continue }
+            pawnMoves += 1
+        }
+        return pawnMoves
+    }
+
+    /// Measured at 40/40 with the bias and 0/40 without, so these thresholds
+    /// have a wide margin and are not a coin-flip away from failing.
+    func testTheBiasMakesWhiteWalkAPawn() {
+        XCTAssertGreaterThan(pawnMoveShare(biased: true), 30,
+                             "the bias should pick a pawn nearly every time")
+        XCTAssertLessThan(pawnMoveShare(biased: false), 10,
+                          "and without it the engine has other plans")
+    }
+
+    /// Off unless asked for. Black must never get it: Black promotes by
+    /// reaching rank 1, which is a breach, so the same bias would push Black
+    /// toward ending the run by a route the player cannot read.
+    func testTheBiasIsOffByDefault() {
+        XCTAssertFalse(ChessEngine.SearchConstraints().favoursPawnAdvance)
+        XCTAssertFalse(ChessEngine.SearchConstraints.none.favoursPawnAdvance)
+        // The constraints Black's multi-move path builds.
+        XCTAssertFalse(ChessEngine.SearchConstraints(excludedSources: ["a7"],
+                                                     avoidsKingCapture: true)
+                        .favoursPawnAdvance)
+    }
+}
+
 @MainActor
 final class PromotionRewardTests: XCTestCase {
 

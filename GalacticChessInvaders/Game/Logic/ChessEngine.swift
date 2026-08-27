@@ -257,6 +257,19 @@ final class ChessEngine {
         var excludedSources: Set<String>
         /// Destinations already claimed this turn (§25.5, no shared destinations).
         var excludedDestinations: Set<String>
+        /// Push pawns toward promotion.
+        ///
+        /// White's auto-move only. Promotion is the player's one power-up
+        /// (§7.2's laser cap), and a depth-2 search can never see it coming: a
+        /// pawn on rank 2 is six moves from rank 8, so the reward is invisible
+        /// to the engine and it advances a pawn only by accident. This lays a
+        /// gradient the shallow search can climb.
+        ///
+        /// Never set for Black. Black's pawns promote by reaching rank 1, which
+        /// is a breach and ends the run — biasing Black toward it would be
+        /// biasing Black toward winning by a route the player cannot read.
+        var favoursPawnAdvance: Bool
+
         /// Forbid capturing the enemy king.
         ///
         /// Only needed for Black's extra moves: forcing the turn back can leave
@@ -268,11 +281,13 @@ final class ChessEngine {
         init(restrictedTo: String? = nil,
              excludedSources: Set<String> = [],
              excludedDestinations: Set<String> = [],
-             avoidsKingCapture: Bool = false) {
+             avoidsKingCapture: Bool = false,
+             favoursPawnAdvance: Bool = false) {
             self.restrictedTo = restrictedTo
             self.excludedSources = excludedSources
             self.excludedDestinations = excludedDestinations
             self.avoidsKingCapture = avoidsKingCapture
+            self.favoursPawnAdvance = favoursPawnAdvance
         }
 
         static let none = SearchConstraints()
@@ -316,7 +331,9 @@ final class ChessEngine {
 
         for move in moves {
             let child = ChessRules.applying(move, to: position)
-            var score = -negamax(child, depth: depth - 1)
+            var score = -negamax(child, depth: depth - 1,
+                                 whitePawnPush: constraints.favoursPawnAdvance
+                                     ? pawnAdvanceStep : 0)
             // Returning to a position we just came from is how the engine ends up
             // shuffling a rook forever. Penalise it at the root, where the choice
             // is actually made, and steeply enough to outweigh positional noise
@@ -338,6 +355,27 @@ final class ChessEngine {
     private static let mateScore = 100_000
     /// Centipawns deducted for stepping back into a recently occupied position.
     /// Above the positional spread, well below a pawn.
+    /// What a White pawn is worth for how far up the board it stands, per rank
+    /// squared, added to its material value inside the evaluation.
+    ///
+    /// It has to be in the *evaluation*, not a bonus on the root move. Bonusing
+    /// the push itself was tried and measured at 3% of games reaching a
+    /// promotion, no better than none, and raising it did not help: a root
+    /// bonus rewards the step but the search still sees Black take the pawn on
+    /// the reply and scores that at −100. Valuing the pawn's *position* means
+    /// the engine sees the advance survive or not, and defends it.
+    ///
+    /// Squared, so the pull is negligible in the opening and decisive at the
+    /// end, where the pawn is actually worth walking in.
+    private static func whitePawnAdvance(_ square: Chess.Square, step: Int) -> Int {
+        guard let rank = square.coordinate.last?.wholeNumberValue, rank > 2
+        else { return 0 }
+        let gained = rank - 2
+        return gained * gained * step
+    }
+
+    private static let pawnAdvanceStep = 16
+
     private static let repetitionPenalty = 45
     /// Moves within this many centipawns of the best are treated as equally good
     /// and chosen between at random. A quarter of a pawn: wide enough that
@@ -345,8 +383,13 @@ final class ChessEngine {
     /// which matches §25.2's "reasonable, not inspired".
     private static let tieBreakEpsilon = 25
 
-    private nonisolated static func negamax(_ position: Chess.Position, depth: Int) -> Int {
-        guard depth > 0 else { return evaluate(position) }
+    /// `whitePawnPush` is a search-wide setting, not a per-node one: it is the
+    /// bias White's auto-move runs with and zero everywhere else.
+    private nonisolated static func negamax(_ position: Chess.Position, depth: Int,
+                                            whitePawnPush: Int = 0) -> Int {
+        guard depth > 0 else {
+            return evaluate(position, whitePawnPush: whitePawnPush)
+        }
 
         let moves = ChessRules.legalMoves(in: position)
         guard !moves.isEmpty else {
@@ -356,16 +399,25 @@ final class ChessEngine {
 
         var best = -infinity
         for move in moves {
-            best = max(best, -negamax(ChessRules.applying(move, to: position), depth: depth - 1))
+            best = max(best, -negamax(ChessRules.applying(move, to: position),
+                                      depth: depth - 1,
+                                      whitePawnPush: whitePawnPush))
         }
         return best
     }
 
     /// Material plus a positional term, from the perspective of the side to move.
-    private nonisolated static func evaluate(_ position: Chess.Position) -> Int {
+    private nonisolated static func evaluate(_ position: Chess.Position,
+                                             whitePawnPush: Int = 0) -> Int {
         var score = 0
         for (square, piece) in position.board.pieces() {
-            let value = materialValue(piece.kind) + positionalValue(piece, at: square)
+            var value = materialValue(piece.kind) + positionalValue(piece, at: square)
+            if whitePawnPush > 0, piece.kind == .pawn, piece.color == .white {
+                value += whitePawnAdvance(square, step: whitePawnPush)
+            }
+            // Already relative to the side to move, so a bonus on a White pawn
+            // is worth the same to White and costs Black the same — no sign
+            // handling needed beyond this line.
             score += piece.color == position.turn ? value : -value
         }
         return score
