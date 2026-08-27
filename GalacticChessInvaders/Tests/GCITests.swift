@@ -3391,6 +3391,25 @@ final class RaiderTests: XCTestCase {
         XCTAssertGreaterThan(closing, 50, "closing at \(closing) px/s")
     }
 
+    /// A raider that is always there stops being an event. The cap is derived
+    /// from the crossing time, so changing the scout's speed cannot silently
+    /// break it — which is exactly how it broke: §21.1's 6s floor against a
+    /// 4.9s crossing is 94%.
+    func testARaiderIsNeverOnScreenMoreThanTheCap() {
+        let crossing = RaiderRules.crossingDuration(sceneWidth: 960, scoutWidth: 58)
+        for level in 1...12 {
+            let table = LevelManager.parameters(for: level).raiderInterval
+            let used = RaiderRules.interval(forLevel: table, crossing: crossing)
+            XCTAssertGreaterThanOrEqual(used, table,
+                                        "the cap may stretch the interval, never shorten it")
+            XCTAssertLessThanOrEqual(crossing / used,
+                                     RaiderRules.maxScreenShare + 0.001,
+                                     "level \(level) is over the cap")
+        }
+        // And an interval already long enough is left alone.
+        XCTAssertEqual(RaiderRules.interval(forLevel: 30, crossing: crossing), 30)
+    }
+
     func testScoutMatchesTheDesignTable() {
         XCTAssertEqual(RaiderRules.scoutHP, 1, "§6")
         XCTAssertEqual(RaiderRules.scoutPoints, 100, "§9")
