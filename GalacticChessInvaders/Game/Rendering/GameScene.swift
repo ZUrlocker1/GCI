@@ -2679,14 +2679,14 @@ class GameScene: SKScene {
         }
 
         for square in victims {
-            guard let target = found[square] else { continue }
+            guard let target = found[square], let victim = pieceNodes[square] else { continue }
             // The fragment travels at the ring's own speed, so it lands on the
             // frame the ring reaches the piece. Floored, because a piece almost
             // on top of the blast would otherwise be hit before anything has
             // been drawn at all.
             let travel = max(0.09, ringDuration
                              * TimeInterval(min(1, target.distance / ringReach)))
-            launchFragment(from: point, to: target.at, duration: travel, square: square)
+            launchFragment(from: point, to: target.at, duration: travel, victim: victim)
         }
 
         // The king was passed over. Say so on his own shield rather than
@@ -2704,8 +2704,14 @@ class GameScene: SKScene {
     }
 
     /// One piece of shrapnel, with a fading streak behind it.
+    ///
+    /// Carries the victim as a node, not as a square. A fragment is in the air
+    /// for up to a second of real time — longer, since the blast runs in slow
+    /// motion — and the fleet descends on the chess beat, so a square captured
+    /// at detonation can belong to a different piece by the time the fragment
+    /// lands. The same trap that made regenerated pawns unshootable.
     private func launchFragment(from origin: CGPoint, to target: CGPoint,
-                                duration: TimeInterval, square: String) {
+                                duration: TimeInterval, victim: PieceNode) {
         let path = CGMutablePath()
         path.move(to: origin)
         path.addLine(to: target)
@@ -2734,7 +2740,10 @@ class GameScene: SKScene {
         fly.timingMode = .linear      // matches the ring, which expands linearly
         fragment.run(.sequence([
             fly,
-            .run { [weak self] in self?.applyShockwave(at: square) },
+            .run { [weak self, weak victim] in
+                guard let victim else { return }
+                self?.applyShockwave(victim)
+            },
             .removeFromParent(),
         ]))
     }
@@ -2742,12 +2751,17 @@ class GameScene: SKScene {
     /// A fragment landed. Routed through the ordinary black-piece hit handler,
     /// so the explosion, the score, the regeneration slot and the king's own win
     /// check all behave exactly as they do for a laser.
-    private func applyShockwave(at square: String) {
-        // The piece may be gone already — another fragment took it, or a chess
-        // move did, in the fraction of a second this was in the air.
-        guard let node = pieceNodes[square],
+    private func applyShockwave(_ node: PieceNode) {
+        // Its square now, not the one the blast picked: a descent may have moved
+        // it while the fragment was in the air. And it may be gone entirely —
+        // another fragment took it, or a chess move did — in which case the
+        // scene no longer has it registered and there is nothing to hit.
+        let square = node.square
+        guard pieceNodes[square] === node,
               let result = CollisionResolver.shockwaveHitBlackPiece(at: square, board: board)
         else { return }
+        // At where it actually is, so the burst does not appear on the square it
+        // has just left.
         explosions?.burst(at: bloomPosition(of: node), color: NeonPalette.crimson,
                           scale: 1.2)
         handleBlackPieceHit(result, node: node, impact: nil)
