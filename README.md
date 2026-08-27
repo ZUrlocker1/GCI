@@ -22,9 +22,15 @@ diagonal, regenerated pawns arrive armoured and immune to lasers, the black king
 and draws its own weapon — and Blitz, the last wave, which takes most of that back at a three-second
 clock and comes apart as you play it.
 
-**Status:** in development, and playable end to end. There is no download yet — build it from source
-with Xcode (see [SETUP.md](SETUP.md)). Raiders, music and a settings screen are the main systems
-still to come.
+[Download for macOS](https://github.com/ZUrlocker1/GCI/releases/download/v0.1/GCI-0.1.dmg)
+
+Current release: `0.1` (build 1). Universal binary — runs natively on both Apple Silicon and Intel
+Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
+Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
+
+**Status:** playable end to end, with all ten levels, five power-ups and full arcade audio. One music
+track plays on every level and there is no settings screen yet — those are the main things still to
+come. Press `L` in game for the diagnostics panel if you want to look behind the scenes.
 
 The original was prototyped in 1983 on an Apple II in TASC-compiled Applesoft BASIC. This version is
 written in Swift 6 and SpriteKit with no third-party dependencies, and was developed with Claude —
