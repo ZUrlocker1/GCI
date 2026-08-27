@@ -104,12 +104,36 @@ final class AudioManager {
 
     // MARK: - Music
 
+    /// The `M` key. Lives here rather than in the scene because the music
+    /// restarts on its own — every level change calls `playMusic` — and a flag
+    /// the scene owned would be silently overridden by the next track.
+    private(set) var isMusicMuted = false
+    /// The other, independent reason the music can be silent. Kept apart from
+    /// the mute so neither one can resume over the top of the other: unmuting
+    /// mid-pause must not start the music, and resuming from a pause must not
+    /// undo a mute.
+    private var pausedByGame = false
+
+    /// Returns the new state — true when the music is now off.
+    @discardableResult
+    func toggleMusic() -> Bool {
+        isMusicMuted.toggle()
+        if isMusicMuted {
+            musicPlayer?.pause()
+        } else if !pausedByGame {
+            musicPlayer?.play()
+        }
+        DiagnosticsLog.shared.log(.audio, "Music \(isMusicMuted ? "off" : "on")")
+        return isMusicMuted
+    }
+
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {
         guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a") else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
             return
         }
         musicPlayer?.stop()
+        pausedByGame = false
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
         player.volume = volume
@@ -118,20 +142,27 @@ final class AudioManager {
         // here whether or not a freeze ever happens.
         player.enableRate = true
         player.prepareToPlay()
-        player.play()
+        // Loaded but left silent while muted, so unmuting picks up whatever
+        // track the game has since switched to rather than the one playing when
+        // the player hit `M`.
+        if !isMusicMuted { player.play() }
         musicPlayer = player
         DiagnosticsLog.shared.log(.audio, "Music → \(trackName)")
     }
 
     func pauseMusic() {
+        pausedByGame = true
         musicPlayer?.pause()
     }
 
     func resumeMusic() {
+        pausedByGame = false
+        guard !isMusicMuted else { return }
         musicPlayer?.play()
     }
 
     func stopMusic() {
+        pausedByGame = false
         musicPlayer?.stop()
         musicPlayer = nil
     }
