@@ -62,7 +62,8 @@ final class RaiderNode: SKSpriteNode {
 
     /// Sends the scout across from `from` to `to` at `y`, firing once on the
     /// way if `firing`.
-    func cross(fromX: CGFloat, toX: CGFloat, y: CGFloat, firing: Bool) {
+    func cross(fromX: CGFloat, toX: CGFloat, y: CGFloat, firing: Bool,
+               weave: CGFloat = 4) {
         stop()
         position = CGPoint(x: fromX, y: y)
         isHidden = false
@@ -95,12 +96,21 @@ final class RaiderNode: SKSpriteNode {
         run(.sequence(sequence + [.run { [weak self] in self?.finish() }]),
             withKey: Self.crossKey)
 
-        // A slow wobble, so the disc reads as hovering across rather than
-        // sliding on a rail.
-        run(.repeatForever(.sequence([
-            .moveBy(x: 0, y: 4, duration: 0.5),
-            .moveBy(x: 0, y: -4, duration: 0.5),
-        ])))
+        // The vertical half of the path, running alongside the crossing.
+        // A few points is a hover; a whole square is the weave later levels
+        // fly, which makes aiming a vertical problem as well as a horizontal
+        // one. Eased, so it turns rather than bouncing.
+        let half = weave > 8 ? RaiderRules.weaveHalfPeriod : 0.5
+        let up = SKAction.moveBy(x: 0, y: weave, duration: half)
+        let down = SKAction.moveBy(x: 0, y: -weave, duration: half)
+        up.timingMode = .easeInEaseOut
+        down.timingMode = .easeInEaseOut
+        // Starts half a swing in, so the scout enters mid-curve rather than
+        // always at the top of one.
+        run(.sequence([
+            .moveBy(x: 0, y: weave / 2, duration: half / 2),
+            .repeatForever(.sequence([down, down, up, up])),
+        ]))
 
     }
 

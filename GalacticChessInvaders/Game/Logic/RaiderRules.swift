@@ -60,14 +60,22 @@ enum RaiderRules {
     /// Where the scout crosses, held for the whole level so a player who has
     /// seen one crossing knows where the next will be.
     ///
-    /// Early levels fly it *over* the board, above every piece — which is where
-    /// Space Invaders' mystery ship flies, and what makes it read as a passing
-    /// bonus rather than as part of the fleet. §6 asks for rank 4–5; that is
-    /// where it drops to once the player has met it, and it is a real
-    /// escalation, because down there it is firing into traffic.
+    /// Three patterns, each a real escalation on the last:
+    ///
+    /// * **over the board** (Levels 1–3) — above every piece, which is where
+    ///   Space Invaders' mystery ship flies and what makes it read as a passing
+    ///   bonus rather than as part of the fleet;
+    /// * **piece height** (4–6) — §6's rank 4–5, where it is firing into
+    ///   traffic;
+    /// * **weaving** (7+) — the same crossing with the height no longer
+    ///   constant, so aiming stops being a purely horizontal problem.
+    ///
+    /// Each earns its own warning pass the first time it appears in a run.
     enum Crossing: Equatable {
         case overTheBoard
         case rank(Int)
+        /// Same crossing, but weaving up and down through it.
+        case weaving(Int)
 
         /// What the player has to *learn*, as opposed to where exactly this
         /// one flies. Rank 4 and rank 5 are the same problem, so seeing one
@@ -76,14 +84,46 @@ enum RaiderRules {
             switch self {
             case .overTheBoard: return .overTheBoard
             case .rank:         return .atPieceHeight
+            case .weaving:      return .weaving
+            }
+        }
+
+        /// How far it strays vertically from its line, in points.
+        var weaveAmplitude: CGFloat {
+            switch self {
+            // Not zero even when flying straight: a few points of drift keeps
+            // the disc hovering rather than sliding along a rail.
+            case .overTheBoard, .rank: return 4
+            case .weaving:             return RaiderRules.weaveAmplitude
+            }
+        }
+
+        /// The rank it is centred on, if any.
+        var rank: Int? {
+            switch self {
+            case .overTheBoard:        return nil
+            case .rank(let r):         return r
+            case .weaving(let r):      return r
             }
         }
     }
 
-    enum Pattern: Hashable { case overTheBoard, atPieceHeight }
+    enum Pattern: Hashable { case overTheBoard, atPieceHeight, weaving }
+
+    /// Just under a square either side of the line, so the weave costs the
+    /// player a vertical guess as well as a horizontal one without ever taking
+    /// the scout somewhere it could not have been.
+    static let weaveAmplitude: CGFloat = 55
+    /// Half a cycle. About 2.7 full waves across a crossing — enough to read
+    /// as a rhythm rather than as a wobble, slow enough to aim against.
+    static let weaveHalfPeriod: TimeInterval = 0.9
+    /// From here the scout stops flying in a straight line.
+    static let weavesFromLevel = 7
 
     static func crossing(for level: Int) -> Crossing {
-        level <= aboveBoardThroughLevel ? .overTheBoard : .rank(Bool.random() ? 4 : 5)
+        let rank = Bool.random() ? 4 : 5
+        if level <= aboveBoardThroughLevel { return .overTheBoard }
+        return level >= weavesFromLevel ? .weaving(rank) : .rank(rank)
     }
 
     static let aboveBoardThroughLevel = 3

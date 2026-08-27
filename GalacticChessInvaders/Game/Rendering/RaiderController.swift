@@ -105,15 +105,11 @@ final class RaiderController {
         let leftToRight = Bool.random()
         let fromX = leftToRight ? -margin : sceneWidth + margin
         let toX = leftToRight ? sceneWidth + margin : -margin
-        let y: CGFloat
-        switch schedule.crossing {
-        case .overTheBoard:
-            // Between the board's top edge and the HUD, so it clears every
-            // piece however far the fleet has descended.
-            y = boardBottomY + BoardNode.boardSize + 14
-        case .rank(let rank):
-            y = boardBottomY + (CGFloat(rank) - 0.5) * BoardNode.squareSize
-        }
+        // Over the board: between the board's top edge and the HUD, so it
+        // clears every piece however far the fleet has descended.
+        let y = schedule.crossing.rank.map {
+            boardBottomY + (CGFloat($0) - 0.5) * BoardNode.squareSize
+        } ?? boardBottomY + BoardNode.boardSize + 14
 
         let owed = schedule.owesWarningPass
         let firing = schedule.claimFiringPass()
@@ -129,11 +125,13 @@ final class RaiderController {
             // without a second flag to keep in step.
             self.onExit?(scout, scout.hp <= 0)
         }
-        scout.cross(fromX: fromX, toX: toX, y: y, firing: firing)
+        scout.cross(fromX: fromX, toX: toX, y: y, firing: firing,
+                    weave: schedule.crossing.weaveAmplitude)
         setWarble(true)
 
+        let weaving = schedule.crossing.pattern == .weaving ? " weaving" : ""
         DiagnosticsLog.shared.log(.raider,
-            firing ? "scout firing pass" : "scout warning pass")
+            "scout\(weaving) \(firing ? "firing" : "warning") pass")
     }
 
     func setPaused(_ paused: Bool) {
