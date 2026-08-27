@@ -79,6 +79,13 @@ class GameScene: SKScene {
 
     /// §24.2's hit freeze. The scene's own `update` keeps running so it can
     /// time itself; everything under `bloomNode` is what actually stops.
+    /// §8.4's one-second wait before the ship comes back. Zero when alive.
+    private static let respawnDelay: TimeInterval = 1.0
+    private var respawnRemaining: TimeInterval = 0
+    /// The ship is destroyed and has not come back yet — it should not be
+    /// drawn, moved or fired during that second.
+    private var isShipDown: Bool { respawnRemaining > 0 }
+
     private var freezeRemaining: TimeInterval = 0
     private var afterFreeze: (() -> Void)?
     private var highScoreEntry: HighScoreEntryNode?
@@ -771,6 +778,7 @@ class GameScene: SKScene {
         shake = .none
         shakeElapsed = 0
         freezeRemaining = 0
+        respawnRemaining = 0
         afterFreeze = nil
         bloomNode.isPaused = false
         starfieldNode.isPaused = false
@@ -1678,7 +1686,11 @@ class GameScene: SKScene {
         // laser pool is paused then, so the round was created, played its shot
         // sound, and sat frozen at the ship holding a slot that could not
         // resolve — two taps and the player started the level unable to fire.
-        guard stateMachine.currentState is PlayingState, !isBeatSuspended,
+        // `isShipDown` covers the second between being destroyed and coming
+        // back: a wreck should not be shooting, and firing from a hidden ship
+        // is the tell that made the lost-respawn bug look like a rendering
+        // fault rather than a state one.
+        guard stateMachine.currentState is PlayingState, !isBeatSuspended, !isShipDown,
               let ship, let shipState, shipState.canFire,
               let laserPool, let laser = laserPool.nextAvailable(owner: .player)
         else { return }
@@ -2385,15 +2397,23 @@ class GameScene: SKScene {
 
         AudioManager.shared.play(.invaderHitsShip)
         ship?.isHidden = true
-        run(.sequence([
-            .wait(forDuration: 1.0),
-            .run { [weak self] in self?.respawnShip() },
-        ]))
+        // A countdown the update loop owns, not a scene `SKAction`.
+        //
+        // The action fired after one second and then *bailed* if the game was
+        // not PLAYING at that exact instant — and scene actions keep running
+        // while paused, so pausing inside that second (having just died, which
+        // is when a player is most likely to) threw the respawn away with
+        // nothing to retry it. The ship stayed hidden for the rest of the run
+        // while the state said it was alive: invisible, and still able to move
+        // and fire. This timer only advances while playing, so it cannot be
+        // spent on a frame that refuses to act on it.
+        respawnRemaining = Self.respawnDelay
     }
 
     /// Respawns at center-bottom (§8.4) with the invincibility flash.
     private func respawnShip() {
-        guard let ship, stateMachine.currentState is PlayingState else { return }
+        respawnRemaining = 0
+        guard let ship else { return }
         ship.position = CGPoint(x: size.width / 2, y: Self.shipLaneY)
         ship.isHidden = false
         ship.startRespawnInvincibility(duration: SpaceshipState.invincibilityDuration)
@@ -2440,11 +2460,15 @@ class GameScene: SKScene {
         if dt > 0, stateMachine.currentState is PlayingState {
             // Held still while a banner is up or the game is decided; §12.11
             // has gameplay beginning once the announcement leaves.
-            if !isBeatSuspended {
+            if !isBeatSuspended, !isShipDown {
                 let lane = Self.shipMargin...(size.width - Self.shipMargin)
                 ship?.update(deltaTime: dt, bounds: lane)
             }
             shipState?.update(deltaTime: dt)
+            if isShipDown {
+                respawnRemaining -= dt
+                if respawnRemaining <= 0 { respawnShip() }
+            }
 
             // The end-of-game hold owns the beat while it runs.
             if advanceReveal(dt) {
