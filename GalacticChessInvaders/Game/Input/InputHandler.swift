@@ -103,7 +103,12 @@ final class InputHandler {
             return isDown ? .moveRight : .stopMoving
         case 49:        // Space
             return isDown ? .fireLaser : nil
-        case 53, 35:    // Escape, P
+        // Escape only. §5 gives pause both Escape and P; P is now the hidden
+        // power-up test key, and the scene's handler claims it ahead of this
+        // one. Escape is the sole pause key, so it always pauses rather than
+        // first cancelling a chess selection as §5 suggests — a pause key that
+        // sometimes needs two presses is worse than one that never does.
+        case 53:        // Escape
             return isDown ? .pause : nil
         case 36, 76:    // Return, numpad Enter
             return isDown ? .confirmStart : nil

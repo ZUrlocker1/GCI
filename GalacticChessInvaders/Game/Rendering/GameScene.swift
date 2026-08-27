@@ -551,9 +551,10 @@ class GameScene: SKScene {
     ///
     /// Raiders are on a ~28-second clock and most levels go quiet once one has
     /// been shot down, so testing a power-up otherwise means waiting for a
-    /// crossing that may not come. This launches whatever the roster is
-    /// currently offering — so on a level with two or three, shooting one down
-    /// and pressing `R` again brings the next.
+    /// crossing that may not come. Successive presses walk the level's whole
+    /// list and wrap, and it keeps working after raids have ended for the wave —
+    /// that override is most of the point, since re-checking a power-up already
+    /// collected once is exactly when the clock has nothing left to send.
     ///
     /// Deliberately routed through the same launch path as the clock rather
     /// than a shortcut of its own: a test key that flies a raider differently
@@ -3236,16 +3237,12 @@ class GameScene: SKScene {
             return
         }
 
-        // Hidden: shift-P grants the next power-up outright, for testing.
+        // Hidden: P grants the next power-up outright, for testing.
         //
-        // Shifted, not bare, because plain `P` is pause — §5 is explicit that
-        // "`P` always toggles pause/resume", and this handler runs *ahead* of
-        // `InputHandler`, so taking the bare letter would silently remove one of
-        // the two pause keys. The other test keys are unmodified letters; this
-        // one is the exception because it is the only one whose letter is
-        // already spoken for.
+        // This claims `P` from §5's pause binding, which is now Escape alone —
+        // note the handler order, since this runs *ahead* of `InputHandler` and
+        // would shadow the pause key silently if that binding were still there.
         if stateMachine.currentState is PlayingState,
-           event.modifierFlags.contains(.shift),
            event.charactersIgnoringModifiers?.lowercased() == "p" {
             grantNextPowerUp()
             return

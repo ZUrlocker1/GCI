@@ -170,18 +170,22 @@ Deviations
       power-up means waiting for a crossing that may never come. Successive
       presses walk the level's whole list and wrap, on a cursor of their own so
       looking at the third raider does not change what the clock sends next.
-      Routed through the real launch path, not a shortcut of its own
-- [x] Hidden `shift-P` grants the next power-up outright, cycling through all
-      five and wrapping. `R` exercises the crossing, the flight path and the
-      hitbox; this exercises only the effect, which is the half that is otherwise
-      unreachable when a level's roster does not happen to offer it. Routed
-      through the same `activate` call the kill path makes, so a granted effect
-      is indistinguishable from an earned one, and it awards no points —
-      scoring belongs to the kill, not the effect.
-      **Shifted, not bare:** plain `P` is pause (§5: "`P` always toggles
-      pause/resume"), and the scene's key handler runs ahead of `InputHandler`,
-      so taking the bare letter would have silently removed one of the two pause
-      keys
+      Routed through the real launch path, not a shortcut of its own. It is a
+      genuine override: it walks the level's roster as it *started*, so it keeps
+      working after raids have ended for the wave — which is the case it mainly
+      exists for, re-testing a power-up already collected once
+- [x] Hidden `P` grants the next power-up outright, cycling through all five and
+      wrapping. `R` exercises the crossing, the flight path and the hitbox; this
+      exercises only the effect, which is the half that is otherwise unreachable
+      when a level's roster does not happen to offer it. Routed through the same
+      `activate` call the kill path makes, so a granted effect is
+      indistinguishable from an earned one, and it awards no points — scoring
+      belongs to the kill, not the effect
+- [x] **Pause is Escape only.** `P` was one of §5's two pause keys and is now
+      this test key; nothing user-facing named it, so nothing had to change on
+      screen. Escape always pauses rather than first cancelling a chess
+      selection as §5 suggests — now that it is the only pause key, one that
+      sometimes needs two presses would be worse than one that never does
 - [x] The log names the test keys on its first line, so they are written down
       somewhere they will actually be seen. Startup logging was trimmed at the
       same time: the app-launch and state-transition lines said nothing a
@@ -513,6 +517,7 @@ One line each; the reasoning is in the commits and the code.
 - Friendly fire on your own king deflects rather than killing it
 - Destruction uses the kenney `explosionCrunch` ladder, graduated by length, in
   place of §12.12's gdc-bundle files (28 MB for four sounds, no better)
+- Pause is Escape, not §5's "Escape and `P`". `P` is the power-up test key
 
 ### Not yet verified in the running app
 
