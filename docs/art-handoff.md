@@ -12,7 +12,7 @@ pieces double as a *Space Invaders*-style fleet — sliding sideways, descending
 player simultaneously commands White's moves **and** a laser ship at the bottom of the screen. This
 package is the **visual + art handoff**: the look, the screen layouts, the HUD, the FX language, the
 design tokens, and the production-ready sprite assets. The full game-design / mechanics spec is included
-separately (`GalacticChessInvaders_DesignDoc.md`).
+separately (`gci-game-design.md`).
 
 Target platform from the design doc: **macOS, SpriteKit**, default window 900×700 (≈9:7).
 
@@ -249,7 +249,7 @@ All screens are 900×700, pure-black, with a parallax starfield + faint nebula b
 
 ## Files in this bundle
 - `README.md` — this document (self-sufficient).
-- `GalacticChessInvaders_DesignDoc.md` — full game-design spec (mechanics, scoring, levels, audio).
+- `docs/gci-game-design.md` — full game-design spec (mechanics, scoring, levels, audio).
 - `Galactic Chess Invaders - Screens.html` — all six screens on a pan/zoom canvas (the master visual ref).
 - `GCI Sprite Sheet.html` — every piece/ship + damage states + explosions, labeled.
 - `sprites.js` — pixel maps + the vector/contour/damage renderer (authoritative sprite logic).
@@ -258,6 +258,6 @@ All screens are 900×700, pure-black, with a parallax starfield + faint nebula b
 - `GCI.spriteatlas/` — the production sprite atlas.
 - `assets/` — the 1983 reference screenshots.
 
-> Tip for the Claude Code session: start by reading `README.md` and `GalacticChessInvaders_DesignDoc.md`,
+> Tip for the Claude Code session: start by reading `README.md` and `docs/gci-game-design.md`,
 > open `Galactic Chess Invaders - Screens.html` in a browser to see the target, then drop `GCI.spriteatlas`
 > into the Xcode project and build screen-by-screen (Title → Gameplay → HUD → FX → Help → Game Over).
