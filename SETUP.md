@@ -54,40 +54,52 @@ Or `setup.sh` runs this automatically if source files are present.
 
 ---
 
-## Signing and distribution
+## Making a build for someone else
 
-Set up the same way Zudio is: **Developer ID, notarized, shipped as a DMG.** Team
-`K66MA9TR8Z`, sandboxed, hardened runtime on.
+Exactly the Zudio routine.
 
-| Configuration | Identity | Why |
-|---|---|---|
-| Debug | `-` (ad-hoc), signing not required | a local build never waits on a certificate |
-| Release | `Developer ID Application` | anything that leaves this machine is signed |
+### 1. Archive it in Xcode
 
-`GalacticChessInvaders.entitlements` turns on the App Sandbox and asks for
-nothing else — the game reads only its own bundle and writes only
-`UserDefaults`, so it needs no file, network or hardware exceptions.
+**Product → Archive.** The Organizer opens with the new archive selected.
 
-### Making a build for someone else
+> If Xcode complains about the Hardened Runtime, the archive was built before
+> the signing settings were added. Quit Xcode, reopen the project, and archive
+> again — the settings are in `project.yml` and are applied by
+> `xcodegen generate`.
+
+### 2. Distribute it
+
+**Distribute App**, then:
+
+- **Direct Distribution** — for Ben, or anyone else testing. Xcode signs it,
+  sends it to Apple for notarization, and staples the ticket. Wait for it to
+  finish, then **Export** the app to `~/Downloads`.
+- **App Store Connect** — only when it is going to the store.
+
+### 3. Wrap it in a DMG
 
 ```bash
-./release.sh
+./release-dmg.sh
 ```
 
-Builds a universal Release binary, signs it, notarizes it, staples the ticket,
-and writes a drag-to-install DMG to `~/Downloads`. One-time prerequisites are
-listed at the top of the script: a Developer ID Application certificate, an
-app-specific password stored as the `AC_PASSWORD` notarytool profile, and
-`brew install create-dmg`.
+Takes `~/Downloads/GalacticChessInvaders.app` and writes
+`~/Downloads/GalacticChessInvaders-<version>.dmg`, ready to send. Pass a path if
+the app is somewhere else.
 
-### Why not App Store Connect
+It refuses to build a DMG from an app that has not been notarized, because that
+is the mistake that reaches the other person as a scary warning rather than as a
+game.
 
-TestFlight needs App Store distribution certificates and, for external testers, a
-review pass — a lot of process to get a build to one person. A notarized DMG
-opens on any Mac with no warning and no account. If the App Store becomes the
-goal later, the signing settings here are already what it needs; only the
-certificate and the upload step change.
+Needs `create-dmg` once: `brew install create-dmg`.
 
-**"No Team Found in Archive"** was `DEVELOPMENT_TEAM` being unset, together with
-`CODE_SIGNING_REQUIRED: NO`. Both are fixed in `project.yml`, so regenerate with
-`xcodegen generate` after pulling.
+---
+
+## What is set up, for reference
+
+Signing matches Zudio: team `K66MA9TR8Z`, Developer ID for Release, ad-hoc for
+local Debug builds, Hardened Runtime on, and `GalacticChessInvaders.entitlements`
+turning on the App Sandbox with no exceptions — the game reads only its own
+bundle and writes only `UserDefaults`.
+
+All of it lives in `project.yml`. After pulling changes, run `xcodegen generate`
+to apply them, then reopen the project in Xcode.
