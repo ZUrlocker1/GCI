@@ -4651,11 +4651,18 @@ final class PowerUpTests: XCTestCase {
 
     // MARK: - Per-type values (§13.2)
 
-    /// The Bomb is the only two-hit scout and the only one worth over 200.
-    func testOnlyTheBombTakesTwoHitsAndItPaysForThem() {
+    /// Every carrier dies to one hit. §13.2 gives the Bomb Scout two, which read
+    /// as a bug: a clean hit that leaves a small fast target flying looks like a
+    /// miss, and the player has no time to reconsider what they saw.
+    func testEveryCarrierDiesToOneHit() {
         for powerUp in PowerUp.allCases {
-            XCTAssertEqual(powerUp.hp, powerUp == .nuke ? 2 : 1, "\(powerUp)")
+            XCTAssertEqual(powerUp.hp, 1, "\(powerUp)")
         }
+    }
+
+    /// The Bomb is still worth most — rarest, and it clears the sky at the two
+    /// moments the sky is fullest.
+    func testTheBombIsWorthMost() {
         let others = PowerUp.allCases.filter { $0 != .nuke }.map(\.points)
         XCTAssertGreaterThan(PowerUp.nuke.points, others.max() ?? 0)
     }
