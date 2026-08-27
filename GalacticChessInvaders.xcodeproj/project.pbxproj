@@ -98,6 +98,7 @@
 		E382860009AA1E103879DF01 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533060B476CEB068D8FE3931 /* AudioManager.swift */; };
 		E417F771A182BF6A6C7A8D29 /* ScorePopPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096490D7A6278EF53261317B /* ScorePopPool.swift */; };
 		E7D495E2DBBDC199D24C5469 /* FleetFiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */; };
+		EF4BE7455C8F7D6914EFAF95 /* Silhouette.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85CA9EDA2CA72A635DCD707 /* Silhouette.swift */; };
 		F53A8FD80E91731A2F3B94DF /* chess-b-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */; };
 		F85FF93C6997AF4868C1CBC3 /* TitleOverlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5479162403C3F6B963DA628 /* TitleOverlayNode.swift */; };
 		F9929020CEFD54511CD99A8E /* GCIBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */; };
@@ -202,6 +203,7 @@
 		C6065939A740086FDEF2B63B /* chess-w-queen-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-queen-d1.png"; sourceTree = "<group>"; };
 		C6C2B5784E5BF76690D58C93 /* GalacticChessInvaders.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GalacticChessInvaders.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C7C9EB476F38A1115CA12AE8 /* LaserPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaserPool.swift; sourceTree = "<group>"; };
+		C85CA9EDA2CA72A635DCD707 /* Silhouette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Silhouette.swift; sourceTree = "<group>"; };
 		C85D5AC26FD4179831878F66 /* chess-b-knight-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-knight-d1.png"; sourceTree = "<group>"; };
 		CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarfieldTiling.swift; sourceTree = "<group>"; };
 		D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king-d2.png"; sourceTree = "<group>"; };
@@ -417,6 +419,7 @@
 				41027B92E5E5C0CED577CDCC /* NeonPalette.swift */,
 				F86607BAC135182D9E5F8BD4 /* PieceNode.swift */,
 				096490D7A6278EF53261317B /* ScorePopPool.swift */,
+				C85CA9EDA2CA72A635DCD707 /* Silhouette.swift */,
 				433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */,
 				CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */,
 				E5479162403C3F6B963DA628 /* TitleOverlayNode.swift */,
@@ -640,6 +643,7 @@
 				5E5F85935F04C28062E9F04F /* Regeneration.swift in Sources */,
 				24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */,
 				E417F771A182BF6A6C7A8D29 /* ScorePopPool.swift in Sources */,
+				EF4BE7455C8F7D6914EFAF95 /* Silhouette.swift in Sources */,
 				92F5117575286012F40FFBAC /* SoundKey.swift in Sources */,
 				E08464B23F92D11F3F247DAB /* SpaceshipNode.swift in Sources */,
 				1105DF500AABD684C9DF74CD /* SpaceshipState.swift in Sources */,

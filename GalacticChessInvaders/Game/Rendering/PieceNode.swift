@@ -16,7 +16,6 @@ final class PieceNode: SKSpriteNode {
     private static let checkGlowKey = "checkGlow"
     private static let armorKey = "armor"
     private static let armorFillName = "armorFill"
-    private static var silhouetteCache: [String: SKTexture] = [:]
     private static let chargeGlowName = "gunnerCharge"
     private static let ventName = "vent"
     private static let beamName = "beamIn"
@@ -402,7 +401,7 @@ final class PieceNode: SKSpriteNode {
         childNode(withName: Self.armorFillName)?.removeFromParent()
         guard armored else { return }
 
-        let fill = SKSpriteNode(texture: Self.filledSilhouette(forTexture: piece.textureName),
+        let fill = SKSpriteNode(texture: Silhouette.filled(forTexture: piece.textureName),
                                 color: NeonPalette.armorFill, size: size)
         fill.name = Self.armorFillName
         fill.colorBlendFactor = 1
@@ -447,68 +446,6 @@ final class PieceNode: SKSpriteNode {
             .removeFromParent(),
         ]))
         run(.sequence([.wait(forDuration: 0.51), .run(completion)]))
-    }
-
-    /// The piece's *interior* as a texture: every pixel enclosed by the outline,
-    /// plus the outline itself.
-    ///
-    /// The sprites are hollow — their alpha is the stroke and nothing else — so
-    /// there is no fill to tint. This finds one by flooding inward from the
-    /// image border: anything transparent the flood can reach is outside the
-    /// piece, and anything transparent it cannot reach is enclosed by the
-    /// outline, which is exactly the region wanted. Measured once per texture
-    /// and cached, like the ink bounds beside it.
-    private static func filledSilhouette(forTexture name: String) -> SKTexture {
-        if let cached = silhouetteCache[name] { return cached }
-        let texture = buildSilhouette(forTexture: name) ?? SKTexture(imageNamed: name)
-        silhouetteCache[name] = texture
-        return texture
-    }
-
-    private static func buildSilhouette(forTexture name: String) -> SKTexture? {
-        guard let image = SKTexture(imageNamed: name).cgImage() as CGImage?,
-              image.width > 0, image.height > 0 else { return nil }
-        let w = image.width, h = image.height
-        var pixels = [UInt8](repeating: 0, count: w * h * 4)
-        guard let context = CGContext(
-            data: &pixels, width: w, height: h, bitsPerComponent: 8,
-            bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
-        context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
-
-        // Flood the transparent region inward from every border pixel.
-        var outside = [Bool](repeating: false, count: w * h)
-        var stack: [Int] = []
-        func consider(_ index: Int) {
-            guard !outside[index], pixels[index * 4 + 3] <= 20 else { return }
-            outside[index] = true
-            stack.append(index)
-        }
-        for x in 0..<w { consider(x); consider((h - 1) * w + x) }
-        for y in 0..<h { consider(y * w); consider(y * w + w - 1) }
-        while let index = stack.popLast() {
-            let x = index % w, y = index / w
-            if x > 0 { consider(index - 1) }
-            if x < w - 1 { consider(index + 1) }
-            if y > 0 { consider(index - w) }
-            if y < h - 1 { consider(index + w) }
-        }
-
-        var fill = [UInt8](repeating: 0, count: w * h * 4)
-        for index in 0..<(w * h) where !outside[index] {
-            // Enclosed, or the outline itself: both belong to the silhouette.
-            fill[index * 4] = 255
-            fill[index * 4 + 1] = 255
-            fill[index * 4 + 2] = 255
-            fill[index * 4 + 3] = 255
-        }
-        guard let out = CGContext(
-            data: &fill, width: w, height: h, bitsPerComponent: 8,
-            bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )?.makeImage() else { return nil }
-        return SKTexture(cgImage: out)
     }
 
     /// Gives this piece a hitbox, for a node that was created without one.

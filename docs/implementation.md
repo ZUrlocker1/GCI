@@ -293,7 +293,11 @@ shooting — in a median of eight White moves, losing no material. Never set for
 Black, which promotes by reaching rank 1, i.e. by breaching.
 
 **Promoting a pawn is the player's only reward** (§7.2). Reaching rank 8 raises
-the laser cap by one, stacking to six, reset at each wave. The cap is
+the laser cap by one, stacking to six, reset at each wave. The hull fills the
+same green an armored pawn wears, brightening with the stack — the gutter notice
+is gone in a second, and the fill is the standing reminder of what the ship is
+carrying. `Silhouette` finds the fillable shape inside a hollow outline by
+flooding in from the image border; the pawn and the ship share it. The cap is
 *concurrency* — `canFire` is `activeLasers < laserCap` and a slot frees the
 moment its round lands — so it pays only when shots are missing, which is what
 happens at range and under pressure: 1.7 shots/second at two, 5.0 at six. It is
