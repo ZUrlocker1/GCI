@@ -34,6 +34,26 @@ if [ -f "$PBXPROJ" ]; then
   fi
 fi
 
+# Sprite names are string literals, so a texture that is referenced but not
+# bundled compiles cleanly and fails at run time as SpriteKit's missing-texture
+# placeholder — a big grey X on screen, with nothing in the log. That is exactly
+# how the camel's two walk frames shipped broken: they were written into
+# assets/GCI.spriteatlas, and the app loads from Resources/Sprites.
+SPRITES=GalacticChessInvaders/Resources/Sprites
+if [ -d "$SPRITES" ]; then
+  MISSING_ART=""
+  for name in $(grep -rhoE '"(chess|ship)-[a-z0-9-]+"' --include="*.swift" \
+                  GalacticChessInvaders | tr -d '"' | sort -u); do
+    [ -f "$SPRITES/$name.png" ] || MISSING_ART="$MISSING_ART  $name\n"
+  done
+  if [ -n "$MISSING_ART" ]; then
+    echo "✗ Sprites referenced in code but not in $SPRITES:"
+    printf "%b" "$MISSING_ART"
+    echo "  (a missing texture renders as a grey X and logs nothing)"
+    exit 1
+  fi
+fi
+
 # swift-plugin-server (used to expand @Observable) is flaky in this environment
 # and used to be treated as cosmetic noise — filtered out on the assumption that
 # the rest of the diagnostics were still trustworthy. They are not: verified by

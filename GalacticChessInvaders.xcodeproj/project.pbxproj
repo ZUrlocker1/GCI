@@ -22,6 +22,7 @@
 		14F7B295279756393ED204CA /* chess-w-bishop-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 6804169215469385E2B6893E /* chess-w-bishop-d1.png */; };
 		1671C9F123B8F22D6E1C61CE /* ship-camel.png in Resources */ = {isa = PBXBuildFile; fileRef = 49DEBFD146DE24F4E7A38593 /* ship-camel.png */; };
 		1840BB4464E1128BE071D44C /* TitleScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DB4E6155700677F3736099 /* TitleScene.swift */; };
+		1A62E271F6892409D17B06A4 /* ship-camel-b.png in Resources */ = {isa = PBXBuildFile; fileRef = C9811D7E64799129FF1929B9 /* ship-camel-b.png */; };
 		1AAB40E8E2E3C6E0A09E39EA /* LevelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3958B7024DAADC15E5C557B9 /* LevelManager.swift */; };
 		1FBE4ACA89D5247C2820022A /* chess-b-bishop.png in Resources */ = {isa = PBXBuildFile; fileRef = 89C03C76F77C2116A0D5D2BB /* chess-b-bishop.png */; };
 		21490A78500EE1F60D19E61B /* chess-b-pawn-armored.png in Resources */ = {isa = PBXBuildFile; fileRef = 635B8F8F319846DD6D42CF11 /* chess-b-pawn-armored.png */; };
@@ -70,6 +71,7 @@
 		9D8A372DBBCA9B9102C4264A /* chess-w-rook-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E035ABF8A545D83002E5689 /* chess-w-rook-d1.png */; };
 		9F1596A7F6BC01E4F501C8D7 /* chess-w-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = B1C4ECE6D9D8E3925073ACFE /* chess-w-king-d2.png */; };
 		A38ACF123B15ADE148A9CCDE /* ship-llama.png in Resources */ = {isa = PBXBuildFile; fileRef = 41CA2029B4FBD81DDF753D7B /* ship-llama.png */; };
+		A48C365E31A834FAD4782D2B /* ship-camel-c.png in Resources */ = {isa = PBXBuildFile; fileRef = 3420846073BE18C53447E8B2 /* ship-camel-c.png */; };
 		A5723D032739FA8C59CB6091 /* CheckPathNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741746F275F1126EB8D73A8C /* CheckPathNode.swift */; };
 		AA89831E81221FDF8F2C6AD8 /* RaiderRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D52D7B60FB53896B80DB403D /* RaiderRules.swift */; };
 		AB5B47092457C71AF974E1C6 /* chess-w-pawn-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 797AE4C04EB793676DEFC8C0 /* chess-w-pawn-d1.png */; };
@@ -149,6 +151,7 @@
 		2CAF566BD8F26FECE2DB1C25 /* TurnTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnTimer.swift; sourceTree = "<group>"; };
 		2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-rook-d2.png"; sourceTree = "<group>"; };
 		321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreManager.swift; sourceTree = "<group>"; };
+		3420846073BE18C53447E8B2 /* ship-camel-c.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel-c.png"; sourceTree = "<group>"; };
 		358C1653386A6A77FA844C99 /* chess-w-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop.png"; sourceTree = "<group>"; };
 		360CD5A00CE701C3BACFB1BA /* Juice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Juice.swift; sourceTree = "<group>"; };
 		386C3750928FB14BC1D27D55 /* FleetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetController.swift; sourceTree = "<group>"; };
@@ -211,6 +214,7 @@
 		C7C9EB476F38A1115CA12AE8 /* LaserPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaserPool.swift; sourceTree = "<group>"; };
 		C85CA9EDA2CA72A635DCD707 /* Silhouette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Silhouette.swift; sourceTree = "<group>"; };
 		C85D5AC26FD4179831878F66 /* chess-b-knight-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-knight-d1.png"; sourceTree = "<group>"; };
+		C9811D7E64799129FF1929B9 /* ship-camel-b.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel-b.png"; sourceTree = "<group>"; };
 		CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarfieldTiling.swift; sourceTree = "<group>"; };
 		D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king-d2.png"; sourceTree = "<group>"; };
 		D52D7B60FB53896B80DB403D /* RaiderRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaiderRules.swift; sourceTree = "<group>"; };
@@ -280,6 +284,8 @@
 				1E035ABF8A545D83002E5689 /* chess-w-rook-d1.png */,
 				9AB88E2F8252175EF285AF23 /* chess-w-rook-d2.png */,
 				14C2C8B3CAA40DB1FA83AA1E /* chess-w-rook.png */,
+				C9811D7E64799129FF1929B9 /* ship-camel-b.png */,
+				3420846073BE18C53447E8B2 /* ship-camel-c.png */,
 				49DEBFD146DE24F4E7A38593 /* ship-camel.png */,
 				E3453ECB5D3C283EB99A0D7E /* ship-escort.png */,
 				749A6F222A6188E3037609E2 /* ship-flagship.png */,
@@ -585,6 +591,8 @@
 				3203C80A87E53941D3CA57FE /* chess-w-rook-d2.png in Resources */,
 				3D123DD84E9772D4FA235EA8 /* chess-w-rook.png in Resources */,
 				7705CF0A074223E6B67350F7 /* sfx in Resources */,
+				1A62E271F6892409D17B06A4 /* ship-camel-b.png in Resources */,
+				A48C365E31A834FAD4782D2B /* ship-camel-c.png in Resources */,
 				1671C9F123B8F22D6E1C61CE /* ship-camel.png in Resources */,
 				D27B42151BC5A3E38E5C3E27 /* ship-escort.png in Resources */,
 				054F25D0681FB675A237F71B /* ship-flagship.png in Resources */,

@@ -913,6 +913,13 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   part that reads as walking rather than as leaning. The feet travel ±11px, about
   2pt at render size.
 
+  The frames live in `Resources/Sprites/`, which is where the app actually loads
+  textures from — `assets/GCI.spriteatlas` is the source, not the bundle, and
+  writing them only there shipped a grey X on every other frame. A missing
+  texture compiles cleanly, renders as SpriteKit's placeholder and logs nothing,
+  so `typecheck.sh` now cross-checks every `chess-`/`ship-` string literal in the
+  Swift sources against the bundled PNGs.
+
   Two animations, not one: the outline cycles its own frames and the hull cycles
   their filled silhouettes, started in the same frame on the same clock. A static
   hull behind moving legs leaves fill hanging in the air where the legs used to
