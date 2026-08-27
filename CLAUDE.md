@@ -30,9 +30,13 @@ The chess game is real but fast and shallow (5-second turn timer, 1–2 ply engi
 **Total runtime Swift dependencies: 0.** Everything is Apple built-in.
 
 ChessKit was originally planned as an SPM dependency but cannot be used: in every
+
 released version (1.3.7 and 2.0.0) `FenSerialization` and `Position` have no
+
 public initializer, so an external consumer cannot construct a `Position` at all
+
 — their own README example does not compile. Its algorithms were instead ported
+
 into `Game/Logic/Chess/` under the MIT licence, with attribution in each file.
 
 ---
@@ -93,16 +97,19 @@ GCI/
 ## Architecture Rules — Read Before Writing Any Code
 
 ### Three-Layer Separation
+
 1. **Game Logic** (`Game/Logic/`) — pure Swift, zero SpriteKit imports. Runs on any platform. Unit-testable.
 2. **Rendering** (`Game/Rendering/`) — SpriteKit only. Reads from Logic layer, never writes back.
 3. **Input** (`Game/Input/`) — translates platform events to `GameAction` enum. Logic layer consumes `GameAction` only.
 
 ### Never Block the Main Thread
+
 - Chess engine (`GKMinmaxStrategist`) runs in `Task.detached(priority: .userInitiated)`
 - Result delivered back via `await MainActor.run { }`
 - Fleet movement, physics, rendering always on main thread via SKAction
 
 ### Performance Rules
+
 - **Object pools** for lasers, score pop-ups, reticles — zero allocation during gameplay
 - **Single SKEffectNode** parent for all bloom content. `shouldRasterize` is
   **off**: the subtree changes every frame, so the cache is invalidated before it
@@ -113,6 +120,7 @@ GCI/
 - **Default texture filtering** (linear, not `.nearest`) — sprites are smooth vector art, not pixel art
 
 ### Platform Portability
+
 - All input goes through `GameAction` enum — no direct keyboard code in Logic or Rendering
 - `AudioManager` and all game logic are identical on macOS and iOS
 - SpriteKit scene size is resolution-independent; use scene coordinates not screen points
@@ -123,6 +131,7 @@ GCI/
 ## Key Game Mechanics (Quick Reference)
 
 ### Chess
+
 - Real chess rules, own implementation; negamax search at depth 2
 - 5-second turn timer; on expiry, engine auto-moves White (constrained to selected piece if one is selected; otherwise picks best available)
 - Castling, en passant and all four promotions are implemented and verified
@@ -131,6 +140,7 @@ GCI/
 - Lose: White King shot to 0 HP, White King checkmated, ship loses 3 lives, or Black piece reaches Rank 1
 
 ### Fleet (Black Pieces)
+
 - Sweep left/right in Invader formation; descend half a rank at each wall
 - **Logical squares update on each descent** via `GCIBoard.forcePlace()` — bypasses chess legality
 - Lateral sweep does NOT update logical squares — only descent does
@@ -138,12 +148,14 @@ GCI/
 - Fleet chess move fires AFTER each lateral sweep completes
 
 ### Damage System
+
 - Pieces have HP: Pawn 2, Knight/Bishop 6, Rook 8, Queen 12, King 16
 - Damage shown by **outline erosion** (not chipped pixels): Full → Chipped (d1) → Cracked (d2) → Critical (d2 + flicker)
 - Sprite atlas: `chess-[w/b]-[piece].png`, `chess-[w/b]-[piece]-d1.png`, `chess-[w/b]-[piece]-d2.png`
 - No HP bars — the sprite IS the health indicator
 
 ### Player Ship
+
 - Arrow keys / WASD: move. Space: fire.
 - Laser cap: 2 (normal), +1 per green Raider Scout shot down (stacks, hard cap 6),
   resets each level. Promotion grants a queen and nothing else — see
@@ -152,10 +164,12 @@ GCI/
 - 3 lives; 2-second respawn invincibility after death
 
 ### Multi-Move (Level 3+)
+
 - 2 black chess moves per turn at Level 3; 3 at Level 5
 - All moves chosen simultaneously by engine, then animated in parallel via SKAction group
 
 ### Scoring
+
 - Shoot Pawn: 25 | Knight/Bishop: 50 | Rook: 75 | Queen: 150 | King: 500
 - Checkmate bonus: 300 | King shot at checkmate: 800 (both bonuses)
 - Score multiplier: ×1.0 at Level 1, +0.5 per level
@@ -178,6 +192,7 @@ All sprites in `assets/GCI.spriteatlas/`. Naming: `chess-[w/b]-[piece][-d1/-d2].
 Ships: `ship-player.png`, `ship-scout.png` (green), `ship-escort.png` (orange), `ship-flagship.png` (blue)
 
 White pieces: `#12E0FF` cyan glow. Black pieces: `#FF2060` magenta glow.
+
 Font: **Press Start 2P** (Google Fonts, free).
 
 ---
@@ -185,6 +200,7 @@ Font: **Press Start 2P** (Google Fonts, free).
 ## Diagnostics Log
 
 `DiagnosticsLog.shared` — singleton, `ObservableObject`.
+
 - **Debug builds only** (`#if DEBUG`) — auto-disabled in release
 - Green category labels, white description text, monospace font
 - macOS: right sidebar panel alongside the game
@@ -214,6 +230,7 @@ struct PhysicsCategory {
 ## Current Phase
 
 **Phase 1 — Real Chess Board** (complete)
+
 - `Game/Logic/Chess/` — chess model, move generation, check/mate, FEN
 - `ChessEngine` — facade plus depth-2 negamax search, run off the main thread
 - `GCIBoard` — chess position + per-piece HP + `forcePlace` for fleet descent
@@ -224,6 +241,7 @@ struct PhysicsCategory {
 - Verified: standard perft suite matches exactly at depths 1–4
 
 Not yet built: fleet sweep and descent, lasers and shooting, turn timer, scoring
+
 on capture, level progression, game-over flow.
 
 See `docs/gci-game-design.md` §22 for the full 11-phase development plan.
@@ -233,11 +251,17 @@ See `docs/gci-game-design.md` §22 for the full 11-phase development plan.
 ## Chess Implementation Notes
 
 `Game/Logic/Chess/` is a self-contained chess model, ported from ChessKit (MIT):
+
 bitboard board representation, ray-scan move generation, and bitboard attack
+
 detection. Departures from the original are documented in the file headers — most
+
 notably `isAttacked(_:by:in:)` replaces ChessKit's turn-coupled `isCheck`, and
+
 includes king adjacency rather than patching it in the king's generator.
 
 Correctness is pinned by `ChessPerftTests`, which enumerates the standard
+
 reference positions and must match the published node counts exactly (~11M nodes
+
 at depth 4). Any change to move generation should be validated against it.
