@@ -901,6 +901,24 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   Half again the height of a scout (§6.4 makes it the larger tribute ship), and
   the only carrier with a voice — a generated low bray on entry, so you hear it
   before you have picked it out of the board
+- **The camel walks.** Three drawings, four frames — the two swung poses
+  separated by the neutral one, because cycling straight from one to the other
+  reads as a twitch: the legs cross the middle without ever being seen there.
+  0.2s a frame, so 0.8s for a full cycle.
+
+  The swung frames are generated from the atlas sprite rather than drawn. The
+  legs are sheared about the hip line at y=141, by an offset proportional to how
+  far below the hip each row sits, so a leg pivots instead of sliding and stays
+  attached to the belly; front and rear swing in opposite phase, which is the
+  part that reads as walking rather than as leaning. The feet travel ±11px, about
+  2pt at render size.
+
+  Two animations, not one: the outline cycles its own frames and the hull cycles
+  their filled silhouettes, started in the same frame on the same clock. A static
+  hull behind moving legs leaves fill hanging in the air where the legs used to
+  be. A 1.5pt bob on the same clock ties the walk to ground the camel does not
+  have — legs alone read as a walk from a standing start and as a slide once the
+  thing is moving
 - **Raiders face the way they are going.** The crossing is built as legs rather
   than one `moveTo`, so a raider that turns can turn to face; the camel has legs
   and a head, and a camel crossing right-to-left rear-first reads as a bug. Every
@@ -911,7 +929,13 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   change — a raider that feints is on screen *longer* and is marginally easier to
   catch — but a crossing the player has already read stops being fully
   predictable. It never backs past its own entry point, which would read as a
-  second entrance
+  second entrance.
+
+  **Only the Spread and Bomb carriers.** It was every carrier first, which spread
+  the surprise so thin it became the weather: a tax on the player's aim
+  everywhere rather than a moment anywhere. Tied to two ships it is a tell — the
+  fat orange disc and the honking camel are the ones that might not go where they
+  are pointed, and the other three stay clean to read
 - Carrier sizes are **measured, not uniform**. The plain scout is a wide 280×144
   disc and the specials are compact shapes on 200×200 squares, so scaling every
   sprite by canvas height gave the specials *half* the target area — the wrong

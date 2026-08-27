@@ -4919,10 +4919,11 @@ final class PowerUpTests: XCTestCase {
 
     // MARK: - The feint (§6.3)
 
-    /// Roughly one crossing in five doubles back.
+    /// Roughly one crossing in five doubles back, for the carriers that can.
     func testAboutOneCrossingInFiveDoublesBack() {
         var feints = 0
-        for _ in 0..<4_000 where RaiderRules.feint(span: 1_000, from: 0, to: 1_000) != nil {
+        for _ in 0..<4_000
+        where RaiderRules.feint(for: .nuke, span: 1_000, from: 0, to: 1_000) != nil {
             feints += 1
         }
         let rate = Double(feints) / 4_000
@@ -4930,12 +4931,25 @@ final class PowerUpTests: XCTestCase {
                        "measured \(rate)")
     }
 
+    /// Only the Spread and Bomb carriers. Every carrier feinting made the
+    /// surprise into the weather; two ships make it a tell.
+    func testOnlyTheSpreadAndBombCarriersDoubleBack() {
+        XCTAssertEqual(Set(PowerUp.allCases.filter(RaiderRules.doublesBack)),
+                       [.gatling, .nuke])
+        for powerUp in PowerUp.allCases where !RaiderRules.doublesBack(powerUp) {
+            for _ in 0..<500 {
+                XCTAssertNil(RaiderRules.feint(for: powerUp, span: 1_000,
+                                               from: 0, to: 1_000), "\(powerUp)")
+            }
+        }
+    }
+
     /// It turns somewhere in the middle and comes back a little way — never past
     /// where it came in, which would read as a second entrance.
     func testTheFeintTurnsMidCrossingAndNeverBacksPastTheEntry() {
         for _ in 0..<2_000 {
-            guard let feint = RaiderRules.feint(span: 1_000, from: 0, to: 1_000)
-            else { continue }
+            guard let feint = RaiderRules.feint(for: .gatling, span: 1_000,
+                                                from: 0, to: 1_000) else { continue }
             XCTAssertGreaterThan(feint.turn, 0)
             XCTAssertLessThan(feint.turn, 1_000, "it must turn before it exits")
             XCTAssertLessThan(feint.back, feint.turn, "it has to come back")
@@ -4946,8 +4960,8 @@ final class PowerUpTests: XCTestCase {
     /// And the same in the other direction, where every comparison flips.
     func testTheFeintWorksRightToLeft() {
         for _ in 0..<2_000 {
-            guard let feint = RaiderRules.feint(span: -1_000, from: 1_000, to: 0)
-            else { continue }
+            guard let feint = RaiderRules.feint(for: .gatling, span: -1_000,
+                                                from: 1_000, to: 0) else { continue }
             XCTAssertLessThan(feint.turn, 1_000)
             XCTAssertGreaterThan(feint.turn, 0)
             XCTAssertGreaterThan(feint.back, feint.turn, "back is rightward here")

@@ -38,6 +38,8 @@ final class RaiderNode: SKSpriteNode {
     private static let damagedKey = "damaged"
     private static let hullName = "hull"
     private static let markingsName = "markings"
+    private static let walkKey = "walk"
+    private static let bobKey = "bob"
 
     /// Fired as the scout reaches its firing point, with its current position.
     var onFire: ((CGPoint) -> Void)?
@@ -145,6 +147,37 @@ final class RaiderNode: SKSpriteNode {
         }
 
         physicsBody = Self.body(for: size)
+    }
+
+    /// Sets the camel walking. A no-op for everything else.
+    ///
+    /// Two animations rather than one, because the hull is a separate node: the
+    /// outline cycles its own frames and the hull cycles their filled
+    /// silhouettes. They are started in the same frame with the same timing, so
+    /// they stay in step — a static hull behind moving legs would show the fill
+    /// hanging in the air where the legs used to be.
+    private func startWalking(_ powerUp: PowerUp) {
+        let cycle = powerUp.walkCycle
+        guard cycle.count > 1 else { return }
+        let step = powerUp.walkFrameDuration
+
+        run(.repeatForever(.animate(with: cycle.map { SKTexture(imageNamed: $0) },
+                                    timePerFrame: step, resize: false, restore: false)),
+            withKey: Self.walkKey)
+        if let hull = childNode(withName: Self.hullName) as? SKSpriteNode {
+            hull.run(.repeatForever(
+                .animate(with: cycle.map { Silhouette.filled(forTexture: $0) },
+                         timePerFrame: step, resize: false, restore: false)),
+                     withKey: Self.walkKey)
+        }
+        // A shallow bob on the same clock. Legs alone read as a walk from a
+        // standing start and as a slide once the thing is moving; the rise and
+        // fall is what ties them to the ground it does not have. Additive with
+        // the flight path, which is its own `moveBy`, so the swoop is unaffected.
+        let up = SKAction.moveBy(x: 0, y: 1.5, duration: step * 2)
+        let down = SKAction.moveBy(x: 0, y: -1.5, duration: step * 2)
+        for action in [up, down] { action.timingMode = .easeInEaseOut }
+        run(.repeatForever(.sequence([up, down])), withKey: Self.bobKey)
     }
 
     /// §13.2's silhouette cues, drawn over the plain scout disc.
@@ -277,7 +310,8 @@ final class RaiderNode: SKSpriteNode {
             // got to, rather than from a position decided in advance.
             leg(to: fromX + span * RaiderRules.fireFraction(), thenFire: true)
         }
-        if let feint = RaiderRules.feint(span: span, from: cursor, to: toX) {
+        if let feint = RaiderRules.feint(for: powerUp, span: span,
+                                         from: cursor, to: toX) {
             leg(to: feint.turn)
             leg(to: feint.back)
         }
@@ -287,6 +321,7 @@ final class RaiderNode: SKSpriteNode {
             withKey: Self.crossKey)
 
         flyVertically(flight, duration: duration, entryY: y, bounds: bounds)
+        startWalking(powerUp)
     }
 
     /// The vertical half of the path, running alongside the crossing.
@@ -380,6 +415,9 @@ final class RaiderNode: SKSpriteNode {
 
     func stop() {
         removeAllActions()
+        // The hull animates independently while the camel walks, and
+        // `removeAllActions` does not reach a child.
+        childNode(withName: Self.hullName)?.removeAllActions()
         xScale = 1
         isCrossing = false
         isHidden = true
