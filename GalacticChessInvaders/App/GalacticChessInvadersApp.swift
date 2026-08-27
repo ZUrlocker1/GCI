@@ -12,6 +12,10 @@ struct GalacticChessInvadersApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
+        // First line in the log, before anything else has a chance to write one.
+        // The log is debug-only, so this is the one place the hidden test keys
+        // are written down where someone will actually see them.
+        DiagnosticsLog.shared.log(.startup, "Test modes A, R, V, shift-P")
         registerBundledFonts()
         // Every SFX player is built and prepared here so gameplay never touches
         // the filesystem (§18: zero I/O during play).
@@ -45,7 +49,7 @@ struct GalacticChessInvadersApp: App {
             }
             var error: Unmanaged<CFError>?
             if CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
-                DiagnosticsLog.shared.log(.startup, "Font registered: \(name)")
+                DiagnosticsLog.shared.log(.startup, "Font \(name)")
             } else {
                 DiagnosticsLog.shared.log(.startup, "Font already registered: \(name)")
             }

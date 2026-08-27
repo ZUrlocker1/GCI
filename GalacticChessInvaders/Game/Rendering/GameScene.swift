@@ -182,8 +182,7 @@ class GameScene: SKScene {
         setupInputHandler()
         setupStateMachine()
 
-        DiagnosticsLog.shared.log(.startup, "App launched (macOS, debug build)")
-        DiagnosticsLog.shared.log(.startup, "Scene size: \(Int(size.width))×\(Int(size.height))")
+        DiagnosticsLog.shared.log(.startup, "Screen: \(Int(size.width))×\(Int(size.height))")
     }
 
     // MARK: - Scene Setup
@@ -239,9 +238,7 @@ class GameScene: SKScene {
         addStarLayer(texture: dot, count: 12, speed: 140, alpha: 0.92,
                      starSize: 3.4, drift: -0.16, twinkleShare: 0.45)   // near, leans left
 
-        DiagnosticsLog.shared.log(.startup,
-            "Starfield: 3 tiers, \(starfieldNode.children.reduce(0) { $0 + $1.children.count })"
-            + " batched sprites, \(starfieldNode.children.count) scroll actions")
+        DiagnosticsLog.shared.log(.startup, "Starfield: 3 tiers")
     }
 
     /// A soft round dot: solid core fading to transparent, drawn once at launch.
@@ -448,7 +445,6 @@ class GameScene: SKScene {
         bloomNode.addChild(overlay)
         titleOverlay = overlay
 
-        DiagnosticsLog.shared.log(.level, "TITLE")
     }
 
     func hideTitleScreen() {
@@ -523,6 +519,32 @@ class GameScene: SKScene {
         DiagnosticsLog.shared.clear()
         DiagnosticsLog.shared.log(.restart, "")
         stateMachine.enter(TitleState.self)
+    }
+
+    /// Where the `P` test key is up to in `PowerUp.allCases`.
+    private var testPowerUpCursor = 0
+
+    /// Hidden developer aid: grant the next power-up outright.
+    ///
+    /// `R` sends the raider that carries one; this skips the raider. The two are
+    /// different tests — `R` exercises the crossing, the flight path and the
+    /// hitbox, and this exercises only the effect, which is the half that is
+    /// hard to reach when the level's roster does not happen to offer it. Every
+    /// power-up is reachable on any level, cycling and wrapping.
+    ///
+    /// Routed through `activate` — the same call the kill path makes — so a
+    /// granted effect is indistinguishable from an earned one. No points are
+    /// awarded: scoring belongs to the kill, not the effect.
+    private func grantNextPowerUp() {
+        guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
+        let powerUp = PowerUp.allCases[testPowerUpCursor % PowerUp.allCases.count]
+        testPowerUpCursor += 1
+        // Above the ship, so the §13.3 label lands where the player is looking
+        // rather than wherever a scout happened to die.
+        let at = CGPoint(x: ship?.position.x ?? size.width / 2,
+                         y: Self.boardBottomY + BoardNode.squareSize)
+        activate(powerUp, at: at)
+        DiagnosticsLog.shared.log(.auto, "granted \(powerUp.label.lowercased())")
     }
 
     /// Hidden developer aid: send the level's next raider in immediately.
@@ -650,7 +672,6 @@ class GameScene: SKScene {
         ScoreManager.shared.resetForNewGame()
         shipState = SpaceshipState()
         buildPlayfield()
-        DiagnosticsLog.shared.log(.level, "PLAYING")
     }
 
     /// One line per level, in the same shape whether it is the first or the
@@ -660,7 +681,7 @@ class GameScene: SKScene {
         let p = levels.parameters
         DiagnosticsLog.shared.log(.level,
             "\(levels.level) — \(Int(p.turnTimer))s beat, "
-            + "\(p.blackMovesPerTurn) move/turn, ×\(ScoreManager.shared.multiplier)")
+            + "\(p.blackMovesPerTurn) move/turn")
     }
 
     /// The next wave: level and multiplier step up, score carries over. Lives
@@ -3212,6 +3233,21 @@ class GameScene: SKScene {
         if stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "a" {
             toggleAutoMode()
+            return
+        }
+
+        // Hidden: shift-P grants the next power-up outright, for testing.
+        //
+        // Shifted, not bare, because plain `P` is pause — §5 is explicit that
+        // "`P` always toggles pause/resume", and this handler runs *ahead* of
+        // `InputHandler`, so taking the bare letter would silently remove one of
+        // the two pause keys. The other test keys are unmodified letters; this
+        // one is the exception because it is the only one whose letter is
+        // already spoken for.
+        if stateMachine.currentState is PlayingState,
+           event.modifierFlags.contains(.shift),
+           event.charactersIgnoringModifiers?.lowercased() == "p" {
+            grantNextPowerUp()
             return
         }
 
