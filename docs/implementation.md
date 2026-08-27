@@ -888,14 +888,13 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   first, and the displaced one has its world changes lifted before the new one
   applies. A shield sitting unspent competes with nothing, and neither does a
   laser cap that has already been raised
-- **Carriers are split between atlas art and drawn overlays**, and the split is
-  a playtest result rather than a principle. The specials began as shape overlays
-  on the plain scout while `ship-scout-repair`, `-ice`, `-spread` and `-bomb` sat
-  in the atlas unused; switching all four to their sprites was a clear win for
-  Spread and a clear loss for Repair and Ice, whose hexagonal grid and
-  crystalline facets read better drawn. So Spread flies `ship-scout-spread`, and
-  Repair and Ice keep the disc and the overlay. `ship-scout-bomb` and
-  `ship-scout-ice` remain in the atlas, unused
+- **Repair, Ice and Spread are the plain scout disc with drawn overlays** — a
+  hexagonal grid, crystalline facets, a row of exhaust ports — sized 58 × 30pt,
+  with Spread squashed to 82 × 26 for §13.2's "fat, squat disc". All three have
+  purpose-built sprites in the atlas (`ship-scout-repair`, `-ice`, `-spread`,
+  and `-bomb` besides), all three were tried with them, and all three read better
+  drawn. The sprites stay in the atlas, unused. Worth recording as a result
+  rather than a preference: purpose-built art is the obvious answer and it lost
 - **The Nuke flies §6.4's Mutant Camel**, not `ship-scout-bomb`. The bomb sprite
   is a competent red mine; the camel is a Jeff Minter tribute with legs, and one
   of those is the right thing to see swooping at you carrying a nuclear weapon.
