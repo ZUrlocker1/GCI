@@ -204,6 +204,27 @@ enum FleetRules {
     /// of an angled pawn shot read as noise.
     static let bishopShotInterval = 2
 
+    // MARK: - Per-rank sweep phase (Blitz)
+
+    /// How far each rank lags the rank behind it, in radians of the sweep
+    /// cycle. **This one number is the whole feature**, and it is a dial rather
+    /// than a switch:
+    ///
+    /// * `0` — every rank in step. Identical to the fleet's behaviour before
+    ///   per-rank sweeping existed, so this is also the way to turn it off.
+    /// * `.pi / 4` — a wave travelling down through the formation. Adjacent
+    ///   ranks stay within about half a square of each other, so files still
+    ///   read.
+    /// * `.pi` — adjacent ranks exactly opposed, counter-marching. The most
+    ///   dramatic and the least legible: relative shear between neighbouring
+    ///   ranks is *twice* the amplitude, which at Blitz's widening reaches two
+    ///   and a half squares. Worth trying in motion; expect the board to stop
+    ///   reading as a grid.
+    ///
+    /// Blitz only. Everywhere else the fleet moves as one body, which is what
+    /// makes it a fleet.
+    static let rankPhaseLag: CGFloat = .pi / 4
+
     /// How long a gunner glows before its round leaves (§ the charge-up
     /// telegraph). Long enough to see and act on, short enough that it is a
     /// warning rather than a countdown.

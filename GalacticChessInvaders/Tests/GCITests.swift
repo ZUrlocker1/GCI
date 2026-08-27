@@ -2428,6 +2428,26 @@ final class FleetRulesTests: XCTestCase {
         }
     }
 
+    /// The per-rank sweep is one number, and its three interesting settings
+    /// are a wave, a counter-march, and off.
+    func testRankPhaseLagIsADial() {
+        // The shipped setting: a wave down the formation.
+        XCTAssertEqual(FleetRules.rankPhaseLag, .pi / 4, accuracy: 0.0001)
+        // Adjacent ranks stay close enough that files still read. At lag θ the
+        // worst separation between neighbours is 2·amplitude·sin(θ/2).
+        let amplitude = FleetRules.sweepAmplitude(
+            squareSize: BoardNode.squareSize,
+            ratio: FleetRules.wideSweepAmplitudeRatio)
+        let shear = 2 * amplitude * sin(FleetRules.rankPhaseLag / 2)
+        XCTAssertLessThan(shear, BoardNode.squareSize,
+                          "neighbouring ranks must stay within a square")
+        // And the counter-march setting is the same dial at its limit, where
+        // that separation is the full 2x — which is the legibility cost.
+        let opposed = 2 * amplitude * sin(CGFloat.pi / 2)
+        XCTAssertEqual(opposed, 2 * amplitude, accuracy: 0.0001)
+        XCTAssertGreaterThan(opposed, BoardNode.squareSize * 1.4)
+    }
+
     /// Level 10's deeper band: three ranks march instead of two.
     func testDeepFormationAddsAThirdRank() {
         XCTAssertEqual(FleetRules.deepFormationRanks, 3)
