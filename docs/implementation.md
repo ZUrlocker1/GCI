@@ -996,97 +996,86 @@ is genuinely outstanding:
 - Starfield is ~170 batched sprites in one draw call; `SKShapeNode` cannot batch
   and would have cost one draw call each
 
-## Potential optimizations
+## Performance — done, and still open
 
-**One real problem was here and is fixed.** The object pools were rebuilt per
-level while their nodes stayed parented to a `bloomNode` that was not, so every
-level — and every `V` skip — orphaned 288 nodes and 40 physics bodies into the
-scene graph. Playing for five minutes across several levels took CPU from 38% to
-70%, and skipping to Level 8 or 10 multiplied it. The pools are built once with
-the scene now.
+### Done
 
-Two pieces of instrumentation were also lying. The FPS readout sampled a single
-frame every 250ms, so it swung between 75 and 17 on a game that played smoothly;
-it averages every frame in the window now. And the diagnostics log's text view
-called `isScrolledToBottom`, which reads `textView.bounds` and makes TextKit lay
-out the whole document — up to sixty times a second, at a cost that grew as the
-log filled. It flushes at 10Hz now, appending exactly the same text.
+Measured on an M4 (10 cores). Before: **38% CPU rising to 84% over a session**,
+FPS reported as swinging 75 → 19, node count **42,170**.
 
-Everything below is what is left, and none of it is a known problem. Measured
-27 Aug 2026 on an M4 (10 cores) with Activity Monitor: **36–38% steady, 48% at
-the highest levels**, with no observed lag or dropped input at any point.
+- [x] **The pools are built once, not once per level.** `buildPlayfield` rebuilt
+      the laser, score-pop, explosion and shatter pools every level *and* every
+      `V` skip, while their nodes are parented to `bloomNode`, which is not
+      rebuilt — and `reset()` hides a pool's nodes without unparenting them. Each
+      call orphaned **488 nodes, 40 of them carrying physics bodies**, into the
+      scene graph for the rest of the run. `V` wraps from 10 back to 1, so a
+      testing session that walks the ladder repeatedly reaches 84 calls easily,
+      which is exactly the 42,170 observed. This was the whole of "CPU climbs the
+      longer you play"
+- [x] **`didMove(to:)` is guarded against running twice.** The scene is a
+      singleton and `presentScene` is called from `makeNSView`, so anything that
+      makes SwiftUI rebuild the representable — a window rebuild, a move to
+      another display — presents the same scene again and SpriteKit calls
+      `didMove` again. Nothing in `setupScene` was idempotent: it built a second
+      `bloomNode`, meaning **a second full-screen CIBloom pass every frame**, a
+      second starfield and a second set of pools, and left the first of each
+      parented and costing frames
+- [x] **The FPS readout is an average, not a sample.** It took one frame every
+      250ms, which reads 75 off a short frame and 19 off a long one while the
+      other fourteen were fine — the reason a smooth-feeling game reported wild
+      swings. It averages every frame in the window now
+- [x] **The diagnostics log flushes at 10Hz instead of per frame.** The text view
+      is append-only, but it called `isScrolledToBottom`, which reads
+      `textView.bounds` and makes TextKit lay out the whole document — at the
+      2000-line cap, up to sixty times a second, at a cost that grew as the log
+      filled. Identical text, six times fewer forced layouts
 
-That number is per *core*, not per machine, so it is 3.6–4.8% of an M4 — an
-unremarkable figure for a 60fps SpriteKit scene running a full-screen Core Image
-bloom pass. The rise at the late levels is expected load rather than drift: three
-marching ranks, more pieces venting embers, more rounds in flight. It was also
-almost certainly a **Debug** build, which pays for `-Onone` codegen, the
-diagnostics log, and the node-count tree walk — none of which ship.
+**Watch `nodeCount`.** It should now settle at roughly the same number after
+every level instead of stepping up by ~488. That single figure is the direct test
+of whether the leak is gone.
 
-So this list is a place to start *if* CPU ever matters, roughly in order of
-expected return. None of it has been measured; the first two are the only ones
-worth trying before profiling.
+### Still open
 
-**Per-frame label text.** `SKLabelNode.text` re-lays out glyphs on assignment.
-`TurnTimerNode.refresh` writes *both* its labels every frame while White may
-move — and interpolates a new `String` for the digits each time — so a value
-that changes once a second is rebuilt sixty. `syncPowerUpAlley` does the same for
-up to three lines. Guarding each write on an actual change is a few lines and
-costs nothing when the value has changed. This is the cheapest item on the list
-and probably the largest of the CPU ones after the two below.
-
-**Check the frame rate first.** `preferredFramesPerSecond` is never set on the
-`SKView`, and neither is anything else about its cadence. Press `L` and read the
-FPS line: if it says ~120 on a ProMotion display, the game is rendering twice as
-often as it needs to and capping it to 60 halves everything below. One line in
-`ContentView.GameSKViewRepresentable`, and it costs nothing to find out.
+None of these is a known problem, and at 60fps steady none of them is why the
+frame rate moves. Ordered by expected return.
 
 **`bloomNode.shouldRasterize = true`** (`GameScene.setupBloomNode`). Rasterizing
-an `SKEffectNode` caches its rendered output and re-renders when the subtree
-changes. Every moving thing in the game is a child of this node, so the subtree
-changes every frame and the cache is never hit — it is likely paying for a
-texture round-trip per frame and getting nothing back. Apple's own guidance is to
-rasterize only when contents rarely change. Flipping it to `false` is visually
-identical, since rasterization is purely a caching strategy, so this is a safe
-experiment. It is a `CLAUDE.md`-documented decision, which is the only reason it
-has not been changed.
+caches an `SKEffectNode`'s output and re-renders when the subtree changes — and
+every moving thing in the game is a child of this node, so the cache is never
+hit. Applying the `CIFilter` forces an offscreen pass either way, so what
+rasterizing adds is a retained buffer and invalidation bookkeeping that never pay
+off: a real but probably modest win. Flipping it is visually identical, which
+makes it the safest thing on the list.
 
 **`ignoresSiblingOrder` is not set on the view.** With explicit `zPosition`
 everywhere — which this codebase has — setting it lets SpriteKit reorder draws
-within a z-layer to batch by texture. The pieces already share one atlas, so
-there is batching to win. Turn on `showsDrawCount` (it is wired to the sidebar)
-and see whether the count actually drops before keeping it.
+within a z-layer to batch by texture. Turn on `showsDrawCount` (it is wired to
+the sidebar) and see whether the count actually drops before keeping it.
 
-**`rearRankPieces` runs every frame on every level.** It is passed as an argument
-to `raiders?.update(...)`, so it is evaluated unconditionally: two array
-allocations (`allPieces(color:)` filters the piece dictionary, then a second
-`filter`) plus a string parse per piece, 60 times a second. It is only *used* on
-Levels 1–2, where `RaiderRules.waitsForThinnedRearRank` is true. Guarding the
-call — or passing a closure instead of a value — makes it free from Level 3 on.
+**Per-frame `SKLabelNode.text` writes.** `TurnTimerNode.refresh` writes both its
+labels every frame while White may move, interpolating a fresh `String` for the
+digits, so a value that changes once a second is rebuilt sixty times.
+`syncPowerUpAlley` does the same for up to three lines. Guarding each write on an
+actual change is a few lines.
 
 **`childNode(withName:)` in the per-frame path.** Five lookups a frame between
 `syncPowerUpAlley`, its countdown bar and `syncRespawnWarnings`, each a linear
-scan of `bloomNode`'s children — of which there are on the order of a hundred
-once the laser pools, the raiders and the effect pools are parented. Holding the
-node references instead of looking them up by name removes roughly 500 string
+scan of `bloomNode`'s children. Holding the references removes roughly 500 string
 comparisons a frame.
 
-**72 pre-created player laser nodes** (`LaserPool`), up from 6, each carrying a
-physics body. Parked bodies have `categoryBitMask = .none` so they are never
-contact-tested, but SpriteKit still walks the body list. The number is derived
-from the Gatling barrage's measured steady state, so it can only come down by
-changing the barrage — a lower fire rate or a shorter reach would both shrink it.
+**`rearRankPieces` runs every frame on every level.** Passed as an argument to
+`raiders?.update(...)`, so it is evaluated unconditionally: two array allocations
+plus a string parse per piece, 60 times a second, and it is only *used* on Levels
+1–2 where `waitsForThinnedRearRank` is true.
 
-**CIBloom is a full-screen Core Image pass every frame** at radius 6, intensity
-0.9. The alternative to the whole approach is pre-blurred additive sprite copies
-per glowing node, which trades GPU fill for draw calls and node count. That is a
-large change to the look as well as the cost, so it is a last resort rather than
-a tuning knob.
+**CIBloom is a full-screen Core Image pass every frame.** The alternative is
+pre-blurred additive sprite copies per glowing node, which trades GPU fill for
+draw calls and node count. That is a large change to the look as well as the
+cost, so it is a last resort.
 
-**Already handled, for the record:** the starfield is ~170 sprites sharing one
-texture in a single draw call (`SKShapeNode` circles could not batch and cost one
-each); `Silhouette`'s flood fill is measured once per texture and cached;
-diagnostics publish at 4Hz rather than per frame; every laser, explosion, score
+**Already handled, for the record:** the starfield is ~196 sprites sharing one
+texture in a single draw call; `Silhouette`'s flood fill is measured once per
+texture and cached; diagnostics publish at 4Hz; every laser, explosion, score
 pop, shatter and raider is pooled, so gameplay allocates nothing.
 
 ## Verification notes
