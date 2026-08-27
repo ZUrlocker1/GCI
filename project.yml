@@ -30,13 +30,26 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.zurlocker.GalacticChessInvaders
         INFOPLIST_FILE: GalacticChessInvaders/Info.plist
-        ENABLE_HARDENED_RUNTIME: NO
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGNING_REQUIRED: NO
-        CODE_SIGNING_STYLE: Manual
         CURRENT_PROJECT_VERSION: "1"
         MARKETING_VERSION: "0.1"
         SWIFT_STRICT_CONCURRENCY: complete
+        # Signing, set up the way Zudio is. `DEVELOPMENT_TEAM` is the piece that
+        # was missing: without it an archive carries no team and Xcode refuses to
+        # distribute it — "No Team Found in Archive".
+        DEVELOPMENT_TEAM: K66MA9TR8Z
+        CODE_SIGN_ENTITLEMENTS: GalacticChessInvaders.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Manual
+      configs:
+        # Ad-hoc locally, so a debug build never waits on a certificate.
+        Debug:
+          CODE_SIGN_IDENTITY: "-"
+          CODE_SIGNING_REQUIRED: NO
+        # Developer ID for anything that leaves this machine. Notarization
+        # requires the hardened runtime, which is why it is on above.
+        Release:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGNING_REQUIRED: YES
 
   GCITests:
     type: bundle.unit-test
@@ -50,6 +63,11 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         BUNDLE_LOADER: "$(TEST_HOST)"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/GalacticChessInvaders.app/Contents/MacOS/GalacticChessInvaders"
+        # The test bundle needs a team too, or archiving the scheme fails on it
+        # rather than on the app.
+        DEVELOPMENT_TEAM: K66MA9TR8Z
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
     dependencies:
       - target: GalacticChessInvaders
 
