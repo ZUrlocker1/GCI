@@ -3287,7 +3287,7 @@ final class RaiderTests: XCTestCase {
     /// Every scout after it fires.
     func testTheFirstScoutOfALevelHoldsItsFire() {
         var schedule = RaiderSchedule()
-        schedule.reset(interval: 20)
+        schedule.reset(interval: 20, level: 1)
         XCTAssertFalse(schedule.firstScoutDone)
         XCTAssertFalse(schedule.claimFiringPass(), "the first crosses silent")
         XCTAssertTrue(schedule.firstScoutDone)
@@ -3295,7 +3295,7 @@ final class RaiderTests: XCTestCase {
             XCTAssertTrue(schedule.claimFiringPass(), "and the rest all fire")
         }
         // A new level gets its warning pass back.
-        schedule.reset(interval: 20)
+        schedule.reset(interval: 20, level: 1)
         XCTAssertFalse(schedule.claimFiringPass())
     }
 
@@ -3303,7 +3303,7 @@ final class RaiderTests: XCTestCase {
     /// rather than skipping it — a blocked raider is late, not cancelled.
     func testTheSpawnClockWaitsRatherThanSkipping() {
         var schedule = RaiderSchedule()
-        schedule.reset(interval: 20)
+        schedule.reset(interval: 20, level: 7)
         XCTAssertFalse(schedule.tick(19, interval: 20, onScreen: 0), "not yet")
         XCTAssertTrue(schedule.tick(2, interval: 20, onScreen: 0), "due")
         XCTAssertFalse(schedule.tick(19, interval: 20, onScreen: 0))
@@ -3318,21 +3318,56 @@ final class RaiderTests: XCTestCase {
                       "and launches the moment there is room")
     }
 
-    /// §6: mid-board, and the same height all level so a player who has seen
-    /// one crossing knows where the next will be.
+    /// Early levels fly it over the board, where the mystery ship belongs;
+    /// later ones drop it into §6's rank 4–5, which is a real escalation
+    /// because down there it is firing into traffic.
+    func testTheScoutFliesHighEarlyAndDropsLater() {
+        for level in 1...RaiderRules.aboveBoardThroughLevel {
+            XCTAssertEqual(RaiderRules.crossing(for: level), .overTheBoard,
+                           "level \(level)")
+        }
+        for level in (RaiderRules.aboveBoardThroughLevel + 1)...10 {
+            guard case .rank(let rank) = RaiderRules.crossing(for: level) else {
+                return XCTFail("level \(level) should cross at a rank")
+            }
+            XCTAssertTrue([4, 5].contains(rank), "§6: rank 4-5")
+        }
+    }
+
+    /// The height is held for the whole level, so a player who has seen one
+    /// crossing knows where the next will be.
     func testTheCrossingHeightIsFixedForTheLevel() {
         var schedule = RaiderSchedule()
-        schedule.reset(interval: 20)
-        let rank = schedule.crossingRank
-        XCTAssertTrue([4, 5].contains(rank), "§6: rank 4-5")
+        schedule.reset(interval: 20, level: 7)
+        let crossing = schedule.crossing
         for _ in 0..<10 {
             _ = schedule.tick(1, interval: 20, onScreen: 0)
-            XCTAssertEqual(schedule.crossingRank, rank, "held for the level")
+            XCTAssertEqual(schedule.crossing, crossing, "held for the level")
         }
-        // Only a new level rerolls it.
+        // Only a new level rerolls it, and both heights stay reachable.
         var seen = Set<Int>()
-        for _ in 0..<50 { schedule.reset(interval: 20); seen.insert(schedule.crossingRank) }
-        XCTAssertEqual(seen, [4, 5], "and both heights are reachable")
+        for _ in 0..<60 {
+            schedule.reset(interval: 20, level: 7)
+            if case .rank(let r) = schedule.crossing { seen.insert(r) }
+        }
+        XCTAssertEqual(seen, [4, 5])
+    }
+
+    /// Level 1 gives the player two control schemes and no fleet fire; a scout
+    /// arriving over an untouched board is one more thing to parse before
+    /// anything has happened. It waits for the back rank to break.
+    func testEarlyLevelsHoldTheScoutUntilTheRearRankThins() {
+        XCTAssertTrue(RaiderRules.waitsForThinnedRearRank(level: 1))
+        XCTAssertTrue(RaiderRules.waitsForThinnedRearRank(level: 2))
+        XCTAssertFalse(RaiderRules.waitsForThinnedRearRank(level: 3))
+
+        var schedule = RaiderSchedule()
+        schedule.reset(interval: 20, level: 1)
+        XCTAssertFalse(schedule.tick(25, interval: 20, onScreen: 0, blocked: true),
+                       "overdue, but the rank is still crowded")
+        XCTAssertFalse(schedule.tick(10, interval: 20, onScreen: 0, blocked: true))
+        XCTAssertTrue(schedule.tick(0, interval: 20, onScreen: 0, blocked: false),
+                      "and goes the moment it thins — the wait is not lost")
     }
 
     /// The shot never leaves at the very edges of the crossing: one fired on

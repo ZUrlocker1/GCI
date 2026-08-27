@@ -32,12 +32,38 @@ enum RaiderRules {
     /// §6: at most two raiders on screen; a third waits.
     static let maxOnScreen = 2
 
-    /// §6: "mid-board height (rank 4–5)".
+    /// Where the scout crosses, held for the whole level so a player who has
+    /// seen one crossing knows where the next will be.
     ///
-    /// Picked once per level and held, so a player who has seen one crossing
-    /// knows where the next will be. Varying it per raider would make the
-    /// first sighting worth nothing.
-    static func crossingRank() -> Int { Bool.random() ? 4 : 5 }
+    /// Early levels fly it *over* the board, above every piece — which is where
+    /// Space Invaders' mystery ship flies, and what makes it read as a passing
+    /// bonus rather than as part of the fleet. §6 asks for rank 4–5; that is
+    /// where it drops to once the player has met it, and it is a real
+    /// escalation, because down there it is firing into traffic.
+    enum Crossing: Equatable {
+        case overTheBoard
+        case rank(Int)
+    }
+
+    static func crossing(for level: Int) -> Crossing {
+        level <= aboveBoardThroughLevel ? .overTheBoard : .rank(Bool.random() ? 4 : 5)
+    }
+
+    static let aboveBoardThroughLevel = 3
+
+    /// Early levels hold the scout back until the fleet's rear rank has
+    /// thinned.
+    ///
+    /// Level 1 is where the player is learning two control schemes at once, and
+    /// §21.1 already gives it no fleet fire at all — a scout arriving over an
+    /// untouched board is one more thing to parse before anything has happened.
+    /// Waiting until the back rank is broken means the first one shows up as a
+    /// reward for making progress.
+    static func waitsForThinnedRearRank(level: Int) -> Bool { level <= 2 }
+
+    /// More than this many pieces still on the fleet's rear rank counts as
+    /// crowded — half of a full rank.
+    static let crowdedRearRank = 4
 
     /// Where in the crossing the single shot leaves, as a fraction of the way
     /// across. Never at the very edges: a shot fired as the scout enters is
@@ -62,26 +88,27 @@ struct RaiderSchedule {
     /// crossing. Scouts spawned while this is false do not fire.
     private(set) var firstScoutDone = false
     /// The height every scout in this level crosses at.
-    private(set) var crossingRank = RaiderRules.crossingRank()
+    private(set) var crossing = RaiderRules.Crossing.overTheBoard
 
     /// Restarts the clock for a new level. The first raider is not due
     /// immediately: a wave should open on the chess position, not on a UFO.
-    mutating func reset(interval: TimeInterval) {
+    mutating func reset(interval: TimeInterval, level: Int) {
         untilNext = interval
         firstScoutDone = false
-        crossingRank = RaiderRules.crossingRank()
+        crossing = RaiderRules.crossing(for: level)
     }
 
     /// True when a raider is due. `onScreen` is the cap check, folded in here
     /// so a blocked spawn does not silently reset the clock and skip a turn —
     /// it stays due until there is room.
     mutating func tick(_ dt: TimeInterval, interval: TimeInterval,
-                       onScreen: Int) -> Bool {
+                       onScreen: Int, blocked: Bool = false) -> Bool {
         untilNext -= dt
         guard untilNext <= 0 else { return false }
-        // Due but capped: leave the clock expired so it launches the moment
-        // there is room. Resetting it here would silently skip a raider.
-        guard onScreen < RaiderRules.maxOnScreen else { return false }
+        // Due but capped, or held back by a crowded rear rank: leave the clock
+        // expired so it launches the moment the way is clear. Resetting it here
+        // would silently skip a raider.
+        guard !blocked, onScreen < RaiderRules.maxOnScreen else { return false }
         untilNext = interval
         return true
     }

@@ -37,14 +37,22 @@ final class RaiderController {
 
     var onScreen: Int { scouts.filter(\.isCrossing).count }
 
-    func reset(interval: TimeInterval) {
+    func reset(interval: TimeInterval, level: Int) {
         scouts.forEach { $0.stop() }
-        schedule.reset(interval: interval)
+        schedule.reset(interval: interval, level: level)
     }
 
     /// Advances the real-time clock and launches a scout when one is due.
-    func update(deltaTime: TimeInterval, interval: TimeInterval) {
-        guard schedule.tick(deltaTime, interval: interval, onScreen: onScreen),
+    ///
+    /// `rearRankPieces` gates the early levels: the first scout waits until the
+    /// player has broken into the fleet's back rank, so it arrives as a reward
+    /// for progress rather than as one more thing to parse on a full board.
+    func update(deltaTime: TimeInterval, interval: TimeInterval,
+                level: Int, rearRankPieces: Int) {
+        let blocked = RaiderRules.waitsForThinnedRearRank(level: level)
+            && rearRankPieces > RaiderRules.crowdedRearRank
+        guard schedule.tick(deltaTime, interval: interval,
+                            onScreen: onScreen, blocked: blocked),
               let scout = scouts.first(where: { !$0.isCrossing }) else { return }
         launch(scout)
     }
@@ -56,8 +64,15 @@ final class RaiderController {
         let leftToRight = Bool.random()
         let fromX = leftToRight ? -margin : sceneWidth + margin
         let toX = leftToRight ? sceneWidth + margin : -margin
-        // §6: rank 4–5, the same height all level.
-        let y = boardBottomY + (CGFloat(schedule.crossingRank) - 0.5) * BoardNode.squareSize
+        let y: CGFloat
+        switch schedule.crossing {
+        case .overTheBoard:
+            // Between the board's top edge and the HUD, so it clears every
+            // piece however far the fleet has descended.
+            y = boardBottomY + BoardNode.boardSize + 14
+        case .rank(let rank):
+            y = boardBottomY + (CGFloat(rank) - 0.5) * BoardNode.squareSize
+        }
 
         let firing = schedule.claimFiringPass()
         scout.onFire = { [weak self] point in self?.onScoutFire?(point) }
@@ -70,8 +85,13 @@ final class RaiderController {
         }
         scout.cross(fromX: fromX, toX: toX, y: y, firing: firing)
 
+        let where_: String
+        switch schedule.crossing {
+        case .overTheBoard:   where_ = "over the board"
+        case .rank(let rank): where_ = "rank \(rank)"
+        }
         DiagnosticsLog.shared.log(.raider,
-            "scout \(leftToRight ? "→" : "←") rank \(schedule.crossingRank)"
+            "scout \(leftToRight ? "→" : "←") \(where_)"
             + (firing ? "" : " (warning pass)"))
     }
 
