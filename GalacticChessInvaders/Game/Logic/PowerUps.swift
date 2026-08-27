@@ -101,6 +101,28 @@ enum PowerUp: String, CaseIterable {
     /// is the only test that counts. The sprites stay in the atlas, unused.
     var spriteName: String { self == .nuke ? "ship-camel" : "ship-scout" }
 
+    /// The camel's walk cycle, in order. Empty for everything else — a disc has
+    /// no legs to move.
+    ///
+    /// Three drawings and four frames: the two swung poses are separated by the
+    /// neutral one, which is the passing pose every walk cycle needs. Cycling
+    /// B→C directly reads as a twitch, because the legs cross the middle without
+    /// ever being seen there.
+    ///
+    /// The two swung frames are generated from the atlas sprite rather than
+    /// drawn: the legs are sheared about the hip line, by an offset proportional
+    /// to how far below the hip each row sits, so the leg pivots instead of
+    /// sliding and stays attached. Front and rear swing in opposite phase, which
+    /// is the part that reads as walking rather than as leaning.
+    var walkCycle: [String] {
+        guard self == .nuke else { return [] }
+        return ["ship-camel", "ship-camel-b", "ship-camel", "ship-camel-c"]
+    }
+
+    /// A plodding trot: 0.8s for a full cycle. Faster looks like a scuttle, and
+    /// this is a camel.
+    var walkFrameDuration: TimeInterval { 0.2 }
+
     /// Against the standard 30pt scout height.
     ///
     /// Not 1.0 for everything, because the sprites do not fill their canvases

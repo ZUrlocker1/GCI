@@ -214,20 +214,33 @@ enum RaiderRules {
     }
 
     /// A one-in-five chance the crossing doubles back on itself before carrying
-    /// on the way it was going.
+    /// on the way it was going — for the two carriers that are allowed to.
     ///
     /// Returns where to turn and how far back to go, or nil for a straight
-    /// crossing. The point is not difficulty — the raider is on screen *longer*
-    /// for doubling back, so it is marginally easier to catch — it is that a
-    /// crossing you have already read stops being fully predictable. One in five
-    /// is often enough to make the player watch and rare enough that the
-    /// straight crossing stays the thing they are watching *for*.
+    /// crossing. The point is not difficulty: a raider that doubles back is on
+    /// screen *longer* and is marginally easier to catch. It is that a crossing
+    /// the player has already read stops being fully predictable.
+    ///
+    /// One in five is often enough to make the player watch and rare enough that
+    /// the straight crossing stays the thing they are watching *for*.
     static let feintChance = 0.2
     /// How far back it comes, as a fraction of the crossing.
     static let feintDepth: ClosedRange<CGFloat> = 0.10...0.20
 
-    static func feint(span: CGFloat, from cursor: CGFloat,
+    /// Only the Spread and Bomb carriers double back.
+    ///
+    /// It was every carrier first, which spread the surprise so thin it became
+    /// the weather — a tax on the player's aim everywhere rather than a moment
+    /// anywhere. Tied to two ships it is a *tell*: the fat orange disc and the
+    /// honking camel are the ones that might not go where they are pointed, and
+    /// the other three stay clean to read.
+    static func doublesBack(_ powerUp: PowerUp) -> Bool {
+        powerUp == .gatling || powerUp == .nuke
+    }
+
+    static func feint(for powerUp: PowerUp, span: CGFloat, from cursor: CGFloat,
                       to toX: CGFloat) -> (turn: CGFloat, back: CGFloat)? {
+        guard doublesBack(powerUp) else { return nil }
         guard Double.random(in: 0..<1) < feintChance else { return nil }
         // Somewhere in the middle of what is left: a feint in the first moments
         // is not yet a change of mind, and one at the far edge is not seen.
