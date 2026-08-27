@@ -63,7 +63,7 @@ class GameScene: SKScene {
     /// This is the *only* thing that stops a regenerated pawn firing. Armor
     /// does not: an armored pawn is a gunner like any other, and taking fire
     /// and returning it are separate questions.
-    private var materialising: Set<String> = []
+
     private var explosions: ExplosionPool?
     private var shatters: ShatterPool?
     private var raiders: RaiderController?
@@ -953,7 +953,6 @@ class GameScene: SKScene {
         explosions?.reset()
         shatters?.reset()
         regeneration.reset()
-        materialising.removeAll()
         // Torn down, not just reset: `buildPlayfield` makes a fresh controller
         // every level, so resetting the old one left its nodes parented.
         raiders?.teardown()
@@ -1979,7 +1978,7 @@ class GameScene: SKScene {
         }
 
         let candidates = board.allPieces(color: .black)
-            .filter { !materialising.contains($0.logicalSquare) }
+            .filter { pieceNodes[$0.logicalSquare]?.isMaterialising != true }
             .map { FleetFiring.Candidate(square: $0.logicalSquare, type: $0.type) }
 
         // Crossfire: the bishops fire together on their own cadence, so two
@@ -2866,14 +2865,12 @@ class GameScene: SKScene {
         }
         let armored = Regeneration.arrivesArmored(level: levels.parameters)
         guard let pawn = board.regeneratePawn(at: square, armored: armored) else { return }
-        materialising.insert(square)
-
         let node = PieceNode(piece: pawn, squareSize: BoardNode.squareSize)
         node.position = centre
         // No body until it has finished arriving — §23.9's "the piece cannot be
         // shot while beaming in", and the shimmer is the only warning the
         // player gets or needs.
-        node.physicsBody = nil
+        node.beginMaterialising()
         fleet.adopt(node, square: square, atLogicalCentre: centre)
         pieceNodes[square] = node
 
@@ -2882,13 +2879,22 @@ class GameScene: SKScene {
         let tint = defensive ? NeonPalette.starBlueLight : NeonPalette.transporterGreen
         node.beamIn(duration: Regeneration.beamInDuration, tint: tint) {
             [weak self, weak node] in
-            guard let self, let node, self.pieceNodes[square] === node else { return }
+            guard let self, let node else { return }
+            // Its *current* square, not the one it arrived on. The fleet
+            // descends on the chess beat and a beam-in lasts 1.8 seconds, so a
+            // pawn that regenerates shortly before a descent finishes arriving
+            // one rank lower than it started — and this used to check
+            // `pieceNodes[<the original square>] === node`, which by then held
+            // nothing. The guard failed, `becomeSolid` never ran, and the pawn
+            // spent the rest of the wave visible, marching, firing, and
+            // completely immune to laser fire with no hit ever logged.
+            let landed = node.square
+            guard self.pieceNodes[landed] === node else { return }
             // The hitbox is the whole point of the materialisation: until this
             // runs the pawn is on the board, in the engine and in the fleet,
             // and completely immune to being shot.
             node.becomeSolid()
-            self.materialising.remove(square)
-            node.refresh(with: self.board.piece(at: square) ?? pawn)
+            node.refresh(with: self.board.piece(at: landed) ?? pawn)
             if armored { node.setArmored(true) }
             node.startIdleBob(phase: .random(in: 0...0.8))
             // The board just gained a piece back. That deserves the same
@@ -3473,9 +3479,30 @@ class GameScene: SKScene {
         #if DEBUG
         guard dt > 0, now - lastStatsUpdate >= Self.statsInterval else { return }
         lastStatsUpdate = now
+        auditHitboxes()
         DiagnosticsLog.shared.fps = (1.0 / dt).rounded()
         DiagnosticsLog.shared.nodeCount = countAllNodes()
         #endif
+    }
+
+    /// Catches a piece that is on the board with no hitbox and no beam-in
+    /// running.
+    ///
+    /// That state is invisible by construction: no contact fires, so no hit is
+    /// logged, no sound plays and nothing on screen looks wrong — the player
+    /// simply shoots a piece over and over and nothing happens. It took a
+    /// player noticing "that pawn never takes damage" to find it once, which is
+    /// exactly the kind of bug worth spending four checks a second on.
+    ///
+    /// Repairs as well as reports: a wave that has already gone wrong is better
+    /// off playable, and the log line is what says it happened.
+    private func auditHitboxes() {
+        for (square, node) in pieceNodes
+        where node.physicsBody == nil && !node.isMaterialising {
+            node.becomeSolid()
+            DiagnosticsLog.shared.log(.error,
+                "\(node.piece.color) \(node.piece.type) \(square) had no hitbox")
+        }
     }
 
     private func countAllNodes() -> Int {

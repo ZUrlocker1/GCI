@@ -457,7 +457,25 @@ final class PieceNode: SKSpriteNode {
     /// pawn was therefore left with `physicsBody == nil` permanently — lasers
     /// passed straight through it for the rest of the wave, which reads exactly
     /// like armor that never expires.
-    func becomeSolid() { rebuildPhysicsBody() }
+    /// True from the moment a regenerated piece starts beaming in until it
+    /// finishes. While it is set the piece has no physics body at all (§23.9:
+    /// "the piece cannot be shot while it arrives").
+    ///
+    /// A flag on the node rather than a set of squares held by the scene, which
+    /// is what it was: a piece's square changes whenever the fleet descends, and
+    /// a beam-in lasts 1.8 seconds, so a set keyed by square went stale in the
+    /// middle of the very window it was tracking.
+    private(set) var isMaterialising = false
+
+    func beginMaterialising() {
+        isMaterialising = true
+        physicsBody = nil
+    }
+
+    func becomeSolid() {
+        isMaterialising = false
+        rebuildPhysicsBody()
+    }
 
     // MARK: - Transporter beam-in (§23.9)
 
