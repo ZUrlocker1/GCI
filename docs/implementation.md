@@ -639,11 +639,18 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       over the ordinary pawn. Three sounds, all for cut raiders. Six `SoundKey`
       cases went with them, so the enum no longer promises features that are not
       coming
-- [ ] **Bundle size: 15 MB, and 11.7 MB of it is audio.** One file is 6.1 MB —
-      the game-over sting, at **192 kHz stereo**, four times the useful sample
-      rate. Re-encoding the GDC files to 44.1 kHz mono would take the bundle
-      under 10 MB without trimming a single sound or changing what anything
-      sounds like. The kenney files are already 44.1 mono
+- [x] **The game-over sting resampled, 6.1 MB → 1.4 MB.** It was 192 kHz stereo,
+      four times the useful rate, and on its own a third of the bundle.
+      Resampled to 44.1 kHz with `afconvert`; stereo kept, so the only thing
+      discarded is content above 22 kHz that nothing can hear. Verified rather
+      than assumed: duration, peak and RMS across four slices of the envelope are
+      identical to four decimal places. Resources are 10.3 MB, from 15.1
+- [ ] **Six more GDC sounds are 96 kHz stereo** (`EffectiveTrailer_Booms`,
+      `Button Arp Twinkle`, `Interface Arp Reveal Down Long`, `Interface Sci-Fi
+      Ping Down`, `Interface Deny Low Fat Dark`, `DSGNErie_NoiseBoxHit_10`). The
+      same resample takes them from 2.5 MB to about 1.1 MB. Downmixing the lot to
+      mono — which every kenney file already is, and which the game never pans —
+      would roughly halve that again
 
 ## Phase 6.1 — Raiders: Scout ✅
 
