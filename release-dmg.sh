@@ -27,12 +27,19 @@ BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${PLIST}")
 
 TEAM_ID="K66MA9TR8Z"
 SIGNING_IDENTITY="Developer ID Application: Zack Urlocker (${TEAM_ID})"
-OUTPUT_DMG="${HOME}/Downloads/GalacticChessInvaders-${VERSION}.dmg"
+# One name throughout: the DMG, the volume and the app all match whatever the
+# exported bundle is called. Appending the version produced "GCI 01-0.1.0.dmg",
+# which is a mouthful and says the version twice when the app is already named
+# for a build. The version is still reported at the end, and it is in the About
+# box where it belongs.
+OUTPUT_DMG="${HOME}/Downloads/$(basename "${APP_SRC}" .app).dmg"
 
 DMG_WORK="/tmp/GCIDMG"
 DMG_STAGING="${DMG_WORK}/staging"
 DMG_BACKGROUND="${DMG_WORK}/background.png"
-APP_NAME="GalacticChessInvaders.app"
+# The app's own name, not a hardcoded one — the exported bundle is often
+# renamed ("GCI 01.app") and it should keep that name inside the DMG.
+APP_NAME="$(basename "${APP_SRC}")"
 
 WINDOW_W=560
 WINDOW_H=340
@@ -121,7 +128,7 @@ cp -R "${APP_SRC}" "${DMG_STAGING}/${APP_NAME}"
 rm -f "${OUTPUT_DMG}"
 
 create-dmg \
-    --volname "Galactic Chess Invaders ${VERSION}" \
+    --volname "$(basename "${APP_SRC}" .app)" \
     --background "${DMG_BACKGROUND}" \
     --window-pos 200 120 \
     --window-size ${WINDOW_W} ${WINDOW_H} \
