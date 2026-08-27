@@ -677,6 +677,12 @@ class GameScene: SKScene {
 
         let player = SpaceshipNode()
         player.position = CGPoint(x: size.width / 2, y: Self.shipLaneY)
+        // The hull is a *view* of the laser cap, not a latch. It only ever gets
+        // switched on at a promotion, and it reads correctly today because the
+        // ship is rebuilt every level with the cap already reset — this line is
+        // what keeps that true if the ship is ever built at some other moment.
+        player.setRapidFire(stacks: (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
+                                        - SpaceshipState.baseLaserCap)
         bloomNode.addChild(player)
         ship = player
 
