@@ -33,6 +33,30 @@ enum RaiderRules {
     /// §6: at most two raiders on screen; a third waits.
     static let maxOnScreen = 2
 
+    /// The most of the time a raider may be on screen at all.
+    ///
+    /// §21.1's interval tightens to 6s, and a crossing takes 5.6s — which would
+    /// have meant a scout up 94% of the time from Level 7, i.e. permanently.
+    /// A raider that is always there stops being an event and becomes scenery,
+    /// the same failure the screen shake had.
+    static let maxScreenShare = 0.6
+
+    /// The interval actually used: the level's, or whatever the share cap
+    /// requires, whichever is longer.
+    ///
+    /// Derived from the crossing rather than written into the table, so
+    /// changing the scout's speed cannot silently break the cap.
+    static func interval(forLevel levelInterval: TimeInterval,
+                         crossing: TimeInterval) -> TimeInterval {
+        max(levelInterval, crossing / maxScreenShare)
+    }
+
+    /// How long one crossing takes, entry to exit, including the off-screen
+    /// margin at both ends.
+    static func crossingDuration(sceneWidth: CGFloat, scoutWidth: CGFloat) -> TimeInterval {
+        TimeInterval((sceneWidth + scoutWidth * 2) / scoutSpeed)
+    }
+
     /// Where the scout crosses, held for the whole level so a player who has
     /// seen one crossing knows where the next will be.
     ///

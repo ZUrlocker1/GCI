@@ -57,7 +57,17 @@ final class RaiderController {
     func reset(interval: TimeInterval, level: Int) {
         scouts.forEach { $0.stop() }
         setWarble(false)
-        schedule.reset(interval: interval, level: level)
+        schedule.reset(interval: paced(interval), level: level)
+    }
+
+    /// The level's interval, stretched if it would put a raider on screen more
+    /// than `maxScreenShare` of the time.
+    private func paced(_ levelInterval: TimeInterval) -> TimeInterval {
+        let width = scouts.first?.size.width ?? 0
+        return RaiderRules.interval(
+            forLevel: levelInterval,
+            crossing: RaiderRules.crossingDuration(sceneWidth: sceneWidth,
+                                                   scoutWidth: width))
     }
 
     /// Removes the raiders from the scene. The controller is rebuilt per level,
@@ -77,7 +87,7 @@ final class RaiderController {
                 level: Int, rearRankPieces: Int) {
         let blocked = RaiderRules.waitsForThinnedRearRank(level: level)
             && rearRankPieces > RaiderRules.crowdedRearRank
-        guard schedule.tick(deltaTime, interval: interval,
+        guard schedule.tick(deltaTime, interval: paced(interval),
                             onScreen: onScreen, blocked: blocked),
               let scout = scouts.first(where: { !$0.isCrossing }) else { return }
         launch(scout)
@@ -115,14 +125,8 @@ final class RaiderController {
         scout.cross(fromX: fromX, toX: toX, y: y, firing: firing)
         setWarble(true)
 
-        let where_: String
-        switch schedule.crossing {
-        case .overTheBoard:   where_ = "over the board"
-        case .rank(let rank): where_ = "rank \(rank)"
-        }
         DiagnosticsLog.shared.log(.raider,
-            "scout \(leftToRight ? "→" : "←") \(where_)"
-            + (firing ? "" : " (warning pass)"))
+            firing ? "scout \(leftToRight ? "→" : "←")" : "scout warning pass")
     }
 
     func setPaused(_ paused: Bool) {

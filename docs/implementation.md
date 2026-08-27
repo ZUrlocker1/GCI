@@ -421,9 +421,12 @@ turn, so the board pulses together; a raider ignores that entirely.
   thing to parse on an untouched board
 - 220 px/s, and the constraint is the ship's 294: a scout the player cannot
   outrun can only be hit by already standing under it. Closing at 74 px/s means
-  a missed pass is recoverable. The cost is frequency — a 5.6s crossing is 28%
-  of Level 1's interval but 94% of Level 10's, so by Blitz there is nearly
-  always one up
+  a missed pass is recoverable
+- **A raider is never on screen more than 60% of the time.** §21.1's interval
+  tightens to 6s against a 4.9s crossing, which is 94% — always there, and a
+  raider that is always there is scenery rather than an event. The interval is
+  stretched to whatever the cap needs (8.2s from Level 5), derived from the
+  crossing time so changing the scout's speed cannot silently break it
 - The warble is a genuine looping player, owned by the controller rather than
   the node: it is an `AVAudioPlayer`, so `isPaused` and `removeAllActions` do
   nothing to it and every path that should silence it says so explicitly
