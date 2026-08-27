@@ -63,14 +63,29 @@ final class DiagnosticsLog {
     var logInput: Bool = false
 
     private let maxLines = 2000
+    private static let trimChunk = 200
 
     private init() {}
 
-    func log(_ category: LogCategory, _ message: String) {
+    /// `@autoclosure`, so the message is only *built* if it will be kept.
+    ///
+    /// Every call site interpolates a string — "\(square) rejoins", "ship fires
+    /// 2/2" — and there are eighty of them, the hot ones firing on every shot
+    /// and every hit. As a plain `String` parameter that interpolation runs
+    /// before the call, so a release build, where `isEnabled` is false, paid to
+    /// construct and immediately discard tens of strings a second. Deferring it
+    /// costs nothing when logging is on and removes the work entirely when it is
+    /// off.
+    func log(_ category: LogCategory, _ message: @autoclosure () -> String) {
         guard isEnabled else { return }
         if category == .input && !logInput { return }
-        lines.append(LogLine(category: category, message: message))
-        if lines.count > maxLines { lines.removeFirst() }
+        lines.append(LogLine(category: category, message: message()))
+        // Trimmed in chunks, not one at a time. `removeFirst()` on an Array
+        // shifts every remaining element, so at the cap each new line moved two
+        // thousand of them — a cost that appears only once the log fills, which
+        // is exactly the shape of "CPU climbs for the first few minutes and then
+        // settles". One shift per two hundred lines instead of one per line.
+        if lines.count > maxLines { lines.removeFirst(Self.trimChunk) }
     }
 
     func clear() { lines.removeAll() }
