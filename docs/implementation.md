@@ -8,8 +8,9 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 Ten levels play end to end, each with a mechanic of its own. What is left, in
 the order it is worth doing rather than the order §20 numbers it:
 
-1. **Raiders** (6.x) — the Scout flies; the Galaxian Escort, the Flagship and
-   the special scouts are next. Every sprite is already in the atlas
+1. **Raiders** (6.x) — the Scout flies and all four special scouts carry their
+   power-ups; the Galaxian Escort and the Flagship are next. Every sprite is
+   already in the atlas
 2. **Music and settings** (5), then polish and release (8, 9) — craft work that
    interacts with nothing and can happen whenever
 
@@ -28,7 +29,7 @@ checklist, not a running order.
 | 4 | Basic sound effects | 🟡 |
 | 5 | Background music + settings | ⬜ |
 | 6.1 | Raiders: scout & basic escort | 🟡 — Scout done, Escort next |
-| 6.2 | Raiders: flagship, variants, special scouts | ⬜ |
+| 6.2 | Raiders: flagship, variants, special scouts | 🟡 — special scouts done |
 | 7.1 | Level escalation: chess AI | ⬜ |
 | 7.2 | Level escalation: arcade mechanics | ✅ |
 | 8 | Visual polish | ⬜ |
@@ -401,52 +402,6 @@ promise Level 4's regeneration has to be built to keep.
   keeps the engine's own board in step — without it the search moves other
   pieces straight through the new pawn, the same class of bug as `forcePlace`
 
-### Raiders (§6)
-
-The only things in the game that run on a real-time clock rather than the chess
-beat. Everything else — sweep, descent, fire, regeneration — is paced off the
-turn, so the board pulses together; a raider ignores that entirely.
-
-- **Raider Scout** on §21.1's `raiderInterval` (20s, tightening to a 6s floor):
-  one acid-green shot straight down at 125% of the fleet's speed — floored at
-  180, because §21.1 gives Level 1 a projectile speed of *zero* and a
-  zero-speed round never fires at all. 1 HP, 100 points, warbling as it goes. Two on screen at once; a spawn blocked by the cap
-  stays due rather than being skipped
-- **Three crossing patterns**, each a real escalation and each fixed for the
-  level so one sighting teaches the next: **over the board** (L1–3), above every
-  piece, where the mystery ship belongs; **piece height** (L4–6), §6's rank 4–5,
-  firing into traffic; **weaving** (L7+), the same crossing with the height no
-  longer constant, so aiming stops being a purely horizontal problem. The weave
-  is ±55pt — most of a square, and inside the board at either rank
-- **A warning pass is owed once per attack pattern, per run** — three in a run,
-  at Levels 1, 4 and 7, as each new pattern first appears.
-  §6 gives one every level, which spends its own rationale ("the player sees
-  the attack pattern before being shot at") the first time and then keeps
-  handing over a harmless raider forever. Two per run, and everything else fires
-- On Levels 1–2 the scout does not arrive at all until the fleet's rear rank is
-  down to half: the first one should be a reward for making progress, not one
-  more thing to parse on an untouched board
-- 220 px/s, and the constraint is the ship's 294: a scout the player cannot
-  outrun can only be hit by already standing under it. Closing at 74 px/s means
-  a missed pass is recoverable
-- **At least seven seconds of clear sky between crossings.** §21.1's interval
-  tightens to 6s against a 4.9s crossing, so scouts ran nose to tail. The gap is
-  what the player feels, not the share of time one is up: capping the *share* at
-  60% still left only 3.3s of quiet, which reads as a stream rather than a raid
-  you get a breather from. The interval is stretched to one crossing plus the
-  gap (11.9s from Level 4), derived from the crossing so changing the scout's
-  speed cannot silently close it again
-- The warble is a genuine looping player, owned by the controller rather than
-  the node: it is an `AVAudioPlayer`, so `isPaused` and `removeAllActions` do
-  nothing to it and every path that should silence it says so explicitly
-- Solid grey-green hull under the outline. Every piece on the board is a hollow
-  outline, which is right for pieces standing on squares; a ship passing in
-  front of them has to occlude them or it reads as a decal
-- `RaiderController` is the architecture the rest of 6.x hangs off — pool, cap
-  and clock. §6.1's separate `Raiders.spriteatlas` is not built: the sprites are
-  already in `GCI.spriteatlas`, and a second atlas costs a texture binding for
-  nothing
-
 ### Playtest fixes
 
 One line each; the reasoning is in the commits and the code.
@@ -499,6 +454,13 @@ One line each; the reasoning is in the commits and the code.
   arbitrary second prize on top of a reward that is already substantial, and it
   takes the decision of what to shoot away from the player at the moment they
   earned more shots
+- Promotion does not raise the laser cap either — §7.2's Rapid Fire moved onto
+  the green Raider Scout. Crowning a pawn is far too rare to be the only way to
+  earn it; most runs never see one, so the reward effectively did not exist. The
+  chess prize (a queen) is unchanged
+- §13.1's "two Special Scouts per level from Level 5" is not built: one per
+  level throughout. Two power-up offers in a wave makes the raider the loudest
+  thing on a board that is already the busiest in the game
 - Crossfire is Levels 7 and 10, not "8 onward" (§21.3), and it is the bishops'
   cadence rather than a 40% roll on a pawn's shot
 - **Fleet rush is cut** (§7.2: "one random piece jumps 2 ranks forward after
@@ -603,7 +565,122 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       referenced would be 91MB, dominated by three long uncompressed GDC stems —
       trim or convert to AAC before ship
 
-## Phases 5, 6.x, 7.x, 8, 9 ⬜
+## Phase 6.1 — Raiders: Scout ✅
+
+The only things in the game that run on a real-time clock rather than the chess
+beat. Everything else — sweep, descent, fire, regeneration — is paced off the
+turn, so the board pulses together; a raider ignores that entirely.
+
+- **Raider Scout**: one acid-green shot straight down at 125% of the fleet's
+  speed — floored at 180, because §21.1 gives Level 1 a projectile speed of
+  *zero* and a zero-speed round never fires at all. 1 HP, 100 points, warbling
+  as it goes. Two on screen at once; a spawn blocked by the cap stays due rather
+  than being skipped
+- **Shooting one grants Rapid Fire** — +1 laser slot, stacking to 6, reset each
+  wave. This was §7.2's promotion reward; see the deviations below
+- **Three crossing patterns**, each a real escalation and each fixed for the
+  level so one sighting teaches the next: **over the board** (L1–3), above every
+  piece, where the mystery ship belongs; **piece height** (L4–6), §6's rank 4–5,
+  firing into traffic; **weaving** (L7+), the same crossing with the height no
+  longer constant, so aiming stops being a purely horizontal problem. The weave
+  is ±55pt — most of a square, and inside the board at either rank
+- **A warning pass is owed once per attack pattern, per run** — three in a run,
+  at Levels 1, 4 and 7, as each new pattern first appears.
+  §6 gives one every level, which spends its own rationale ("the player sees
+  the attack pattern before being shot at") the first time and then keeps
+  handing over a harmless raider forever
+- On Levels 1–2 the scout does not arrive at all until the fleet's rear rank is
+  down to half: the first one should be a reward for making progress, not one
+  more thing to parse on an untouched board
+- 220 px/s, and the constraint is the ship's 294: a scout the player cannot
+  outrun can only be hit by already standing under it. Closing at 74 px/s means
+  a missed pass is recoverable
+- **Raids end for the wave once the player shoots one down.** The wave offers
+  one power-up; after it has been taken, another crossing is either a second
+  power-up (which §13.1 rules out) or a scout with nothing to give. Missing is
+  what keeps them coming — so how many raiders a wave sees is set by how long
+  the player takes to hit one, which is the right thing for it to depend on.
+  Uniform for now; Levels 7–10 are the candidates for relaxing it
+- **22 seconds of clear sky between crossings**, giving one every ~28s and 2–4
+  in a typical wave. It was 7s, which is a crossing every 12.6s and nine or ten
+  in a wave — a constant presence rather than an event. The first crossing comes
+  at 55% of the gap, because from Level 2 it is the one carrying the power-up
+  and a late first pass is an offer never made. Note that this now overrides
+  §21.1's `raiderInterval` at *every* level: raider frequency is deliberately
+  flat across the ladder, and the escalation lives in what the scout is carrying
+  instead
+- The warble is a genuine looping player, owned by the controller rather than
+  the node: it is an `AVAudioPlayer`, so `isPaused` and `removeAllActions` do
+  nothing to it and every path that should silence it says so explicitly
+- Solid grey-green hull under the outline. Every piece on the board is a hollow
+  outline, which is right for pieces standing on squares; a ship passing in
+  front of them has to occlude them or it reads as a decal
+- `RaiderController` is the architecture the rest of 6.x hangs off — pool, cap
+  and clock. §6.1's separate `Raiders.spriteatlas` is not built: the sprites are
+  already in `GCI.spriteatlas`, and a second atlas costs a texture binding for
+  nothing
+
+**Not built:** Galaxian Escort, Flagship, Kamikaze, King Protection Mode, the
+Minter tribute ships.
+
+## Phase 6.2 — Special Scouts & Power-Ups ✅
+
+§13's power-ups, delivered the way §13.1 specifies: no pickup falls and nothing
+is collected — shooting the scout *is* the power-up. That keeps the reward on
+the arcade half of the game, where the player already has to aim.
+
+**One offer per wave.** The level's first crossing is the special; if it gets
+across unharmed the crossings that follow are ordinary green scouts, so Rapid
+Fire is the consolation prize rather than a competing one. It has to be first:
+raids end on a kill, so a special placed any later is skipped entirely by a
+player doing the obvious thing and shooting the scout in front of them.
+
+| Debut | Power-up | Effect | Pts | HP |
+|---|---|---|---|---|
+| — | Raider Scout (green) | Rapid Fire: +1 laser slot, stacks to 6 | 100 | 1 |
+| 2 | Repair (green-cyan hexes) | Shield: absorbs one lethal hit, + 0.8s grace | 100 | 1 |
+| 4 | Ice (pale blue, 0.6× speed) | Time Freeze: 3s where only the player moves | 150 | 1 |
+| 6 | Bomb (crimson spikes) | Nuke: a ring that clears every enemy round in flight | 250 | 2 |
+| 8 | Spread (orange, 1.4× wide) | Gatling: 15s of uncapped 5-way auto-fire at 8/s | 150 | 1 |
+
+Each debut lands one level *before* the wave its effect answers — Shield at FIRE
+POWER, Freeze at RELENTLESS before TRIPLE THREAT, Nuke at WIDE ORBIT before
+CROSSFIRE, Gatling at ARMORED PAWNS before KING ACTIVATED — so a power-up is met
+while the player can still experiment and is already known when it is needed. A
+debut level always shows its newcomer rather than drawing for it; levels between
+debuts draw from everything unlocked so far.
+
+- **Time Freeze** stops the fleet, the raiders, enemy rounds, the starfield and
+  the chess turn timer, and drops the music to `rate = 0.5` — §13.2's one
+  sanctioned use of `rate`. The player's own movement, fire and rounds in flight
+  are untouched, which is the whole effect
+- **Gatling** fires outside `SpaceshipState` entirely rather than raising the
+  cap. The cap counts rounds in flight and frees a slot as each resolves; a
+  barrage borrowing those slots would leave the count wherever the last volley
+  stranded it and the player would come out of fifteen seconds unable to fire.
+  The player laser pool went 6 → 72: measured, a volley is 6.82 round-seconds
+  against a 618pt board, so the steady state is 54.6 rounds in the air
+- **Nuke** expands a magenta-to-white ring over 0.4s, clearing enemy rounds as
+  it reaches them with a spark at each. Pieces and raiders are untouched
+- **Shield** is a hexagon, not a circle, so it can never be confused with the
+  black king's forcefield: one means protected, the other means unshootable
+- Only the two clocked effects are exclusive (§13.1); a second replaces the
+  first, and the displaced one has its world changes lifted before the new one
+  applies. A shield sitting unspent competes with nothing
+- The four hulls are drawn as shape overlays on the existing scout sprite — the
+  hexagonal grid, crystalline facets, sea-mine spikes, the row of exhaust ports.
+  Four new sprites would be better and are not in the atlas
+- Every active power-up shows as a standing line in the player's alley, stacked
+  above the turn-timer slot, with a countdown bar on the timed one
+- The two Ice sounds are synthesised (`Resources/sfx/generated/`): a swept-noise
+  whoosh falling 2.4kHz → 180Hz with a comb-delay tail and a crystalline ring
+  over the last third, and a shorter rising version for the expiry
+
+**Lightning Scout is retired.** §13.2's fifth type grants "+1 laser slot", which
+is now what the ordinary green scout grants; two scouts handing over the same
+reward is one scout too many.
+
+## Phases 5, 6.2 remainder, 7.x, 8, 9 ⬜
 
 Not started.
 

@@ -92,6 +92,12 @@ class GameScene: SKScene {
 
     private var freezeRemaining: TimeInterval = 0
     private var afterFreeze: (() -> Void)?
+
+    /// §13's power-ups. The clock and the shield charge; everything the effects
+    /// actually *do* to the world lives in the Power-Ups section below.
+    private var powerUps = PowerUpState()
+    /// Time until the next Gatling volley. Only meaningful while it is running.
+    private var gatlingCooldown: TimeInterval = 0
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
     /// slots, so without this the prompt reappeared immediately after submitting
@@ -813,8 +819,14 @@ class GameScene: SKScene {
         raiders?.teardown()
         raiders = nil
         for side in [PieceColor.black, .white] { setRespawnWarning(side, on: false) }
-        bloomNode.childNode(withName: Self.rapidFireName)?.removeFromParent()
-        shownRapidFireStacks = 0
+        clearPowerUpAlley()
+        // §13.2: neither the shield nor a running clock carries to the next
+        // level. Lifting the effect first puts the world back before the state
+        // that describes it is thrown away.
+        if let running = powerUps.cancel() { lift(running) }
+        powerUps.reset()
+        gatlingCooldown = 0
+        ship?.removeShield()
         shake = .none
         shakeElapsed = 0
         freezeRemaining = 0
@@ -1518,7 +1530,6 @@ class GameScene: SKScene {
 
         if outcome.promotedTo != nil {
             AudioManager.shared.play(.pawnPromotion)
-            grantRapidFire(for: outcome.moved.color)
         }
 
         // The black king falling by chess capture is a win exactly like being
@@ -1662,10 +1673,18 @@ class GameScene: SKScene {
 
     func hidePausedOverlay() {
         removePausedOverlay()
-        fleet?.setPaused(false)
         laserPool?.setPaused(false)
-        raiders?.setPaused(false)
+        // A Time Freeze that was running when the player paused is still
+        // running now — unpausing everything here would end it early and leave
+        // its clock ticking against a world that had already resumed.
+        fleet?.setPaused(isTimeFrozen)
+        raiders?.setPaused(isTimeFrozen)
+        laserPool?.setPaused(isTimeFrozen, owner: .enemy)
     }
+
+    /// Whether the player has the game stopped. `lift` consults this so an
+    /// effect expiring behind a PAUSED banner cannot resume the world.
+    private var isGamePaused: Bool { stateMachine.currentState is PausedState }
 
     /// The PAUSED banner is two labels (title + hint) sharing one name, so this
     /// clears every match — `childNode(withName:)` returns only the first, which
@@ -1993,45 +2012,82 @@ class GameScene: SKScene {
     // MARK: - Regeneration (§23.9) and armored pawns (§10.1)
 
     private static let respawnWarningName = "respawnWarning"
-    private static let rapidFireName = "rapidFireNotice"
+    /// At most three at once: Rapid Fire, a shield, and one timed effect.
+    private static let powerUpAlleyLines = 3
+    private static let powerUpLineName = "powerUpLine"
+    private static let powerUpBarName = "powerUpBar"
+    /// Just above the turn-timer / AUTO MODE slot at y=166.
+    private static let powerUpAlleyBottomY = GameScene.boardBottomY + 62
+    private static let powerUpAlleyStep: CGFloat = 16
+    private static let powerUpBarWidth: CGFloat = 84
     /// The stack the notice is currently showing, so it only flares when the
     /// number actually changes rather than on every frame.
     private var shownRapidFireStacks = 0
 
-    /// A standing RAPID FIRE readout for as long as the power-up is up.
+    /// The standing power-up readout in the player's alley: one line per effect
+    /// currently up, for as long as it is up.
     ///
-    /// It used to be a one-second flash at the moment of promotion. Crowning a
-    /// pawn is rare and the reward lasts the rest of the wave, so the player
-    /// needs to be able to *check* what they are carrying, not catch it in
-    /// passing. Mirrors the cap rather than latching, so it cannot outlive it.
-    private func syncRapidFireNotice() {
+    /// It used to be a one-second flash at the moment each was granted. These
+    /// are rare and they last — a shield until it is spent, Rapid Fire for the
+    /// rest of the wave — so the player needs to be able to *check* what they
+    /// are carrying, not catch it in passing. Mirrors the state rather than
+    /// latching, so no line can outlive the thing it describes.
+    ///
+    /// Stacked above the turn-timer slot rather than below the status line: the
+    /// alley runs out of room downward at the ship's own lane, and three lines
+    /// of readout crossing the ship would be worse than useless.
+    private func syncPowerUpAlley() {
+        var lines: [(text: String, color: SKColor, progress: CGFloat?)] = []
+
         let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
             - SpaceshipState.baseLaserCap
-        let existing = bloomNode.childNode(withName: Self.rapidFireName) as? SKLabelNode
-        guard stacks > 0 else {
-            existing?.removeFromParent()
-            shownRapidFireStacks = 0
-            return
+        if stacks > 0 {
+            lines.append(("RAPID FIRE \(shipState?.laserCap ?? 0)",
+                          NeonPalette.transporterGreen, nil))
+        }
+        if powerUps.hasShield {
+            lines.append((PowerUp.shield.label, PowerUp.shield.tint, nil))
+        }
+        if let active = powerUps.active, let duration = active.duration {
+            lines.append((active.label, active.tint,
+                          CGFloat(max(0, powerUps.remaining) / duration)))
         }
 
-        let label = existing ?? {
-            let fresh = SKLabelNode(fontNamed: "PressStart2P-Regular")
-            fresh.name = Self.rapidFireName
-            fresh.fontSize = 9
-            fresh.fontColor = NeonPalette.transporterGreen
-            fresh.horizontalAlignmentMode = .center
-            fresh.verticalAlignmentMode = .center
-            // Below the transient gutter notice, so a SKIP LEVEL or a
-            // RESPAWNING flash never lands on top of it.
-            fresh.position = CGPoint(x: 112, y: Self.boardBottomY + 14)
-            fresh.zPosition = 12
-            bloomNode.addChild(fresh)
-            return fresh
-        }()
-        label.text = "RAPID FIRE \(shipState?.laserCap ?? 0)"
+        for index in 0..<Self.powerUpAlleyLines {
+            let label = alleyLabel(index)
+            guard index < lines.count else {
+                label.isHidden = true
+                alleyBar(index).isHidden = true
+                continue
+            }
+            let line = lines[index]
+            label.isHidden = false
+            label.text = line.text
+            label.fontColor = line.color
+            // Bottom-up, so a new line pushes the block upward and the one the
+            // player already had stays where they last read it.
+            label.position = CGPoint(
+                x: 112,
+                y: Self.powerUpAlleyBottomY
+                    + CGFloat(lines.count - 1 - index) * Self.powerUpAlleyStep)
+
+            let bar = alleyBar(index)
+            guard let progress = line.progress else {
+                bar.isHidden = true
+                continue
+            }
+            bar.isHidden = false
+            bar.color = line.color
+            bar.size.width = max(0, Self.powerUpBarWidth * progress)
+            bar.position = CGPoint(x: 112 - Self.powerUpBarWidth / 2,
+                                   y: label.position.y - 8)
+        }
+
+        // The change is the event; the line itself is the reference.
         guard stacks != shownRapidFireStacks else { return }
         shownRapidFireStacks = stacks
-        // The change is the event; the label itself is the reference.
+        guard stacks > 0 else { return }
+        let label = alleyLabel(0)
         label.removeAllActions()
         label.setScale(1)
         label.run(.sequence([
@@ -2041,6 +2097,48 @@ class GameScene: SKScene {
                     .colorize(with: NeonPalette.transporterGreen,
                               colorBlendFactor: 1, duration: 0.25)]),
         ]))
+    }
+
+    /// Pooled, because these are rebuilt every frame and a readout is not worth
+    /// a node churn.
+    private func alleyLabel(_ index: Int) -> SKLabelNode {
+        let name = "\(Self.powerUpLineName)\(index)"
+        if let existing = bloomNode.childNode(withName: name) as? SKLabelNode {
+            return existing
+        }
+        let fresh = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        fresh.name = name
+        fresh.fontSize = 9
+        fresh.horizontalAlignmentMode = .center
+        fresh.verticalAlignmentMode = .center
+        fresh.zPosition = 12
+        bloomNode.addChild(fresh)
+        return fresh
+    }
+
+    private func alleyBar(_ index: Int) -> SKSpriteNode {
+        let name = "\(Self.powerUpBarName)\(index)"
+        if let existing = bloomNode.childNode(withName: name) as? SKSpriteNode {
+            return existing
+        }
+        let fresh = SKSpriteNode(color: .white,
+                                 size: CGSize(width: Self.powerUpBarWidth, height: 3))
+        fresh.name = name
+        fresh.anchorPoint = CGPoint(x: 0, y: 0.5)
+        fresh.zPosition = 12
+        fresh.isHidden = true
+        bloomNode.addChild(fresh)
+        return fresh
+    }
+
+    private func clearPowerUpAlley() {
+        for index in 0..<Self.powerUpAlleyLines {
+            bloomNode.childNode(withName: "\(Self.powerUpLineName)\(index)")?
+                .removeFromParent()
+            bloomNode.childNode(withName: "\(Self.powerUpBarName)\(index)")?
+                .removeFromParent()
+        }
+        shownRapidFireStacks = 0
     }
 
     /// A flashing green warning while anything is about to materialise.
@@ -2112,33 +2210,257 @@ class GameScene: SKScene {
     private func resolveRaiderExit(_ node: RaiderNode, destroyed: Bool) {
         guard destroyed else { return }
         let at = bloomPosition(of: node)
-        let points = ScoreManager.shared.scaled(RaiderRules.scoutPoints)
-        explosions?.burst(at: at, color: NeonPalette.acidGreen, scale: 1.4)
-        scorePops?.pop(points, at: at, color: NeonPalette.acidGreen)
-        ScoreManager.shared.addPoints(RaiderRules.scoutPoints, logged: false)
+        let powerUp = node.powerUp
+        let tint = powerUp?.tint ?? NeonPalette.acidGreen
+        let value = powerUp?.points ?? RaiderRules.scoutPoints
+        let points = ScoreManager.shared.scaled(value)
+        // §13.3: a special goes up bigger than a standard scout, in its own
+        // colour, and says what it just handed over.
+        explosions?.burst(at: at, color: tint, scale: powerUp == nil ? 1.4 : 2.2)
+        scorePops?.pop(points, at: at, color: tint)
+        ScoreManager.shared.addPoints(value, logged: false)
         refreshHUD()
-        AudioManager.shared.play(.raiderDestroyed)
-        DiagnosticsLog.shared.log(.raider, "scout destroyed (\(points))")
+
+        guard let powerUp else {
+            // §13.1 reserves power-ups for the special scouts, but the ordinary
+            // green one is not nothing: it carries Rapid Fire, which used to be
+            // the promotion reward. Crowning a pawn is far too rare to be the
+            // only way to earn it — most runs never see one — and hanging it on
+            // the scout puts the reward where the player can actually go and
+            // take it.
+            AudioManager.shared.play(.raiderDestroyed)
+            grantRapidFire()
+            DiagnosticsLog.shared.log(.raider, "scout destroyed (\(points))")
+            return
+        }
+        activate(powerUp, at: at)
+        DiagnosticsLog.shared.log(.raider,
+            "\(powerUp.rawValue) scout destroyed (\(points))")
     }
 
-    /// §7.2's promotion reward: one more laser in the air at a time.
+    // MARK: - Power-ups (§13)
+
+    /// §13.2's Time Freeze, holding the world but not the player.
+    private var isTimeFrozen: Bool { powerUps.isFrozen }
+
+    /// A special scout was shot. §13.1: the effect starts here, on the kill —
+    /// there is no pickup to collect and nothing falls.
+    private func activate(_ powerUp: PowerUp, at point: CGPoint) {
+        flashPowerUpLabel(powerUp, at: point)
+
+        switch powerUp {
+        case .shield:
+            powerUps.raiseShield()
+            ship?.applyShield()
+            AudioManager.shared.play(.repairScoutDestroyed)
+
+        case .nuke:
+            // Instant and over in 0.4s, so it never touches the effect clock —
+            // a nuke does not displace a running freeze or barrage, and §13.1's
+            // "one at a time" was never about it.
+            AudioManager.shared.play(.bombShockwave)
+            detonate(at: point)
+
+        case .freeze, .gatling:
+            // §13.1: a second effect replaces the first immediately. The one it
+            // displaced has to have its world changes lifted first, or a freeze
+            // cut short by a barrage would leave the fleet paused for the rest
+            // of the wave.
+            if let displaced = powerUps.begin(powerUp) { lift(displaced) }
+            apply(powerUp)
+        }
+        syncPowerUpAlley()
+    }
+
+    /// Starts a timed effect's world changes.
+    private func apply(_ powerUp: PowerUp) {
+        switch powerUp {
+        case .freeze:
+            AudioManager.shared.play(.iceScoutDestroyed)
+            // Everything that moves on an SKAction rather than through the
+            // update loop has to be told; everything the update loop drives is
+            // gated on `isTimeFrozen` where it is ticked.
+            fleet?.setPaused(true)
+            raiders?.setPaused(true)
+            laserPool?.setPaused(true, owner: .enemy)
+            starfieldNode.isPaused = true
+            // §13.2's one sanctioned use of `rate`: the music slows and deepens
+            // rather than a separate sound announcing the freeze.
+            AudioManager.shared.setMusicRate(0.5)
+            washScreen(NeonPalette.iceBlue)
+
+        case .gatling:
+            AudioManager.shared.play(.spreadScoutDestroyed)
+            // Fires on the next frame rather than after a first interval: the
+            // barrage should start the instant the scout dies.
+            gatlingCooldown = 0
+
+        case .shield, .nuke:
+            break
+        }
+    }
+
+    /// Undoes a timed effect's world changes, whether it expired or was
+    /// displaced. Deliberately does not consult `powerUps` — by the time this
+    /// runs, `active` may already be the effect that replaced this one.
+    private func lift(_ powerUp: PowerUp) {
+        switch powerUp {
+        case .freeze:
+            AudioManager.shared.play(.iceEffectExpires)
+            // Only if the player has not paused in the meantime, which owns
+            // the same three switches and would otherwise be overruled here.
+            if !isGamePaused {
+                fleet?.setPaused(false)
+                raiders?.setPaused(false)
+                laserPool?.setPaused(false, owner: .enemy)
+                starfieldNode.isPaused = false
+            }
+            AudioManager.shared.setMusicRate(1.0)
+
+        case .gatling:
+            AudioManager.shared.play(.uiSciFiPing)
+
+        case .shield, .nuke:
+            break
+        }
+    }
+
+    /// §13.2's Gatling Barrage: five lasers at once, eight times a second, with
+    /// the concurrency cap ignored.
     ///
-    /// §7.2 also has the promotion destroy the nearest black piece with a
-    /// targeting beam. Not built, deliberately — a free kill handed over for
-    /// reaching rank 8 is a large and arbitrary second prize on top of a reward
-    /// that is already substantial, and it would take the decision of *what to
-    /// shoot* away from the player at the exact moment they earned more shots.
+    /// Fires outside `SpaceshipState` entirely rather than raising `laserCap`
+    /// to some large number. The cap counts rounds in flight and frees a slot
+    /// when each one resolves; a barrage that borrowed those slots would leave
+    /// the count wherever the last volley happened to strand it when the effect
+    /// ended, and the player would come out of fifteen glorious seconds unable
+    /// to fire. Barrage rounds are simply not the ship's rounds.
+    static let gatlingInterval: TimeInterval = 1.0 / 8
+    /// Centre, ±20°, ±40° (§13.2), as slopes — `LaserNode.fire` takes sideways
+    /// travel per unit of forward travel, not an angle.
+    static let gatlingLeans: [CGFloat] = [0, 0.364, -0.364, 0.839, -0.839]
+
+    private func advanceGatling(_ dt: TimeInterval) {
+        guard powerUps.isGatling, !isShipDown, !isBeatSuspended,
+              let ship, let laserPool else { return }
+        gatlingCooldown -= dt
+        guard gatlingCooldown <= 0 else { return }
+        gatlingCooldown = Self.gatlingInterval
+
+        let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
+        let reach = size.height - origin.y
+        for lean in Self.gatlingLeans {
+            guard let laser = laserPool.nextAvailable(owner: .player) else { break }
+            laser.onDeactivate = nil
+            laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
+                       speed: ProjectileState.playerLaserSpeed,
+                       travelDistance: reach, lean: lean,
+                       tint: NeonPalette.orange)
+        }
+        AudioManager.shared.play(.playerLaserFire)
+    }
+
+    /// §13.2's Nuke: a ring that clears every enemy round it passes over, and
+    /// leaves pieces and raiders alone.
+    private func detonate(at point: CGPoint) {
+        let reach = (size.width * size.width + size.height * size.height).squareRoot()
+        let duration: TimeInterval = 0.4
+        let ring = SKShapeNode(circleOfRadius: 1)
+        ring.position = point
+        ring.fillColor = .clear
+        ring.lineWidth = 3
+        ring.glowWidth = 6
+        ring.zPosition = 14
+        bloomNode.addChild(ring)
+
+        ring.run(.sequence([
+            .customAction(withDuration: duration) { [weak self] node, elapsed in
+                guard let self, let shape = node as? SKShapeNode else { return }
+                let progress = min(1, CGFloat(elapsed) / CGFloat(duration))
+                let radius = reach * progress
+                shape.path = CGPath(ellipseIn: CGRect(x: -radius, y: -radius,
+                                                      width: radius * 2,
+                                                      height: radius * 2),
+                                    transform: nil)
+                // §13.2's magenta → white → transparent, so the wave reads as
+                // energy leaving rather than as a circle being drawn.
+                shape.strokeColor = NeonPalette.magenta.blended(toward: .white,
+                                                               by: progress)
+                shape.alpha = 1 - progress * progress
+                self.clearEnemyRounds(within: radius, of: point)
+            },
+            .removeFromParent(),
+        ]))
+    }
+
+    private func clearEnemyRounds(within radius: CGFloat, of centre: CGPoint) {
+        guard let laserPool else { return }
+        for laser in laserPool.activeLasers(owner: .enemy) {
+            let dx = laser.position.x - centre.x, dy = laser.position.y - centre.y
+            guard dx * dx + dy * dy <= radius * radius else { continue }
+            explosions?.burst(at: laser.position, color: NeonPalette.crimson, scale: 0.35)
+            laser.deactivate()
+        }
+    }
+
+    /// §13.3's type label, flashed at the destroy position for 0.8 seconds.
+    private func flashPowerUpLabel(_ powerUp: PowerUp, at point: CGPoint) {
+        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        label.text = powerUp.label
+        label.fontSize = 14
+        label.fontColor = powerUp.tint
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode = .center
+        // Clamped inward so a scout shot near the edge does not put half the
+        // word off-screen — the label is wider than the ship that earned it.
+        let margin = CGFloat(powerUp.label.count) * 7 + 12
+        label.position = CGPoint(x: min(max(point.x, margin), size.width - margin),
+                                 y: point.y)
+        label.zPosition = 16
+        bloomNode.addChild(label)
+        label.setScale(0.6)
+        label.run(.sequence([
+            .group([.scale(to: 1.15, duration: 0.14), .moveBy(x: 0, y: 12, duration: 0.14)]),
+            .scale(to: 1.0, duration: 0.1),
+            .wait(forDuration: 0.4),
+            .fadeOut(withDuration: 0.16),
+            .removeFromParent(),
+        ]))
+    }
+
+    /// A brief tint over the whole playfield, for effects that change the state
+    /// of the world rather than of the ship.
+    private func washScreen(_ color: SKColor) {
+        let wash = SKSpriteNode(color: color, size: size)
+        wash.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        wash.zPosition = 15
+        wash.alpha = 0
+        wash.blendMode = .add
+        bloomNode.addChild(wash)
+        wash.run(.sequence([
+            .fadeAlpha(to: 0.16, duration: 0.08),
+            .fadeOut(withDuration: 0.5),
+            .removeFromParent(),
+        ]))
+    }
+
+    /// One more laser in the air at a time, for shooting an ordinary scout.
     ///
-    /// Black never collects this. Its pawns promote by reaching rank 1, which
-    /// is a breach and ends the run, so the case is unreachable — but the guard
-    /// costs nothing and says so.
-    private func grantRapidFire(for color: PieceColor) {
-        guard color == .white, let shipState, shipState.grantRapidFire() else { return }
-        // No flash here: `syncRapidFireNotice` puts up a standing readout and
+    /// This was §7.2's promotion reward and is now the green scout's. The
+    /// promotion still promotes — a pawn reaching the eighth rank becomes a
+    /// queen, which is the whole reward chess itself offers — but the arcade
+    /// half of the prize moved to the target the arcade half of the game can
+    /// actually shoot at.
+    ///
+    /// Stacks to `maxLaserCap` and resets with the level, unchanged: the scout
+    /// is a repeatable source where the promotion was a one-off, so the ceiling
+    /// matters more now, not less.
+    private func grantRapidFire() {
+        guard let shipState, shipState.grantRapidFire() else { return }
+        // No flash here: `syncPowerUpAlley` puts up a standing readout and
         // flares it when the number changes, so a separate one-second banner
         // would just be the same words twice in the same gutter.
         ship?.setRapidFire(stacks: shipState.laserCap - SpaceshipState.baseLaserCap)
-        DiagnosticsLog.shared.log(.promote,
+        DiagnosticsLog.shared.log(.raider,
             "rapid fire — \(shipState.laserCap) lasers")
     }
 
@@ -2607,7 +2929,20 @@ class GameScene: SKScene {
         // Contacts can still be delivered while paused or during the end-game
         // reveal; neither should ever cost a life.
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        guard let shipState, shipState.loseLife() else { return }
+        guard let shipState else { return }
+        // §13.2's Shield Bubble absorbs "the next single hit that would destroy
+        // the ship". Checked after invincibility, not before: a hit during the
+        // respawn grace window costs nothing anyway, and spending the shield on
+        // it would take the reward away for free.
+        if !shipState.isInvincible, powerUps.absorbHit() {
+            shipState.beginGrace()
+            ship?.removeShield(absorbed: true)
+            AudioManager.shared.play(.shieldAbsorbsHit)
+            AudioManager.shared.play(.shieldShatters)
+            DiagnosticsLog.shared.log(.raider, "shield absorbed the hit")
+            return
+        }
+        guard shipState.loseLife() else { return }
         refreshHUD()
         ship?.direction = 0
 
@@ -2678,17 +3013,24 @@ class GameScene: SKScene {
             return
         }
         advanceShake(dt)
-        if !isBeatSuspended, stateMachine.currentState is PlayingState {
+        if !isBeatSuspended, !isTimeFrozen, stateMachine.currentState is PlayingState {
             advanceRegeneration(dt)
         }
         if stateMachine.currentState is PlayingState {
             syncRespawnWarnings()
-            syncRapidFireNotice()
+            syncPowerUpAlley()
+            // §13's effect clock. Ticked before the systems it gates, so the
+            // frame a freeze ends on is already a running frame.
+            if let expired = powerUps.tick(dt) {
+                lift(expired)
+                DiagnosticsLog.shared.log(.raider, "\(expired.rawValue) ends")
+            }
+            advanceGatling(dt)
         }
         // Raiders run on their own clock, not the chess beat — that is the
         // whole point of them (§6) — but they still hold during a banner or
         // once the game is decided.
-        if !isBeatSuspended, stateMachine.currentState is PlayingState {
+        if !isBeatSuspended, !isTimeFrozen, stateMachine.currentState is PlayingState {
             raiders?.update(deltaTime: dt, interval: levels.parameters.raiderInterval,
                             level: levels.level, rearRankPieces: rearRankPieces)
         }
@@ -2717,7 +3059,7 @@ class GameScene: SKScene {
             // White's move and no beat is running, start one. `resolveBeat` has
             // several early returns — pausing while Black was thinking used to
             // leave the game with no live beat and no way to move again.
-            if !isBeatSuspended, !isResolvingBeat,
+            if !isBeatSuspended, !isTimeFrozen, !isResolvingBeat,
                board.turn == .white, !turnTimer.isRunning {
                 beginBeat()
             }
@@ -2726,7 +3068,10 @@ class GameScene: SKScene {
             // the game never pauses for chess (§3). But once the game is
             // decided the beat stops entirely: a timer left running would
             // expire and resolve another beat over a finished board.
-            if !isBeatSuspended, turnTimer.update(deltaTime: dt) {
+            // §13.2's Time Freeze "pauses the chess turn timer" as well as the
+            // fleet — the whole point is three seconds where only the player
+            // acts, and a clock still running would spend them auto-moving.
+            if !isBeatSuspended, !isTimeFrozen, turnTimer.update(deltaTime: dt) {
                 Task { await self.resolveBeat() }
             }
             // The countdown is the player's own clock, so it appears only while

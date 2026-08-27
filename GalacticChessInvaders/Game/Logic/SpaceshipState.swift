@@ -58,6 +58,22 @@ final class SpaceshipState {
         return true
     }
 
+    /// Starts the invincibility window without costing a life.
+    ///
+    /// §13.2's shield "absorbs the next single hit that would destroy the
+    /// ship". Taken literally that is one hit and no more, which in a Level 7
+    /// crossfire means the second round of the same volley kills you a frame
+    /// later and the shield reads as having done nothing at all. The grace is
+    /// what makes absorbing a hit mean surviving the moment.
+    ///
+    /// Shorter than a respawn's two seconds: this is a reprieve, not a reset.
+    static let shieldGrace: TimeInterval = 0.8
+
+    func beginGrace(_ duration: TimeInterval = SpaceshipState.shieldGrace) {
+        isInvincible = true
+        invincibilityRemaining = max(invincibilityRemaining, duration)
+    }
+
     /// Ticks the invincibility countdown. Call every frame; a no-op when not
     /// invincible, so callers do not need to guard.
     func update(deltaTime: TimeInterval) {
