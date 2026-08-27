@@ -143,7 +143,7 @@ final class LaserNode: SKSpriteNode {
     private var liveContactMask: UInt32 {
         owner == .player
             ? (PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece
-               | PhysicsCategory.enemyShot)
+               | PhysicsCategory.enemyShot | PhysicsCategory.raider)
             : (PhysicsCategory.friendlyPiece | PhysicsCategory.ship
                | PhysicsCategory.playerLaser)
     }
@@ -176,8 +176,10 @@ final class LaserNode: SKSpriteNode {
     /// than `travelDistance`, and the duration is taken from the real path
     /// length — otherwise an angled round would cross the board faster than its
     /// stated speed (§21.3).
+    /// `tint` overrides the round's own colour — a raider's shot is acid green
+    /// (§12) whoever's pool it came out of.
     func fire(from origin: CGPoint, damage: Int, speed: CGFloat,
-              travelDistance: CGFloat, lean: CGFloat = 0) {
+              travelDistance: CGFloat, lean: CGFloat = 0, tint: SKColor? = nil) {
         guard speed > 0, travelDistance > 0 else { return }
         state = ProjectileState(owner: owner, damage: damage, speed: speed)
         position = origin
@@ -193,6 +195,7 @@ final class LaserNode: SKSpriteNode {
         let duration = TimeInterval(path / speed)
 
         setDiagonal(lean != 0, dx: dx, dy: dy)
+        if let tint { color = tint }
 
         let move = SKAction.moveBy(x: dx, y: dy, duration: duration)
         let finish = SKAction.run { [weak self] in self?.deactivate() }

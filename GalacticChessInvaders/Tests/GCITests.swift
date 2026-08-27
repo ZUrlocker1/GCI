@@ -3280,6 +3280,82 @@ final class PromotionRewardTests: XCTestCase {
 }
 
 @MainActor
+final class RaiderTests: XCTestCase {
+
+    /// §6's Galaga precedent: the first scout of a level crosses without
+    /// firing, so the player sees the attack pattern before being shot at.
+    /// Every scout after it fires.
+    func testTheFirstScoutOfALevelHoldsItsFire() {
+        var schedule = RaiderSchedule()
+        schedule.reset(interval: 20)
+        XCTAssertFalse(schedule.firstScoutDone)
+        XCTAssertFalse(schedule.claimFiringPass(), "the first crosses silent")
+        XCTAssertTrue(schedule.firstScoutDone)
+        for _ in 0..<5 {
+            XCTAssertTrue(schedule.claimFiringPass(), "and the rest all fire")
+        }
+        // A new level gets its warning pass back.
+        schedule.reset(interval: 20)
+        XCTAssertFalse(schedule.claimFiringPass())
+    }
+
+    /// The clock is real time, not the chess beat, and the cap holds a spawn
+    /// rather than skipping it — a blocked raider is late, not cancelled.
+    func testTheSpawnClockWaitsRatherThanSkipping() {
+        var schedule = RaiderSchedule()
+        schedule.reset(interval: 20)
+        XCTAssertFalse(schedule.tick(19, interval: 20, onScreen: 0), "not yet")
+        XCTAssertTrue(schedule.tick(2, interval: 20, onScreen: 0), "due")
+        XCTAssertFalse(schedule.tick(19, interval: 20, onScreen: 0))
+
+        // Due, but the board is full: it stays due.
+        XCTAssertFalse(schedule.tick(2, interval: 20,
+                                     onScreen: RaiderRules.maxOnScreen),
+                       "capped, so it holds")
+        XCTAssertFalse(schedule.tick(0, interval: 20,
+                                     onScreen: RaiderRules.maxOnScreen))
+        XCTAssertTrue(schedule.tick(0, interval: 20, onScreen: 1),
+                      "and launches the moment there is room")
+    }
+
+    /// §6: mid-board, and the same height all level so a player who has seen
+    /// one crossing knows where the next will be.
+    func testTheCrossingHeightIsFixedForTheLevel() {
+        var schedule = RaiderSchedule()
+        schedule.reset(interval: 20)
+        let rank = schedule.crossingRank
+        XCTAssertTrue([4, 5].contains(rank), "§6: rank 4-5")
+        for _ in 0..<10 {
+            _ = schedule.tick(1, interval: 20, onScreen: 0)
+            XCTAssertEqual(schedule.crossingRank, rank, "held for the level")
+        }
+        // Only a new level rerolls it.
+        var seen = Set<Int>()
+        for _ in 0..<50 { schedule.reset(interval: 20); seen.insert(schedule.crossingRank) }
+        XCTAssertEqual(seen, [4, 5], "and both heights are reachable")
+    }
+
+    /// The shot never leaves at the very edges of the crossing: one fired on
+    /// entry is unreadable, one fired on exit is unavoidable.
+    func testTheShotLeavesMidCrossing() {
+        for _ in 0..<100 {
+            let f = RaiderRules.fireFraction()
+            XCTAssertGreaterThanOrEqual(f, 0.25)
+            XCTAssertLessThanOrEqual(f, 0.7)
+        }
+    }
+
+    func testScoutMatchesTheDesignTable() {
+        XCTAssertEqual(RaiderRules.scoutHP, 1, "§6")
+        XCTAssertEqual(RaiderRules.scoutPoints, 100, "§9")
+        XCTAssertEqual(RaiderRules.maxOnScreen, 2, "§6")
+        // §21.1 already paced them: 20s at Level 1, tightening to a 6s floor.
+        XCTAssertEqual(LevelManager.parameters(for: 1).raiderInterval, 20)
+        XCTAssertEqual(LevelManager.parameters(for: 10).raiderInterval, 6)
+    }
+}
+
+@MainActor
 final class RegenerationTests: XCTestCase {
 
     private func level(_ n: Int) -> LevelParameters { LevelManager.parameters(for: n) }

@@ -18,6 +18,9 @@ enum LogCategory: String {
     /// separate moments seconds apart, and following one through a wave's worth
     /// of sweep and descent chatter is the point of having categories at all.
     case regen   = "REGEN    "
+    /// Raiders (§6) — the only things that run on a real-time clock rather
+    /// than the chess beat, so they are worth following on their own.
+    case raider  = "RAIDER   "
     case shoot   = "SHOOT    "
     case hit     = "HIT      "
     case destroy = "DESTROY  "
