@@ -813,6 +813,8 @@ class GameScene: SKScene {
         raiders?.teardown()
         raiders = nil
         for side in [PieceColor.black, .white] { setRespawnWarning(side, on: false) }
+        bloomNode.childNode(withName: Self.rapidFireName)?.removeFromParent()
+        shownRapidFireStacks = 0
         shake = .none
         shakeElapsed = 0
         freezeRemaining = 0
@@ -1991,6 +1993,55 @@ class GameScene: SKScene {
     // MARK: - Regeneration (§23.9) and armored pawns (§10.1)
 
     private static let respawnWarningName = "respawnWarning"
+    private static let rapidFireName = "rapidFireNotice"
+    /// The stack the notice is currently showing, so it only flares when the
+    /// number actually changes rather than on every frame.
+    private var shownRapidFireStacks = 0
+
+    /// A standing RAPID FIRE readout for as long as the power-up is up.
+    ///
+    /// It used to be a one-second flash at the moment of promotion. Crowning a
+    /// pawn is rare and the reward lasts the rest of the wave, so the player
+    /// needs to be able to *check* what they are carrying, not catch it in
+    /// passing. Mirrors the cap rather than latching, so it cannot outlive it.
+    private func syncRapidFireNotice() {
+        let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
+            - SpaceshipState.baseLaserCap
+        let existing = bloomNode.childNode(withName: Self.rapidFireName) as? SKLabelNode
+        guard stacks > 0 else {
+            existing?.removeFromParent()
+            shownRapidFireStacks = 0
+            return
+        }
+
+        let label = existing ?? {
+            let fresh = SKLabelNode(fontNamed: "PressStart2P-Regular")
+            fresh.name = Self.rapidFireName
+            fresh.fontSize = 9
+            fresh.fontColor = NeonPalette.transporterGreen
+            fresh.horizontalAlignmentMode = .center
+            fresh.verticalAlignmentMode = .center
+            // Below the transient gutter notice, so a SKIP LEVEL or a
+            // RESPAWNING flash never lands on top of it.
+            fresh.position = CGPoint(x: 112, y: Self.boardBottomY + 14)
+            fresh.zPosition = 12
+            bloomNode.addChild(fresh)
+            return fresh
+        }()
+        label.text = "RAPID FIRE \(shipState?.laserCap ?? 0)"
+        guard stacks != shownRapidFireStacks else { return }
+        shownRapidFireStacks = stacks
+        // The change is the event; the label itself is the reference.
+        label.removeAllActions()
+        label.setScale(1)
+        label.run(.sequence([
+            .group([.scale(to: 1.4, duration: 0.12),
+                    .colorize(with: .white, colorBlendFactor: 1, duration: 0.12)]),
+            .group([.scale(to: 1.0, duration: 0.25),
+                    .colorize(with: NeonPalette.transporterGreen,
+                              colorBlendFactor: 1, duration: 0.25)]),
+        ]))
+    }
 
     /// A flashing green warning while anything is about to materialise.
     ///
@@ -2083,9 +2134,9 @@ class GameScene: SKScene {
     /// costs nothing and says so.
     private func grantRapidFire(for color: PieceColor) {
         guard color == .white, let shipState, shipState.grantRapidFire() else { return }
-        flashGutterNotice("RAPID FIRE \(shipState.laserCap)",
-                          color: NeonPalette.transporterGreen)
-        // The notice is gone in a second; the hull is the standing reminder.
+        // No flash here: `syncRapidFireNotice` puts up a standing readout and
+        // flares it when the number changes, so a separate one-second banner
+        // would just be the same words twice in the same gutter.
         ship?.setRapidFire(stacks: shipState.laserCap - SpaceshipState.baseLaserCap)
         DiagnosticsLog.shared.log(.promote,
             "rapid fire — \(shipState.laserCap) lasers")
@@ -2630,7 +2681,10 @@ class GameScene: SKScene {
         if !isBeatSuspended, stateMachine.currentState is PlayingState {
             advanceRegeneration(dt)
         }
-        if stateMachine.currentState is PlayingState { syncRespawnWarnings() }
+        if stateMachine.currentState is PlayingState {
+            syncRespawnWarnings()
+            syncRapidFireNotice()
+        }
         // Raiders run on their own clock, not the chess beat — that is the
         // whole point of them (§6) — but they still hold during a banner or
         // once the game is decided.
