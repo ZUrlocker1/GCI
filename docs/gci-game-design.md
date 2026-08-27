@@ -2689,3 +2689,318 @@ Each section of this design document is detailed enough to drive automated test 
 | **Gate 4** | All `LevelProgressionTests` | Phase 8 (visual polish) |
 | **Gate 5** | Full suite green, all performance benchmarks pass | Phase 9 (App Store submission) |
 The rule: **no phase begins until the previous gate is green.** This is not bureaucracy — it is the difference between finding a `forcePlace` bug in isolation versus finding it after six phases of arcade systems are built on top of it.
+
+---
+
+## Appendix A — iOS and iPadOS Portability
+
+**Not scheduled.** The port is wanted eventually, not now. This appendix is kept
+so the decision stays available: the architecture rules below have been followed
+throughout the macOS build — logic layers import no SpriteKit or AppKit, and all
+input arrives as a platform-agnostic `GameAction` — so the option is still open
+and costs nothing to keep open.
+
+Recovered from the superseded v1.0 design document, which was deleted once the
+live document diverged from it. Section numbers have been rewritten; the content
+is unchanged, and it predates the Special Scout power-up system in §13, the
+ten-level ladder as built, and everything in `docs/implementation.md`.
+
+### A.1 Port Considerations
+
+- Replace keyboard controls with on-screen D-pad (move ship) + tap-to-fire button.
+- Chess piece selection via tap-then-tap (tap piece, then tap destination).
+- `UIAdaptivePresentationController` for split-screen iPad support.
+- Use `UIRequiresFullScreen = false` in Info.plist to allow iPad multitasking.
+- SpriteKit scenes scale cleanly to any screen size using `.aspectFill` + safe-area insets.
+
+---
+
+### A.2 Architecture
+
+How the macOS codebase must be structured so that a port is a matter of adding
+a platform layer rather than rewriting the game. Written when the port was
+planned for Phase 2; the constraints have been followed regardless, and
+`CLAUDE.md` states them as live architecture rules.
+
+---
+
+#### A.2.1 Core Principle: Separate Logic from Platform
+
+Every system in the game belongs to one of three layers:
+
+```
+┌─────────────────────────────────────────┐
+│           GAME LOGIC LAYER              │  ← Pure Swift. No UIKit, no AppKit,
+│  Chess engine, board model, scoring,    │     no SpriteKit. Runs identically
+│  level manager, fleet AI, collision     │     on macOS and iOS.
+│  rules, HP system, turn timer           │
+├─────────────────────────────────────────┤
+│         RENDERING / SCENE LAYER         │  ← SpriteKit (shared macOS + iOS).
+│  GameScene, PieceNode, HUDNode,         │     SKScene works on both platforms
+│  particle effects, audio nodes          │     with zero changes.
+├─────────────────────────────────────────┤
+│        PLATFORM INPUT LAYER             │  ← Separate per platform.
+│  macOS: keyboard + mouse handlers       │     Swapped out at compile time
+│  iOS: touch, virtual joystick, buttons  │     using #if os(iOS) / os(macOS)
+└─────────────────────────────────────────┘
+```
+
+**Rule:** The game logic layer must never import `AppKit`, `UIKit`, `SpriteKit`, or reference screen coordinates. It communicates with the scene layer through a clean protocol interface only.
+
+---
+
+#### A.2.2 Input Abstraction
+
+The game must never respond directly to keyboard events or mouse clicks in the game logic. Instead, all input is translated into **abstract game actions** before being passed to the logic layer:
+
+```swift
+enum GameAction {
+    case moveShipLeft
+    case moveShipRight
+    case fireShipLaser
+    case selectPiece(position: BoardPosition)
+    case movePiece(to: BoardPosition)
+    case deselectPiece
+    case pause
+}
+```
+
+- On **macOS**: keyboard and mouse events are translated into `GameAction` values by a `MacInputHandler`.
+- On **iOS**: touch events, virtual joystick deltas, and button taps are translated into `GameAction` values by a `TouchInputHandler`.
+- The game logic layer receives only `GameAction` — it has no idea whether the source was a key press or a finger tap.
+
+This means adding iOS controls in Phase 2 requires writing `TouchInputHandler` only — nothing in the game logic changes.
+
+---
+
+#### A.2.3 macOS Window Behavior
+
+The game runs in a **standard resizable macOS window** — it does not take over the screen on launch. The user can optionally go full screen via the green traffic-light button or `⌃⌘F` as with any Mac app, but this is never forced.
+
+**Default window size:** 900×700 points — large enough to see all pieces clearly, small enough to sit comfortably on a 13" laptop screen without dominating the desktop.
+
+**Minimum window size:** 640×500 points — below this pieces become too small to click reliably.
+
+**Resizing behavior:** the SpriteKit scene uses `scaleMode = .aspectFit` on macOS so the playfield scales cleanly inside any window size, with black letterbox bars if the window proportions differ from the scene's native ratio. The game never stretches or crops.
+
+The app should **not** set `NSWindowStyleMask.fullSizeContentView` or hide the title bar — the standard macOS chrome (title bar, traffic lights, menu bar) remains visible at all times in windowed mode.
+
+---
+
+#### A.2.4 SpriteKit — Already Cross-Platform
+
+SpriteKit runs on macOS, iOS, and iPadOS with the same API. The `GameScene`, all `SKSpriteNode` subclasses, `SKAction` animations, particle emitters, and `SKAudioNode` audio all work without modification. This is the main reason SpriteKit was chosen over a Mac-only framework.
+
+The one exception: `SKView` is embedded differently on macOS (`NSView`) vs iOS (`UIView`). This is handled by a thin wrapper in `ContentView.swift` using `#if os(iOS)`.
+
+---
+
+#### A.2.4 Screen Size & Layout
+
+The game must never use hardcoded pixel coordinates. All positions must be calculated relative to the scene size at runtime.
+
+```swift
+// Wrong — hardcoded
+shipNode.position = CGPoint(x: 512, y: 40)
+
+// Right — relative
+shipNode.position = CGPoint(x: scene.size.width / 2, y: scene.size.height * 0.05)
+```
+
+**Key layout rules:**
+- The playfield scales to fill the available screen using `SKScene.scaleMode = .aspectFill`
+- The spaceship strip height is defined as a **percentage of scene height** (5%), not a fixed pixel value
+- Piece sprite sizes (16–28px) are defined as a fraction of the square size, which is derived from scene width at runtime
+- HUD elements anchor to screen edges using `SKNode` anchor points — top-left for score, top-right for lives
+- Safe area insets are respected on iPhone (notch, home indicator) using `UIWindow.safeAreaInsets` on iOS
+
+---
+
+#### A.2.5 Audio
+
+`AVFoundation` and `SKAudioNode` both work identically on macOS and iOS. No changes needed for audio in the port.
+
+One consideration: iOS may interrupt audio for phone calls, Siri, etc. The game should observe `AVAudioSession` interruption notifications on iOS and auto-pause when audio is interrupted. On macOS this is not needed.
+
+```swift
+// iOS only — add to AppDelegate or scene setup
+#if os(iOS)
+NotificationCenter.default.addObserver(
+    forName: AVAudioSession.interruptionNotification, ...)
+#endif
+```
+
+---
+
+#### A.2.6 Asset Scaling — @1x / @2x / @3x
+
+All sprite assets must be provided in three resolutions in `Assets.xcassets`:
+- `@1x` — standard (older non-Retina, rarely used)
+- `@2x` — Retina Mac, older iPhones
+- `@3x` — iPhone Pro models, new iPads
+
+The pixel-art aesthetic requires special handling: sprites must use **nearest-neighbour scaling** (no bilinear interpolation) or they will look blurry. Set this on the `SKTexture`:
+
+```swift
+texture.filteringMode = .nearest
+```
+
+This must be set on every piece sprite, projectile, and UI element. It is the single most important visual detail for the pixel-art look on Retina screens.
+
+---
+
+#### A.2.7 iOS-Specific UI Elements to Build in Phase 2
+
+These do not exist on macOS and must be added for iOS:
+
+| Element | Description |
+|---|---|
+| Virtual joystick | Left thumb zone — two arrow buttons or an analog stick for ship movement |
+| Fire button | Large tap target, bottom-right, glows when laser is available |
+| Pause button | Top-right corner, small, always accessible |
+| Chess piece tap handling | Tap to select, tap reticle to move — replaces mouse click |
+| Larger touch targets | Piece sprites may need slightly larger tap areas than their visual size on iPhone |
+| Landscape-only lock | Game is landscape only on iPhone. Set `UISupportedInterfaceOrientations` to landscape in Info.plist |
+| iPad layout | More screen real estate — HUD can be richer, pieces can be larger |
+
+---
+
+#### A.2.8 Persistence
+
+`UserDefaults` works identically on macOS and iOS — no changes needed for high score storage.
+
+For Phase 2 Game Center integration, the `ScoreManager` class should be designed with a protocol so the local `UserDefaults` implementation can be swapped for a `GameCenterScoreManager` without touching any other code:
+
+```swift
+protocol ScoreStorage {
+    func submitScore(_ score: Int, level: Int, initials: String)
+    func topScores() -> [ScoreEntry]
+}
+
+// v1.0
+class LocalScoreManager: ScoreStorage { ... }
+
+// Phase 2
+class GameCenterScoreManager: ScoreStorage { ... }
+```
+
+---
+
+#### A.2.9 Shared Codebase Structure
+
+The project should use a **single Xcode target with conditional compilation** rather than two separate targets. Most files are shared; platform differences are handled inline with `#if os(iOS)`:
+
+```
+GalacticChessInvaders.xcodeproj
+├── Targets:
+│   ├── GCI-macOS        (macOS deployment target)
+│   └── GCI-iOS          (iOS deployment target — Phase 2)
+├── Shared/              ← Everything in here compiles for both
+│   ├── Game/
+│   ├── Chess/
+│   ├── Arcade/
+│   ├── Nodes/
+│   └── Scores/
+├── macOS/               ← macOS-only files
+│   ├── MacInputHandler.swift
+│   └── AppDelegate.swift
+└── iOS/                 ← iOS-only files (Phase 2)
+    ├── TouchInputHandler.swift
+    ├── VirtualJoystick.swift
+    └── AppDelegate.swift
+```
+
+This structure means the Phase 2 iOS port is primarily:
+1. Write `TouchInputHandler.swift`
+2. Write `VirtualJoystick.swift` and on-screen buttons
+3. Test layout on iPhone and iPad screen sizes
+4. Handle audio session interruptions
+5. Submit to App Store
+
+The game logic, chess engine, rendering, audio, and scoring require no changes.
+
+---
+
+### A.3 Touch Controls
+
+| Action | Input |
+|---|---|
+| Move ship | Left virtual joystick (bottom-left zone) |
+| Fire laser | Fire button (bottom-right zone) |
+| Select + move chess piece | Tap piece, then tap destination reticle |
+| Deselect piece | Tap empty space |
+| Pause | Pause button (top-right corner) |
+
+The left half of the screen drives the ship; the right half (and upper area) handles chess. The split is natural for two-thumb play on iPhone and iPad.
+
+### A.4 Phased Plan
+
+The original document scheduled these as Phases 10 and 11, after the macOS game
+was complete. They are recorded here as a starting point, not a commitment.
+
+#### iPad
+
+**Goal:** Ship on iPad using the shared codebase. iPad first because its larger screen is closer to the Mac layout — lower risk than iPhone.
+
+**Build:**
+- New iOS target in Xcode project (shared `Shared/` folder unchanged)
+- `TouchInputHandler.swift` — translates touch → `GameAction`
+- `VirtualJoystick.swift` — left-thumb zone for ship movement
+- On-screen fire button — large tap target, bottom-right
+- Pause button — top-right corner
+- iPad layout pass — pieces can be larger, HUD richer, more screen real estate
+- Landscape-only lock (`UISupportedInterfaceOrientations`)
+- Safe area insets handling
+- Audio session interruption handling (phone calls, Siri)
+- `scaleMode = .aspectFill` on iPad (fills the screen more fully than Mac's `.aspectFit`)
+
+**Testing:**
+- All Phase 1 chess logic unit tests pass unchanged
+- Virtual joystick moves ship smoothly, fire button responsive
+- Tap to select piece, tap reticle to move — works reliably on iPad Pro and iPad mini
+- No misfire when tapping near piece vs. empty space
+- Landscape lock — refuses portrait rotation
+- Audio interruption — game pauses, resumes correctly after call ends
+- 60 fps on iPad (8th gen) or newer
+- Level 1–3 full playthrough on iPad — no control frustrations
+- **Pass criteria:** complete playthrough on iPad Pro and iPad mini with no input errors
+
+---
+
+#### iPhone
+
+**Goal:** Ship on iPhone. Smaller screen and narrower aspect ratio require the most layout work.
+
+**Build:**
+- iPhone layout pass — smaller piece sprites, compact HUD, tighter touch zones
+- Larger touch targets for piece selection (pieces are smaller but tap area is padded)
+- Virtual joystick and fire button scaled for one-thumb reach
+- HUD condensed — score and lives on same line to save vertical space
+- Test on smallest supported screen (iPhone SE 3rd gen, 4.7")
+- App Store metadata for iPhone
+
+**Testing:**
+- All touch controls work on iPhone SE (smallest screen)
+- Piece tap targets — no misfires at minimum sprite size
+- HUD legible at iPhone screen size — score, timer, lives all readable
+- No UI elements clipped by notch or home indicator safe areas
+- 60 fps on iPhone 12 or newer
+- Level 1–3 full playthrough on iPhone 15 and iPhone SE
+- Chess piece selection under fire — tap accuracy acceptable given arcade pace
+- **Pass criteria:** complete playthrough on both iPhone SE and iPhone 15 Pro with no missed taps on piece selection
+
+---
+
+| Feature | Phase | Notes |
+|---|---|---|
+| Game Center leaderboards | 2 | Online high scores by level; replaces local-only table |
+| iCloud sync | 2 | High scores and settings across Mac and iPhone |
+| Additional power-ups | 2 | Repair Drone, Smart Bomb, Speed Boost (designed in §13, not built in v1.0) |
+| Chess960 mode | 2 | Randomized starting positions — changes fleet formation shape each game |
+| Multiplayer (local) | 3 | Two players: one flies the ship, one makes chess moves |
+| Deeper engine option | 3 | Optional 3-4 ply for "hard" difficulty setting |
+| Piece skins / themes | 3 | Unlock alternate neon color schemes via score milestones |
+| Replay system | 3 | Record and play back last game |
+| Soundtrack volume reactivity | 2 | Full dynamic music system tied to game state (designed in §12, basic version in v1.0) |
+
+---

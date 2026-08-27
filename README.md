@@ -41,7 +41,8 @@ this repository.
   introduction to what the game is trying to be.
 - [gci-game-design.md](docs/gci-game-design.md) — the full design document: every rule, mechanic,
   level, sprite spec, sound and screen. The authoritative source, and what the code cites by section
-  number throughout.
+  number throughout. Appendix A covers an eventual iOS and iPadOS port, which is not scheduled — the
+  architecture rules that keep it possible are followed in the macOS build regardless.
 - [art-handoff.md](docs/art-handoff.md) — the visual handoff written before any code existed: screen
   layouts, HUD, FX language, design tokens and the sprite system.
 
