@@ -161,12 +161,12 @@ Deviations
       shows, plus a brief SKIP LEVEL notice in the gutter
 - [x] Hidden Auto Mode — `A` toggles; White auto-moves on a 1s beat, labelled
       TEST MODE in the gutter and logged; ends automatically at mate/stalemate
-- [x] Hidden `R` sends the level's next raider in immediately — raiders are on a
-      ~28s clock and most levels go quiet after one is shot down, so otherwise
-      testing a power-up means waiting for a crossing that may never come. It
-      launches whatever the roster is offering, so pressing it again after a
-      kill brings the next one. Routed through the real launch path, not a
-      shortcut of its own
+- [x] Hidden `R` sends a raider in immediately — raiders are on a ~28s clock and
+      most levels go quiet after one is shot down, so otherwise testing a
+      power-up means waiting for a crossing that may never come. Successive
+      presses walk the level's whole list and wrap, on a cursor of their own so
+      looking at the third raider does not change what the clock sends next.
+      Routed through the real launch path, not a shortcut of its own
 - [x] Lives read from `SpaceshipState`, including on a HUD built mid-run
 
 Window resize works: the scene is a fixed 960×700 with `.aspectFit`, so layout is

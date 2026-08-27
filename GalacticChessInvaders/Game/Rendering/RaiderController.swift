@@ -78,6 +78,10 @@ final class RaiderController {
     /// raiders a wave sees depends on how long the player takes to hit them,
     /// which is the right thing for it to depend on.
     private var remaining: [PowerUp] = []
+    /// Where the `R` test key is up to. Its own cursor rather than the roster
+    /// itself, so walking the list to look at something never reorders what the
+    /// clock will actually send.
+    private var summonCursor = 0
     /// Kept for the cadence, which stretches or tightens with how much the level
     /// is offering rather than with the level number.
     private var rosterCount = 1
@@ -90,6 +94,7 @@ final class RaiderController {
         setWarble(false)
         remaining = PowerUps.roster(forLevel: level)
         rosterCount = remaining.count
+        summonCursor = 0
         self.kindsSeen = kindsSeen
         schedule.reset(interval: paced(interval))
     }
@@ -168,8 +173,11 @@ final class RaiderController {
             // leaves it above zero. That is what tells the two endings apart
             // without a second flag to keep in step.
             let destroyed = scout.hp <= 0
-            if destroyed, self.remaining.first == powerUp {
-                self.remaining.removeFirst()
+            // Removed by identity rather than position: the `R` test key can
+            // send an entry out of order, so the one that just died is not
+            // necessarily the one at the head of the queue.
+            if destroyed, let index = self.remaining.firstIndex(of: powerUp) {
+                self.remaining.remove(at: index)
                 DiagnosticsLog.shared.log(.raider, self.remaining.isEmpty
                     ? "raids over for this level"
                     : "next up: \(self.remaining[0].shipName) scout")
@@ -184,19 +192,25 @@ final class RaiderController {
             "\(powerUp.shipName) scout \(firing ? "firing" : "warning") pass")
     }
 
-    /// Launches the level's current offer immediately, for the `R` test key.
+    /// Launches one of the level's raiders immediately, for the `R` test key.
     ///
-    /// Returns what went up, or nil if there is nothing to send — the roster is
-    /// exhausted, or both pooled nodes are already crossing. It resets the clock
-    /// as a real launch does, so pressing `R` does not also leave a scheduled
-    /// crossing about to arrive on top of the summoned one.
+    /// Successive presses walk the level's whole list — green, then spread, then
+    /// ice on Level 9 — and wrap, so every raider a level can send is reachable
+    /// without having to shoot the one in front of it first. The cursor is
+    /// separate from the roster, so looking at the third raider does not change
+    /// what the clock sends next or what a kill advances past.
+    ///
+    /// Returns what went up, or nil if there is nothing to send: the roster is
+    /// exhausted, or one is already crossing.
     @discardableResult
     func summonNext() -> PowerUp? {
-        guard let offering = remaining.first,
+        guard !remaining.isEmpty,
               let scout = scouts.first(where: { !$0.isCrossing }),
               onScreen < RaiderRules.maxScoutsOnScreen else { return nil }
-        launch(scout, carrying: offering)
-        return offering
+        let index = summonCursor % remaining.count
+        summonCursor = index + 1
+        launch(scout, carrying: remaining[index])
+        return remaining[index]
     }
 
     func setPaused(_ paused: Bool) {
