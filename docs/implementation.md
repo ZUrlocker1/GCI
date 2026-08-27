@@ -757,7 +757,7 @@ randomised per crossing, so a learned shape still has to be read.
   | duration | 15s | 15s | 7s | 7s |
   | rounds/sec | 40 | 40 | 20 | **12** |
   | angle | ±20°, ±40° | ±8°, ±16° | ±8°, ±16° | **±20° swept** |
-  | range | full screen | full screen | 6 squares | 6 squares |
+  | range | full screen | full screen | 6 squares | **to rank 7** |
   | rounds fired | 600 | 600 | 140 | **84** |
 
   A single sweeping stream is a different weapon rather than a smaller one: only
@@ -778,10 +778,20 @@ randomised per crossing, so a learned shape still has to be read.
   feel: at twelve rounds a second, 1.8s puts 10.8 rounds in each half-sweep,
   which is 3.7° and about 24pt apart at full reach — dense enough to read as a
   ribbon rather than a row of separate shots
-- **The range cap survives from the cut-back pass** and still does most of the
-  work: rounds burn out at rank 5.4, so the spray clears the pieces actually
-  threatening the ship and leaves the back ranks to be earned the ordinary way.
-  They fade over their last 0.18s — every other laser in the game expires
+- **The range is a ceiling, not a distance** — the constraint is which rank the
+  spray may touch. Rounds burn out at y=556: rank 7 runs 504–568 with its pieces
+  centred on 536, so that is past the middle of a rank-7 piece and 12pt clear of
+  the nearest rank-8 one. The seventh row is reachable; the eighth has to be
+  earned the ordinary way.
+
+  It works out to 7.4 squares rather than the round 7 it looks like it should be,
+  and the difference matters: a flat "one more square" than the previous six
+  landed at 530, which is 6pt *short* of rank 7's centre and would only ever have
+  clipped the bottom of a piece standing there. Aiming at the rank rather than at
+  a round number of squares is the difference between reaching it and nearly
+  reaching it.
+
+  Rounds fade over their last 0.18s — every other laser in the game expires
   off-screen, so this is the only one that would otherwise blink out in view
 - **Spray rounds pass through White's own pieces.** There are a great many of
   them and the sweep aims them rather than the player, so ordinary friendly fire
@@ -793,8 +803,8 @@ randomised per crossing, so a learned shape still has to be read.
   cap. The cap counts rounds in flight and frees a slot as each resolves; a spray
   borrowing those slots would leave the count wherever the last round stranded it
   and the player would come out of the power-up unable to fire. The player laser
-  pool is 24: measured, a round is in the air 0.79s over its 384pt range, so
-  twelve a second put 9.4 up at once, plus the manual cap of 6. It has been 72
+  pool is 24: measured, a round is in the air 0.97s over its 474pt range, so
+  twelve a second put 11.6 up at once, plus the manual cap of 6. It has been 72
   and 32 on the way here — an under-sized pool does not fail loudly, it silently
   drops rounds and the spray just looks thinner than it should
 - **Nuke** expands a magenta-to-white ring over 0.4s, clearing enemy rounds as

@@ -2405,16 +2405,33 @@ class GameScene: SKScene {
     /// them is somewhere slightly different.
     static let gatlingInterval: TimeInterval = 1.0 / 12
 
-    /// How far a barrage round travels before it burns out — six squares.
+    /// The highest point a spray round reaches before it burns out.
     ///
-    /// Ordinary player fire crosses the whole board; this deliberately does
-    /// not. An uncapped barrage cleared everything from the ship's own rank to
-    /// the eighth regardless of where the fleet was, so collecting it simply
-    /// ended the wave. Six squares reaches the fleet once it has descended a
-    /// rank or two, which is most of a wave, and leaves the back ranks to be
-    /// earned the ordinary way — so the barrage clears the pieces that are
-    /// actually threatening the ship rather than the whole position.
-    static let gatlingReach: CGFloat = BoardNode.squareSize * 6
+    /// Expressed as a *ceiling* rather than a distance, because the constraint
+    /// is which rank it may touch: ordinary player fire crosses the whole board
+    /// and this deliberately does not. An uncapped spray cleared everything from
+    /// the ship's rank to the eighth regardless of where the fleet was, so
+    /// collecting it simply ended the wave.
+    ///
+    /// Rank 7 runs 504–568 with its pieces centred on 536, and rank 8 begins at
+    /// 568. Burning out at 556 puts the spray past the middle of a rank-7 piece
+    /// and 12pt clear of the nearest rank-8 one — so the seventh row is
+    /// reachable and the eighth has to be earned the ordinary way.
+    ///
+    /// The distance this works out to is 7.4 squares, not the round 7 it looks
+    /// like it should be: a flat "one more square" than the previous six landed
+    /// at 530, which is 6pt *short* of rank 7's centre and would only ever have
+    /// clipped the bottom of a piece there. Aiming at the rank rather than at a
+    /// round number of squares is the difference between reaching it and nearly
+    /// reaching it.
+    static let gatlingCeiling: CGFloat =
+        GameScene.boardBottomY + BoardNode.squareSize * 7 - 12
+
+    /// The same thing as a travel distance, from the ship's muzzle. Derived, so
+    /// the pool arithmetic and the tests cannot drift from the ceiling.
+    static var gatlingReach: CGFloat {
+        gatlingCeiling - (shipLaneY + SpaceshipNode.displayHeight / 2)
+    }
     /// How far the spray swings either side of vertical, as a slope —
     /// `LaserNode.fire` takes sideways travel per unit of forward travel, not an
     /// angle. 0.364 is 20°.
@@ -2452,7 +2469,10 @@ class GameScene: SKScene {
         gatlingCooldown = Self.gatlingInterval
 
         let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
-        let reach = min(Self.gatlingReach, size.height - origin.y)
+        // From the ceiling rather than a fixed distance, so the burnout height
+        // is the same wherever the muzzle happens to be.
+        let reach = min(Self.gatlingCeiling - origin.y, size.height - origin.y)
+        guard reach > 0 else { return }
         let sweep = sin(2 * .pi * gatlingPhase / Self.gatlingSweepPeriod)
         guard let laser = laserPool.nextAvailable(owner: .player) else { return }
         laser.onDeactivate = nil
