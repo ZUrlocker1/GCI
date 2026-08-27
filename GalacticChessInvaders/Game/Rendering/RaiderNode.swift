@@ -271,7 +271,7 @@ final class RaiderNode: SKSpriteNode {
     /// silently fly a raider through the ship.
     func cross(fromX: CGFloat, toX: CGFloat, y: CGFloat, firing: Bool,
                powerUp: PowerUp, flight: RaiderRules.Flight,
-               bounds: ClosedRange<CGFloat>) {
+               bounds: ClosedRange<CGFloat>, repeatOffering: Bool = false) {
         stop()
         dress(as: powerUp)
         position = CGPoint(x: fromX, y: y)
@@ -310,8 +310,8 @@ final class RaiderNode: SKSpriteNode {
             // got to, rather than from a position decided in advance.
             leg(to: fromX + span * RaiderRules.fireFraction(), thenFire: true)
         }
-        if let feint = RaiderRules.feint(for: powerUp, span: span,
-                                         from: cursor, to: toX) {
+        if let feint = RaiderRules.feint(for: powerUp, repeatOffering: repeatOffering,
+                                         span: span, from: cursor, to: toX) {
             leg(to: feint.turn)
             leg(to: feint.back)
         }

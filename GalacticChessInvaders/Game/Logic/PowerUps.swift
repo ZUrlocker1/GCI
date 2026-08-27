@@ -226,7 +226,7 @@ enum PowerUps {
     /// | 4 | ice — Time Freeze |
     /// | 5 | green — Rapid Fire again, because it is the generally useful one |
     /// | 6 | spread — Gatling Barrage |
-    /// | 7 | bomb — Nuke |
+    /// | 7 | bomb, then bomb again — Nuke twice |
     /// | 8 | green, then spread |
     /// | 9 | green, then spread, then ice |
     /// | 10 | green, then spread, then ice, then bomb |
@@ -248,7 +248,11 @@ enum PowerUps {
         case 4:    return [.freeze]
         case 5:    return [.rapidFire]
         case 6:    return [.gatling]
-        case 7:    return [.nuke]
+        // Two camels. Crossfire is the hardest wave that had a single offer, so
+        // one quick Nuke kill left the rest of it silent — and a second raider
+        // arriving where the player has learned to expect none is also the
+        // gentlest possible warning that Levels 8 and up send more than one.
+        case 7:    return [.nuke, .nuke]
         case 8:    return [.rapidFire, .gatling]
         case 9:    return [.rapidFire, .gatling, .freeze]
         default:   return [.rapidFire, .gatling, .freeze, .nuke]

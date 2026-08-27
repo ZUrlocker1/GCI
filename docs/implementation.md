@@ -704,10 +704,10 @@ level has one answer, the same answer every run.
 | 4 | RELENTLESS | ice | TIME FREEZE |
 | 5 | TRIPLE THREAT | green | RAPID FIRE |
 | 6 | WIDE ORBIT | spread | SPREAD FIRE |
-| 7 | CROSSFIRE | bomb | NUKE |
+| 7 | CROSSFIRE | camel → camel | NUKE → NUKE |
 | 8 | ARMORED PAWNS | green → spread | RAPID FIRE → SPREAD FIRE |
 | 9 | KING ACTIVATED | green → spread → ice | RAPID FIRE → SPREAD FIRE → TIME FREEZE |
-| 10 | BLITZ! | green → spread → ice → bomb | RAPID FIRE → SPREAD FIRE → TIME FREEZE → NUKE |
+| 10 | BLITZ! | green → spread → ice → camel | RAPID FIRE → SPREAD FIRE → TIME FREEZE → NUKE |
 
 Scout speeds and HP, since they are what decide whether a carrier is catchable:
 
@@ -735,6 +735,8 @@ branch for it, unreachable for now.
 
 - **One kind at a time, and it keeps coming back until it is shot down.** The
   entry at the front of the roster crosses, and only a kill advances to the next.
+  Level 7 sends the same carrier twice, which is where the player first meets a
+  wave that does not go quiet after one kill.
   Missing costs nothing but time, so how many raiders a wave sees depends on how
   long the player takes to hit one — which is the right thing for it to depend
   on. Most levels therefore go quiet after a single kill
