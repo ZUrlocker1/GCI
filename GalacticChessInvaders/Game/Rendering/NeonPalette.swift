@@ -35,16 +35,24 @@ enum NeonPalette {
     /// General UI chrome — HUD text, menu highlights, headings.
     static let orange = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
 
-    /// The fill inside an armored pawn (§10.1). The outline stays Black's own
-    /// magenta — recolouring it silver, which is what the doc's "heavy silver
-    /// metallic outline" suggested, made the piece read as a different piece
-    /// rather than as the same pawn wearing something.
-    static let armorFill = SKColor(red: 1.00, green: 0.42, blue: 0.48, alpha: 1)
-
     /// §23.9's standard transporter column: green-white. The defensive spawn
     /// uses `starBlueLight` instead, and the colour is the only thing telling
     /// the player whether the arriving pawn is random or shielding the king.
     static let transporterGreen = SKColor(red: 0.55, green: 1.00, blue: 0.72, alpha: 1)
+
+    /// The fill inside an armored pawn (§10.1). The outline stays Black's own
+    /// magenta — recolouring it silver, which is what the doc's "heavy silver
+    /// metallic outline" suggested, made the piece read as a different piece
+    /// rather than as the same pawn wearing something.
+    ///
+    /// Deliberately the *same* green the transporter column arrives in, not a
+    /// near-match: armor only ever comes with a regenerated pawn, so the beam
+    /// that delivers it and the shell it wears should be one colour and read as
+    /// one event. It is also complementary to Black's magenta, which is why a
+    /// translucent fill inside a magenta outline reads at a glance.
+    static let armorFill = transporterGreen
+
+
 
     /// A hotter, more saturated accent reserved for the title screen and
     /// transient in-game call-outs (the AUTO move flash, SKIP LEVEL, the title

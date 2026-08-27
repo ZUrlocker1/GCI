@@ -371,9 +371,10 @@ promise Level 4's regeneration has to be built to keep.
   scattering along the rear rank and materialise directly in front of him.
   §23.9's rook and bishop defensive spawns are not built
 - **Armored pawns** (Level 8, and again at Blitz): half of every regenerated pawn arrives with its
-  interior filled a translucent lighter red — outline untouched, so it reads as
-  the same pawn wearing something rather than as a different piece — and immune
-  to laser fire for three White moves. The sprites are hollow, so the fill is a
+  interior filled the same translucent green the transporter column arrived in —
+  outline untouched, so it reads as the same pawn wearing something rather than
+  as a different piece — and immune to laser fire for three White moves. One
+  colour for one event, and complementary to Black's magenta. The sprites are hollow, so the fill is a
   silhouette found by flooding inward from the image border: transparent pixels
   the flood cannot reach are the ones the outline encloses. Cached per texture,
   beside the ink bounds. A hit ricochets — orange sparks,
