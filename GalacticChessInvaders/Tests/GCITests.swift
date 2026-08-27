@@ -4810,14 +4810,22 @@ final class PowerUpTests: XCTestCase {
                              "and still wide enough to be a spray")
     }
 
-    /// The barrage must not reach the whole board. Uncapped, it cleared
-    /// everything from the ship's rank to the eighth wherever the fleet was, so
-    /// collecting it ended the wave rather than rewarding the player.
-    func testTheSprayDoesNotReachTheWholeBoard() {
-        XCTAssertLessThan(GameScene.gatlingReach, BoardNode.boardSize,
-                          "a spray that spans the board leaves nothing to play for")
-        // Far enough to matter once the fleet has descended a rank or two.
-        XCTAssertGreaterThanOrEqual(GameScene.gatlingReach, BoardNode.squareSize * 4)
+    /// The spray reaches the seventh rank and not the eighth. That is the whole
+    /// range rule: uncapped it cleared everything from the ship's rank to the
+    /// back wherever the fleet was, so collecting it ended the wave.
+    func testTheSprayReachesTheSeventhRankAndNotTheEighth() {
+        let bottom: CGFloat = 120        // GameScene.boardBottomY
+        func rank(_ n: Int) -> ClosedRange<CGFloat> {
+            let low = bottom + CGFloat(n - 1) * BoardNode.squareSize
+            return low...(low + BoardNode.squareSize)
+        }
+        XCTAssertTrue(rank(7).contains(GameScene.gatlingCeiling),
+                      "the burnout has to land inside the seventh rank")
+        // Past the middle of a rank-7 piece, or it only clips the bottom of one.
+        XCTAssertGreaterThan(GameScene.gatlingCeiling,
+                             bottom + 6.5 * BoardNode.squareSize)
+        // And clear of the eighth, which must stay earned the ordinary way.
+        XCTAssertLessThan(GameScene.gatlingCeiling, rank(8).lowerBound)
     }
 
     /// Total rounds a spray can put up. The number that actually decides how

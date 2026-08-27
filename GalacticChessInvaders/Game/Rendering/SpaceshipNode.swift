@@ -11,7 +11,9 @@ final class SpaceshipNode: SKSpriteNode {
     /// speed the shortest tap overshot the file you were aiming at, and aiming
     /// is the whole game once the fleet sweep opens narrow lanes.
     static let speed: CGFloat = 294
-    private static let displayHeight: CGFloat = 40
+    /// Not private: the spray's ceiling is derived from where the muzzle sits,
+    /// which is the ship's lane plus half its hull.
+    static let displayHeight: CGFloat = 40
     private static let rapidFireName = "rapidFire"
     private static let shieldName = "shieldBubble"
 
