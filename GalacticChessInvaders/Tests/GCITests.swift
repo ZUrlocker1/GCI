@@ -4664,7 +4664,7 @@ final class PowerUpTests: XCTestCase {
     func testOnlyTheClockedEffectsAreTimed() {
         XCTAssertEqual(Set(PowerUp.allCases.filter(\.isTimed)), [.freeze, .gatling])
         XCTAssertEqual(PowerUp.freeze.duration, 3)
-        XCTAssertEqual(PowerUp.gatling.duration, 15)
+        XCTAssertEqual(PowerUp.gatling.duration, 7)
         for powerUp in [PowerUp.rapidFire, .shield, .nuke] {
             XCTAssertNil(powerUp.duration, "\(powerUp)")
         }
@@ -4765,15 +4765,37 @@ final class PowerUpTests: XCTestCase {
 
     // MARK: - Gatling geometry
 
-    /// The pool has to cover a full Gatling barrage: five rounds eight times a
-    /// second, each in the air for as long as its own angle takes to fly out.
+    /// The pool has to cover a full Gatling barrage: five rounds per volley,
+    /// each in the air for as long as its own angle takes to fly its range out.
+    /// An under-sized pool does not fail loudly — it silently drops arms of the
+    /// spread and the barrage just looks thinner.
     func testTheLaserPoolCoversAFullGatlingBarrage() {
-        let reach: CGFloat = 700 - 82        // scene height less the ship's muzzle
         let inFlight = GameScene.gatlingLeans
-            .map { Double(reach * (1 + $0 * $0).squareRoot() / ProjectileState.playerLaserSpeed) }
+            .map { Double(GameScene.gatlingReach * (1 + $0 * $0).squareRoot()
+                          / ProjectileState.playerLaserSpeed) }
             .reduce(0, +) / GameScene.gatlingInterval
-        XCTAssertGreaterThan(LaserPool.playerCapacity, Int(inFlight.rounded(.up)),
-                             "a starved pool silently drops arms of the spread")
+        XCTAssertGreaterThan(LaserPool.playerCapacity, Int(inFlight.rounded(.up)))
+        // And not wildly over-sized either: every node carries a physics body
+        // the scene walks every frame.
+        XCTAssertLessThan(LaserPool.playerCapacity, Int(inFlight.rounded(.up)) * 3)
+    }
+
+    /// The barrage must not reach the whole board. Uncapped, it cleared
+    /// everything from the ship's rank to the eighth wherever the fleet was, so
+    /// collecting it ended the wave rather than rewarding the player.
+    func testTheBarrageDoesNotReachTheWholeBoard() {
+        XCTAssertLessThan(GameScene.gatlingReach, BoardNode.boardSize,
+                          "a barrage that spans the board leaves nothing to play for")
+        // Far enough to matter once the fleet has descended a rank or two.
+        XCTAssertGreaterThanOrEqual(GameScene.gatlingReach, BoardNode.squareSize * 4)
+    }
+
+    /// Total rounds a barrage puts up. The number that actually decides how much
+    /// of the board it clears, and the one that was 600.
+    func testABarrageIsAHundredAndFortyRoundsNotSixHundred() {
+        let volleys = (PowerUp.gatling.duration ?? 0) / GameScene.gatlingInterval
+        let rounds = Int(volleys.rounded()) * GameScene.gatlingLeans.count
+        XCTAssertEqual(rounds, 140)
     }
 
     /// Centre, ±8°, ±16°. Stored as slopes because `LaserNode.fire` takes

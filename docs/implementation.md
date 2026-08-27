@@ -5,17 +5,21 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 
 ✅ done · 🟡 partial · ⬜ not started
 
-Ten levels play end to end, each with a mechanic of its own. What is left, in
-the order it is worth doing rather than the order §20 numbers it:
+Ten levels play end to end, each with a mechanic of its own, with all five
+power-ups and full arcade audio. The three things left that a player would
+notice, in the order they are worth doing:
 
-1. **Raiders** (6.x) — the Scout flies and all four special scouts carry their
-   power-ups; the Galaxian Escort and the Flagship are next. Every sprite is
+1. **Music and a settings screen** (5) — one track plays everywhere and there is
+   no way to change the volume. Blocked only on choosing tracks
+2. **The rest of the raiders** (6.x) — the Scout and every power-up carrier fly;
+   the diving family (Escort, Flagship, Kamikaze) does not. Every sprite is
    already in the atlas
-2. **Music and settings** (5), then polish and release (8, 9) — craft work that
-   interacts with nothing and can happen whenever
+3. **Polish and release** (8, 9) — attract mode, a fourth starfield tier, then
+   balance, icon, DMG and notarization
 
-§20's phase numbers were a plan written before any of this existed. They are a
-checklist, not a running order.
+Full detail in **[Roadmap — what is left](#roadmap--what-is-left)** near the end
+of this file. §20's phase numbers were a plan written before any of this
+existed; they are a checklist, not a running order.
 
 | Phase | Title | |
 |---|---|---|
@@ -29,10 +33,10 @@ checklist, not a running order.
 | 4 | Basic sound effects | 🟡 |
 | 5 | Background music + settings | ⬜ |
 | 6.1 | Raiders: scout & basic escort | 🟡 — Scout done, Escort next |
-| 6.2 | Raiders: flagship, variants, special scouts | 🟡 — special scouts done |
-| 7.1 | Level escalation: chess AI | ⬜ |
+| 6.2 | Raiders: flagship, variants, special scouts | 🟡 — special scouts and power-ups done |
+| 7.1 | Level escalation: chess AI | ✅ — built with the level ladder |
 | 7.2 | Level escalation: arcade mechanics | ✅ |
-| 8 | Visual polish | ⬜ |
+| 8 | Visual polish | 🟡 — score pops, banners, high scores, end screens done |
 | 9 | Mac hardening & App Store release | ⬜ |
 
 ---
@@ -570,11 +574,33 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       ceiling in `AudioManager`, so per-key balance is preserved. The check alarm
       and countdown tick are mixed further down and the alarm has a 3s cooldown —
       both repeat, and repetition reads as loudness
-- [ ] Arcade SFX (laser, impacts, destruction, fleet, raiders) — arrive with 3.x
-- [ ] 8 sounds still need generating with jsfxr (marked `generated/` in `SoundKey`)
-- [ ] **Bundle size**: only the 12 wired files are bundled (7.7MB). All 49
-      referenced would be 91MB, dominated by three long uncompressed GDC stems —
-      trim or convert to AAC before ship
+- [x] Arcade SFX wired: player laser, per-piece impacts and destruction, fleet
+      volleys, the king's and the bishops' own rounds, raiders, armor, the
+      transporter, and all five power-ups
+- [x] **Sound audit**, 27 Aug 2026: every `SoundKey` the code actually plays was
+      checked against what is bundled. Six were silent in a running build — four
+      of the five power-ups among them — because the files existed in `assets/`
+      but had never been copied into `Resources/`. A missing file degrades
+      silently by design (`AudioManager.preload` reports a count and moves on),
+      which is right for unbuilt phases and exactly why this needed checking
+      rather than assuming
+- [x] Two GDC stems were library-length rather than game-length and are now
+      trimmed with a fade: the nuke shockwave 17.3s → 2.4s (6.6MB → 0.93MB) and
+      the armor ricochet 15.1s → 0.4s (5.8MB → 0.16MB)
+- [x] Three sounds synthesised, since the doc marks them "generate with jsfxr"
+      and no source exists: the two Ice Scout whooshes and §12.12's sub-bass
+      fleet heartbeat (an 88→52Hz double-thump)
+- [x] `lightningScoutDestroyed` removed — the Lightning Scout is retired, so
+      there is no ship left to make the sound
+- [ ] 3 sounds still need generating: `llamaBleat`, `camelHonk` (Minter ships,
+      not built) and nothing else — the rest of `generated/` is done
+- [ ] 12 keys reference files that are not bundled, all belonging to unbuilt
+      features (escorts, the flagship, the Minter ships) or to large GDC stems
+      not yet trimmed (`criticalCrackleEerie` 24MB, `ambientSpaceLoop` 28MB,
+      `mechanicBannerTier2/3`, `fleetRankDrop`)
+- [ ] **Bundle size**: 37 files, 11.5MB. Every remaining GDC stem needs the same
+      trim-and-fade treatment before it goes in — untrimmed they are 91MB
+      between them
 
 ## Phase 6.1 — Raiders: Scout ✅
 
@@ -613,8 +639,11 @@ turn, so the board pulses together; a raider ignores that entirely.
   already in `GCI.spriteatlas`, and a second atlas costs a texture binding for
   nothing
 
+Hidden `R` sends the next raider in on demand — see Phase 2.1's dev aids.
+
 **Not built:** Galaxian Escort, Flagship, Kamikaze, King Protection Mode, the
-Minter tribute ships.
+Minter tribute ships. All of them plug into `RaiderController`'s existing pool,
+cap, clock, roster and flight-path model; none needs new architecture.
 
 ## Phase 6.2 — Special Scouts & Power-Ups ✅
 
@@ -686,12 +715,27 @@ randomised per crossing, so a learned shape still has to be read.
   the chess turn timer, and drops the music to `rate = 0.5` — §13.2's one
   sanctioned use of `rate`. The player's own movement, fire and rounds in flight
   are untouched, which is the whole effect
-- **Gatling** is centre, ±8°, ±16° — much narrower than §13.2's ±20°/±40°, and
-  narrower than its own fallback of ±15°/±30°. At ±40° a round covered 518pt of
-  lateral travel climbing a 618pt board, wider than the entire 512pt board, so
-  fifteen seconds of it swept the position clear wherever the ship stood and
-  where the player aimed stopped mattering. The fan is now about five squares
-  wide at the top of the board
+- **Gatling** took three passes to get down to a reward rather than an ending.
+  §13.2's version — fifteen seconds of ±20°/±40° at eight volleys a second,
+  flying the full height of the screen — swept **244% of the board area**: it
+  covered the whole position twice over, wherever the ship happened to be
+  standing, so collecting it ended the wave. Narrowing the fan alone still left
+  84%. What it is now:
+
+  | | §13.2 | narrowed | now |
+  |---|---|---|---|
+  | duration | 15s | 15s | **7s** |
+  | volleys/sec | 8 | 8 | **4** |
+  | spread | ±20°, ±40° | ±8°, ±16° | ±8°, ±16° |
+  | range | full screen | full screen | **6 squares** |
+  | rounds fired | 600 | 600 | **140** |
+  | board area swept | 244% | 84% | **32%** |
+
+  The range cap is what changed its character rather than just its size: rounds
+  burn out at rank 5.4, so the barrage clears the pieces actually threatening
+  the ship and leaves the back ranks to be earned the ordinary way. They fade
+  over their last 0.18s — every other laser in the game expires off-screen, so
+  this is the only one that would otherwise blink out in plain view
 - **Barrage rounds pass through White's own pieces.** The ship auto-fires these
   and the player aims none of them, so ordinary friendly fire made the reward
   demolish White's position as a side effect of being used. Done by dropping
@@ -701,9 +745,11 @@ randomised per crossing, so a learned shape still has to be read.
 - **Gatling** fires outside `SpaceshipState` entirely rather than raising the
   cap. The cap counts rounds in flight and frees a slot as each resolves; a
   barrage borrowing those slots would leave the count wherever the last volley
-  stranded it and the player would come out of fifteen seconds unable to fire.
-  The player laser pool went 6 → 72: measured, a volley is 6.82 round-seconds
-  against a 618pt board, so the steady state is 54.6 rounds in the air
+  stranded it and the player would come out of the barrage unable to fire. The
+  player laser pool is 32: measured, a volley is 3.77 round-seconds over a 384pt
+  range, so four a second put 15.1 in the air. It was briefly 72, sized for the
+  uncut barrage — an under-sized pool does not fail loudly, it silently drops
+  arms of the spread and the barrage just looks thinner
 - **Nuke** expands a magenta-to-white ring over 0.4s, clearing enemy rounds as
   it reaches them with a spark at each. Pieces and raiders are untouched
 - **Shield** is a hexagon, not a circle, so it can never be confused with the
@@ -725,9 +771,119 @@ randomised per crossing, so a learned shape still has to be read.
 is what Rapid Fire is; two ships handing over the same reward is one ship too
 many.
 
-## Phases 5, 6.2 remainder, 7.x, 8, 9 ⬜
+## Roadmap — what is left
 
-Not started.
+Ten levels play end to end with every mechanic, all five power-ups, and full
+arcade audio. What remains, grouped by what it is rather than by §20's phase
+numbers — those were a plan written before any of this existed, and the running
+order has diverged.
+
+Ordered within each group by what it would cost to *not* have at ship.
+
+### Music and settings (§20 Phase 5) — not started
+
+The largest single gap, and the only one a player would notice immediately.
+
+- [ ] **Per-level music.** One track (`GCI-intro.m4a`) is bundled and plays
+      everywhere. §5 wants a pool drawn from per level. **Blocked on track
+      selection** — `assets/music/` holds six unopened loop bundles and a
+      MIDI set; someone has to listen and choose. Nothing else here depends on it
+- [ ] **Level clear fanfare** (3–4s) and **game over riff**, both specced in §5
+      and currently standing in with `levelClear` / `gameOver` one-shots
+- [ ] **Title screen music**, stopping cleanly when the game starts
+- [ ] **`SettingsView.swift`** — master / music / SFX volume sliders, music
+      on/off, persisted via `UserDefaults`. `AudioManager` already exposes
+      `setMusicVolume` and a per-key gain and ceiling, so the plumbing is
+      in place and only the screen and the persistence are missing
+- [ ] Stubbed Gameplay / Controls / Display sections in Settings, so adding
+      difficulty and key remapping later needs no rework
+- [ ] Settings entry points: a title-screen button and a gameplay shortcut that
+      pauses while open. §5 is explicit that the pause overlay stays a plain
+      overlay with no menu — that part is already true
+- [ ] **Music ducking** under priority SFX. `AudioManager.duckMusic` exists and
+      is not called from anywhere
+
+### Raiders — the rest of §6 (§20 Phases 6.1, 6.2)
+
+The Scout and all five power-up carriers are done. What is left is the dive
+family, which needs a genuinely new motion model — everything built so far
+crosses the screen horizontally.
+
+- [ ] **Galaxian Escort** — peels off the fleet's rear rank, curved dive at the
+      ship's *last known* position, fires at the apex, exits. Reaching the
+      bottom strip costs a life. 150 pts
+- [ ] **Galaxian Flagship** — 2 HP, flanked by two Escorts that must die first,
+      immune while they live (white flash + clang so the rule teaches itself)
+- [ ] **Escort variants** — Kamikaze (fast, silent, straight at the ship),
+      Paired, Looping
+- [ ] **King Protection Mode** (§6.3) — raiders actively plug an open lane to the
+      black king. The most interesting unbuilt idea in the doc: it makes a clean
+      shot at the king something the game contests rather than something the
+      player waits for
+- [ ] **Minter tribute ships** (§6.4) — Llama on even level clears, Mutant Camel
+      on every third, flying across the score tally. Sprites are already in the
+      atlas; both sounds still need generating
+- [ ] `RaiderController`'s pool, cap, clock, roster and flight-path model are the
+      seam all of the above plug into — none of it needs new architecture
+
+### Gameplay decisions still open
+
+Not bugs and not missing features — things playtesting raised that have no answer
+yet.
+
+- [ ] **Should Rapid Fire outlast its level?** It resets every wave, which was
+      right when a promotion granted it and is arguable now that a scout does.
+      Carrying it over would make the green scout the most valuable raider in the
+      game, which may be the point or may be too much
+- [ ] **Levels 7–10 and the one-kill rule.** Raids currently end for the wave
+      once the player brings one down, at every level. By the late levels a
+      player is fast enough that this can happen very early and leave a long
+      quiet stretch — worth revisiting once those levels have been played
+      properly
+- [ ] **Level 11+.** Level 10 (Blitz) is deliberately the last wave and clearing
+      it wins the run. A twelfth mechanic would need a reason to exist beyond
+      "harder"
+- [ ] **Fleet rush stays cut** (§7.2). Recorded under deviations with the
+      reasoning; listed here so it is a decision rather than an oversight
+
+### Visual polish (§20 Phase 8)
+
+Much of this phase landed early — score pops, banner animations, the high score
+table, the game over and level clear screens, per-piece destruction sounds. What
+is genuinely outstanding:
+
+- [ ] **Fourth starfield tier.** Three are built (46 / 26 / 12 sprites at
+      20 / 58 / 140 px/s); §12.4 asks for four
+- [ ] **Wireframe geometric debris** in a foreground layer, Asteroids Recharged
+      style — the one piece of the art direction with nothing built against it
+- [ ] **8-frame explosion sprite sheets per piece type.** Explosions are
+      currently pooled particle bursts tinted per piece, which reads well enough
+      that this may not be worth doing
+- [ ] **Hyperspace jump on level clear**
+- [ ] **Attract mode** — §14.2's 5-slide cycle on a 12s timeout. `HowToPlayNode`
+      and `TitleOverlayNode` exist; nothing cycles
+
+### Shipping (§20 Phase 9)
+
+- [ ] **Balance pass from outside playtesters.** §9's own criteria: is Level 1
+      learnable in one attempt, Level 3 urgent, Level 5 overwhelming-but-fair
+- [ ] **Bundle size** — see Phase 4. Every remaining GDC stem needs trimming
+- [ ] **App icon**, all sizes
+- [ ] **DMG** for direct distribution, then App Store: sandbox entitlements,
+      notarization, screenshots, metadata
+- [ ] **Instruments passes** — Allocations over 30 minutes for leaks, Time
+      Profiler for the frame budget. See "Potential optimizations" for where to
+      look first
+- [ ] **XCTest cannot run in this environment**, so the whole suite has been
+      typechecked but never executed. Running it once in Xcode is the single
+      highest-value verification step left
+
+### Not scheduled
+
+- **iOS / iPadOS port** — `gci-game-design.md` Appendix A. Wanted eventually, not
+  now. The architecture rules that keep it possible are followed regardless: the
+  logic layers import no SpriteKit or AppKit, and all input arrives as
+  `GameAction`
 
 ---
 

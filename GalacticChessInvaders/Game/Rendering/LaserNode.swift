@@ -24,6 +24,7 @@ final class LaserNode: SKSpriteNode {
     private static let flightKey = "fly"
     private static let beamName = "kingBeam"
     private static let exhaustKey = "exhaust"
+    private static let fadeKey = "fade"
 
     /// An angled round is longer and narrower than a straight bolt: its whole
     /// job is to read as travelling *along* a line the player has to judge.
@@ -193,7 +194,7 @@ final class LaserNode: SKSpriteNode {
     /// (§12) whoever's pool it came out of.
     func fire(from origin: CGPoint, damage: Int, speed: CGFloat,
               travelDistance: CGFloat, lean: CGFloat = 0, tint: SKColor? = nil,
-              sparesFriendlies: Bool = false) {
+              sparesFriendlies: Bool = false, fadesOut: Bool = false) {
         guard speed > 0, travelDistance > 0 else { return }
         state = ProjectileState(owner: owner, damage: damage, speed: speed)
         // Before the masks are read below.
@@ -215,6 +216,15 @@ final class LaserNode: SKSpriteNode {
 
         let move = SKAction.moveBy(x: dx, y: dy, duration: duration)
         let finish = SKAction.run { [weak self] in self?.deactivate() }
+        // A round that runs out of range in mid-air rather than flying off the
+        // top of the screen has to be seen to *stop*. Every other laser in the
+        // game expires off-screen, so this is the only case where a bare
+        // `deactivate` would read as a round blinking out of existence.
+        if fadesOut {
+            let tail = min(0.18, duration * 0.35)
+            run(.sequence([.wait(forDuration: duration - tail),
+                           .fadeOut(withDuration: tail)]), withKey: Self.fadeKey)
+        }
         run(.sequence([move, finish]), withKey: Self.flightKey)
     }
 
@@ -321,6 +331,10 @@ final class LaserNode: SKSpriteNode {
         state = nil
         isHidden = true
         removeAction(forKey: Self.flightKey)
+        // A limited-range round fades as it expires; the node is pooled, so the
+        // next shot out of it would otherwise be invisible.
+        removeAction(forKey: Self.fadeKey)
+        alpha = 1
         zRotation = 0
         missileRig.isHidden = true
         missileRig.removeAction(forKey: Self.exhaustKey)

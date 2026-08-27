@@ -11,15 +11,17 @@ final class LaserPool {
     /// §20 Phase 3.2 sized this at 6, which is `SpaceshipState.maxLaserCap`.
     ///
     /// §13.2's Gatling Barrage removes the cap entirely and auto-fires a 5-way
-    /// spread eight times a second. Measured rather than guessed: a round has
-    /// 618pt to cover at 520pt/s, and the ±20°/±40° rounds cover 6% and 30%
-    /// more than that, so one volley is 6.82 round-seconds and the steady state
-    /// is 54.6 rounds in the air. 48 — the first number here, chosen off a
-    /// straight-flight estimate — would have started starving the barrage about
-    /// a second in, dropping one or two arms of the spread on every volley for
-    /// the remaining fourteen. 72 clears the measured figure with room for the
-    /// player's own manual shots on top.
-    private static let playerCount = 72
+    /// spread, so the pool has to cover its steady state. Measured rather than
+    /// guessed: a round covers `GameScene.gatlingReach` (384pt) at 520pt/s and
+    /// the angled ones a little further, so one volley is 3.77 round-seconds
+    /// and four volleys a second put 15.1 in the air. 32 clears that with room
+    /// for the player's own manual shots on top.
+    ///
+    /// It was briefly 72, sized for the barrage before it was cut back — eight
+    /// volleys a second of full-board rounds is 54.6 in the air. Worth keeping
+    /// the arithmetic visible: an under-sized pool does not fail loudly, it
+    /// silently drops arms of the spread and the barrage just looks thinner.
+    private static let playerCount = 32
     private static let enemyCount = 16
 
     /// Exposed so the barrage arithmetic can be pinned by a test rather than
