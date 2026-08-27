@@ -116,13 +116,19 @@ final class HowToPlayNode: SKNode {
         // Deliberately plain, and last. The panel ships, so these are reachable
         // by anyone — but they are a way to look behind the game, not part of
         // playing it, and the layout should say so.
-        heading("DEBUG MODE", Self.cyan.withAlphaComponent(0.55), x: x, y: 150)
+        heading("DEBUG MODE", Self.cyan.withAlphaComponent(0.55), x: x, y: 145)
         // Two short lines rather than one long one — five key/label pairs on a
         // single row runs the width of the column and reads as a wall.
-        for (i, line) in ["L  Log   -   A  Auto   -   P  Powerup",
-                          "R  Raider   -   V  Level"].enumerated() {
-            let keys = label(line, 11, SKColor.white.withAlphaComponent(0.6), .left)
-            keys.position = CGPoint(x: x, y: 132 - CGFloat(i) * 17)
+        //
+        // Press Start 2P advances exactly one em per character, so the padding
+        // after "Log" is counted rather than eyeballed: it puts `A` and `V` on
+        // the same column, 16 characters in on both lines.
+        for (i, line) in ["L  Log      ·   A  Auto   ·   P  Powerup",
+                          "R  Raider   ·   V  Level"].enumerated() {
+            // 10pt, not 11: at 11 the longer line is 440pt against a 410pt
+            // column and runs off the panel.
+            let keys = label(line, 10, SKColor.white.withAlphaComponent(0.6), .left)
+            keys.position = CGPoint(x: x, y: 127 - CGFloat(i) * 17)
             addChild(keys)
         }
     }
