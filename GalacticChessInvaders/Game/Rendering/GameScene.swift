@@ -99,8 +99,15 @@ class GameScene: SKScene {
     /// §13's power-ups. The clock and the shield charge; everything the effects
     /// actually *do* to the world lives in the Power-Ups section below.
     private var powerUps = PowerUpState()
-    /// Time until the next Gatling volley. Only meaningful while it is running.
+    /// Time until the next Spread Fire round. Only meaningful while it is running.
     private var gatlingCooldown: TimeInterval = 0
+    /// How far through its sweep the spray is, in seconds. Advances whenever the
+    /// effect is up, held or not, so the hose keeps moving and a player who taps
+    /// gets samples of the same arc a player who holds paints continuously.
+    private var gatlingPhase: TimeInterval = 0
+    /// Whether the fire key is currently down. Ordinary fire is one shot per
+    /// press and ignores this; Spread Fire sprays for as long as it is held.
+    private var isFireHeld = false
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
     /// slots, so without this the prompt reappeared immediately after submitting
@@ -384,7 +391,11 @@ class GameScene: SKScene {
         case .stopMoving: ship?.direction =  0
 
         case .fireLaser:
+            isFireHeld = true
             fireLaserFromShip()
+
+        case .stopFiring:
+            isFireHeld = false
 
         case .selectPieceAt(let square):
             selectPiece(at: square)
@@ -872,6 +883,8 @@ class GameScene: SKScene {
         if let running = powerUps.cancel() { lift(running) }
         powerUps.reset()
         gatlingCooldown = 0
+        gatlingPhase = 0
+        isFireHeld = false
         ship?.removeShield()
         shake = .none
         shakeElapsed = 0
@@ -1714,6 +1727,10 @@ class GameScene: SKScene {
         fleet?.setPaused(true)
         laserPool?.setPaused(true)
         raiders?.setPaused(true)
+        // The key-up that ends a spray is delivered to whatever is listening
+        // when it happens. Releasing the trigger while paused would otherwise
+        // never be seen, and the hose would still be running on resume.
+        isFireHeld = false
         DiagnosticsLog.shared.log(.level, "PAUSED")
     }
 
@@ -2365,18 +2382,28 @@ class GameScene: SKScene {
         }
     }
 
-    /// §13.2's Gatling Barrage: five lasers at once, eight times a second, with
-    /// the concurrency cap ignored.
+    /// §13.2's Spread Fire, rebuilt as a sweeping hose: one stream, ten rounds a
+    /// second, the angle oscillating through ±20° — Missile Command's spray
+    /// rather than a fixed fan.
+    ///
+    /// It fires only while the player holds the fire key. §13.2 has the ship
+    /// auto-fire for the duration, which sounds generous and plays badly: the
+    /// power-up took the trigger away at the exact moment it handed over more
+    /// firepower, so the most powerful thing in the game was also the one moment
+    /// the player was not shooting. Holding the key is the whole difference
+    /// between operating a hose and watching one.
     ///
     /// Fires outside `SpaceshipState` entirely rather than raising `laserCap`
     /// to some large number. The cap counts rounds in flight and frees a slot
-    /// when each one resolves; a barrage that borrowed those slots would leave
-    /// the count wherever the last volley happened to strand it when the effect
-    /// ended, and the player would come out of fifteen glorious seconds unable
-    /// to fire. Barrage rounds are simply not the ship's rounds.
-    /// Four volleys a second, down from eight. Halving the rate halves the
-    /// rounds in the air without changing what a single volley looks like.
-    static let gatlingInterval: TimeInterval = 1.0 / 4
+    /// when each one resolves; a spray that borrowed those slots would leave
+    /// the count wherever the last round happened to strand it when the effect
+    /// ended, and the player would come out of the power-up unable to fire.
+    /// Spray rounds are simply not the ship's rounds.
+    /// Twelve rounds a second — genuinely rapid, and it can afford to be now
+    /// that it is one stream rather than five. The old five-way volley at four a
+    /// second put twenty rounds a second up; this puts twelve, and every one of
+    /// them is somewhere slightly different.
+    static let gatlingInterval: TimeInterval = 1.0 / 12
 
     /// How far a barrage round travels before it burns out — six squares.
     ///
@@ -2388,44 +2415,56 @@ class GameScene: SKScene {
     /// earned the ordinary way — so the barrage clears the pieces that are
     /// actually threatening the ship rather than the whole position.
     static let gatlingReach: CGFloat = BoardNode.squareSize * 6
-    /// Centre, ±8°, ±16°, as slopes — `LaserNode.fire` takes sideways travel per
-    /// unit of forward travel, not an angle.
+    /// How far the spray swings either side of vertical, as a slope —
+    /// `LaserNode.fire` takes sideways travel per unit of forward travel, not an
+    /// angle. 0.364 is 20°.
     ///
-    /// §13.2 specifies ±20°/±40° and flags its own doubt about it ("if
-    /// playtesting shows it trivialises too much, narrow the spread"). It did:
-    /// at ±40° a round covered 518pt of lateral travel on its way up a 618pt
-    /// board — wider than the entire 512pt board — so fifteen seconds of it
-    /// swept the whole position clear regardless of where the ship was standing,
-    /// and where the player aimed stopped mattering.
+    /// §13.2 built this as five simultaneous streams at fixed angles, which is
+    /// what made it uncontrollable: five arms covering the board at once meant
+    /// there was nothing to aim, and at its original ±40° a single round crossed
+    /// 518pt sideways climbing a 618pt board — wider than the whole board.
+    /// Narrowing the fan twice helped and never fixed the shape of the problem.
     ///
-    /// Narrower than the doc's own fallback of ±15°/±30°, because the problem
-    /// was not the exact angle but that the fan covered everything: at ±16° the
-    /// outermost round travels 177pt sideways, so the whole spread is about five
-    /// squares wide at the top of the board. Still unmistakably a spread, and
-    /// still something the player has to point at a target.
-    static let gatlingLeans: [CGFloat] = [0, 0.1405, -0.1405, 0.2867, -0.2867]
+    /// One stream that *sweeps* is a different weapon. Only one round is ever on
+    /// its way to a given place, so the player is pointing a hose rather than
+    /// standing behind a wall of fire, and ±20° is generous precisely because
+    /// coverage now costs time.
+    static let gatlingMaxLean: CGFloat = 0.364
+
+    /// How long one full left-right-left sweep takes.
+    ///
+    /// Chosen against the fire rate rather than by feel: at twelve rounds a
+    /// second, 1.8s puts about eleven rounds in each half-sweep, so consecutive
+    /// rounds leave under 4° apart and the arc reads as a ribbon rather than a
+    /// row of separate shots. That ribbon is the whole effect. Sweep faster and
+    /// it breaks into scatter; slower and it stops looking like spray.
+    static let gatlingSweepPeriod: TimeInterval = 1.8
 
     private func advanceGatling(_ dt: TimeInterval) {
-        guard powerUps.isGatling, !isShipDown, !isBeatSuspended,
-              let ship, let laserPool else { return }
+        guard powerUps.isGatling, !isBeatSuspended else { return }
+        // The sweep runs whether or not the trigger is down, so releasing and
+        // pressing again picks the hose up where it had got to rather than
+        // restarting the arc from centre every time.
+        gatlingPhase += dt
+        guard isFireHeld, !isShipDown, let ship, let laserPool else { return }
         gatlingCooldown -= dt
         guard gatlingCooldown <= 0 else { return }
         gatlingCooldown = Self.gatlingInterval
 
         let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
         let reach = min(Self.gatlingReach, size.height - origin.y)
-        for lean in Self.gatlingLeans {
-            guard let laser = laserPool.nextAvailable(owner: .player) else { break }
-            laser.onDeactivate = nil
-            // Barrage rounds pass straight through White's pieces. The player
-            // is not aiming these — the ship auto-fires them — so friendly fire
-            // would make the reward demolish their own position for them.
-            laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
-                       speed: ProjectileState.playerLaserSpeed,
-                       travelDistance: reach, lean: lean,
-                       tint: NeonPalette.orange, sparesFriendlies: true,
-                       fadesOut: true)
-        }
+        let sweep = sin(2 * .pi * gatlingPhase / Self.gatlingSweepPeriod)
+        guard let laser = laserPool.nextAvailable(owner: .player) else { return }
+        laser.onDeactivate = nil
+        // Spray rounds pass straight through White's pieces. There are a great
+        // many of them and the sweep aims them, not the player, so friendly fire
+        // would make the reward demolish their own position for them.
+        laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
+                   speed: ProjectileState.playerLaserSpeed,
+                   travelDistance: reach,
+                   lean: Self.gatlingMaxLean * CGFloat(sweep),
+                   tint: NeonPalette.orange, sparesFriendlies: true,
+                   fadesOut: true)
         AudioManager.shared.play(.playerLaserFire)
     }
 
@@ -3015,6 +3054,7 @@ class GameScene: SKScene {
         guard shipState.loseLife() else { return }
         refreshHUD()
         ship?.direction = 0
+        isFireHeld = false
 
         let lastLife = shipState.lives == 0
         blowUpSpaceship(final: lastLife)
