@@ -13,7 +13,6 @@ enum SoundKey: String, CaseIterable {
 
     // ── Player spaceship ─────────────────────────────────────────────────────
     case playerLaserFire        // laserRetro_001.ogg        (kenney-sci-fi)
-    case playerLaserMiss        // phaserDown1.ogg           (kenney-digital)
     case playerShipDestroyed    // explosionCrunch_004.ogg   (kenney-sci-fi)
     case playerExtraLife        // powerUp11.ogg             (kenney-digital)
 
@@ -56,11 +55,10 @@ enum SoundKey: String, CaseIterable {
     case fleetHeartbeat         // — generate with jsfxr (sub-bass double-thump, ~70 Hz)
 
     // ── Raider ships ──────────────────────────────────────────────────────────
+    // The Escort, the Flagship and the Llama are cut (§6); their keys and their
+    // files went with them.
     case scoutEnterLoop         // spaceEngine_000.ogg       (kenney-sci-fi) — loop
     case scoutLaserFire         // laserSmall_004.ogg        (kenney-sci-fi)
-    case escortDetaches         // phaserUp3.ogg             (kenney-digital)
-    case escortDives            // phaserDown2.ogg           (kenney-digital)
-    case flagshipFirstHit       // DSGNErie_NoiseBoxHit_36.wav (gdc-bundle)
     case raiderDestroyed        // threeTone1.ogg            (kenney-digital)
 
     // ── Special scouts ────────────────────────────────────────────────────────
@@ -92,9 +90,8 @@ enum SoundKey: String, CaseIterable {
     case ambientSpaceLoop       // Roomtone Space Ship Interior Muted.wav (gdc-bundle) — loop
 
     // ── Jeff Minter tribute ships ─────────────────────────────────────────────
-    case llamaBleat             // — generate with jsfxr (synthesized bleat ~600 Hz)
+    // Only the Camel, which flies as the Nuke's carrier rather than as a flyover.
     case camelHonk              // — generate with jsfxr (synthesized honk ~180 Hz)
-    case minterShipDestroyed    // phaseJump2.ogg            (kenney-digital)
 }
 
 // MARK: - File resolution
@@ -105,7 +102,6 @@ extension SoundKey {
         switch self {
         // Player
         case .playerLaserFire:          return "kenney-sci-fi/laserRetro_001.caf"
-        case .playerLaserMiss:          return "kenney-digital/phaserDown1.caf"
         case .playerShipDestroyed:      return "kenney-sci-fi/explosionCrunch_004.caf"
         case .playerExtraLife:          return "kenney-digital/powerUp11.caf"
         // Chess UI
@@ -161,9 +157,6 @@ extension SoundKey {
         // series of beeps, which is what it sounded like.
         case .scoutEnterLoop:           return "kenney-sci-fi/spaceEngine_000.caf"
         case .scoutLaserFire:           return "kenney-sci-fi/laserSmall_004.caf"
-        case .escortDetaches:           return "kenney-digital/phaserUp3.caf"
-        case .escortDives:              return "kenney-digital/phaserDown2.caf"
-        case .flagshipFirstHit:         return "gdc-bundle/DSGNErie_NoiseBoxHit_36_InMotionAudio_SinisterTextures4.caf"
         case .raiderDestroyed:          return "kenney-digital/threeTone1.caf"
         // Special scouts
         case .iceScoutDestroyed:        return "generated/ice-scout-destroy.caf"
@@ -192,9 +185,7 @@ extension SoundKey {
         case .uiSciFiPing:              return "gdc-bundle/Interface Sci-Fi Ping Down.caf"
         case .ambientSpaceLoop:         return "gdc-bundle/Roomtone Space Ship Interior Muted.caf"
         // Minter ships
-        case .llamaBleat:               return "generated/llama-bleat.caf"
         case .camelHonk:                return "generated/camel-honk.caf"
-        case .minterShipDestroyed:      return "kenney-digital/phaseJump2.caf"
         }
     }
 

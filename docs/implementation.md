@@ -632,9 +632,18 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       features (escorts, the flagship, the Minter ships) or to large GDC stems
       not yet trimmed (`criticalCrackleEerie` 24MB, `ambientSpaceLoop` 28MB,
       `mechanicBannerTier2/3`, `fleetRankDrop`)
-- [ ] **Bundle size**: 37 files, 11.5MB. Every remaining GDC stem needs the same
-      trim-and-fade treatment before it goes in — untrimmed they are 91MB
-      between them
+- [x] **Dead assets removed** (27 Aug 2026). Nine sprites: the Escort, Flagship
+      and Llama, which are cut; the five purpose-built special-scout sprites that
+      were tried and lost to the drawn overlays; and `chess-b-pawn-armored`,
+      which nothing ever loaded — armor is drawn as a tinted `Silhouette` fill
+      over the ordinary pawn. Three sounds, all for cut raiders. Six `SoundKey`
+      cases went with them, so the enum no longer promises features that are not
+      coming
+- [ ] **Bundle size: 15 MB, and 11.7 MB of it is audio.** One file is 6.1 MB —
+      the game-over sting, at **192 kHz stereo**, four times the useful sample
+      rate. Re-encoding the GDC files to 44.1 kHz mono would take the bundle
+      under 10 MB without trimming a single sound or changing what anything
+      sounds like. The kenney files are already 44.1 mono
 
 ## Phase 6.1 — Raiders: Scout ✅
 
