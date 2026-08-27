@@ -29,8 +29,12 @@ enum PowerUp: String, CaseIterable {
     /// §13.2 Bomb Scout — a shockwave that clears every enemy round in flight.
     case nuke
 
-    /// §13.2's values. The Bomb is worth most because it is the only one that
-    /// takes two hits; Rapid Fire pays §9's plain-scout rate.
+    /// §13.2's values. Rapid Fire pays §9's plain-scout rate.
+    ///
+    /// The Bomb is still worth most, though no longer for §13.2's stated reason
+    /// (it no longer takes two hits). It earns the top value by being the
+    /// rarest — two levels in a run — and by clearing every round in flight at
+    /// exactly the moments the sky is fullest, Crossfire and Blitz.
     var points: Int {
         switch self {
         case .rapidFire: return RaiderRules.scoutPoints
@@ -41,8 +45,15 @@ enum PowerUp: String, CaseIterable {
         }
     }
 
-    /// §13.2: the Bomb Scout flashes on the first hit, like the flagship.
-    var hp: Int { self == .nuke ? 2 : RaiderRules.scoutHP }
+    /// One hit, every carrier.
+    ///
+    /// §13.2 gives the Bomb Scout two, "like the Flagship", to make it "a
+    /// meaningful challenge for the reward". In play it read as a bug rather
+    /// than as a challenge: a clean hit that leaves the target flying looks like
+    /// the shot missed, and a scout is small, fast and briefly on screen — the
+    /// player has no time to reconsider what they just saw. The Flagship can
+    /// carry that mechanic because it is large, slow and announced.
+    var hp: Int { RaiderRules.scoutHP }
 
     /// Against `RaiderRules.scoutSpeed`.
     ///
@@ -51,12 +62,10 @@ enum PowerUp: String, CaseIterable {
     /// one whose value most depends on collecting it at a moment of your
     /// choosing.
     ///
-    /// The Bomb Scout is 20% slower than standard, and it needs to be: it is the
-    /// only carrier that takes two hits, and the only one that *swoops* — diving
-    /// to rank 1–2 at mid-crossing and climbing out. A target moving fast
-    /// vertically is far harder to lead with a vertical laser than one flying
-    /// level, so at full speed two hits inside one crossing asked for more than
-    /// the reward is worth.
+    /// The Bomb Scout is 20% slower than standard, and stays so now that it only
+    /// takes one hit: it is the only carrier that *swoops* — diving to rank 1–2
+    /// at mid-crossing and climbing out — and a target moving fast vertically is
+    /// far harder to lead with a vertical laser than one flying level.
     ///
     /// The green scout is 7% off standard, which sounds like nothing and is not:
     /// what the player feels is the *closing* speed, and the ship only has 74
@@ -150,9 +159,8 @@ enum PowerUps {
     /// One offer for most of the run, then two, three and four as the levels get
     /// hard enough to need them. The order within a level is cheapest first, so
     /// the player banks Rapid Fire before the spray arrives and has more shots
-    /// to go after it with — and the bomb comes last on Blitz because it is the
-    /// only two-hit carrier, so it belongs behind the ones that make hitting it
-    /// easier.
+    /// to go after it with — and the bomb comes last on Blitz because clearing
+    /// the sky is worth most once the sky is at its fullest.
     ///
     /// Blitz is also the only level that offers all four, which is what stops
     /// the Nuke from appearing exactly once in a run: the stacked levels are

@@ -343,8 +343,10 @@ final class RaiderNode: SKSpriteNode {
         guard isCrossing else { return false }
         hp -= 1
         guard hp <= 0 else {
-            // §13.2's Bomb Scout "flashes red on first hit". The only scout that
-            // survives one, so this is the tell that it is worth a second.
+            // Unreachable today: every carrier has 1 HP, so the guard above
+            // always falls through. Kept for §6.1's Flagship, which has two and
+            // is the one ship large and slow enough for a survivable hit to read
+            // as a mechanic rather than as a miss.
             removeAction(forKey: Self.damagedKey)
             run(.repeat(.sequence([
                 .colorize(with: .white, colorBlendFactor: 1, duration: 0.06),

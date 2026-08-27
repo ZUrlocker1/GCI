@@ -701,14 +701,21 @@ Scout speeds and HP, since they are what decide whether a carrier is catchable:
 | repair | 220 px/s | 74 px/s | 4.8s | 1 |
 | ice | 132 px/s (0.6×) | 162 px/s | 8.0s | 1 |
 | spread | 220 px/s | 74 px/s | 4.8s | 1 |
-| bomb | 176 px/s (0.8×) | 118 px/s | 6.0s | **2** |
+| bomb | 176 px/s (0.8×) | 118 px/s | 6.0s | 1 |
 
 The closing rate is what the player actually feels, and it is why the green
 scout's modest 7% cut matters: the ship only has 74 px/s of margin at full scout
 speed, so taking 7% off the scout adds a fifth to the closing rate. The bomb is
-slower again because it is the only two-hit carrier *and* the only one that
-swoops — a target moving fast vertically is far harder to lead with a vertical
-laser, and two hits inside one crossing asked more than the reward is worth.
+slower again because it is the only one that *swoops* — a target moving fast
+vertically is far harder to lead with a vertical laser than one flying level.
+
+**Every carrier dies to one hit.** §13.2 gives the Bomb Scout two, "like the
+Flagship", to make it "a meaningful challenge for the reward". It read as a bug
+instead: a clean hit that leaves the target flying looks like the shot missed,
+and a scout is small, fast and briefly on screen — there is no time to reconsider
+what you just saw. The Flagship can carry that mechanic because it is large, slow
+and announced; a scout cannot. `RaiderNode.takeHit` keeps the survive-a-hit
+branch for it, unreachable for now.
 
 - **One kind at a time, and it keeps coming back until it is shot down.** The
   entry at the front of the roster crosses, and only a kill advances to the next.
@@ -723,8 +730,8 @@ laser, and two hits inside one crossing asked more than the reward is worth.
   appeared on Level 7 and never again
 - Levels 8–10 stack what the player already knows, cheapest first: Rapid Fire is
   banked before the spray arrives, so there are more shots to go after it with,
-  and Blitz puts the two-hit bomb last, behind the two carriers that make hitting
-  it easier
+  and Blitz puts the bomb last, because clearing the sky is worth most once the
+  sky is at its fullest
 - The gap between crossings **tightens with the roster** — 22s / 15s / 12s for
   one, two and three-or-more offers — because on those levels every miss costs a
   full gap and a level advertising three power-ups would realistically hand over
@@ -747,9 +754,8 @@ randomised per crossing, so a learned shape still has to be read.
 | repair | a long eased glide down, giving up 55–95% of its headroom | above the board |
 | bomb | one dive and climb, 70–95% deep, bottoming out at 45% across | above the board |
 
-The bomb's dive is what makes its second hit gettable — it is closest at
-mid-crossing — and also why it needed slowing: closest is also where it is moving
-most steeply.
+The bomb's dive is why it needed slowing: it is closest at mid-crossing, which is
+also where it is moving most steeply, and a vertical laser has to lead that.
 
 - The green scout is flat *because* the others are not: it is the raider the
   player meets first and chases most often, so it stays a pure horizontal aiming

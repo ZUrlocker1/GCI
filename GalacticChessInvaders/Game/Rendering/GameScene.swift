@@ -2878,7 +2878,9 @@ class GameScene: SKScene {
             // One HP (§6), so this always destroys it — but ask rather than
             // assume, since the flagship arriving in 6.2 will not.
             if !raider.takeHit() {
-                shatterGlass(impact, color: NeonPalette.acidGreen)
+                // Its own colour, not the plain scout's green. Unreachable while
+                // every carrier has 1 HP, and wrong the moment one does not.
+                shatterGlass(impact, color: raider.powerUp.tint)
                 AudioManager.shared.play(.pieceHitLight)
             }
             return
