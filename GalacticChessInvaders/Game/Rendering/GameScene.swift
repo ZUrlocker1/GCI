@@ -679,8 +679,17 @@ class GameScene: SKScene {
         testPowerUpCursor += 1
         // Above the ship, so the §13.3 label lands where the player is looking
         // rather than wherever a scout happened to die.
-        let at = CGPoint(x: ship?.position.x ?? size.width / 2,
-                         y: Self.boardBottomY + BoardNode.squareSize)
+        //
+        // Except the Nuke, which detonates where it is granted: from the ship's
+        // own rank the ring only ever expands upward and away, and the three
+        // pieces nearest the bottom of the board are not what anyone wants to
+        // watch it take. The middle of the board puts the fragments in every
+        // direction, which is the whole thing worth looking at.
+        let at = powerUp == .nuke
+            ? CGPoint(x: size.width / 2,
+                      y: Self.boardBottomY + BoardNode.boardSize / 2)
+            : CGPoint(x: ship?.position.x ?? size.width / 2,
+                      y: Self.boardBottomY + BoardNode.squareSize)
         activate(powerUp, at: at)
         DiagnosticsLog.shared.log(.auto, "granted \(powerUp.label.lowercased())")
     }
