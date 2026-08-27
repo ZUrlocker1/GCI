@@ -51,3 +51,43 @@ bash assets/sfx/convert_to_caf.sh
 ```
 
 Or `setup.sh` runs this automatically if source files are present.
+
+---
+
+## Signing and distribution
+
+Set up the same way Zudio is: **Developer ID, notarized, shipped as a DMG.** Team
+`K66MA9TR8Z`, sandboxed, hardened runtime on.
+
+| Configuration | Identity | Why |
+|---|---|---|
+| Debug | `-` (ad-hoc), signing not required | a local build never waits on a certificate |
+| Release | `Developer ID Application` | anything that leaves this machine is signed |
+
+`GalacticChessInvaders.entitlements` turns on the App Sandbox and asks for
+nothing else — the game reads only its own bundle and writes only
+`UserDefaults`, so it needs no file, network or hardware exceptions.
+
+### Making a build for someone else
+
+```bash
+./release.sh
+```
+
+Builds a universal Release binary, signs it, notarizes it, staples the ticket,
+and writes a drag-to-install DMG to `~/Downloads`. One-time prerequisites are
+listed at the top of the script: a Developer ID Application certificate, an
+app-specific password stored as the `AC_PASSWORD` notarytool profile, and
+`brew install create-dmg`.
+
+### Why not App Store Connect
+
+TestFlight needs App Store distribution certificates and, for external testers, a
+review pass — a lot of process to get a build to one person. A notarized DMG
+opens on any Mac with no warning and no account. If the App Store becomes the
+goal later, the signing settings here are already what it needs; only the
+certificate and the upload step change.
+
+**"No Team Found in Archive"** was `DEVELOPMENT_TEAM` being unset, together with
+`CODE_SIGNING_REQUIRED: NO`. Both are fixed in `project.yml`, so regenerate with
+`xcodegen generate` after pulling.
