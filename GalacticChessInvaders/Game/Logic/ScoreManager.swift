@@ -49,7 +49,10 @@ final class ScoreManager {
         Int((Double(base) * multiplier).rounded())
     }
 
-    func addPoints(_ base: Int, source: String = "") {
+    /// `logged: false` for callers that print their own line — a raider says
+    /// what it was worth as part of announcing that it died, and two lines for
+    /// one event is one line too many.
+    func addPoints(_ base: Int, source: String = "", logged: Bool = true) {
         // Rounded, not truncated: ×1.5 on a 25-point pawn is 37.5, and
         // truncating quietly paid 37 on every scaled capture.
         let points = scaled(base)
@@ -57,6 +60,7 @@ final class ScoreManager {
         // No running total: the HUD is showing it, and repeating it on every
         // line makes the one number that matters here — what this kill paid —
         // the hardest thing to find.
+        guard logged else { return }
         DiagnosticsLog.shared.log(.score,
             "\(source.isEmpty ? "" : "\(source) ")+\(points) (×\(multiplier))")
     }

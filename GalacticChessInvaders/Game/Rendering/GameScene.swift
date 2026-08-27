@@ -2046,13 +2046,13 @@ class GameScene: SKScene {
     private func resolveRaiderExit(_ node: RaiderNode, destroyed: Bool) {
         guard destroyed else { return }
         let at = bloomPosition(of: node)
+        let points = ScoreManager.shared.scaled(RaiderRules.scoutPoints)
         explosions?.burst(at: at, color: NeonPalette.acidGreen, scale: 1.4)
-        scorePops?.pop(ScoreManager.shared.scaled(RaiderRules.scoutPoints),
-                       at: at, color: NeonPalette.acidGreen)
-        ScoreManager.shared.addPoints(RaiderRules.scoutPoints, source: "scout")
+        scorePops?.pop(points, at: at, color: NeonPalette.acidGreen)
+        ScoreManager.shared.addPoints(RaiderRules.scoutPoints, logged: false)
         refreshHUD()
         AudioManager.shared.play(.raiderDestroyed)
-        DiagnosticsLog.shared.log(.raider, "scout destroyed")
+        DiagnosticsLog.shared.log(.raider, "scout destroyed (\(points))")
     }
 
     /// §7.2's promotion reward: one more laser in the air at a time.
