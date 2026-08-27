@@ -30,7 +30,7 @@ class TitleState: GCIState {
         MainActor.assumeIsolated {
             gameScene?.showTitleScreen()
             AudioManager.shared.playMusic("GCI-intro")
-            DiagnosticsLog.shared.log(.startup, "Title screen displayed")
+            DiagnosticsLog.shared.log(.startup, "Title screen")
         }
     }
 

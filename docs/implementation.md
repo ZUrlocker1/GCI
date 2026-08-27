@@ -171,6 +171,23 @@ Deviations
       presses walk the level's whole list and wrap, on a cursor of their own so
       looking at the third raider does not change what the clock sends next.
       Routed through the real launch path, not a shortcut of its own
+- [x] Hidden `shift-P` grants the next power-up outright, cycling through all
+      five and wrapping. `R` exercises the crossing, the flight path and the
+      hitbox; this exercises only the effect, which is the half that is otherwise
+      unreachable when a level's roster does not happen to offer it. Routed
+      through the same `activate` call the kill path makes, so a granted effect
+      is indistinguishable from an earned one, and it awards no points —
+      scoring belongs to the kill, not the effect.
+      **Shifted, not bare:** plain `P` is pause (§5: "`P` always toggles
+      pause/resume"), and the scene's key handler runs ahead of `InputHandler`,
+      so taking the bare letter would have silently removed one of the two pause
+      keys
+- [x] The log names the test keys on its first line, so they are written down
+      somewhere they will actually be seen. Startup logging was trimmed at the
+      same time: the app-launch and state-transition lines said nothing a
+      timestamp did not, the starfield's sprite and action counts were a
+      one-time measurement rather than a running fact, and the absent-sound
+      count only ever counted files that are deliberately not bundled
 - [x] Lives read from `SpaceshipState`, including on a HUD built mid-run
 
 Window resize works: the scene is a fixed 960×700 with `.aspectFit`, so layout is

@@ -43,15 +43,16 @@ final class AudioManager {
             DiagnosticsLog.shared.log(.error, "sfx bundle directory not found — no SFX will play")
             return
         }
-        // Only the sounds the game currently triggers are bundled; the rest arrive
-        // with the phases that use them. Report those as one summary line rather
-        // than dozens of errors, so the log stays readable.
-        var absent = 0
-        for key in SoundKey.allCases where !preload(key) { absent += 1 }
+        // Only the sounds the game currently triggers are bundled; the rest
+        // arrive with the phases that use them, and a missing file is a no-op
+        // rather than an error. The count of absent files used to be reported
+        // here; every sound the game actually plays is now bundled, so it only
+        // ever counted files that are deliberately not there — a number that
+        // never changes is not worth a line on every launch.
+        for key in SoundKey.allCases { preload(key) }
 
         DiagnosticsLog.shared.log(.audio,
-            "SFX ready: \(sfxPools.count) pools, \(loopPlayers.count) loops"
-            + (absent > 0 ? " (\(absent) not yet bundled)" : ""))
+            "SFX ready: \(sfxPools.count) pools, \(loopPlayers.count) loops")
     }
 
     /// Returns false if the sound is not available to load.
