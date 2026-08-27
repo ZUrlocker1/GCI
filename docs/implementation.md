@@ -225,30 +225,26 @@ Get the black fleet sweeping and descending alongside the chess game. No shootin
 - [x] Fleet log lines: sweep, half-drop, logical descent, breach
 - [x] Playtested and reworked over several rounds — see below
 
-### Playability: what was tried, what stuck
+### Why the fleet moves as it does
 
-The first build was unplayable. What got it there, in brief:
+Each of these is a readability rule, and the fleet was unplayable without them.
 
-- Unbounded horizontal sweep let pieces drift off their true file —
-  unreadable. **Constrained the sweep** to well under half a square
-  (`sweepAmplitudeRatio`, 0.35 → 0.7 of a square total).
-- Descent tied to wall bounces coupled difficulty to sweep width. **Decoupled
-  it** — descent now paces off the chess beat instead.
-- An even 0.5/0.5 two-step drop left the fleet parked on a rank boundary —
-  same ambiguity as the horizontal drift, other axis. **Split it unevenly**
-  (0.3 then 0.7) instead.
-- A smooth continuous sweep read as drifting, not marching. **Stepped it** —
-  discrete jumps at the same overall pace.
-- Constraining the sweep retired the original reason for having no grid.
-  **Added a fixed grid** as a stationary reference.
-- **Added a descent telegraph and capture tethers**, purely to help the
-  player track where pieces actually are.
-- **Chess-move pieces now leave the fleet formation** rather than staying a
-  hybrid piece that both marches and plays chess.
-- Speed, amplitude and grid brightness were each tuned twice more after that,
-  directly against user feedback.
-
-Pass: fleet sweeps indefinitely without drift, chess still fully playable, 60fps.
+- **The sweep is bounded** to well under half a square end to end
+  (`sweepAmplitudeRatio`), so a piece never drifts far enough to be ambiguous
+  about which file it is on
+- **The sweep is stepped, not continuous** — discrete jumps at the same overall
+  pace. Smooth motion reads as drifting; stepped motion reads as marching
+- **Descent paces off the chess beat**, not off wall bounces, so difficulty is
+  not coupled to sweep width
+- **The drop is split unevenly** (0.3 then 0.7). An even half-and-half parks the
+  fleet on a rank boundary, which is the same ambiguity as horizontal drift on
+  the other axis
+- **A fixed grid** is drawn as a stationary reference, which the bounded sweep
+  made worth having
+- **A descent telegraph and capture tethers**, purely so the player can track
+  where pieces actually are
+- **A piece that makes a chess move leaves the formation**, rather than staying a
+  hybrid that both marches and plays chess
 
 ## Phase 3.2 — Shooting & Collision ✅
 
@@ -316,7 +312,7 @@ search can never see it coming — a pawn on rank 2 is six moves from rank 8, so
 the reward is invisible and the engine advances a pawn only by accident. A
 White-pawn advancement term in the evaluation (rank², `pawnAdvanceStep`) lays a
 gradient the shallow search can climb. It has to be in the *evaluation*: a bonus
-on the root move was tried and measured at 3% of games promoting, no better than
+on the root move measured at 3% of games promoting, no better than
 none, because the search still sees Black take the pawn on the reply. Measured
 with the eval term: 7% on a full board, and **97% once Black is thinned to a
 king and four pieces** — which is what GCI becomes as soon as the player starts
@@ -432,59 +428,50 @@ promise Level 4's regeneration has to be built to keep.
 - A regenerated pawn is worth 15 rather than 25 (§9), and `ChessEngine.forceAdd`
   keeps the engine's own board in step — without it the search moves other
   pieces straight through the new pawn, the same class of bug as `forcePlace`
-- **A beam-in must be tracked by node, not by square.** A regenerated pawn is
-  given no physics body until it finishes arriving (§23.9), and the completion
-  used to verify it was still the registered piece by looking up *the square it
-  arrived on*. The fleet descends on the chess beat and a beam-in lasts 1.8
-  seconds, so a pawn regenerating shortly before a descent finishes one rank
-  lower than it started: the lookup found nothing, the guard rejected its own
-  completion, and `becomeSolid` never ran. The pawn spent the rest of the wave
-  visible, marching, firing — and completely immune to laser fire.
+- **Nothing deferred may carry a square.** Two bugs, one shape: an arriving
+  pawn's beam-in and the Nuke's shrapnel both captured a square and acted on it
+  later, and the fleet descends on the beat, so by then the square belonged to
+  something else. Carry the node and read `node.square` when the work runs
+- **A beam-in is tracked by node, not by square.** An arriving pawn has no
+  physics body until it lands (§23.9), and its square can change underneath it —
+  the fleet descends on the beat and a beam-in lasts 1.8s. Keyed by square, the
+  completion rejected itself and the pawn stayed permanently immune to laser
+  fire, silently. `isMaterialising` is a flag on the node, and debug builds audit
+  hitboxes four times a second: any piece with no body and no beam-in running is
+  repaired and logged
 
-  It is a nasty one to find because it is silent in every channel: no contact
-  fires, so there is no hit, no sound, no log line and nothing on screen that
-  looks wrong. A player reported it as "that pawn never takes damage". The scene
-  now audits hitboxes four times a second in debug builds — any piece with no
-  body and no beam-in running is repaired and logged as an error — and
-  `isMaterialising` is a flag on the node, so nothing about the arrival is keyed
-  by a square that can change underneath it
+### Traps worth remembering
 
-### Playtest fixes
+Rules that were learned the hard way, kept as rules rather than as incidents.
+Each one is a mistake that is easy to make again.
 
-One line each; the reasoning is in the commits and the code.
-
-- **No collisions at all** — every physics body was static, and SpriteKit needs
-  one dynamic body in a pair to report a contact
-- **Hitboxes followed the frame, not the art** — ink bounds are measured and
-  cached per texture
-- **Damage was invisible** — the hit path never refreshed the sprite, and
-  `damageState` used HP ratios rather than §7.1's table
-- **Enemy shots spawned off-target** — board-local coordinates for a node living
-  in `bloomNode`
-- **Angled rounds flew broadside** — `zRotation` turns a node's own axes, so the
-  bolt ended up perpendicular to its own travel. Aimed from the travel vector
-  now, dressed as a missile, with a circular hitbox so the angle cannot matter
-- **A hit that resolved to nothing deleted the round in mid-air** — deactivated
-  before the board lookup
-- **Heavy shots landed light** — the resolver hardcoded `enemyShotDamage`
-- **Play continued after a win** — `isBeatSuspended` gates every path that could
-  restart the beat
-- **Two crashes, one cause** — releasing a fleet member by square no-oped on a
-  stale key. Released by identity now
-- **`applyDamage` never told the chess engine** — same class as `forcePlace`
-- **The sounds were never missing, only never copied** into `Resources/sfx/`
-- **Player shots detonated against nothing, two squares up** — a parked laser
-  cleared its contact *test* but kept its category, and SpriteKit fires a
-  contact when either body's test matches the other's category. Harmless until
-  rounds could shoot each other down; after that every spent enemy shot was an
-  invisible mine where it died. Both masks are cleared now, and the handler
-  additionally refuses any contact involving a round that is not in flight
-- **The ship could come back invisible** — respawn was a scene `SKAction` that
-  bailed if the game was not PLAYING on the frame it fired, with nothing to
-  retry it. Scene actions run while paused, so pausing in the second after
-  dying threw the respawn away: hidden ship, still able to move and fire. It is
-  a countdown the update loop owns now, which only advances while playing
-- **Messages stacked** — the reveal banner was only cleared on teardown
+- **A parked projectile must clear its category, not just its contact test.**
+  SpriteKit fires a contact when *either* body's test matches the other's
+  category, so a spent round that keeps its category is an invisible mine sitting
+  where it died. The handler also refuses any contact involving a round that is
+  not in flight
+- **`zRotation` turns a node's own axes.** A bolt's length is its y-axis, so an
+  angled round aimed by rotation flies broadside. Aim from the travel vector, and
+  give anything angled a circular hitbox so the angle cannot matter
+- **Deactivate a round only after the board lookup succeeds**, or a hit that
+  resolves to nothing deletes the round in mid-air
+- **Release a fleet member by identity, not by square.** A stale key silently
+  no-ops, and two crashes came from that
+- **Anything that changes the board must tell the chess engine** — `applyDamage`
+  and `forcePlace` alike, or the search moves pieces through what it cannot see
+- **Scene `SKAction`s keep running while paused.** Anything that must not be
+  lost to a pause belongs in the update loop, which only advances while playing;
+  the respawn was an action that bailed if the game was not PLAYING on the frame
+  it fired, and pausing in the second after dying threw it away
+- **Nothing that renders may be keyed by a square that can change.** The fleet
+  descends on the beat, so squares move underneath any handler that outlives a
+  frame. Track the node
+- **A missing texture or sound fails silently** — the texture draws a grey X and
+  logs nothing, the sound simply does not play. Both are now checked by
+  `typecheck.sh` and by the sound audit
+- **Hitboxes follow the art, not the frame** — ink bounds measured and cached per
+  texture
+- **Clear the previous message before showing a new one**, or banners stack
 
 ### Deviations from the design doc
 
@@ -688,13 +675,14 @@ and Looping variants, King Protection Mode, and the Llama. See "Cut from §6 and
 ## Phase 6.2 — Special Scouts & Power-Ups ✅
 
 §13's power-ups, delivered the way §13.1 specifies: no pickup falls and nothing
-is collected — shooting the scout *is* the power-up. That keeps the reward on
-the arcade half of the game, where the player already has to aim.
+is collected — shooting the scout *is* the power-up. That keeps the reward on the
+arcade half of the game, where the player already has to aim.
 
 ### The roster
 
-A fixed table of which raider each level sends, and what it is carrying. Every
-level has one answer, the same answer every run.
+A fixed table of which raider each level sends. Every level has one answer, the
+same answer every run — a raider whose identity is a surprise is one the player
+cannot prepare for, which is the opposite of what a rare reward should be.
 
 | Lv | Name | Scouts, in order | Power-ups, in order |
 |---|---|---|---|
@@ -709,302 +697,172 @@ level has one answer, the same answer every run.
 | 9 | KING ACTIVATED | green → spread → ice | RAPID FIRE → SPREAD FIRE → TIME FREEZE |
 | 10 | BLITZ! | green → spread → ice → camel | RAPID FIRE → SPREAD FIRE → TIME FREEZE → NUKE |
 
-Scout speeds and HP, since they are what decide whether a carrier is catchable:
-
-| Scout | Speed | Closing rate | Crossing | HP |
-|---|---|---|---|---|
-| green | 205 px/s (0.93×) | 89 px/s | 5.1s | 1 |
-| repair | 220 px/s | 74 px/s | 4.8s | 1 |
-| ice | 132 px/s (0.6×) | 162 px/s | 8.0s | 1 |
-| spread | 220 px/s | 74 px/s | 4.8s | 1 |
-| bomb | 176 px/s (0.8×) | 118 px/s | 6.0s | 1 |
-
-The closing rate is what the player actually feels, and it is why the green
-scout's modest 7% cut matters: the ship only has 74 px/s of margin at full scout
-speed, so taking 7% off the scout adds a fifth to the closing rate. The bomb is
-slower again because it is the only one that *swoops* — a target moving fast
-vertically is far harder to lead with a vertical laser than one flying level.
-
-**Every carrier dies to one hit.** §13.2 gives the Bomb Scout two, "like the
-Flagship", to make it "a meaningful challenge for the reward". It read as a bug
-instead: a clean hit that leaves the target flying looks like the shot missed,
-and a scout is small, fast and briefly on screen — there is no time to reconsider
-what you just saw. The Flagship can carry that mechanic because it is large, slow
-and announced; a scout cannot. `RaiderNode.takeHit` keeps the survive-a-hit
-branch for it, unreachable for now.
-
-- **One kind at a time, and it keeps coming back until it is shot down.** The
-  entry at the front of the roster crosses, and only a kill advances to the next.
-  Level 7 sends the same carrier twice, which is where the player first meets a
-  wave that does not go quiet after one kill.
-  Missing costs nothing but time, so how many raiders a wave sees depends on how
-  long the player takes to hit one — which is the right thing for it to depend
-  on. Most levels therefore go quiet after a single kill
-- Every power-up **debuts on a level of its own**, so it is met and learned
-  before it ever shares a wave, and **every one comes round again** — a mechanic
-  the player meets once and never uses is not worth building. Both are pinned by
-  tests. Blitz offering all four is what earns the Nuke its second outing: the
-  other stacked levels are green/spread/ice, so without it the bomb scout
-  appeared on Level 7 and never again
-- Levels 8–10 stack what the player already knows, cheapest first: Rapid Fire is
-  banked before the spray arrives, so there are more shots to go after it with,
-  and Blitz puts the bomb last, because clearing the sky is worth most once the
-  sky is at its fullest
+- **One kind at a time, and it keeps coming back until it is shot down.** Only a
+  kill advances the roster; missing costs nothing but time. So how many raiders a
+  wave sees depends on how long the player takes to hit one, and raids end when
+  the roster is empty
+- Every power-up **debuts on a level of its own** and **every one comes round
+  again** — a mechanic met once and never used is not worth building. Both are
+  pinned by tests
+- Levels 7–10 send more than one. Level 7 sends the same carrier twice, which is
+  where the player first meets a wave that does not go quiet after one kill;
+  8–10 stack different ones, cheapest first, so Rapid Fire is banked before the
+  spray arrives
 - The gap between crossings **tightens with the roster** — 22s / 15s / 12s for
-  one, two and three-or-more offers — because on those levels every miss costs a
-  full gap and a level advertising three power-ups would realistically hand over
-  one
-- This replaced an unlocking-pool version, where any unlocked type could turn up
-  on any later level. A raider whose identity is a surprise is one the player
-  cannot prepare for, which is the opposite of what a rare reward should be
+  one, two and three-or-more offers — or a level advertising four power-ups would
+  realistically hand over one
 
-### Flight paths (§6.3)
+### The carriers
 
-Tied to the *kind* of raider rather than to the level, so the path is part of
-each ship's identity and a second cue for what is on offer. Parameters are
-randomised per crossing, so a learned shape still has to be read.
+| Scout | Speed | Closing rate | Crossing | Flight | Enters |
+|---|---|---|---|---|---|
+| green | 205 px/s (0.93×) | 89 px/s | 5.1s | dead level | above the board |
+| repair | 220 px/s | 74 px/s | 4.8s | long eased glide, 55–95% of its headroom | above the board |
+| ice | 132 px/s (0.6×) | 162 px/s | 8.0s | tight weave, ±46–60pt over 0.75–1.05s | rank 4–5 |
+| spread | 220 px/s | 74 px/s | 4.8s | wide weave, ±74–104pt over 1.9–2.6s | rank 5–6 |
+| camel | 176 px/s (0.8×) | 118 px/s | 6.0s | one dive and climb, 70–95% deep | above the board |
 
-| Kind | Path | Enters |
-|---|---|---|
-| green | dead level, and the only straight one | above the board |
-| ice | tight weave, ±46–60pt over 0.75–1.05s half-cycles | rank 4–5 |
-| spread | the same at twice the scale — ±74–104pt over 1.9–2.6s | rank 5–6 |
-| repair | a long eased glide down, giving up 55–95% of its headroom | above the board |
-| bomb | one dive and climb, 70–95% deep, bottoming out at 45% across | above the board |
+All 1 HP. §13.2 gives the Bomb Scout two "like the Flagship"; on a target that
+small, fast and briefly on screen a survivable hit reads as a miss, not as a
+challenge. `RaiderNode.takeHit` keeps the branch for a ship large and slow enough
+to carry it, which is now cut.
 
-The bomb's dive is why it needed slowing: it is closest at mid-crossing, which is
-also where it is moving most steeply, and a vertical laser has to lead that.
-
-- The green scout is flat *because* the others are not: it is the raider the
-  player meets first and chases most often, so it stays a pure horizontal aiming
-  problem. It used to carry a 4pt hover; that is gone
-- The two descending paths genuinely reach the player. Measured: at the steep end
-  of their ranges both bottom out at y=136 — inside the board's first rank, 54pt
-  above the ship's own hull — and every path was checked to stay inside the
-  110–652 strip between the HUD and the ship's lane, at every lane each kind uses
-- The weave is now symmetric about its lane. The first version offset by half
-  the amplitude and then swung a full amplitude twice each way, which put the
-  centre of the weave half an amplitude *below* the lane it was flying and made
-  the low excursion three times the high one
+- **Closing rate is what the player feels**, not speed. The ship has only 74 px/s
+  of margin at full scout speed, which is why the green scout's modest 7% cut
+  adds a fifth to the rate at which a chase closes. The camel is slower again
+  because it is the only one that swoops, and a target moving fast vertically is
+  hard to lead with a vertical laser
+- **Flight is tied to the ship, not the level**, so the path is part of each
+  carrier's identity and a second cue for what is on offer. Parameters are
+  randomised per crossing, so a learned shape still has to be read. The green
+  scout is flat *because* the others are not: it is the one the player meets
+  first and chases most often, so it stays a pure horizontal aiming problem
+- Both descending paths reach the player: at the steep end of their ranges they
+  bottom out at y=136, inside the board's first rank and 54pt above the ship.
+  Every path is checked to stay inside the 110–652 strip between the HUD and the
+  ship's lane, at every lane its kind uses
+- **Raiders face the way they are going.** The crossing is built as legs rather
+  than one `moveTo`, so a raider that turns can turn to face. Only the camel has
+  a front, but it applies to all of them rather than being special-cased
+- **The Spread and Bomb carriers double back** partway and then carry on, never
+  past their own entry point. Spread flips a coin at 20%, because it appears once
+  a level and there is no second of its kind to play against. The camel does not
+  gamble: **the first never feints and the second always does**, so on Level 7
+  the first crossing teaches its path honestly and the one arriving where the
+  player has just learned there is nothing more to expect turns around. Gated on
+  what has actually been brought down this level, so the `R` test key cannot fake
+  it
 
 ### The effects
 
-- **Time Freeze** stops the fleet, the raiders, enemy rounds, the starfield and
-  the chess turn timer, and drops the music to `rate = 0.5` — §13.2's one
-  sanctioned use of `rate`. The player's own movement, fire and rounds in flight
+- **Rapid Fire** — +1 simultaneous laser, stacking to 6, reset each wave. This
+  was §7.2's promotion reward; crowning a pawn is far too rare to be the only
+  source, so most runs never saw it
+- **Shield** — absorbs one lethal hit, plus 0.8s of grace so the next round of
+  the same volley does not simply kill you. Drawn as a hexagon, never a circle,
+  so it cannot be confused with the black king's forcefield: one means protected,
+  the other means unshootable
+- **Time Freeze** — 3s. Stops the fleet, the raiders, enemy rounds, the starfield
+  and the chess turn timer, and drops the music to `rate` 0.5 (§13.2's one
+  sanctioned use of `rate`). The player's own movement, fire and rounds in flight
   are untouched, which is the whole effect
-- **Spread Fire is a swept hose, not a fan** — Missile Command's spray. One
-  stream, twelve rounds a second, the angle oscillating through ±20° on a 1.8s
-  sweep, and it fires **only while the player holds the fire key**.
+- **Spread Fire** — a swept hose, not a fan. One stream, 12 rounds a second,
+  the angle oscillating through ±20° on a 1.8s sweep, for 7s, **only while the
+  fire key is held**.
 
-  It took three passes to get here, and the first two were the wrong axis.
-  §13.2's version was five simultaneous streams at fixed angles, auto-firing for
-  fifteen seconds and flying the full height of the screen: it swept **244% of
-  the board area**, covering the whole position twice over wherever the ship
-  happened to be, so collecting it ended the wave. Narrowing the fan to ±8°/±16°
-  still left 84%, and cutting the duration and rate still left 32% — because a
-  fixed fan means every angle is covered at once and there is nothing to aim.
+  §13.2 specifies five simultaneous streams at fixed angles, auto-firing. A fixed
+  fan covers every angle at once and leaves nothing to aim: it swept 244% of the
+  board area, so collecting it ended the wave. A single sweeping stream is a
+  different weapon rather than a smaller one — only one round is ever on its way
+  to a given place, which is what lets ±20° be generous. Auto-fire went for the
+  same reason it sounded generous: it took the trigger away at the moment it
+  handed over the firepower.
 
-  | | §13.2 | narrowed | cut back | now |
-  |---|---|---|---|---|
-  | streams | 5 fixed | 5 fixed | 5 fixed | **1 swept** |
-  | duration | 15s | 15s | 7s | 7s |
-  | rounds/sec | 40 | 40 | 20 | **12** |
-  | angle | ±20°, ±40° | ±8°, ±16° | ±8°, ±16° | **±20° swept** |
-  | range | full screen | full screen | 6 squares | **to rank 7** |
-  | rounds fired | 600 | 600 | 140 | **84** |
+  The sweep period is set against the fire rate rather than by feel — 10.8 rounds
+  per half-sweep, 3.7° and ~24pt apart at full reach, which is dense enough to
+  read as a ribbon. Its phase advances whether or not the trigger is down, so
+  releasing and pressing again picks the hose up where it had got to.
 
-  A single sweeping stream is a different weapon rather than a smaller one: only
-  one round is ever on its way to a given place, so the player is pointing a hose
-  instead of standing behind a wall of fire, and ±20° can be generous precisely
-  because coverage now costs time
-- **Only while the trigger is held.** §13.2 has the ship auto-fire for the
-  duration, which sounds generous and plays badly: the power-up took the trigger
-  away at the exact moment it handed over the firepower, so the most powerful
-  thing in the game was also the one moment the player was not shooting. Needed
-  a new `GameAction.stopFiring` on the fire key's release — ordinary fire is one
-  shot per press and never needed it. Cleared on pause, on death and on a level
-  change, since a key-up that lands while the scene is not listening is lost and
-  the hose would still be running on resume
-- The sweep's phase advances whether or not the trigger is down, so releasing and
-  pressing again picks the hose up where it had got to rather than restarting the
-  arc from centre. The period is chosen against the fire rate rather than by
-  feel: at twelve rounds a second, 1.8s puts 10.8 rounds in each half-sweep,
-  which is 3.7° and about 24pt apart at full reach — dense enough to read as a
-  ribbon rather than a row of separate shots
-- **The range is a ceiling, not a distance** — the constraint is which rank the
-  spray may touch. Rounds burn out at y=556: rank 7 runs 504–568 with its pieces
-  centred on 536, so that is past the middle of a rank-7 piece and 12pt clear of
-  the nearest rank-8 one. The seventh row is reachable; the eighth has to be
-  earned the ordinary way.
+  Range is a **ceiling**, not a distance: rounds burn out at y=556, past the
+  middle of a rank-7 piece and 12pt clear of rank 8. The seventh row is
+  reachable; the eighth is earned the ordinary way. Rounds fade over their last
+  0.18s, since this is the only laser in the game that expires in view
+- **Nuke** — a magenta-to-white ring that clears every enemy round it passes over
+  **and detonates the nearest black pieces**. §13.2's version only cleared
+  projectiles, which is invisible: deleting things is not an effect you can see.
 
-  It works out to 7.4 squares rather than the round 7 it looks like it should be,
-  and the difference matters: a flat "one more square" than the previous six
-  landed at 530, which is 6pt *short* of rank 7's centre and would only ever have
-  clipped the bottom of a piece standing there. Aiming at the rank rather than at
-  a round number of squares is the difference between reaching it and nearly
-  reaching it.
+  Up to three victims, at least one wherever anything is left, chosen by distance
+  with no radius limit — a range cap would make the reward depend on where a
+  swooping scout happened to die. Each gets a **fragment** thrown from the blast
+  centre, timed to arrive exactly as the ring does, which is what draws the line
+  from cause to effect. Victims are destroyed outright; armor still stops it
+  (§10.1), or Level 8 loses its identity.
 
-  Rounds fade over their last 0.18s — every other laser in the game expires
-  off-screen, so this is the only one that would otherwise blink out in view
-- **Spray rounds pass through White's own pieces.** There are a great many of
-  them and the sweep aims them rather than the player, so ordinary friendly fire
-  made the reward demolish White's position as a side effect of being used. Done
-  by dropping `friendlyPiece` from the round's contact mask rather than by
-  ignoring the hit: a round that will do nothing should fly through, not be
-  consumed by a piece it left unharmed
-- **Spread Fire fires outside `SpaceshipState` entirely** rather than raising the
-  cap. The cap counts rounds in flight and frees a slot as each resolves; a spray
-  borrowing those slots would leave the count wherever the last round stranded it
-  and the player would come out of the power-up unable to fire. The player laser
-  pool is 24: measured, a round is in the air 0.97s over its 474pt range, so
-  twelve a second put 11.6 up at once, plus the manual cap of 6. It has been 72
-  and 32 on the way here — an under-sized pool does not fail loudly, it silently
-  drops rounds and the spray just looks thinner than it should
-- **Nuke** expands a magenta-to-white ring over 0.4s that clears every enemy
-  round it passes over **and detonates the nearest black pieces**. §13.2's
-  version only cleared projectiles, which is invisible: the player saw a big ring
-  and then an absence, and read it as some buff they could not identify. Deleting
-  things is not an effect you can see.
+  **The black king is passed over** while anything else stands, so the rarest
+  power-up is never spent on the one target it cannot kill — he gets a forcefield
+  flare and a clang instead, or the ring looks like it missed the obvious thing.
+  When he is the last piece left he *is* the target, for 6 damage floored at 1 HP.
 
-  Up to **three** victims, at least **one** wherever anything is left, chosen by
-  distance with no radius limit — a cap on range would make the reward depend on
-  where the swooping scout happened to die, and a Nuke that sometimes does
-  nothing visible is the problem this redesign exists to fix. Each victim gets a
-  **fragment** thrown at it from the blast centre, timed to arrive exactly as the
-  ring does; without it the ring and the explosions are two things that happen
-  near each other, and with it there is a line drawn from cause to effect.
-
-  Victims are destroyed outright rather than taking an HP number — a blast that
-  leaves a rook standing is not a blast. Armor still stops it (§10.1): a power-up
-  that walked through armor would take Level 8's identity away.
-
-  **The black king is passed over** while anything else stands, however close he
-  is, so the rarest power-up in the game is never spent on the one target it
-  cannot kill. He gets a forcefield flare and a clang when the blast reaches him
-  anyway, or the ring looks like it missed the most obvious thing on the board.
-  When he is the last piece left he *is* the target, for 6 damage floored at 1 HP
-  — winning a wave has to stay something the player aimed at
-- **The blast runs in slow motion**, which is most of what makes it land. The
-  ring opens over 0.85s rather than 0.4, and the whole world drops to 0.3× for
-  1.3 seconds: `dt` is scaled for everything the update loop drives, and
-  `bloomNode.speed` for everything on an action — the fleet, the lasers, the
-  explosions and the ring itself. Measured, that puts the ring's full expansion
-  at 1.6s of real time and lands the fragments between roughly 0.24s and 1.0s,
-  spread across the slow window rather than bunched at the start.
-
-  The ramp holds at the floor for the first 45% and then *accelerates* back
-  rather than easing out. Coming out of slow motion is the part that sells it: a
-  linear return reads as the game recovering from a stall, where lingering low
-  and then snapping back reads as a decision. The music drops to `rate` 0.7 —
-  shallower than Time Freeze's 0.5, so the two are not mistaken for each other —
-  and restores to whatever the world is actually doing, since a Time Freeze may
-  still be running underneath and owns 0.5 until it expires
-- **Shield** is a hexagon, not a circle, so it can never be confused with the
-  black king's forcefield: one means protected, the other means unshootable
+  **The blast runs in slow motion**, which is most of what makes it land. The
+  ring opens over 0.85s and the world drops to 0.3× for 1.3s: `dt` scaled for
+  everything the update loop drives, `bloomNode.speed` for everything on an
+  action. Measured, the ring's full expansion takes 1.6s of real time and the
+  fragments land between 0.24s and 1.0s, spread across the window. The ramp holds
+  at the floor for the first 45% and then *accelerates* back — a linear return
+  reads as recovering from a stall, where lingering low and snapping back reads
+  as a decision. Music drops to `rate` 0.7, shallower than Time Freeze's 0.5 so
+  the two are distinct, and restores to whatever the world is actually doing
 - Only the two clocked effects are exclusive (§13.1); a second replaces the
   first, and the displaced one has its world changes lifted before the new one
-  applies. A shield sitting unspent competes with nothing, and neither does a
-  laser cap that has already been raised
+  applies
+
+### How it is built
+
+- **Spread Fire and the Nuke fire outside `SpaceshipState`.** The laser cap
+  counts rounds in flight and frees a slot as each resolves; a spray borrowing
+  those slots would strand the count wherever the last round left it and the
+  player would come out of the power-up unable to fire. The player pool is 24,
+  measured: a round is in the air 0.97s over its 474pt range, so 12 a second put
+  11.6 up at once, plus the manual cap of 6
+- **Spray rounds pass through White's own pieces**, by dropping `friendlyPiece`
+  from the round's contact mask rather than by ignoring the hit — a round that
+  will do nothing should fly through, not be consumed. The sweep aims them, not
+  the player, so friendly fire had the reward demolish White's position as a side
+  effect of being used
 - **Repair, Ice and Spread are the plain scout disc with drawn overlays** — a
-  hexagonal grid, crystalline facets, a row of exhaust ports — sized 58 × 30pt,
-  with Spread squashed to 82 × 26 for §13.2's "fat, squat disc". All three have
-  purpose-built sprites in the atlas (`ship-scout-repair`, `-ice`, `-spread`,
-  and `-bomb` besides), all three were tried with them, and all three read better
-  drawn. The sprites stay in the atlas, unused. Worth recording as a result
-  rather than a preference: purpose-built art is the obvious answer and it lost
-- **The Nuke flies §6.4's Mutant Camel**, not `ship-scout-bomb`. The bomb sprite
-  is a competent red mine; the camel is a Jeff Minter tribute with legs, and one
-  of those is the right thing to see swooping at you carrying a nuclear weapon.
-  Half again the height of a scout (§6.4 makes it the larger tribute ship), and
-  the only carrier with a voice — a generated low bray on entry, so you hear it
-  before you have picked it out of the board
-- **The camel walks.** Three drawings, four frames — the two swung poses
-  separated by the neutral one, because cycling straight from one to the other
-  reads as a twitch: the legs cross the middle without ever being seen there.
-  0.2s a frame, so 0.8s for a full cycle.
-
-  The swung frames are generated from the atlas sprite rather than drawn. The
-  legs are sheared about the hip line at y=141, by an offset proportional to how
-  far below the hip each row sits, so a leg pivots instead of sliding and stays
-  attached to the belly; front and rear swing in opposite phase, which is the
-  part that reads as walking rather than as leaning. The feet travel ±11px, about
-  2pt at render size.
-
-  The frames live in `Resources/Sprites/`, which is where the app actually loads
-  textures from — `assets/GCI.spriteatlas` is the source, not the bundle, and
-  writing them only there shipped a grey X on every other frame. A missing
-  texture compiles cleanly, renders as SpriteKit's placeholder and logs nothing,
-  so `typecheck.sh` now cross-checks every `chess-`/`ship-` string literal in the
-  Swift sources against the bundled PNGs.
-
-  Two animations, not one: the outline cycles its own frames and the hull cycles
-  their filled silhouettes, started in the same frame on the same clock. A static
-  hull behind moving legs leaves fill hanging in the air where the legs used to
-  be. A 1.5pt bob on the same clock ties the walk to ground the camel does not
-  have — legs alone read as a walk from a standing start and as a slide once the
-  thing is moving
-- **Raiders face the way they are going.** The crossing is built as legs rather
-  than one `moveTo`, so a raider that turns can turn to face; the camel has legs
-  and a head, and a camel crossing right-to-left rear-first reads as a bug. Every
-  other carrier is a symmetrical disc, for which this is a no-op — which is why
-  it applies to all of them rather than being special-cased
-- **One crossing in five doubles back** partway and then carries on the way it
-  was going, flipping to face each direction as it turns. Not a difficulty
-  change — a raider that feints is on screen *longer* and is marginally easier to
-  catch — but a crossing the player has already read stops being fully
-  predictable. It never backs past its own entry point, which would read as a
-  second entrance.
-
-  **Only the Spread and Bomb carriers**, and they earn it differently. It was
-  every carrier first, which spread the surprise so thin it became the weather: a
-  tax on the player's aim everywhere rather than a moment anywhere.
-
-  The Spread Scout flips a coin at 20%, because it appears once a level and there
-  is no second of its kind to play against. The camel does not gamble at all —
-  **the first never feints and the second always does.** Level 7 sends two, so
-  the first crossing teaches its path honestly, the player shoots it, and the one
-  arriving where they have just learned there is nothing more to expect turns
-  around. A surprise that is set up first is worth more than a random one.
-
-  Gated on what the player has actually brought down this level rather than on
-  roster position, so the `R` test key cannot fake the second camel
-- Carrier sizes are **measured, not uniform**. The plain scout is a wide 280×144
-  disc and the specials are compact shapes on 200×200 squares, so scaling every
-  sprite by canvas height gave the specials *half* the target area — the wrong
-  way round, since they are the rarer and more valuable ships. Each multiplier is
-  now the one that equalises visible ink against the scout's 49.6 × 21.2pt, with
-  the camel deliberately left at 1.71× for presence
-- Every active power-up shows as a standing line in the player's alley, **one
-  line each** — two statuses sharing a line read as one status — with 5pt of air
-  between them, and §13.2's countdown bar under the bottom line for a timed
-  effect. No numbers: the laser cap was briefly appended to RAPID FIRE and the
-  seconds to a timed effect, and both turned a status into something the player
-  had to parse. Neither number was actionable — a shrinking bar is read without
-  being read, which is what a status in the corner of the eye has to be, and the
-  ship's own hull already brightens with each Rapid Fire stack.
-- The four chess readouts — turn timer, AUTO MODE, the transient notice and the
-  status line — all sit 8pt lower than they did, opening a gap between them and
-  the power-up block. Applied as one `gutterDrop` constant rather than four
-  edited literals, because they have to move together: at anything less than the
-  full drop the timer's 22pt digits land on the transient notice.
-
-  The block sits **above** the turn timer, which took two attempts. The gutter is
-  fuller than it looks: below the status line there are 27pt, and every gap
-  between the timer, the transient notice and the status line is 0.5 to 7.5pt —
-  too narrow for a 9pt line. Two lines fitted in that 27pt band; three at a 5pt
-  gap need 37. Above the timer's caption the gutter is empty to the HUD at
-  y=664, so that is where it went. The first version was placed by eye against
-  the timer's *centre* at 166 without accounting for its caption 18pt above and
-  landed on top of the caption — so the measurements are now a table in the code
-  and a test that fails on any overlap
-- The two Ice sounds are synthesised (`Resources/sfx/generated/`): a swept-noise
-  whoosh falling 2.4kHz → 180Hz with a comb-delay tail and a crystalline ring
-  over the last third, and a shorter rising version for the expiry
+  hexagonal grid, crystalline facets, a row of exhaust ports — at 58 × 30pt, with
+  Spread squashed to 82 × 26 for §13.2's "fat, squat disc". All three have
+  purpose-built sprites in the atlas and all three read better drawn; the sprites
+  stay there unused. Worth recording as a result rather than a preference
+- **The Nuke flies §6.4's Mutant Camel.** Half again a scout's height, and the
+  only carrier with a voice — a generated low bray on entry, so you hear it
+  before you have picked it out of the board. Sizes are measured rather than
+  uniform: each multiplier equalises visible ink against the scout's 49.6 ×
+  21.2pt, with the camel left at 1.71× for presence
+- **The camel walks** — three drawings, four frames, 0.2s each. The two swung
+  poses are separated by the neutral one, because cycling straight between them
+  reads as a twitch: the legs cross the middle without being seen there. The
+  swung frames are generated by shearing the atlas sprite about the hip line at
+  y=141, by an offset proportional to how far below the hip each row sits, so a
+  leg pivots instead of sliding; front and rear swing in opposite phase. Two
+  animations, since the hull is a separate node and a static fill behind moving
+  legs hangs in the air. A 1.5pt bob ties the walk to ground the camel does not
+  have
+- Textures load from `Resources/Sprites/`, not `assets/GCI.spriteatlas` — a
+  missing one compiles cleanly, renders as SpriteKit's grey placeholder and logs
+  nothing, so `typecheck.sh` cross-checks every `chess-`/`ship-` string literal
+  against the bundled PNGs
+- Every active power-up shows as a standing line in the player's alley, one line
+  each with 5pt between, and §13.2's countdown bar under the bottom line. No
+  numbers: neither the laser cap nor the remaining seconds was actionable, and a
+  shrinking bar is read without being read. The block sits above the turn timer,
+  the only part of the gutter with room — the measurements are a table in the
+  code and a test that fails on any overlap
+- The two Ice sounds and the camel's bray are synthesised into
+  `Resources/sfx/generated/`
 
 **Lightning Scout is retired.** §13.2's fifth type grants "+1 laser slot", which
-is what Rapid Fire is; two ships handing over the same reward is one ship too
-many.
+is what Rapid Fire is; two ships handing over the same reward is one too many.
 
 ## Roadmap — what is left
 
@@ -1148,6 +1006,14 @@ So this list is a place to start *if* CPU ever matters, roughly in order of
 expected return. None of it has been measured; the first two are the only ones
 worth trying before profiling.
 
+**Per-frame label text.** `SKLabelNode.text` re-lays out glyphs on assignment.
+`TurnTimerNode.refresh` writes *both* its labels every frame while White may
+move — and interpolates a new `String` for the digits each time — so a value
+that changes once a second is rebuilt sixty. `syncPowerUpAlley` does the same for
+up to three lines. Guarding each write on an actual change is a few lines and
+costs nothing when the value has changed. This is the cheapest item on the list
+and probably the largest of the CPU ones after the two below.
+
 **Check the frame rate first.** `preferredFramesPerSecond` is never set on the
 `SKView`, and neither is anything else about its cadence. Press `L` and read the
 FPS line: if it says ~120 on a ProMotion display, the game is rendering twice as
@@ -1177,13 +1043,12 @@ allocations (`allPieces(color:)` filters the piece dictionary, then a second
 Levels 1–2, where `RaiderRules.waitsForThinnedRearRank` is true. Guarding the
 call — or passing a closure instead of a value — makes it free from Level 3 on.
 
-**The per-frame gutter syncs re-set text that has not changed.**
-`syncPowerUpAlley` and `syncRespawnWarnings` run every frame and do up to seven
-`childNode(withName:)` lookups between them, each a linear scan of `bloomNode`'s
-children. `syncPowerUpAlley` also assigns `SKLabelNode.text` every frame, which
-re-lays out glyphs. Only the countdown bar genuinely changes per frame; the
-labels change a handful of times a wave. Cheap to guard, and the same pattern
-would apply to any readout added later.
+**`childNode(withName:)` in the per-frame path.** Five lookups a frame between
+`syncPowerUpAlley`, its countdown bar and `syncRespawnWarnings`, each a linear
+scan of `bloomNode`'s children — of which there are on the order of a hundred
+once the laser pools, the raiders and the effect pools are parented. Holding the
+node references instead of looking them up by name removes roughly 500 string
+comparisons a frame.
 
 **72 pre-created player laser nodes** (`LaserPool`), up from 6, each carrying a
 physics body. Parked bodies have `categoryBitMask = .none` so they are never
