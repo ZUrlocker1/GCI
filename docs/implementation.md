@@ -843,17 +843,53 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   twelve a second put 11.6 up at once, plus the manual cap of 6. It has been 72
   and 32 on the way here — an under-sized pool does not fail loudly, it silently
   drops rounds and the spray just looks thinner than it should
-- **Nuke** expands a magenta-to-white ring over 0.4s, clearing enemy rounds as
-  it reaches them with a spark at each. Pieces and raiders are untouched
+- **Nuke** expands a magenta-to-white ring over 0.4s that clears every enemy
+  round it passes over **and detonates the nearest black pieces**. §13.2's
+  version only cleared projectiles, which is invisible: the player saw a big ring
+  and then an absence, and read it as some buff they could not identify. Deleting
+  things is not an effect you can see.
+
+  Up to **three** victims, at least **one** wherever anything is left, chosen by
+  distance with no radius limit — a cap on range would make the reward depend on
+  where the swooping scout happened to die, and a Nuke that sometimes does
+  nothing visible is the problem this redesign exists to fix. Each victim gets a
+  **fragment** thrown at it from the blast centre, timed to arrive exactly as the
+  ring does; without it the ring and the explosions are two things that happen
+  near each other, and with it there is a line drawn from cause to effect.
+
+  Victims are destroyed outright rather than taking an HP number — a blast that
+  leaves a rook standing is not a blast. Armor still stops it (§10.1): a power-up
+  that walked through armor would take Level 8's identity away.
+
+  **The black king is passed over** while anything else stands, however close he
+  is, so the rarest power-up in the game is never spent on the one target it
+  cannot kill. He gets a forcefield flare and a clang when the blast reaches him
+  anyway, or the ring looks like it missed the most obvious thing on the board.
+  When he is the last piece left he *is* the target, for 6 damage floored at 1 HP
+  — winning a wave has to stay something the player aimed at
 - **Shield** is a hexagon, not a circle, so it can never be confused with the
   black king's forcefield: one means protected, the other means unshootable
 - Only the two clocked effects are exclusive (§13.1); a second replaces the
   first, and the displaced one has its world changes lifted before the new one
   applies. A shield sitting unspent competes with nothing, and neither does a
   laser cap that has already been raised
-- The four special hulls are drawn as shape overlays on the existing scout
-  sprite — the hexagonal grid, crystalline facets, sea-mine spikes, the row of
-  exhaust ports. Five new sprites would be better and are not in the atlas
+- **Every carrier flies its own sprite**, all of them already in
+  `GCI.spriteatlas`. The specials were first drawn as shape overlays on the plain
+  scout — a hexagonal grid, some spikes, a row of exhaust ports — while
+  `ship-scout-repair`, `-ice`, `-spread` and `-bomb` sat in the atlas unused.
+  Purpose-built art beats anything sketched over a disc at 30 points tall
+- **The Nuke flies §6.4's Mutant Camel**, not `ship-scout-bomb`. The bomb sprite
+  is a competent red mine; the camel is a Jeff Minter tribute with legs, and one
+  of those is the right thing to see swooping at you carrying a nuclear weapon.
+  Half again the height of a scout (§6.4 makes it the larger tribute ship), and
+  the only carrier with a voice — a generated low bray on entry, so you hear it
+  before you have picked it out of the board
+- Carrier sizes are **measured, not uniform**. The plain scout is a wide 280×144
+  disc and the specials are compact shapes on 200×200 squares, so scaling every
+  sprite by canvas height gave the specials *half* the target area — the wrong
+  way round, since they are the rarer and more valuable ships. Each multiplier is
+  now the one that equalises visible ink against the scout's 49.6 × 21.2pt, with
+  the camel deliberately left at 1.71× for presence
 - Every active power-up shows as a standing line in the player's alley, **one
   line each** — two statuses sharing a line read as one status — with 5pt of air
   between them, and §13.2's countdown bar under the bottom line for a timed
