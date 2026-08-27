@@ -2075,20 +2075,44 @@ class GameScene: SKScene {
     // MARK: - Regeneration (§23.9) and armored pawns (§10.1)
 
     private static let respawnWarningName = "respawnWarning"
-    /// At most three at once: Rapid Fire, a shield, and one timed effect.
-    private static let powerUpAlleyLines = 3
+    /// Two lines: the untimed power-ups on one, a running timed effect on the
+    /// other. Two is what fits, and two is all that can be up at once — see the
+    /// gutter map below.
+    static let powerUpAlleyLines = 2
     private static let powerUpLineName = "powerUpLine"
-    private static let powerUpBarName = "powerUpBar"
-    /// Just above the turn-timer / AUTO MODE slot at y=166.
-    private static let powerUpAlleyBottomY = GameScene.boardBottomY + 62
-    private static let powerUpAlleyStep: CGFloat = 16
-    private static let powerUpBarWidth: CGFloat = 84
+
+    /// The left gutter is fuller than it looks. Measured at x=112, top down:
+    ///
+    /// | occupant | glyph band |
+    /// |---|---|
+    /// | turn-timer caption (8pt @ 184) | 180 – 188 |
+    /// | turn-timer digits (22pt @ 166), or AUTO MODE (9pt) | 155 – 177 |
+    /// | transient notice — SKIP LEVEL, RESPAWNING (9pt @ 150) | 146 – 155 |
+    /// | status side label (10pt @ 133) | 128 – 138 |
+    /// | status state label (15pt @ 116) | 109 – 124 |
+    /// | the ship's own lane | 42 – 82 |
+    ///
+    /// Which leaves exactly one usable band — **82 to 109**, 27pt — and the gaps
+    /// between the rest are 0.5 to 7.5pt, too narrow for a 9pt line. The first
+    /// version of this readout sat at 182 and 198, chosen by eye against the
+    /// timer's *centre* at 166 without accounting for its caption 18pt above it,
+    /// so the bottom line landed straight on top of the caption. Hence the
+    /// table: the next person to add a gutter line should not have to rediscover
+    /// this.
+    ///
+    /// Two 9pt lines are 18pt of the 27, so the 9 left over goes 3.5pt under the
+    /// bottom line, 3pt between them and 2pt over the top one: lines at 90 and
+    /// 102. `PowerUpAlleyLayoutTests` pins that against both neighbours, because
+    /// eyeballing it is what produced the collision in the first place.
+    static let powerUpAlleyBottomY = GameScene.boardBottomY - 30
+    static let powerUpAlleyStep: CGFloat = 12
+    static let powerUpAlleyFontSize: CGFloat = 9
     /// The stack the notice is currently showing, so it only flares when the
     /// number actually changes rather than on every frame.
     private var shownRapidFireStacks = 0
 
-    /// The standing power-up readout in the player's alley: one line per effect
-    /// currently up, for as long as it is up.
+    /// The standing power-up readout in the player's alley: what is up, and how
+    /// long a timed effect has left.
     ///
     /// It used to be a one-second flash at the moment each was granted. These
     /// are rare and they last — a shield until it is spent, Rapid Fire for the
@@ -2096,54 +2120,49 @@ class GameScene: SKScene {
     /// are carrying, not catch it in passing. Mirrors the state rather than
     /// latching, so no line can outlive the thing it describes.
     ///
-    /// Stacked above the turn-timer slot rather than below the status line: the
-    /// alley runs out of room downward at the ship's own lane, and three lines
-    /// of readout crossing the ship would be worse than useless.
+    /// Two lines, because two is what the gutter has room for and two is all
+    /// that can be up at once: Rapid Fire shares a line with the shield, which
+    /// costs nothing because the two can never co-occur in play — the shield is
+    /// only offered on Level 3 and Rapid Fire is not offered there. The test key
+    /// can stack them, so the line joins them rather than dropping one.
     private func syncPowerUpAlley() {
-        var lines: [(text: String, color: SKColor, progress: CGFloat?)] = []
+        var lines: [(text: String, color: SKColor)] = []
 
         let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
             - SpaceshipState.baseLaserCap
+        var badges: [String] = []
         if stacks > 0 {
-            lines.append(("\(PowerUp.rapidFire.label) \(shipState?.laserCap ?? 0)",
-                          NeonPalette.transporterGreen, nil))
+            badges.append("\(PowerUp.rapidFire.label) \(shipState?.laserCap ?? 0)")
         }
-        if powerUps.hasShield {
-            lines.append((PowerUp.shield.label, PowerUp.shield.tint, nil))
+        if powerUps.hasShield { badges.append(PowerUp.shield.label) }
+        if !badges.isEmpty {
+            lines.append((badges.joined(separator: " · "),
+                          stacks > 0 ? NeonPalette.transporterGreen
+                                     : PowerUp.shield.tint))
         }
-        if let active = powerUps.active, let duration = active.duration {
-            lines.append((active.label, active.tint,
-                          CGFloat(max(0, powerUps.remaining) / duration)))
+        if let active = powerUps.active, active.duration != nil {
+            // A number rather than §13.2's countdown bar. The bar needed a row
+            // of its own under the label and there is no row to spare; the
+            // number costs no layout and says more than a bar of the same width.
+            lines.append(("\(active.label) \(String(format: "%.1f", max(0, powerUps.remaining)))",
+                          active.tint))
         }
 
         for index in 0..<Self.powerUpAlleyLines {
             let label = alleyLabel(index)
             guard index < lines.count else {
                 label.isHidden = true
-                alleyBar(index).isHidden = true
                 continue
             }
-            let line = lines[index]
             label.isHidden = false
-            label.text = line.text
-            label.fontColor = line.color
-            // Bottom-up, so a new line pushes the block upward and the one the
-            // player already had stays where they last read it.
+            label.text = lines[index].text
+            label.fontColor = lines[index].color
+            // Bottom-up, so the timed line with its ticking number always sits
+            // in the same place and a new line pushes the other one up.
             label.position = CGPoint(
                 x: 112,
                 y: Self.powerUpAlleyBottomY
                     + CGFloat(lines.count - 1 - index) * Self.powerUpAlleyStep)
-
-            let bar = alleyBar(index)
-            guard let progress = line.progress else {
-                bar.isHidden = true
-                continue
-            }
-            bar.isHidden = false
-            bar.color = line.color
-            bar.size.width = max(0, Self.powerUpBarWidth * progress)
-            bar.position = CGPoint(x: 112 - Self.powerUpBarWidth / 2,
-                                   y: label.position.y - 8)
         }
 
         // The change is the event; the line itself is the reference.
@@ -2171,7 +2190,7 @@ class GameScene: SKScene {
         }
         let fresh = SKLabelNode(fontNamed: "PressStart2P-Regular")
         fresh.name = name
-        fresh.fontSize = 9
+        fresh.fontSize = Self.powerUpAlleyFontSize
         fresh.horizontalAlignmentMode = .center
         fresh.verticalAlignmentMode = .center
         fresh.zPosition = 12
@@ -2179,26 +2198,9 @@ class GameScene: SKScene {
         return fresh
     }
 
-    private func alleyBar(_ index: Int) -> SKSpriteNode {
-        let name = "\(Self.powerUpBarName)\(index)"
-        if let existing = bloomNode.childNode(withName: name) as? SKSpriteNode {
-            return existing
-        }
-        let fresh = SKSpriteNode(color: .white,
-                                 size: CGSize(width: Self.powerUpBarWidth, height: 3))
-        fresh.name = name
-        fresh.anchorPoint = CGPoint(x: 0, y: 0.5)
-        fresh.zPosition = 12
-        fresh.isHidden = true
-        bloomNode.addChild(fresh)
-        return fresh
-    }
-
     private func clearPowerUpAlley() {
         for index in 0..<Self.powerUpAlleyLines {
             bloomNode.childNode(withName: "\(Self.powerUpLineName)\(index)")?
-                .removeFromParent()
-            bloomNode.childNode(withName: "\(Self.powerUpBarName)\(index)")?
                 .removeFromParent()
         }
         shownRapidFireStacks = 0
