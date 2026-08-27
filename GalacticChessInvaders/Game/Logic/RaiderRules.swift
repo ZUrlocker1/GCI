@@ -213,6 +213,32 @@ enum RaiderRules {
         }
     }
 
+    /// A one-in-five chance the crossing doubles back on itself before carrying
+    /// on the way it was going.
+    ///
+    /// Returns where to turn and how far back to go, or nil for a straight
+    /// crossing. The point is not difficulty — the raider is on screen *longer*
+    /// for doubling back, so it is marginally easier to catch — it is that a
+    /// crossing you have already read stops being fully predictable. One in five
+    /// is often enough to make the player watch and rare enough that the
+    /// straight crossing stays the thing they are watching *for*.
+    static let feintChance = 0.2
+    /// How far back it comes, as a fraction of the crossing.
+    static let feintDepth: ClosedRange<CGFloat> = 0.10...0.20
+
+    static func feint(span: CGFloat, from cursor: CGFloat,
+                      to toX: CGFloat) -> (turn: CGFloat, back: CGFloat)? {
+        guard Double.random(in: 0..<1) < feintChance else { return nil }
+        // Somewhere in the middle of what is left: a feint in the first moments
+        // is not yet a change of mind, and one at the far edge is not seen.
+        let turn = cursor + (toX - cursor) * .random(in: 0.35...0.6)
+        let back = turn - span * .random(in: feintDepth)
+        // Never back past where it came in, which would read as a second entry.
+        let limited = span > 0 ? max(back, cursor) : min(back, cursor)
+        guard abs(limited - turn) > 8 else { return nil }
+        return (turn, limited)
+    }
+
     /// Where a dive bottoms out, as a fraction of the crossing. Just before
     /// halfway, so the climb out is longer than the dive in and the raider
     /// spends its slowest moment low, near the player.

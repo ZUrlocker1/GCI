@@ -867,23 +867,52 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   anyway, or the ring looks like it missed the most obvious thing on the board.
   When he is the last piece left he *is* the target, for 6 damage floored at 1 HP
   — winning a wave has to stay something the player aimed at
+- **The blast runs in slow motion**, which is most of what makes it land. The
+  ring opens over 0.85s rather than 0.4, and the whole world drops to 0.3× for
+  1.3 seconds: `dt` is scaled for everything the update loop drives, and
+  `bloomNode.speed` for everything on an action — the fleet, the lasers, the
+  explosions and the ring itself. Measured, that puts the ring's full expansion
+  at 1.6s of real time and lands the fragments between roughly 0.24s and 1.0s,
+  spread across the slow window rather than bunched at the start.
+
+  The ramp holds at the floor for the first 45% and then *accelerates* back
+  rather than easing out. Coming out of slow motion is the part that sells it: a
+  linear return reads as the game recovering from a stall, where lingering low
+  and then snapping back reads as a decision. The music drops to `rate` 0.7 —
+  shallower than Time Freeze's 0.5, so the two are not mistaken for each other —
+  and restores to whatever the world is actually doing, since a Time Freeze may
+  still be running underneath and owns 0.5 until it expires
 - **Shield** is a hexagon, not a circle, so it can never be confused with the
   black king's forcefield: one means protected, the other means unshootable
 - Only the two clocked effects are exclusive (§13.1); a second replaces the
   first, and the displaced one has its world changes lifted before the new one
   applies. A shield sitting unspent competes with nothing, and neither does a
   laser cap that has already been raised
-- **Every carrier flies its own sprite**, all of them already in
-  `GCI.spriteatlas`. The specials were first drawn as shape overlays on the plain
-  scout — a hexagonal grid, some spikes, a row of exhaust ports — while
-  `ship-scout-repair`, `-ice`, `-spread` and `-bomb` sat in the atlas unused.
-  Purpose-built art beats anything sketched over a disc at 30 points tall
+- **Carriers are split between atlas art and drawn overlays**, and the split is
+  a playtest result rather than a principle. The specials began as shape overlays
+  on the plain scout while `ship-scout-repair`, `-ice`, `-spread` and `-bomb` sat
+  in the atlas unused; switching all four to their sprites was a clear win for
+  Spread and a clear loss for Repair and Ice, whose hexagonal grid and
+  crystalline facets read better drawn. So Spread flies `ship-scout-spread`, and
+  Repair and Ice keep the disc and the overlay. `ship-scout-bomb` and
+  `ship-scout-ice` remain in the atlas, unused
 - **The Nuke flies §6.4's Mutant Camel**, not `ship-scout-bomb`. The bomb sprite
   is a competent red mine; the camel is a Jeff Minter tribute with legs, and one
   of those is the right thing to see swooping at you carrying a nuclear weapon.
   Half again the height of a scout (§6.4 makes it the larger tribute ship), and
   the only carrier with a voice — a generated low bray on entry, so you hear it
   before you have picked it out of the board
+- **Raiders face the way they are going.** The crossing is built as legs rather
+  than one `moveTo`, so a raider that turns can turn to face; the camel has legs
+  and a head, and a camel crossing right-to-left rear-first reads as a bug. Every
+  other carrier is a symmetrical disc, for which this is a no-op — which is why
+  it applies to all of them rather than being special-cased
+- **One crossing in five doubles back** partway and then carries on the way it
+  was going, flipping to face each direction as it turns. Not a difficulty
+  change — a raider that feints is on screen *longer* and is marginally easier to
+  catch — but a crossing the player has already read stops being fully
+  predictable. It never backs past its own entry point, which would read as a
+  second entrance
 - Carrier sizes are **measured, not uniform**. The plain scout is a wide 280×144
   disc and the specials are compact shapes on 200×200 squares, so scaling every
   sprite by canvas height gave the specials *half* the target area — the wrong
