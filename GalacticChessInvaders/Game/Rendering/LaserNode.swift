@@ -83,7 +83,11 @@ final class LaserNode: SKSpriteNode {
         body.friction = 0
         body.restitution = 0
         body.usesPreciseCollisionDetection = true   // thin and fast — avoid tunnelling
-        body.categoryBitMask = owner == .player ? PhysicsCategory.playerLaser : PhysicsCategory.enemyShot
+        // Both halves are gated on being in flight. A contact is reported when
+        // *either* body's test matches the other's category, so a parked round
+        // that keeps its category is still a target even with its own test
+        // cleared — see `deactivate`.
+        body.categoryBitMask = isActive ? liveCategory : PhysicsCategory.none
         body.contactTestBitMask = isActive ? liveContactMask : PhysicsCategory.none
         body.collisionBitMask = PhysicsCategory.none
         physicsBody = body
@@ -130,6 +134,12 @@ final class LaserNode: SKSpriteNode {
     /// explicitly excluded that; it is a deliberate departure, and it costs the
     /// player real shots, because a laser eaten in flight still counted against
     /// the two-round cap until it cleared.
+    /// What this round *is*, while it is in flight. A parked one advertises
+    /// nothing (see `deactivate`).
+    private var liveCategory: UInt32 {
+        owner == .player ? PhysicsCategory.playerLaser : PhysicsCategory.enemyShot
+    }
+
     private var liveContactMask: UInt32 {
         owner == .player
             ? (PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece
@@ -174,6 +184,7 @@ final class LaserNode: SKSpriteNode {
         isHidden = false
         // Only a live laser tests for contacts, so a parked one sitting on top
         // of a piece cannot fire a spurious hit.
+        physicsBody?.categoryBitMask = liveCategory
         physicsBody?.contactTestBitMask = liveContactMask
 
         let dy = owner == .player ? travelDistance : -travelDistance
@@ -298,8 +309,20 @@ final class LaserNode: SKSpriteNode {
         isHeavy = false
         isDiagonal = false
         childNode(withName: Self.beamName)?.removeFromParent()
-        // Stop testing for contacts rather than clearing `isDynamic` — the body
-        // has to stay dynamic to ever generate a contact again when re-fired.
+        // Both masks, not just the test. A contact fires when *either* body's
+        // contactTest matches the other's category — so a parked round that
+        // still advertises `enemyShot` is a live target for any player laser
+        // flying past, even though it tests for nothing itself and is hidden.
+        //
+        // That was harmless while the player's laser only tested pieces. The
+        // moment rounds could shoot each other down it turned every spent
+        // enemy shot into an invisible mine, sitting exactly where it died —
+        // on a white piece, two squares above the firing line — and every
+        // player shot that reached it detonated against nothing.
+        //
+        // `isDynamic` stays true: the body has to remain dynamic to generate a
+        // contact again when re-fired.
+        physicsBody?.categoryBitMask = PhysicsCategory.none
         physicsBody?.contactTestBitMask = PhysicsCategory.none
         let callback = onDeactivate
         onDeactivate = nil

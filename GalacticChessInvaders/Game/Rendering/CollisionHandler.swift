@@ -20,6 +20,19 @@ final class CollisionHandler: NSObject, @preconcurrency SKPhysicsContactDelegate
 
     func didBegin(_ contact: SKPhysicsContact) {
         guard let nodeA = contact.bodyA.node, let nodeB = contact.bodyB.node else { return }
+
+        // A spent round resolves nothing, whatever the bitmasks say.
+        //
+        // The masks are the first line and they were wrong once: a parked laser
+        // cleared its contact *test* but kept its category, and a contact fires
+        // when either body's test matches the other's category — so every dead
+        // enemy shot sat invisible where it died and detonated the next player
+        // laser to reach it. That is fixed at the source, in `deactivate`, but
+        // the invariant belongs here too: nothing downstream is prepared for a
+        // hit from a round that is not in flight, and a future mask change
+        // should not be able to reintroduce the same failure.
+        if let laser = nodeA as? LaserNode, !laser.isActive { return }
+        if let laser = nodeB as? LaserNode, !laser.isActive { return }
         let categoryA = contact.bodyA.categoryBitMask
         let categoryB = contact.bodyB.categoryBitMask
 

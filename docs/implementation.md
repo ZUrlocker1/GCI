@@ -381,6 +381,17 @@ One line each; the reasoning is in the commits and the code.
   stale key. Released by identity now
 - **`applyDamage` never told the chess engine** — same class as `forcePlace`
 - **The sounds were never missing, only never copied** into `Resources/sfx/`
+- **Player shots detonated against nothing, two squares up** — a parked laser
+  cleared its contact *test* but kept its category, and SpriteKit fires a
+  contact when either body's test matches the other's category. Harmless until
+  rounds could shoot each other down; after that every spent enemy shot was an
+  invisible mine where it died. Both masks are cleared now, and the handler
+  additionally refuses any contact involving a round that is not in flight
+- **The ship could come back invisible** — respawn was a scene `SKAction` that
+  bailed if the game was not PLAYING on the frame it fired, with nothing to
+  retry it. Scene actions run while paused, so pausing in the second after
+  dying threw the respawn away: hidden ship, still able to move and fire. It is
+  a countdown the update loop owns now, which only advances while playing
 - **Messages stacked** — the reveal banner was only cleared on teardown
 
 ### Deviations from the design doc

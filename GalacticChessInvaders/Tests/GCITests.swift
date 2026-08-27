@@ -3035,6 +3035,34 @@ final class LaserPhysicsTests: XCTestCase {
         XCTAssertNotEqual(mask & PhysicsCategory.ship, 0)
     }
 
+    /// A parked round must advertise nothing at all — not merely test for
+    /// nothing. A contact fires when *either* body's contactTest matches the
+    /// other's category, so a spent enemy shot that kept its category was an
+    /// invisible mine sitting where it died, and every player laser that
+    /// reached it detonated against empty board.
+    func testAParkedRoundIsInvisibleToPhysics() {
+        for owner in [ProjectileState.Owner.player, .enemy] {
+            let laser = LaserNode(owner: owner)
+            XCTAssertEqual(laser.physicsBody?.categoryBitMask, PhysicsCategory.none,
+                           "\(owner): fresh from the pool, never fired")
+
+            laser.fire(from: .zero, damage: 2, speed: 300, travelDistance: 400)
+            XCTAssertNotEqual(laser.physicsBody?.categoryBitMask, PhysicsCategory.none,
+                              "\(owner): in flight, it must be a target")
+
+            laser.deactivate()
+            XCTAssertEqual(laser.physicsBody?.categoryBitMask, PhysicsCategory.none,
+                           "\(owner): spent, and must stop being one")
+            XCTAssertEqual(laser.physicsBody?.contactTestBitMask, PhysicsCategory.none)
+            XCTAssertTrue(laser.physicsBody?.isDynamic == true,
+                          "still dynamic, or it could never contact again")
+
+            // And it comes back properly on the next shot from the pool.
+            laser.fire(from: .zero, damage: 2, speed: 300, travelDistance: 400)
+            XCTAssertNotEqual(laser.physicsBody?.categoryBitMask, PhysicsCategory.none)
+        }
+    }
+
     /// Rounds shoot each other down. A departure from §20's Phase 3.2 bitmask
     /// spec, which excluded it — and one that costs the player shots, so it
     /// should be deliberate rather than a stray bit.
