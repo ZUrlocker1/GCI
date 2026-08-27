@@ -15,6 +15,9 @@ final class SpaceshipState {
     static let baseLaserCap = 2
     /// Invincibility flash after a respawn (§8.4).
     static let invincibilityDuration: TimeInterval = 2.0
+    /// §8.2's three lives, named so the HUD can show the right number before a
+    /// run has started rather than assuming one.
+    static let startingLives = 3
 
     private(set) var lives: Int
     private(set) var laserCap = SpaceshipState.baseLaserCap
@@ -22,7 +25,7 @@ final class SpaceshipState {
     private(set) var isInvincible = false
     private var invincibilityRemaining: TimeInterval = 0
 
-    init(lives: Int = 3) {
+    init(lives: Int = SpaceshipState.startingLives) {
         self.lives = lives
     }
 
