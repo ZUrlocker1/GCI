@@ -238,10 +238,30 @@ enum RaiderRules {
         powerUp == .gatling || powerUp == .nuke
     }
 
-    static func feint(for powerUp: PowerUp, span: CGFloat, from cursor: CGFloat,
+    /// How likely this particular crossing is to double back.
+    ///
+    /// `repeatOffering` means the player has already brought one of these down
+    /// this level, so this is the second or later of its kind. Those *always*
+    /// feint, and a first Bomb Scout never does — which is the whole trick on
+    /// Level 7, where two camels cross in succession: the first flies honestly
+    /// and teaches its path, and the second, arriving where the player has just
+    /// learned there is nothing more to expect, does not.
+    ///
+    /// A surprise that is set up first is worth more than a random one, which is
+    /// what the Spread Scout is left with: it appears once per level, so there
+    /// is no second of its kind to play against and a coin flip is the best
+    /// available.
+    static func feintChance(for powerUp: PowerUp, repeatOffering: Bool) -> Double {
+        guard doublesBack(powerUp) else { return 0 }
+        if repeatOffering { return 1 }
+        return powerUp == .gatling ? feintChance : 0
+    }
+
+    static func feint(for powerUp: PowerUp, repeatOffering: Bool,
+                      span: CGFloat, from cursor: CGFloat,
                       to toX: CGFloat) -> (turn: CGFloat, back: CGFloat)? {
-        guard doublesBack(powerUp) else { return nil }
-        guard Double.random(in: 0..<1) < feintChance else { return nil }
+        let chance = feintChance(for: powerUp, repeatOffering: repeatOffering)
+        guard chance > 0, Double.random(in: 0..<1) < chance else { return nil }
         // Somewhere in the middle of what is left: a feint in the first moments
         // is not yet a change of mind, and one at the far edge is not seen.
         let turn = cursor + (toX - cursor) * .random(in: 0.35...0.6)

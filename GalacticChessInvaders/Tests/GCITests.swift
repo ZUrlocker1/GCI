@@ -3319,7 +3319,7 @@ final class RaiderTests: XCTestCase {
     func testTheRosterMatchesTheDesignedLadder() {
         let expected: [Int: [PowerUp]] = [
             1: [.rapidFire], 2: [.rapidFire], 3: [.shield], 4: [.freeze],
-            5: [.rapidFire], 6: [.gatling], 7: [.nuke],
+            5: [.rapidFire], 6: [.gatling], 7: [.nuke, .nuke],
             8: [.rapidFire, .gatling],
             9: [.rapidFire, .gatling, .freeze],
             10: [.rapidFire, .gatling, .freeze, .nuke],
@@ -3331,9 +3331,12 @@ final class RaiderTests: XCTestCase {
 
     /// Most of the run offers one power-up; the hard levels offer two and three.
     func testOffersGrowOnlyAtTheHardLevels() {
-        for level in 1...7 {
+        for level in 1...6 {
             XCTAssertEqual(PowerUps.roster(forLevel: level).count, 1, "level \(level)")
         }
+        // Crossfire sends two of the same, which is where the player first meets
+        // a level that does not go quiet after one kill.
+        XCTAssertEqual(PowerUps.roster(forLevel: 7), [.nuke, .nuke])
         XCTAssertEqual(PowerUps.roster(forLevel: 8).count, 2)
         XCTAssertEqual(PowerUps.roster(forLevel: 9).count, 3)
         XCTAssertEqual(PowerUps.roster(forLevel: 10).count, 4)
@@ -3359,7 +3362,7 @@ final class RaiderTests: XCTestCase {
             guard let first = PowerUps.firstLevel(offering: powerUp) else {
                 return XCTFail("\(powerUp) is never offered")
             }
-            XCTAssertEqual(PowerUps.roster(forLevel: first), [powerUp],
+            XCTAssertEqual(Set(PowerUps.roster(forLevel: first)), [powerUp],
                            "\(powerUp) must debut on a level of its own")
         }
     }
@@ -4919,11 +4922,13 @@ final class PowerUpTests: XCTestCase {
 
     // MARK: - The feint (§6.3)
 
-    /// Roughly one crossing in five doubles back, for the carriers that can.
-    func testAboutOneCrossingInFiveDoublesBack() {
+    /// The Spread Scout flips a coin, because it appears once a level and there
+    /// is no second of its kind to play against.
+    func testTheSpreadScoutFeintsAboutOneCrossingInFive() {
         var feints = 0
         for _ in 0..<4_000
-        where RaiderRules.feint(for: .nuke, span: 1_000, from: 0, to: 1_000) != nil {
+        where RaiderRules.feint(for: .gatling, repeatOffering: false,
+                                span: 1_000, from: 0, to: 1_000) != nil {
             feints += 1
         }
         let rate = Double(feints) / 4_000
@@ -4931,15 +4936,31 @@ final class PowerUpTests: XCTestCase {
                        "measured \(rate)")
     }
 
-    /// Only the Spread and Bomb carriers. Every carrier feinting made the
-    /// surprise into the weather; two ships make it a tell.
+    /// The camel sets its own trap: the first never doubles back, and the second
+    /// — which only exists because the player shot the first — always does.
+    func testTheFirstCamelNeverFeintsAndTheSecondAlways() {
+        XCTAssertEqual(RaiderRules.feintChance(for: .nuke, repeatOffering: false), 0)
+        XCTAssertEqual(RaiderRules.feintChance(for: .nuke, repeatOffering: true), 1)
+        for _ in 0..<500 {
+            XCTAssertNil(RaiderRules.feint(for: .nuke, repeatOffering: false,
+                                           span: 1_000, from: 0, to: 1_000))
+            XCTAssertNotNil(RaiderRules.feint(for: .nuke, repeatOffering: true,
+                                              span: 1_000, from: 0, to: 1_000))
+        }
+        // And the trick is reachable: Level 7 sends two of them.
+        XCTAssertEqual(PowerUps.roster(forLevel: 7).filter { $0 == .nuke }.count, 2)
+    }
+
+    /// Only the Spread and Bomb carriers double back at all — every carrier
+    /// feinting made the surprise into the weather.
     func testOnlyTheSpreadAndBombCarriersDoubleBack() {
         XCTAssertEqual(Set(PowerUp.allCases.filter(RaiderRules.doublesBack)),
                        [.gatling, .nuke])
         for powerUp in PowerUp.allCases where !RaiderRules.doublesBack(powerUp) {
-            for _ in 0..<500 {
-                XCTAssertNil(RaiderRules.feint(for: powerUp, span: 1_000,
-                                               from: 0, to: 1_000), "\(powerUp)")
+            for repeated in [false, true] {
+                XCTAssertEqual(RaiderRules.feintChance(for: powerUp,
+                                                       repeatOffering: repeated),
+                               0, "\(powerUp)")
             }
         }
     }
@@ -4948,8 +4969,9 @@ final class PowerUpTests: XCTestCase {
     /// where it came in, which would read as a second entrance.
     func testTheFeintTurnsMidCrossingAndNeverBacksPastTheEntry() {
         for _ in 0..<2_000 {
-            guard let feint = RaiderRules.feint(for: .gatling, span: 1_000,
-                                                from: 0, to: 1_000) else { continue }
+            guard let feint = RaiderRules.feint(for: .gatling, repeatOffering: true,
+                                                span: 1_000, from: 0, to: 1_000)
+            else { continue }
             XCTAssertGreaterThan(feint.turn, 0)
             XCTAssertLessThan(feint.turn, 1_000, "it must turn before it exits")
             XCTAssertLessThan(feint.back, feint.turn, "it has to come back")
@@ -4960,8 +4982,9 @@ final class PowerUpTests: XCTestCase {
     /// And the same in the other direction, where every comparison flips.
     func testTheFeintWorksRightToLeft() {
         for _ in 0..<2_000 {
-            guard let feint = RaiderRules.feint(for: .gatling, span: -1_000,
-                                                from: 1_000, to: 0) else { continue }
+            guard let feint = RaiderRules.feint(for: .gatling, repeatOffering: true,
+                                                span: -1_000, from: 1_000, to: 0)
+            else { continue }
             XCTAssertLessThan(feint.turn, 1_000)
             XCTAssertGreaterThan(feint.turn, 0)
             XCTAssertGreaterThan(feint.back, feint.turn, "back is rightward here")

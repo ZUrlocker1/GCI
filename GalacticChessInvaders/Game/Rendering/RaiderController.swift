@@ -91,6 +91,9 @@ final class RaiderController {
 
     /// Which kinds have already spent their free pass this run.
     private var kindsSeen: Set<PowerUp> = []
+    /// Which kinds the player has already brought down *this level*. The second
+    /// camel of Level 7 flies differently from the first because of this.
+    private var killedThisLevel: Set<PowerUp> = []
 
     func reset(interval: TimeInterval, level: Int, kindsSeen: Set<PowerUp> = []) {
         scouts.forEach { $0.stop() }
@@ -99,6 +102,7 @@ final class RaiderController {
         fullRoster = remaining
         rosterCount = remaining.count
         summonCursor = 0
+        killedThisLevel.removeAll()
         self.kindsSeen = kindsSeen
         schedule.reset(interval: paced(interval))
     }
@@ -180,6 +184,7 @@ final class RaiderController {
             // Removed by identity rather than position: the `R` test key can
             // send an entry out of order, so the one that just died is not
             // necessarily the one at the head of the queue.
+            if destroyed { self.killedThisLevel.insert(powerUp) }
             if destroyed, let index = self.remaining.firstIndex(of: powerUp) {
                 self.remaining.remove(at: index)
                 DiagnosticsLog.shared.log(.raider, self.remaining.isEmpty
@@ -189,7 +194,8 @@ final class RaiderController {
             self.onExit?(scout, destroyed)
         }
         scout.cross(fromX: fromX, toX: toX, y: entryY, firing: firing,
-                    powerUp: powerUp, flight: flight, bounds: bounds)
+                    powerUp: powerUp, flight: flight, bounds: bounds,
+                    repeatOffering: killedThisLevel.contains(powerUp))
         setWarble(true)
         // §6.4's Mutant Camel announces itself. It is the only carrier with a
         // voice, which is most of why it works as the nuke ship: you hear the
