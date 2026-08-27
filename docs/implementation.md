@@ -743,6 +743,78 @@ Not started.
 - Starfield is ~170 batched sprites in one draw call; `SKShapeNode` cannot batch
   and would have cost one draw call each
 
+## Potential optimizations
+
+Nothing here is a known problem. Measured 27 Aug 2026 on an M4 (10 cores) with
+Activity Monitor: **36–38% steady, 48% at the highest levels**, with no observed
+lag or dropped input at any point.
+
+That number is per *core*, not per machine, so it is 3.6–4.8% of an M4 — an
+unremarkable figure for a 60fps SpriteKit scene running a full-screen Core Image
+bloom pass. The rise at the late levels is expected load rather than drift: three
+marching ranks, more pieces venting embers, more rounds in flight. It was also
+almost certainly a **Debug** build, which pays for `-Onone` codegen, the
+diagnostics log, and the node-count tree walk — none of which ship.
+
+So this list is a place to start *if* CPU ever matters, roughly in order of
+expected return. None of it has been measured; the first two are the only ones
+worth trying before profiling.
+
+**Check the frame rate first.** `preferredFramesPerSecond` is never set on the
+`SKView`, and neither is anything else about its cadence. Press `L` and read the
+FPS line: if it says ~120 on a ProMotion display, the game is rendering twice as
+often as it needs to and capping it to 60 halves everything below. One line in
+`ContentView.GameSKViewRepresentable`, and it costs nothing to find out.
+
+**`bloomNode.shouldRasterize = true`** (`GameScene.setupBloomNode`). Rasterizing
+an `SKEffectNode` caches its rendered output and re-renders when the subtree
+changes. Every moving thing in the game is a child of this node, so the subtree
+changes every frame and the cache is never hit — it is likely paying for a
+texture round-trip per frame and getting nothing back. Apple's own guidance is to
+rasterize only when contents rarely change. Flipping it to `false` is visually
+identical, since rasterization is purely a caching strategy, so this is a safe
+experiment. It is a `CLAUDE.md`-documented decision, which is the only reason it
+has not been changed.
+
+**`ignoresSiblingOrder` is not set on the view.** With explicit `zPosition`
+everywhere — which this codebase has — setting it lets SpriteKit reorder draws
+within a z-layer to batch by texture. The pieces already share one atlas, so
+there is batching to win. Turn on `showsDrawCount` (it is wired to the sidebar)
+and see whether the count actually drops before keeping it.
+
+**`rearRankPieces` runs every frame on every level.** It is passed as an argument
+to `raiders?.update(...)`, so it is evaluated unconditionally: two array
+allocations (`allPieces(color:)` filters the piece dictionary, then a second
+`filter`) plus a string parse per piece, 60 times a second. It is only *used* on
+Levels 1–2, where `RaiderRules.waitsForThinnedRearRank` is true. Guarding the
+call — or passing a closure instead of a value — makes it free from Level 3 on.
+
+**The per-frame gutter syncs re-set text that has not changed.**
+`syncPowerUpAlley` and `syncRespawnWarnings` run every frame and do up to seven
+`childNode(withName:)` lookups between them, each a linear scan of `bloomNode`'s
+children. `syncPowerUpAlley` also assigns `SKLabelNode.text` every frame, which
+re-lays out glyphs. Only the countdown bar genuinely changes per frame; the
+labels change a handful of times a wave. Cheap to guard, and the same pattern
+would apply to any readout added later.
+
+**72 pre-created player laser nodes** (`LaserPool`), up from 6, each carrying a
+physics body. Parked bodies have `categoryBitMask = .none` so they are never
+contact-tested, but SpriteKit still walks the body list. The number is derived
+from the Gatling barrage's measured steady state, so it can only come down by
+changing the barrage — a lower fire rate or a shorter reach would both shrink it.
+
+**CIBloom is a full-screen Core Image pass every frame** at radius 6, intensity
+0.9. The alternative to the whole approach is pre-blurred additive sprite copies
+per glowing node, which trades GPU fill for draw calls and node count. That is a
+large change to the look as well as the cost, so it is a last resort rather than
+a tuning knob.
+
+**Already handled, for the record:** the starfield is ~170 sprites sharing one
+texture in a single draw call (`SKShapeNode` circles could not batch and cost one
+each); `Silhouette`'s flood fill is measured once per texture and cached;
+diagnostics publish at 4Hz rather than per frame; every laser, explosion, score
+pop, shatter and raider is pooled, so gameplay allocates nothing.
+
 ## Verification notes
 
 - `typecheck.sh` runs two passes (sources, tests) at Swift 6 strict concurrency,
