@@ -1,4 +1,4 @@
-iimport SwiftUI
+import SwiftUI
 import SpriteKit
 
 struct ContentView: View {
