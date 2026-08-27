@@ -8,9 +8,8 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 Ten levels play end to end, each with a mechanic of its own. What is left, in
 the order it is worth doing rather than the order §20 numbers it:
 
-1. **Raiders** (6.x) — the last unbuilt gameplay system, and the only remaining
-   source of pressure that is not the fleet. `raiderInterval` is already in the
-   level table, and every sprite is already in the atlas
+1. **Raiders** (6.x) — the Scout flies; the Galaxian Escort, the Flagship and
+   the special scouts are next. Every sprite is already in the atlas
 2. **Music and settings** (5), then polish and release (8, 9) — craft work that
    interacts with nothing and can happen whenever
 
@@ -28,7 +27,7 @@ checklist, not a running order.
 | 3.3 | Arcade layer: damage states & juice | ✅ |
 | 4 | Basic sound effects | 🟡 |
 | 5 | Background music + settings | ⬜ |
-| 6.1 | Raiders: scout & basic escort | ⬜ |
+| 6.1 | Raiders: scout & basic escort | 🟡 — Scout done, Escort next |
 | 6.2 | Raiders: flagship, variants, special scouts | ⬜ |
 | 7.1 | Level escalation: chess AI | ⬜ |
 | 7.2 | Level escalation: arcade mechanics | ✅ |
@@ -401,6 +400,28 @@ promise Level 4's regeneration has to be built to keep.
 - A regenerated pawn is worth 15 rather than 25 (§9), and `ChessEngine.forceAdd`
   keeps the engine's own board in step — without it the search moves other
   pieces straight through the new pawn, the same class of bug as `forcePlace`
+
+### Raiders (§6)
+
+The only things in the game that run on a real-time clock rather than the chess
+beat. Everything else — sweep, descent, fire, regeneration — is paced off the
+turn, so the board pulses together; a raider ignores that entirely.
+
+- **Raider Scout**, from Level 1: crosses at rank 4–5 on §21.1's `raiderInterval`
+  (20s, tightening to a 6s floor), fires one acid-green shot straight down, 1 HP,
+  100 points. Two on screen at once, and a spawn blocked by that cap stays due
+  rather than being skipped
+- **The first scout of a level does not fire** (§6's Galaga precedent) — the
+  player sees the attack pattern before being shot at. The height is fixed for
+  the level too, so a crossing teaches you where the next one will be
+- 300 px/s, derived rather than chosen: a crossing has to be short against the
+  interval or the scout is simply always there. It is 4.1s, which is 21% of
+  Level 1's interval and 69% of Level 10's, and fast enough that hitting one
+  needs leading
+- `RaiderController` is the architecture the rest of 6.x hangs off — pool, cap
+  and clock. §6.1's separate `Raiders.spriteatlas` is not built: the sprites are
+  already in `GCI.spriteatlas`, and a second atlas costs a texture binding for
+  nothing
 
 ### Playtest fixes
 

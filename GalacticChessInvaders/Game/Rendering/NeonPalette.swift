@@ -35,6 +35,11 @@ enum NeonPalette {
     /// General UI chrome — HUD text, menu highlights, headings.
     static let orange = SKColor(red: 1.00, green: 0.73, blue: 0.12, alpha: 1)
 
+    /// §12's `#7DFF4D` for the Raider Scout and its shot — acid green, chosen
+    /// to be unmistakable against both sides' fire. Cyan is the player's,
+    /// magenta and purple are Black's; a raider belongs to neither.
+    static let acidGreen = SKColor(red: 0.49, green: 1.00, blue: 0.30, alpha: 1)
+
     /// §23.9's standard transporter column: green-white. The defensive spawn
     /// uses `starBlueLight` instead, and the colour is the only thing telling
     /// the player whether the arriving pawn is random or shielding the king.

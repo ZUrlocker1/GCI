@@ -66,6 +66,7 @@ class GameScene: SKScene {
     private var materialising: Set<String> = []
     private var explosions: ExplosionPool?
     private var shatters: ShatterPool?
+    private var raiders: RaiderController?
 
     /// §24.1's shake, applied to `bloomNode` rather than to a camera.
     ///
@@ -675,6 +676,14 @@ class GameScene: SKScene {
         ship = player
 
         laserPool = LaserPool(parent: bloomNode)
+        let raiderController = RaiderController(parent: bloomNode, sceneWidth: size.width,
+                                                boardBottomY: Self.boardBottomY)
+        raiderController.onScoutFire = { [weak self] point in self?.fireScoutShot(from: point) }
+        raiderController.onExit = { [weak self] node, destroyed in
+            self?.resolveRaiderExit(node, destroyed: destroyed)
+        }
+        raiderController.reset(interval: levels.parameters.raiderInterval)
+        raiders = raiderController
         scorePops = ScorePopPool(parent: bloomNode)
         explosions = ExplosionPool(parent: bloomNode)
         shatters = ShatterPool(parent: bloomNode)
@@ -783,6 +792,7 @@ class GameScene: SKScene {
         shatters?.reset()
         regeneration.reset()
         materialising.removeAll()
+        raiders?.reset(interval: levels.parameters.raiderInterval)
         for side in [PieceColor.black, .white] { setRespawnWarning(side, on: false) }
         shake = .none
         shakeElapsed = 0
@@ -1625,6 +1635,7 @@ class GameScene: SKScene {
         // ignore the update-loop gate and have to be stopped explicitly.
         fleet?.setPaused(true)
         laserPool?.setPaused(true)
+        raiders?.setPaused(true)
         DiagnosticsLog.shared.log(.level, "PAUSED")
     }
 
@@ -1632,6 +1643,7 @@ class GameScene: SKScene {
         removePausedOverlay()
         fleet?.setPaused(false)
         laserPool?.setPaused(false)
+        raiders?.setPaused(false)
     }
 
     /// The PAUSED banner is two labels (title + hint) sharing one name, so this
@@ -2001,6 +2013,34 @@ class GameScene: SKScene {
         bloomNode.addChild(label)
     }
 
+    // MARK: - Raiders (§6)
+
+    /// §6: "one projectile straight down from its current x-position", acid
+    /// green, behaving like a black-piece shot — it damages white pieces and
+    /// kills the ship. It comes out of the enemy pool for exactly that reason.
+    private func fireScoutShot(from point: CGPoint) {
+        guard let laserPool, let laser = laserPool.nextAvailable(owner: .enemy) else { return }
+        // The scout is a child of `bloomNode` and so is the laser pool, so the
+        // point needs no conversion — it is already in the right space.
+        laser.fire(from: point, damage: ProjectileState.enemyShotDamage,
+                   speed: levels.parameters.projectileSpeed,
+                   travelDistance: point.y, tint: NeonPalette.acidGreen)
+        AudioManager.shared.play(.scoutLaserFire)
+        DiagnosticsLog.shared.log(.raider, "scout fires")
+    }
+
+    private func resolveRaiderExit(_ node: RaiderNode, destroyed: Bool) {
+        guard destroyed else { return }
+        let at = bloomPosition(of: node)
+        explosions?.burst(at: at, color: NeonPalette.acidGreen, scale: 1.4)
+        scorePops?.pop(ScoreManager.shared.scaled(RaiderRules.scoutPoints),
+                       at: at, color: NeonPalette.acidGreen)
+        ScoreManager.shared.addPoints(RaiderRules.scoutPoints, source: "scout")
+        refreshHUD()
+        AudioManager.shared.play(.raiderDestroyed)
+        DiagnosticsLog.shared.log(.raider, "scout destroyed")
+    }
+
     /// §7.2's promotion reward: one more laser in the air at a time.
     ///
     /// §7.2 also has the promotion destroy the nearest black piece with a
@@ -2299,6 +2339,15 @@ class GameScene: SKScene {
     private func resolvePlayerLaserHit(laser: LaserNode, node: SKNode, at point: CGPoint) {
         let impact = Impact(point: point, heading: laser.travelDirection)
         laser.deactivate()
+        if let raider = node as? RaiderNode {
+            // One HP (§6), so this always destroys it — but ask rather than
+            // assume, since the flagship arriving in 6.2 will not.
+            if !raider.takeHit() {
+                shatterGlass(impact, color: NeonPalette.acidGreen)
+                AudioManager.shared.play(.pieceHitLight)
+            }
+            return
+        }
         guard let pieceNode = node as? PieceNode else { return }
         // Before any damage is applied: the side the shot took off is the side
         // that stops being drawn, so the wedge has to know where it landed.
@@ -2553,6 +2602,12 @@ class GameScene: SKScene {
             advanceRegeneration(dt)
         }
         if stateMachine.currentState is PlayingState { syncRespawnWarnings() }
+        // Raiders run on their own clock, not the chess beat — that is the
+        // whole point of them (§6) — but they still hold during a banner or
+        // once the game is decided.
+        if !isBeatSuspended, stateMachine.currentState is PlayingState {
+            raiders?.update(deltaTime: dt, interval: levels.parameters.raiderInterval)
+        }
 
         if dt > 0, stateMachine.currentState is PlayingState {
             // Held still while a banner is up or the game is decided; §12.11
