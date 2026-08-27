@@ -30,7 +30,10 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 
 **Status:** playable end to end, with all ten levels, five power-ups and full arcade audio. One music
 track plays on every level and there is no settings screen yet — those are the main things still to
-come. Press `L` in game for the diagnostics panel if you want to look behind the scenes.
+come. Press `L` in game for the diagnostics panel if you want to look behind the scenes. Four more
+debug keys go with it: `A` plays White automatically, `P` grants the next power-up, `R` sends in the
+next raider, and `V` skips to the next level — handy for reaching Blitz without earning it. They are
+listed on the How To Play screen too.
 
 The original was prototyped in 1983 on an Apple II in TASC-compiled Applesoft BASIC. This version is
 written in Swift 6 and SpriteKit with no third-party dependencies, and was developed with Claude —
