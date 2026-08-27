@@ -85,7 +85,11 @@ enum PowerUp: String, CaseIterable {
     var duration: TimeInterval? {
         switch self {
         case .freeze:  return 3
-        case .gatling: return 15
+        // §13.2 says fifteen seconds and flags its own doubt about it. Seven,
+        // after playtesting: at fifteen the barrage did not so much reward the
+        // player as end the wave, and a power moment that lasts long enough to
+        // become the whole level stops being a moment.
+        case .gatling: return 7
         case .rapidFire, .shield, .nuke: return nil
         }
     }

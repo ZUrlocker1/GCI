@@ -64,7 +64,8 @@ enum SoundKey: String, CaseIterable {
     case raiderDestroyed        // threeTone1.ogg            (kenney-digital)
 
     // ── Special scouts ────────────────────────────────────────────────────────
-    case lightningScoutDestroyed  // zapThreeToneUp.ogg      (kenney-digital)
+    // §13.2's Lightning Scout is retired — its "+1 laser slot" is what the
+    // plain green scout now grants, so there is no ship left to make the sound.
     case iceScoutDestroyed        // — generate with jsfxr (reverberant whoosh)
     case iceEffectExpires         // — generate with jsfxr (iceScoutDestroyed reversed)
     case spreadScoutDestroyed     // phaseJump4.ogg          (kenney-digital)
@@ -165,7 +166,6 @@ extension SoundKey {
         case .flagshipFirstHit:         return "gdc-bundle/DSGNErie_NoiseBoxHit_36_InMotionAudio_SinisterTextures4.caf"
         case .raiderDestroyed:          return "kenney-digital/threeTone1.caf"
         // Special scouts
-        case .lightningScoutDestroyed:  return "kenney-digital/zapThreeToneUp.caf"
         case .iceScoutDestroyed:        return "generated/ice-scout-destroy.caf"
         case .iceEffectExpires:         return "generated/ice-scout-expire.caf"
         case .spreadScoutDestroyed:     return "kenney-digital/phaseJump4.caf"

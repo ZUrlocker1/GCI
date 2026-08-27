@@ -2352,7 +2352,20 @@ class GameScene: SKScene {
     /// the count wherever the last volley happened to strand it when the effect
     /// ended, and the player would come out of fifteen glorious seconds unable
     /// to fire. Barrage rounds are simply not the ship's rounds.
-    static let gatlingInterval: TimeInterval = 1.0 / 8
+    /// Four volleys a second, down from eight. Halving the rate halves the
+    /// rounds in the air without changing what a single volley looks like.
+    static let gatlingInterval: TimeInterval = 1.0 / 4
+
+    /// How far a barrage round travels before it burns out — six squares.
+    ///
+    /// Ordinary player fire crosses the whole board; this deliberately does
+    /// not. An uncapped barrage cleared everything from the ship's own rank to
+    /// the eighth regardless of where the fleet was, so collecting it simply
+    /// ended the wave. Six squares reaches the fleet once it has descended a
+    /// rank or two, which is most of a wave, and leaves the back ranks to be
+    /// earned the ordinary way — so the barrage clears the pieces that are
+    /// actually threatening the ship rather than the whole position.
+    static let gatlingReach: CGFloat = BoardNode.squareSize * 6
     /// Centre, ±8°, ±16°, as slopes — `LaserNode.fire` takes sideways travel per
     /// unit of forward travel, not an angle.
     ///
@@ -2378,7 +2391,7 @@ class GameScene: SKScene {
         gatlingCooldown = Self.gatlingInterval
 
         let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
-        let reach = size.height - origin.y
+        let reach = min(Self.gatlingReach, size.height - origin.y)
         for lean in Self.gatlingLeans {
             guard let laser = laserPool.nextAvailable(owner: .player) else { break }
             laser.onDeactivate = nil
@@ -2388,7 +2401,8 @@ class GameScene: SKScene {
             laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
                        speed: ProjectileState.playerLaserSpeed,
                        travelDistance: reach, lean: lean,
-                       tint: NeonPalette.orange, sparesFriendlies: true)
+                       tint: NeonPalette.orange, sparesFriendlies: true,
+                       fadesOut: true)
         }
         AudioManager.shared.play(.playerLaserFire)
     }
