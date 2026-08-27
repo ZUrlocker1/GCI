@@ -3630,6 +3630,15 @@ class GameScene: SKScene {
             return
         }
 
+        // M silences the music and brings it back, from anywhere. Ahead of the
+        // "any key continues" branches below on purpose — reaching for the
+        // volume should never also advance the game. Below name entry, though,
+        // so a player with an M in their name can still type it.
+        if event.charactersIgnoringModifiers?.lowercased() == "m" {
+            AudioManager.shared.toggleMusic()
+            return
+        }
+
         // Wave clear: any key moves on to the next level.
         if isAwaitingWaveContinue {
             isAwaitingWaveContinue = false
