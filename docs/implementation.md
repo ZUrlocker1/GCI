@@ -956,11 +956,19 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   predictable. It never backs past its own entry point, which would read as a
   second entrance.
 
-  **Only the Spread and Bomb carriers.** It was every carrier first, which spread
-  the surprise so thin it became the weather: a tax on the player's aim
-  everywhere rather than a moment anywhere. Tied to two ships it is a tell — the
-  fat orange disc and the honking camel are the ones that might not go where they
-  are pointed, and the other three stay clean to read
+  **Only the Spread and Bomb carriers**, and they earn it differently. It was
+  every carrier first, which spread the surprise so thin it became the weather: a
+  tax on the player's aim everywhere rather than a moment anywhere.
+
+  The Spread Scout flips a coin at 20%, because it appears once a level and there
+  is no second of its kind to play against. The camel does not gamble at all —
+  **the first never feints and the second always does.** Level 7 sends two, so
+  the first crossing teaches its path honestly, the player shoots it, and the one
+  arriving where they have just learned there is nothing more to expect turns
+  around. A surprise that is set up first is worth more than a random one.
+
+  Gated on what the player has actually brought down this level rather than on
+  roster position, so the `R` test key cannot fake the second camel
 - Carrier sizes are **measured, not uniform**. The plain scout is a wide 280×144
   disc and the specials are compact shapes on 200×200 squares, so scaling every
   sprite by canvas height gave the specials *half* the target area — the wrong
@@ -1061,17 +1069,11 @@ yet.
       right when a promotion granted it and is arguable now that a scout does.
       Carrying it over would make the green scout the most valuable raider in the
       game, which may be the point or may be too much
-- [ ] **Level 7 goes quiet after one kill.** The rule is now roster exhaustion,
-      not a flat one-kill: raids stop when the level has nothing left to offer,
-      and the roster loses one entry per kill. Levels 8, 9 and 10 solved
-      themselves when they gained second, third and fourth offers — they need
-      2, 3 and 4 kills, at a 15s or 12s gap rather than 22s.
-
-      That leaves **Level 7** as the only late level with a single offer, so a
-      quick Nuke kill leaves Crossfire silent for the rest of a long, hard wave.
-      Either give it a second entry — bomb then green is the obvious pairing, and
-      it would give the Nuke a companion the way Blitz does — or leave it, on the
-      grounds that Crossfire is busy enough without raiders. Not decided
+- [x] **The one-kill rule is settled.** It was never a flat one-kill: raids stop
+      when the level's roster is exhausted, and the roster loses one entry per
+      kill. Levels 8, 9 and 10 need 2, 3 and 4 kills. Level 7 was the last late
+      wave still silenced by one, and now sends two camels — 2 kills at a 15s
+      gap, and the player's first sight of a wave that keeps coming
 - [ ] **Level 11+.** Level 10 (Blitz) is deliberately the last wave and clearing
       it wins the run. A twelfth mechanic would need a reason to exist beyond
       "harder"
