@@ -68,7 +68,19 @@ enum RaiderRules {
     enum Crossing: Equatable {
         case overTheBoard
         case rank(Int)
+
+        /// What the player has to *learn*, as opposed to where exactly this
+        /// one flies. Rank 4 and rank 5 are the same problem, so seeing one
+        /// counts as having seen the other.
+        var pattern: Pattern {
+            switch self {
+            case .overTheBoard: return .overTheBoard
+            case .rank:         return .atPieceHeight
+            }
+        }
     }
+
+    enum Pattern: Hashable { case overTheBoard, atPieceHeight }
 
     static func crossing(for level: Int) -> Crossing {
         level <= aboveBoardThroughLevel ? .overTheBoard : .rank(Bool.random() ? 4 : 5)
@@ -95,9 +107,17 @@ enum RaiderRules {
     /// unreadable, and one fired as it leaves is unavoidable.
     static func fireFraction() -> CGFloat { .random(in: 0.25...0.7) }
 
-    /// §6's Galaga precedent: the first scout of a level crosses without
-    /// firing, so the player sees the attack pattern before being shot at.
-    static func fires(isFirstOfLevel: Bool) -> Bool { !isFirstOfLevel }
+    /// §6's Galaga precedent, tied to the *pattern* rather than to the level.
+    ///
+    /// §6 gives a free pass to the first scout of every level. That spends its
+    /// rationale — "the player sees the attack pattern before being shot at" —
+    /// the first time, and then keeps handing over a harmless raider forever:
+    /// by Level 8 the player has seen thirty of them and still gets one a wave.
+    ///
+    /// A pass is now owed only while a pattern is genuinely new, which happens
+    /// twice in a run: the first scout of the game, and the first one after it
+    /// drops to piece height at Level 4, where it really is a different problem.
+    static func fires(patternAlreadySeen: Bool) -> Bool { patternAlreadySeen }
 }
 
 /// The real-time spawn clock (§21.1's `raiderInterval`).
@@ -109,18 +129,18 @@ enum RaiderRules {
 struct RaiderSchedule {
 
     private var untilNext: TimeInterval = 0
-    /// §6: reset to false at level start, set once the first scout has made its
-    /// crossing. Scouts spawned while this is false do not fire.
-    private(set) var firstScoutDone = false
+    /// Whether this level's crossing pattern still owes the player a look at it.
+    private(set) var owesWarningPass = false
     /// The height every scout in this level crosses at.
     private(set) var crossing = RaiderRules.Crossing.overTheBoard
 
     /// Restarts the clock for a new level. The first raider is not due
     /// immediately: a wave should open on the chess position, not on a UFO.
-    mutating func reset(interval: TimeInterval, level: Int) {
+    mutating func reset(interval: TimeInterval, level: Int,
+                        patternsSeen: Set<RaiderRules.Pattern> = []) {
         untilNext = interval
-        firstScoutDone = false
         crossing = RaiderRules.crossing(for: level)
+        owesWarningPass = !patternsSeen.contains(crossing.pattern)
     }
 
     /// True when a raider is due. `onScreen` is the cap check, folded in here
@@ -138,10 +158,11 @@ struct RaiderSchedule {
         return true
     }
 
-    /// Whether the scout being spawned right now fires, and records that the
-    /// warning pass has been used.
+    /// Whether the scout being spawned right now fires, spending the warning
+    /// pass if one was owed.
     mutating func claimFiringPass() -> Bool {
-        defer { firstScoutDone = true }
-        return RaiderRules.fires(isFirstOfLevel: !firstScoutDone)
+        let fires = RaiderRules.fires(patternAlreadySeen: !owesWarningPass)
+        owesWarningPass = false
+        return fires
     }
 }

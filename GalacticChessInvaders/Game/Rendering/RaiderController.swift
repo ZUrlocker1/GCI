@@ -14,6 +14,9 @@ final class RaiderController {
     typealias ExitHandler = (RaiderNode, _ destroyed: Bool) -> Void
     /// A scout fired, from this point in scene coordinates.
     typealias FireHandler = (CGPoint) -> Void
+    /// A warning pass was spent on this pattern. The controller is rebuilt
+    /// every level, so the scene keeps the record for the whole run.
+    var onPatternPreviewed: ((RaiderRules.Pattern) -> Void)?
 
     var onExit: ExitHandler?
     var onScoutFire: FireHandler?
@@ -54,10 +57,12 @@ final class RaiderController {
            : AudioManager.shared.stop(.scoutEnterLoop)
     }
 
-    func reset(interval: TimeInterval, level: Int) {
+    func reset(interval: TimeInterval, level: Int,
+               patternsSeen: Set<RaiderRules.Pattern> = []) {
         scouts.forEach { $0.stop() }
         setWarble(false)
-        schedule.reset(interval: paced(interval), level: level)
+        schedule.reset(interval: paced(interval), level: level,
+                       patternsSeen: patternsSeen)
     }
 
     /// The level's interval, stretched if it would put a raider on screen more
@@ -110,7 +115,9 @@ final class RaiderController {
             y = boardBottomY + (CGFloat(rank) - 0.5) * BoardNode.squareSize
         }
 
+        let owed = schedule.owesWarningPass
         let firing = schedule.claimFiringPass()
+        if owed { onPatternPreviewed?(schedule.crossing.pattern) }
         scout.onFire = { [weak self] point in self?.onScoutFire?(point) }
         scout.onExit = { [weak self, weak scout] in
             guard let self, let scout else { return }

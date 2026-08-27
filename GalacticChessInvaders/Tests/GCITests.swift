@@ -3282,21 +3282,46 @@ final class PromotionRewardTests: XCTestCase {
 @MainActor
 final class RaiderTests: XCTestCase {
 
-    /// §6's Galaga precedent: the first scout of a level crosses without
-    /// firing, so the player sees the attack pattern before being shot at.
-    /// Every scout after it fires.
-    func testTheFirstScoutOfALevelHoldsItsFire() {
+    /// §6's Galaga precedent, tied to the pattern rather than to the level: a
+    /// free pass is owed only while the player has not seen that attack before.
+    ///
+    /// §6 gives one every level, which spends its own rationale the first time
+    /// and then keeps handing over a harmless raider forever.
+    func testAWarningPassIsOwedOncePerPattern() {
         var schedule = RaiderSchedule()
-        schedule.reset(interval: 20, level: 1)
-        XCTAssertFalse(schedule.firstScoutDone)
+        // Nothing seen yet: the first scout of the run crosses silent.
+        schedule.reset(interval: 20, level: 1, patternsSeen: [])
+        XCTAssertTrue(schedule.owesWarningPass)
         XCTAssertFalse(schedule.claimFiringPass(), "the first crosses silent")
-        XCTAssertTrue(schedule.firstScoutDone)
+        XCTAssertFalse(schedule.owesWarningPass)
         for _ in 0..<5 {
             XCTAssertTrue(schedule.claimFiringPass(), "and the rest all fire")
         }
-        // A new level gets its warning pass back.
-        schedule.reset(interval: 20, level: 1)
+
+        // A later level with the same pattern gets no second free pass.
+        schedule.reset(interval: 20, level: 2, patternsSeen: [.overTheBoard])
+        XCTAssertFalse(schedule.owesWarningPass)
+        XCTAssertTrue(schedule.claimFiringPass(), "already seen — it fires")
+
+        // Level 4 drops it to piece height, which is a new problem.
+        schedule.reset(interval: 20, level: 4, patternsSeen: [.overTheBoard])
+        XCTAssertTrue(schedule.owesWarningPass, "a genuinely new attack")
         XCTAssertFalse(schedule.claimFiringPass())
+
+        // And once both are known, nothing is ever free again.
+        for level in [1, 4, 7, 10] {
+            schedule.reset(interval: 20, level: level,
+                           patternsSeen: [.overTheBoard, .atPieceHeight])
+            XCTAssertTrue(schedule.claimFiringPass(), "level \(level)")
+        }
+    }
+
+    /// Rank 4 and rank 5 are the same thing to learn, so seeing one must not
+    /// leave the other still owing a pass.
+    func testTheTwoRankHeightsAreOnePattern() {
+        XCTAssertEqual(RaiderRules.Crossing.rank(4).pattern, .atPieceHeight)
+        XCTAssertEqual(RaiderRules.Crossing.rank(5).pattern, .atPieceHeight)
+        XCTAssertEqual(RaiderRules.Crossing.overTheBoard.pattern, .overTheBoard)
     }
 
     /// The clock is real time, not the chess beat, and the cap holds a spawn
