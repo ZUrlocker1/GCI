@@ -419,9 +419,14 @@ turn, so the board pulses together; a raider ignores that entirely.
   Levels 1–2 it does not arrive at all until the fleet's rear rank is down to
   half: the first one should be a reward for making progress, not one more
   thing to parse on an untouched board
-- 300 px/s, derived rather than chosen — a crossing has to be short against the
-  interval or the scout is simply always there. It is 4.1s, and fast enough that
-  hitting one needs leading
+- 220 px/s, and the constraint is the ship's 294: a scout the player cannot
+  outrun can only be hit by already standing under it. Closing at 74 px/s means
+  a missed pass is recoverable. The cost is frequency — a 5.6s crossing is 28%
+  of Level 1's interval but 94% of Level 10's, so by Blitz there is nearly
+  always one up
+- The warble is a genuine looping player, owned by the controller rather than
+  the node: it is an `AVAudioPlayer`, so `isPaused` and `removeAllActions` do
+  nothing to it and every path that should silence it says so explicitly
 - Solid grey-green hull under the outline. Every piece on the board is a hollow
   outline, which is right for pieces standing on squares; a ship passing in
   front of them has to occlude them or it reads as a decal

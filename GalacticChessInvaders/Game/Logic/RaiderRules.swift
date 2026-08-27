@@ -14,18 +14,19 @@ enum RaiderRules {
 
     // MARK: - Scout (§6, "Space Invaders mystery ship")
 
-    /// Points per second across the board. Not specified by the doc, and it has
-    /// to be derived from the interval rather than picked: at 175 px/s a
-    /// crossing took 7.1s against a 6s interval from Level 7, so a scout was on
-    /// screen 118% of the time — permanently, with the two-raider cap saturated
-    /// and the interval meaning nothing. At 300 it is 4.1s, which is 21% of
-    /// Level 1's interval and 69% of Level 10's: frequent late on, never
-    /// constant.
+    /// Points per second across the board.
     ///
-    /// It is also fast enough to need leading. A laser takes about half a
-    /// second to reach rank 4, in which the scout travels most of its own
-    /// length — which is what makes a mystery ship worth 100 points.
-    static let scoutSpeed: CGFloat = 300
+    /// The hard constraint is `SpaceshipNode.speed`: below it, and by enough to
+    /// matter. A scout the ship cannot outrun is a scout the player can only
+    /// hit by being in the right place already — seeing one and going after it
+    /// has to be possible. At 220 against the ship's 294 the player closes at
+    /// 74 px/s, so a missed pass is recoverable rather than final.
+    ///
+    /// It was 300 first, which is *faster than the ship*, and uncatchable by
+    /// construction. The cost of slowing it is frequency: a crossing is 5.6s,
+    /// which is 28% of Level 1's interval but 94% of Level 10's, so by Blitz
+    /// there is nearly always one on screen. Catchable is worth more than rare.
+    static let scoutSpeed: CGFloat = 220
     static let scoutHP = 1
     /// §9's table.
     static let scoutPoints = 100

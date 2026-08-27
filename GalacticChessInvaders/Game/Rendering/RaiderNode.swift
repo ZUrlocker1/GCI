@@ -15,10 +15,6 @@ final class RaiderNode: SKSpriteNode {
     /// passing bonus rather than part of the fleet.
     private static let displayHeight: CGFloat = 30
     private static let crossKey = "cross"
-    private static let woopKey = "woop"
-    /// A two-tone every 0.85s: the file is 0.72s, so they read as separate
-    /// woops rather than as a continuous tone.
-    private static let woopInterval: TimeInterval = 0.85
 
     /// Fired as the scout reaches its firing point, with its current position.
     var onFire: ((CGPoint) -> Void)?
@@ -106,11 +102,6 @@ final class RaiderNode: SKSpriteNode {
             .moveBy(x: 0, y: -4, duration: 0.5),
         ])))
 
-        // Woop. Woop. Woop.
-        run(.repeatForever(.sequence([
-            .run { AudioManager.shared.play(.scoutEnterLoop) },
-            .wait(forDuration: Self.woopInterval),
-        ])), withKey: Self.woopKey)
     }
 
     /// Takes a hit. Returns true if that destroyed it.
