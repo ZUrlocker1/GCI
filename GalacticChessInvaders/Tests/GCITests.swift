@@ -4866,26 +4866,30 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
     // measurement, and it is the whole point of the test: the readout was first
     // placed by eye against the turn timer's centre without accounting for its
     // caption 18pt above, and landed straight on top of the caption.
+    /// All four chess readouts sit `GameScene.gutterDrop` (8pt) lower than they
+    /// first did, to open a gap under the power-up block.
     private static let occupants: [(name: String, band: ClosedRange<CGFloat>)] = [
-        ("turn-timer caption",  180...188),
-        ("turn-timer digits",   155...177),
-        ("transient notice",    145.5...154.5),
-        ("status side label",   128...138),
-        ("status state label",  108.5...123.5),
+        ("turn-timer caption",  172...180),
+        ("turn-timer digits",   147...169),
+        ("transient notice",    137.5...146.5),
+        ("status side label",   120...130),
+        ("status state label",  100.5...115.5),
         ("the ship's lane",     42...82),
         ("the HUD",             664...700),
     ]
 
     private var alleyBands: [ClosedRange<CGFloat>] {
         let half = GameScene.powerUpAlleyFontSize / 2
-        return (0..<GameScene.powerUpAlleyLines).map { index in
+        let lines = (0..<GameScene.powerUpAlleyLines).map { index -> ClosedRange<CGFloat> in
             let y = GameScene.powerUpAlleyBottomY
                 + CGFloat(index) * GameScene.powerUpAlleyStep
             return (y - half)...(y + half)
         }
+        // The countdown bar is 3pt tall and hangs under the bottom line.
+        return lines + [(GameScene.powerUpBarY - 1.5)...(GameScene.powerUpBarY + 1.5)]
     }
 
-    /// No power-up line may touch anything else in the gutter.
+    /// No power-up line — nor the countdown bar — may touch anything else.
     func testTheReadoutTouchesNothingElseInTheGutter() {
         for (index, line) in alleyBands.enumerated() {
             for occupant in Self.occupants {
@@ -4901,6 +4905,14 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
         XCTAssertGreaterThan(GameScene.powerUpAlleyStep,
                              GameScene.powerUpAlleyFontSize,
                              "the step has to clear a whole line of type")
+    }
+
+    /// The bar hangs under the bottom line without touching it.
+    func testTheCountdownBarClearsTheLineAboveIt() {
+        let lineBottom = GameScene.powerUpAlleyBottomY - GameScene.powerUpAlleyFontSize / 2
+        XCTAssertLessThan(GameScene.powerUpBarY + 1.5, lineBottom)
+        XCTAssertGreaterThan(GameScene.powerUpBarY - 1.5, 180,
+                             "and clears the turn-timer caption below it")
     }
 
     /// Each line gets its own row, with room to breathe between them.
@@ -4922,7 +4934,7 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
         // Above the timer's caption there is nothing until the HUD.
         let highest = alleyBands.map(\.upperBound).max() ?? 0
         let lowest = alleyBands.map(\.lowerBound).min() ?? 0
-        XCTAssertGreaterThan(lowest, 188, "clear of the turn-timer caption")
+        XCTAssertGreaterThan(lowest, 180, "clear of the turn-timer caption")
         XCTAssertLessThan(highest, 664, "clear of the HUD")
     }
 }

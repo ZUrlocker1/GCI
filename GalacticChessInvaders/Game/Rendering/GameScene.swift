@@ -148,6 +148,12 @@ class GameScene: SKScene {
 
     // Board sits above the ship lane, below the HUD.
     private static let boardBottomY: CGFloat = 120
+    /// Everything in the left gutter from the turn timer down sits this much
+    /// lower than it used to, to open a gap between the chess readouts and the
+    /// power-up block above them. Applied as one constant rather than four
+    /// edited literals, because the four move together or the timer's digits
+    /// land on the transient notice.
+    private static let gutterDrop: CGFloat = 8
     private static let shipLaneY: CGFloat = 62
     private static let shipMargin: CGFloat = 30
     /// Time between detecting mate and showing the game-over screen. The mating
@@ -627,7 +633,7 @@ class GameScene: SKScene {
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         // Sits just under the AUTO MODE slot so both can show at once.
-        label.position = CGPoint(x: 112, y: Self.boardBottomY + 30)
+        label.position = CGPoint(x: 112, y: Self.boardBottomY + 30 - Self.gutterDrop)
         label.zPosition = 12
         bloomNode.addChild(label)
         label.run(.sequence([
@@ -770,13 +776,13 @@ class GameScene: SKScene {
         // Countdown lives in the gutter left of the board (§19), with the
         // check/mate banner directly beneath it.
         let timerDisplay = TurnTimerNode()
-        timerDisplay.position = CGPoint(x: 112, y: Self.boardBottomY + 46)
+        timerDisplay.position = CGPoint(x: 112, y: Self.boardBottomY + 46 - Self.gutterDrop)
         timerDisplay.isHidden = true
         bloomNode.addChild(timerDisplay)
         turnTimerNode = timerDisplay
 
         let status = GameStatusNode()
-        status.position = CGPoint(x: 112, y: Self.boardBottomY - 4)
+        status.position = CGPoint(x: 112, y: Self.boardBottomY - 4 - Self.gutterDrop)
         bloomNode.addChild(status)
         statusNode = status
 
@@ -786,7 +792,7 @@ class GameScene: SKScene {
         autoLabel.fontColor = NeonPalette.orange
         autoLabel.horizontalAlignmentMode = .center
         autoLabel.verticalAlignmentMode = .center
-        autoLabel.position = CGPoint(x: 112, y: Self.boardBottomY + 46)
+        autoLabel.position = CGPoint(x: 112, y: Self.boardBottomY + 46 - Self.gutterDrop)
         autoLabel.isHidden = !isAutoMode
         autoLabel.run(.repeatForever(.sequence([
             .fadeAlpha(to: 0.4, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
@@ -2116,6 +2122,12 @@ class GameScene: SKScene {
     static let powerUpAlleyBottomY: CGFloat = 196
     static let powerUpAlleyStep: CGFloat = 14      // 9pt of type, 5pt of air
     static let powerUpAlleyFontSize: CGFloat = 9
+    private static let powerUpBarName = "powerUpBar"
+    static let powerUpBarWidth: CGFloat = 84
+    /// The countdown bar sits under the bottom line, which is always the timed
+    /// effect — it is appended last, and the block stacks upward from a fixed
+    /// floor, so the bar never moves.
+    static let powerUpBarY = GameScene.powerUpAlleyBottomY - 7
     /// The stack the notice is currently showing, so it only flares when the
     /// number actually changes rather than on every frame.
     private var shownRapidFireStacks = 0
@@ -2136,19 +2148,25 @@ class GameScene: SKScene {
         let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
             - SpaceshipState.baseLaserCap
         if stacks > 0 {
-            lines.append(("\(PowerUp.rapidFire.label) \(shipState?.laserCap ?? 0)",
-                          NeonPalette.transporterGreen))
+            // The name only. The laser cap used to be appended, which turned a
+            // status into a readout the player had to parse — and the number was
+            // never actionable: what matters is that Rapid Fire is up, and the
+            // ship's own hull already brightens with each stack.
+            lines.append((PowerUp.rapidFire.label, NeonPalette.transporterGreen))
         }
         if powerUps.hasShield {
             lines.append((PowerUp.shield.label, PowerUp.shield.tint))
         }
-        if let active = powerUps.active, active.duration != nil {
-            // A number rather than §13.2's countdown bar. The bar needed a row
-            // of its own under the label and there is no row to spare; the
-            // number costs no layout and says more than a bar of the same width.
-            lines.append(("\(active.label) \(String(format: "%.1f", max(0, powerUps.remaining)))",
-                          active.tint))
+        var countdown: (progress: CGFloat, color: SKColor)?
+        if let active = powerUps.active, let duration = active.duration {
+            lines.append((active.label, active.tint))
+            // §13.2's countdown bar, back now that the block has moved somewhere
+            // with a row to spare. A bar rather than the seconds it briefly
+            // showed instead: a shrinking length is read without being read,
+            // which is what a status in the corner of the eye needs to be.
+            countdown = (CGFloat(max(0, powerUps.remaining) / duration), active.tint)
         }
+        syncPowerUpBar(countdown)
 
         for index in 0..<Self.powerUpAlleyLines {
             let label = alleyLabel(index)
@@ -2183,6 +2201,26 @@ class GameScene: SKScene {
         ]))
     }
 
+    /// The countdown bar under the bottom line, or nothing when no timed effect
+    /// is running.
+    private func syncPowerUpBar(_ countdown: (progress: CGFloat, color: SKColor)?) {
+        let existing = bloomNode.childNode(withName: Self.powerUpBarName) as? SKSpriteNode
+        guard let countdown else { return existing?.removeFromParent() ?? () }
+        let bar = existing ?? {
+            let fresh = SKSpriteNode(color: .white,
+                                     size: CGSize(width: Self.powerUpBarWidth, height: 3))
+            fresh.name = Self.powerUpBarName
+            fresh.anchorPoint = CGPoint(x: 0, y: 0.5)
+            fresh.position = CGPoint(x: 112 - Self.powerUpBarWidth / 2,
+                                     y: Self.powerUpBarY)
+            fresh.zPosition = 12
+            bloomNode.addChild(fresh)
+            return fresh
+        }()
+        bar.color = countdown.color
+        bar.size.width = max(0, Self.powerUpBarWidth * countdown.progress)
+    }
+
     /// Pooled, because these are rebuilt every frame and a readout is not worth
     /// a node churn.
     private func alleyLabel(_ index: Int) -> SKLabelNode {
@@ -2205,6 +2243,7 @@ class GameScene: SKScene {
             bloomNode.childNode(withName: "\(Self.powerUpLineName)\(index)")?
                 .removeFromParent()
         }
+        bloomNode.childNode(withName: Self.powerUpBarName)?.removeFromParent()
         shownRapidFireStacks = 0
     }
 
