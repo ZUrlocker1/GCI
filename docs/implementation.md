@@ -856,9 +856,17 @@ also where it is moving most steeply, and a vertical laser has to lead that.
   exhaust ports. Five new sprites would be better and are not in the atlas
 - Every active power-up shows as a standing line in the player's alley, **one
   line each** — two statuses sharing a line read as one status — with 5pt of air
-  between them. A timed effect carries its remaining seconds, which replaces
-  §13.2's countdown bar: the bar needed a row of its own beneath the label, and
-  the number says more in the same space.
+  between them, and §13.2's countdown bar under the bottom line for a timed
+  effect. No numbers: the laser cap was briefly appended to RAPID FIRE and the
+  seconds to a timed effect, and both turned a status into something the player
+  had to parse. Neither number was actionable — a shrinking bar is read without
+  being read, which is what a status in the corner of the eye has to be, and the
+  ship's own hull already brightens with each Rapid Fire stack.
+- The four chess readouts — turn timer, AUTO MODE, the transient notice and the
+  status line — all sit 8pt lower than they did, opening a gap between them and
+  the power-up block. Applied as one `gutterDrop` constant rather than four
+  edited literals, because they have to move together: at anything less than the
+  full drop the timer's 22pt digits land on the transient notice.
 
   The block sits **above** the turn timer, which took two attempts. The gutter is
   fuller than it looks: below the status line there are 27pt, and every gap
