@@ -432,6 +432,22 @@ promise Level 4's regeneration has to be built to keep.
 - A regenerated pawn is worth 15 rather than 25 (§9), and `ChessEngine.forceAdd`
   keeps the engine's own board in step — without it the search moves other
   pieces straight through the new pawn, the same class of bug as `forcePlace`
+- **A beam-in must be tracked by node, not by square.** A regenerated pawn is
+  given no physics body until it finishes arriving (§23.9), and the completion
+  used to verify it was still the registered piece by looking up *the square it
+  arrived on*. The fleet descends on the chess beat and a beam-in lasts 1.8
+  seconds, so a pawn regenerating shortly before a descent finishes one rank
+  lower than it started: the lookup found nothing, the guard rejected its own
+  completion, and `becomeSolid` never ran. The pawn spent the rest of the wave
+  visible, marching, firing — and completely immune to laser fire.
+
+  It is a nasty one to find because it is silent in every channel: no contact
+  fires, so there is no hit, no sound, no log line and nothing on screen that
+  looks wrong. A player reported it as "that pawn never takes damage". The scene
+  now audits hitboxes four times a second in debug builds — any piece with no
+  body and no beam-in running is repaired and logged as an error — and
+  `isMaterialising` is a flag on the node, so nothing about the arrival is keyed
+  by a square that can change underneath it
 
 ### Playtest fixes
 
