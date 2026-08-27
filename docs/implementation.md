@@ -408,8 +408,9 @@ beat. Everything else — sweep, descent, fire, regeneration — is paced off th
 turn, so the board pulses together; a raider ignores that entirely.
 
 - **Raider Scout** on §21.1's `raiderInterval` (20s, tightening to a 6s floor):
-  one acid-green shot straight down, 1 HP, 100 points, a two-tone woop every
-  0.85s while it crosses. Two on screen at once; a spawn blocked by the cap
+  one acid-green shot straight down at 125% of the fleet's speed — floored at
+  180, because §21.1 gives Level 1 a projectile speed of *zero* and a
+  zero-speed round never fires at all. 1 HP, 100 points, warbling as it goes. Two on screen at once; a spawn blocked by the cap
   stays due rather than being skipped
 - **Three crossing patterns**, each a real escalation and each fixed for the
   level so one sighting teaches the next: **over the board** (L1–3), above every

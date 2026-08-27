@@ -2103,7 +2103,7 @@ class GameScene: SKScene {
         // The scout is a child of `bloomNode` and so is the laser pool, so the
         // point needs no conversion — it is already in the right space.
         laser.fire(from: point, damage: ProjectileState.enemyShotDamage,
-                   speed: levels.parameters.projectileSpeed,
+                   speed: RaiderRules.shotSpeed(level: levels.parameters),
                    travelDistance: point.y, tint: NeonPalette.acidGreen)
         AudioManager.shared.play(.scoutLaserFire)
         DiagnosticsLog.shared.log(.raider, "scout fires")

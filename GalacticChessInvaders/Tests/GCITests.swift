@@ -3471,6 +3471,28 @@ final class RaiderTests: XCTestCase {
         XCTAssertEqual(RaiderRules.interval(forLevel: 30, crossing: crossing), 30)
     }
 
+    /// The scout's round is 25% up on the fleet's, and never zero.
+    ///
+    /// §21.1 gives Level 1 a projectile speed of zero because the fleet does
+    /// not fire there, so deriving the scout's shot from it produced a round of
+    /// speed zero — which `LaserNode.fire` refuses. The scout could not shoot
+    /// on the one level where §6 makes it the only repeatable incoming fire.
+    func testTheScoutsShotIsFasterThanTheFleetsAndNeverZero() {
+        XCTAssertEqual(LevelManager.parameters(for: 1).projectileSpeed, 0,
+                       "the premise: Level 1's fleet does not fire")
+        for level in 1...12 {
+            let params = LevelManager.parameters(for: level)
+            let shot = RaiderRules.shotSpeed(level: params)
+            XCTAssertGreaterThan(shot, 0, "level \(level): a zero-speed round never fires")
+            XCTAssertGreaterThan(shot, params.projectileSpeed,
+                                 "level \(level): faster than the fleet's")
+        }
+        // Where the fleet does fire, it is exactly the stated 25%.
+        let five = LevelManager.parameters(for: 5)
+        XCTAssertEqual(RaiderRules.shotSpeed(level: five),
+                       five.projectileSpeed * 1.25, accuracy: 0.01)
+    }
+
     func testScoutMatchesTheDesignTable() {
         XCTAssertEqual(RaiderRules.scoutHP, 1, "§6")
         XCTAssertEqual(RaiderRules.scoutPoints, 100, "§9")
