@@ -1047,6 +1047,24 @@ final class GameOverNodeTests: XCTestCase {
         }
     }
 
+    /// Pausing over a reveal banner must leave both readable. They were both
+    /// centred, so PAUSED landed exactly on BLACK KING DESTROYED — in the one
+    /// situation the player is most likely to pause in.
+    ///
+    /// Press Start 2P draws ~0.7em of cap height, and `.center` alignment
+    /// centres that box on the node's position.
+    func testPausedBannerClearsTheRevealBanner() {
+        func halfHeight(_ fontSize: CGFloat) -> CGFloat { fontSize * 0.7 / 2 }
+        let revealTop = halfHeight(30)                 // showEndBanner, at centre
+        let hintBottom = GameScene.pauseLift - GameScene.pauseHintGap - halfHeight(11)
+        XCTAssertGreaterThan(hintBottom - revealTop, 8,
+                             "the hint must clear the reveal banner, with room")
+        // And the title has to clear its own hint.
+        let titleBottom = GameScene.pauseLift - halfHeight(36)
+        let hintTop = GameScene.pauseLift - GameScene.pauseHintGap + halfHeight(11)
+        XCTAssertGreaterThan(titleBottom - hintTop, 4)
+    }
+
     /// Losing and winning must not both read "GAME OVER" — and clearing a wave
     /// must not read the same as finishing the run, or the ending is invisible.
     func testWinAndLossReadDifferently() {
