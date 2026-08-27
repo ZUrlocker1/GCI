@@ -6,6 +6,8 @@ final class HowToPlayNode: SKNode {
     private static let magenta = NeonPalette.magenta
     private static let orange  = NeonPalette.orange
     private static let font    = "PressStart2P-Regular"
+    /// The scene hit-tests for this to open the link.
+    static let musicLinkName = "musicLink"
 
     // Hardcoded layout coordinates derived from 960×700 scene with 36px HUD at top.
     // All y values are scene-space (0 = bottom, 700 = top).
@@ -131,6 +133,16 @@ final class HowToPlayNode: SKNode {
             keys.position = CGPoint(x: x, y: 127 - CGFloat(i) * 17)
             addChild(keys)
         }
+
+        // — CREDIT —
+        // Cyan and named, because the scene opens the URL when it is clicked;
+        // 9pt because the line with the domain on it is 396pt against a 410pt
+        // column and 10pt would run off the panel.
+        let music = label("Music created by Zudio · mzurlocker.com/zudio",
+                          9, Self.cyan.withAlphaComponent(0.8), .left)
+        music.name = Self.musicLinkName
+        music.position = CGPoint(x: x, y: 88)
+        addChild(music)
     }
 
     // MARK: - Footer
