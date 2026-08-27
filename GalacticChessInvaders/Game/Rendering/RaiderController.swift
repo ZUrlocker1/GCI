@@ -57,12 +57,27 @@ final class RaiderController {
            : AudioManager.shared.stop(.scoutEnterLoop)
     }
 
+    /// §13.1: the one special scout this level carries, and the crossing it
+    /// takes over. Nil once it has flown — a level offers the power-up once,
+    /// whether or not the player took it.
+    private var pendingSpecial: PowerUp?
+    private var crossingsThisLevel = 0
+    /// Set the moment a raider is shot down. `RaiderRules.endsAfterAKill`: the
+    /// level offers one power-up, and once it has been taken there is nothing
+    /// left for another crossing to give.
+    private var huntOver = false
+    private var endsAfterAKill = true
+
     func reset(interval: TimeInterval, level: Int,
                patternsSeen: Set<RaiderRules.Pattern> = []) {
         scouts.forEach { $0.stop() }
         setWarble(false)
         schedule.reset(interval: paced(interval), level: level,
                        patternsSeen: patternsSeen)
+        crossingsThisLevel = 0
+        huntOver = false
+        endsAfterAKill = RaiderRules.endsAfterAKill(level: level)
+        pendingSpecial = PowerUps.special(forLevel: level)
     }
 
     /// The level's interval, stretched if it would put a raider on screen more
@@ -90,6 +105,7 @@ final class RaiderController {
     /// for progress rather than as one more thing to parse on a full board.
     func update(deltaTime: TimeInterval, interval: TimeInterval,
                 level: Int, rearRankPieces: Int) {
+        guard !huntOver else { return }
         let blocked = RaiderRules.waitsForThinnedRearRank(level: level)
             && rearRankPieces > RaiderRules.crowdedRearRank
         guard schedule.tick(deltaTime, interval: paced(interval),
@@ -111,6 +127,15 @@ final class RaiderController {
             boardBottomY + (CGFloat($0) - 0.5) * BoardNode.squareSize
         } ?? boardBottomY + BoardNode.boardSize + 14
 
+        // §13.1: the special *replaces* a standard crossing rather than adding
+        // one, so it is chosen here, at the point a scout was going to launch
+        // anyway. Always the level's first crossing — see
+        // `PowerUps.specialCrossingIndex` for why.
+        let special: PowerUp? = crossingsThisLevel == PowerUps.specialCrossingIndex
+            ? pendingSpecial : nil
+        if special != nil { pendingSpecial = nil }
+        crossingsThisLevel += 1
+
         let owed = schedule.owesWarningPass
         let firing = schedule.claimFiringPass()
         if owed { onPatternPreviewed?(schedule.crossing.pattern) }
@@ -123,15 +148,22 @@ final class RaiderController {
             // `hp` is zero only when a shot took it; a completed crossing
             // leaves it at one. That is what tells the two endings apart
             // without a second flag to keep in step.
-            self.onExit?(scout, scout.hp <= 0)
+            let destroyed = scout.hp <= 0
+            if destroyed, self.endsAfterAKill {
+                self.huntOver = true
+                self.pendingSpecial = nil
+                DiagnosticsLog.shared.log(.raider, "raids over for this level")
+            }
+            self.onExit?(scout, destroyed)
         }
         scout.cross(fromX: fromX, toX: toX, y: y, firing: firing,
-                    weave: schedule.crossing.weaveAmplitude)
+                    weave: schedule.crossing.weaveAmplitude, powerUp: special)
         setWarble(true)
 
         let weaving = schedule.crossing.pattern == .weaving ? " weaving" : ""
+        let kind = special.map { "\($0.rawValue) scout" } ?? "scout"
         DiagnosticsLog.shared.log(.raider,
-            "scout\(weaving) \(firing ? "firing" : "warning") pass")
+            "\(kind)\(weaving) \(firing ? "firing" : "warning") pass")
     }
 
     func setPaused(_ paused: Bool) {

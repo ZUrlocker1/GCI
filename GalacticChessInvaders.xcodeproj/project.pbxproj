@@ -78,6 +78,7 @@
 		B13EF8E180EE359E19DA52C3 /* Juice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CD5A00CE701C3BACFB1BA /* Juice.swift */; };
 		B49EB30582FE0AF32698E494 /* ship-scout-spread.png in Resources */ = {isa = PBXBuildFile; fileRef = 239AF42D6C7F98EDE54DA101 /* ship-scout-spread.png */; };
 		B67633A0D0D31669ED91AEDA /* chess-b-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F648508E30268B3A5E5EDBB4 /* chess-b-bishop-d2.png */; };
+		B885AB3887AD2C690E35831D /* PowerUps.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF8136F818C7011E78335EF2 /* PowerUps.swift */; };
 		BF65DE6B34BC76D86E140734 /* StarfieldTiling.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */; };
 		BF7CA3BE908F94E71CFFE90F /* chess-b-rook.png in Resources */ = {isa = PBXBuildFile; fileRef = 05591BA327EAD55AD0F69F70 /* chess-b-rook.png */; };
 		C362A3476F3961B1753410C1 /* ship-scout.png in Resources */ = {isa = PBXBuildFile; fileRef = 2B2151BC597FBC6006588FF8 /* ship-scout.png */; };
@@ -225,6 +226,7 @@
 		E57357BA4A5F6DD20F96CD2F /* chess-b-knight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-knight.png"; sourceTree = "<group>"; };
 		E6BD913BC0D0EB5692D30572 /* HighScoreEntryNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighScoreEntryNode.swift; sourceTree = "<group>"; };
 		E959C91FFB1F35EA1BFAE1C7 /* chess-b-pawn-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-pawn-d1.png"; sourceTree = "<group>"; };
+		EF8136F818C7011E78335EF2 /* PowerUps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerUps.swift; sourceTree = "<group>"; };
 		F0BD4078DBA5A682106045F5 /* chess-b-rook-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-rook-d1.png"; sourceTree = "<group>"; };
 		F5CBD6F2CC804D886BB6FCB2 /* ChessRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessRules.swift; sourceTree = "<group>"; };
 		F648508E30268B3A5E5EDBB4 /* chess-b-bishop-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d2.png"; sourceTree = "<group>"; };
@@ -330,6 +332,7 @@
 				3958B7024DAADC15E5C557B9 /* LevelManager.swift */,
 				7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */,
 				D8C800709B09587557941485 /* Piece.swift */,
+				EF8136F818C7011E78335EF2 /* PowerUps.swift */,
 				7C0C0E6B6868C3ACDC346F91 /* ProjectileState.swift */,
 				D52D7B60FB53896B80DB403D /* RaiderRules.swift */,
 				4B58B64ABA847AF8604BB2BF /* Regeneration.swift */,
@@ -648,6 +651,7 @@
 				761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */,
 				10EC7FDA96FB9D9DF9ED8846 /* Piece.swift in Sources */,
 				7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */,
+				B885AB3887AD2C690E35831D /* PowerUps.swift in Sources */,
 				8045F16B75DCA226FEFC2848 /* ProjectileState.swift in Sources */,
 				FFE6E9C12B8CA47F1E4D2585 /* RaiderController.swift in Sources */,
 				251070EF8C182A0192C1AC5F /* RaiderNode.swift in Sources */,

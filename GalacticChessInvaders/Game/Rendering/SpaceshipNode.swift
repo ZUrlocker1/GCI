@@ -13,6 +13,7 @@ final class SpaceshipNode: SKSpriteNode {
     static let speed: CGFloat = 294
     private static let displayHeight: CGFloat = 40
     private static let rapidFireName = "rapidFire"
+    private static let shieldName = "shieldBubble"
 
     private(set) var isInvincible = false
     private(set) var hasShield = false
@@ -94,13 +95,55 @@ final class SpaceshipNode: SKSpriteNode {
         }
     }
 
+    /// §13.2's Repair Scout reward: "a cyan hexagonal outline softly pulses
+    /// around the ship while active".
+    ///
+    /// A hexagon rather than a circle on purpose — a circle around the ship
+    /// reads as the same ring the black king wears when its forcefield is up
+    /// (§10.1), and the two must never be confusable: one means the player is
+    /// protected, the other means the target is not shootable.
     func applyShield() {
+        guard !hasShield else { return }
         hasShield = true
-        // Phase 2+: add shield bubble child node
+
+        let radius = max(size.width, size.height) * 0.78
+        let path = CGMutablePath()
+        for index in 0..<6 {
+            let angle = CGFloat(index) * .pi / 3 + .pi / 6
+            let point = CGPoint(x: cos(angle) * radius, y: sin(angle) * radius * 0.82)
+            index == 0 ? path.move(to: point) : path.addLine(to: point)
+        }
+        path.closeSubpath()
+
+        let bubble = SKShapeNode(path: path)
+        bubble.name = Self.shieldName
+        bubble.strokeColor = NeonPalette.cyan
+        bubble.fillColor = NeonPalette.cyan.withAlphaComponent(0.06)
+        bubble.lineWidth = 1.6
+        bubble.glowWidth = 2.5
+        bubble.zPosition = 0.5
+        addChild(bubble)
+        bubble.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0.45, duration: 0.7),
+            .fadeAlpha(to: 1.0, duration: 0.7),
+        ])))
     }
 
     func removeShield(absorbed: Bool = false) {
         hasShield = false
-        // Phase 2+: shield-shatter particle burst if absorbed
+        guard let bubble = childNode(withName: Self.shieldName) else { return }
+        bubble.removeAllActions()
+        guard absorbed else { return bubble.removeFromParent() }
+        // §13.2: "the shield shatters in a particle burst". A hard flash to
+        // white and a fast expansion outward — the player has just survived
+        // something that would have killed them and should be in no doubt.
+        bubble.run(.sequence([
+            .group([.scale(to: 1.7, duration: 0.22), .fadeOut(withDuration: 0.22)]),
+            .removeFromParent(),
+        ]))
+        if let shape = bubble as? SKShapeNode {
+            shape.strokeColor = .white
+            shape.lineWidth = 3
+        }
     }
 }

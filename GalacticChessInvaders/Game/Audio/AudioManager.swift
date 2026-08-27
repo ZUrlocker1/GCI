@@ -112,6 +112,10 @@ final class AudioManager {
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
         player.volume = volume
+        // §13.2's Time Freeze slows the music to 0.5×. `rate` is ignored unless
+        // this is set *before* the player is prepared, so it has to be armed
+        // here whether or not a freeze ever happens.
+        player.enableRate = true
         player.prepareToPlay()
         player.play()
         musicPlayer = player
@@ -133,6 +137,12 @@ final class AudioManager {
 
     func setMusicVolume(_ volume: Float) {
         musicPlayer?.volume = volume
+    }
+
+    /// §13.2's Time Freeze: the music slows and deepens rather than a separate
+    /// sound announcing the effect. The one place `rate` is used deliberately.
+    func setMusicRate(_ rate: Float) {
+        musicPlayer?.rate = rate
     }
 
     /// Temporarily duck music during loud SFX, then restore.

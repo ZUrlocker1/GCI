@@ -61,10 +61,42 @@ enum RaiderRules {
     /// The gap is the thing the player feels, not the share of time a scout is
     /// up. Capping the share at 60% still left only 3.3 seconds of quiet
     /// between crossings at the tighter levels, which reads as a stream of
-    /// scouts rather than as a raid you get a breather from. Seven seconds is
-    /// longer than a crossing, so the sky is empty for more of the level than
-    /// it is occupied.
-    static let minimumGap: TimeInterval = 7
+    /// scouts rather than as a raid you get a breather from.
+    ///
+    /// Seven seconds fixed that and was still far too many raiders: a crossing
+    /// plus seven is a scout every 12.6s, which over a two-minute wave is nine
+    /// or ten of them — a constant presence rather than an event. A raider is
+    /// meant to *interrupt*. Twenty-two puts a crossing every ~28s, so a wave
+    /// sees a handful, and combined with `endsAfterAKill` most waves see two or
+    /// three before the player brings one down and the sky clears for good.
+    static let minimumGap: TimeInterval = 22
+
+    /// The first crossing of a level comes at a fraction of the full gap.
+    ///
+    /// At the full 28s the opening scout arrived so late that on a short wave
+    /// it never came at all — and from Level 2 the *first* scout is the one
+    /// carrying the level's power-up (`PowerUps.specialCrossingIndex`), so a
+    /// late first crossing is a power-up the player never gets offered. The
+    /// long gaps are what stop raiders becoming wallpaper; they are not needed
+    /// before the first one has been seen.
+    static let openingLead = 0.55
+
+    /// Whether shooting a raider down ends the level's raids.
+    ///
+    /// The level offers one power-up. Once the player has taken it, further
+    /// crossings are either a second power-up — which §13.1 rules out — or a
+    /// scout with nothing to give, which is just more traffic on a board that
+    /// is already the busiest thing in the game.
+    ///
+    /// Missing is what keeps them coming: a scout that gets across unharmed
+    /// leaves the offer open, and the next one carries it again. So the number
+    /// of raiders a wave sees is set by how long the player takes to hit one,
+    /// which is the right thing for it to depend on.
+    ///
+    /// Uniform for now. Levels 7-10 are the candidates for relaxing it — by
+    /// then the player is fast enough that one kill can arrive very early — but
+    /// that is a playtest question, not a guess.
+    static func endsAfterAKill(level: Int) -> Bool { true }
 
     /// The interval actually used: the level's, or one crossing plus the
     /// minimum gap, whichever is longer.
@@ -203,7 +235,7 @@ struct RaiderSchedule {
     /// immediately: a wave should open on the chess position, not on a UFO.
     mutating func reset(interval: TimeInterval, level: Int,
                         patternsSeen: Set<RaiderRules.Pattern> = []) {
-        untilNext = interval
+        untilNext = interval * RaiderRules.openingLead
         crossing = RaiderRules.crossing(for: level)
         owesWarningPass = !patternsSeen.contains(crossing.pattern)
     }
