@@ -779,6 +779,7 @@ class GameScene: SKScene {
         shatters?.reset()
         regeneration.reset()
         materialising.removeAll()
+        for side in [PieceColor.black, .white] { setRespawnWarning(side, on: false) }
         shake = .none
         shakeElapsed = 0
         freezeRemaining = 0
@@ -1938,6 +1939,48 @@ class GameScene: SKScene {
     /// gives no clue which piece is shooting at them.
     // MARK: - Regeneration (§23.9) and armored pawns (§10.1)
 
+    private static let respawnWarningName = "respawnWarning"
+
+    /// A flashing green warning while anything is about to materialise.
+    ///
+    /// Mirrors state rather than reacting to events, so two arrivals due at
+    /// once raise one warning and nothing can leave a stale one on screen. In
+    /// the left gutter, high for Black and low for White, so the side it
+    /// belongs to is readable without stopping to read it — White is unused
+    /// today and waiting for a power-up that brings a piece back.
+    private func syncRespawnWarnings() {
+        setRespawnWarning(.black, on: regeneration.isWarning)
+        // Nothing white regenerates yet. The ship's own one-second respawn is
+        // deliberately silent — it is short, it is centre-screen, and the
+        // player already knows they were hit. The white branch below stays in
+        // place for the white-piece respawns a power-up would bring, which is
+        // the only thing that would need it.
+    }
+
+    private func setRespawnWarning(_ side: PieceColor, on: Bool) {
+        let name = "\(Self.respawnWarningName)-\(side)"
+        let existing = bloomNode.childNode(withName: name)
+        guard on else { return existing?.removeFromParent() ?? () }
+        guard existing == nil else { return }
+
+        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        label.name = name
+        label.text = "RESPAWNING"
+        label.fontSize = 9
+        label.fontColor = NeonPalette.transporterGreen
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode = .center
+        label.zPosition = 12
+        label.position = CGPoint(
+            x: 112,
+            y: side == .black ? Self.boardBottomY + BoardNode.boardSize - 40
+                              : Self.boardBottomY - 40)
+        label.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0.2, duration: 0.28), .fadeAlpha(to: 1.0, duration: 0.28),
+        ])))
+        bloomNode.addChild(label)
+    }
+
     /// A black piece just died: queue its replacement, if the level still has a
     /// slot for one.
     private func scheduleRegeneration(after type: PieceType) {
@@ -1968,7 +2011,6 @@ class GameScene: SKScene {
         guard let square = Regeneration.spawnSquare(defensive: defensive,
                                                     kingSquare: king?.logicalSquare,
                                                     rearRank: fleet.rearRank,
-                                                    depth: levels.parameters.formationRanks,
                                                     occupied: occupied),
               let centre = boardNode.center(of: square) else {
             // The slot goes back: the cap counts pawns that arrive, not
@@ -2460,6 +2502,7 @@ class GameScene: SKScene {
         if !isBeatSuspended, stateMachine.currentState is PlayingState {
             advanceRegeneration(dt)
         }
+        if stateMachine.currentState is PlayingState { syncRespawnWarnings() }
 
         if dt > 0, stateMachine.currentState is PlayingState {
             // Held still while a banner is up or the game is decided; §12.11

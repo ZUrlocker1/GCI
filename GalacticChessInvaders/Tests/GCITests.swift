@@ -3240,10 +3240,11 @@ final class RegenerationTests: XCTestCase {
     func testRegenerationIsPacedOffTheBeat() {
         for n in 4...10 {
             let delay = Regeneration.delay(for: level(n))
-            XCTAssertEqual(delay, level(n).turnTimer * 1.5, accuracy: 0.001,
-                           "level \(n)")
-            XCTAssertGreaterThanOrEqual(delay, 4, "never instant")
-            XCTAssertLessThan(delay, 10, "and always shorter than the doc's flat 10s")
+            XCTAssertEqual(delay, level(n).turnTimer, accuracy: 0.001, "level \(n)")
+            XCTAssertGreaterThanOrEqual(delay, 2.5, "never instant")
+            // The beam-in is part of the wait and the player is watching it, so
+            // the whole kill-to-live time is what has to stay reasonable.
+            XCTAssertLessThan(delay + Regeneration.beamInDuration, 6.5, "level \(n)")
         }
         // Blitz's 3s clock pulls it in with everything else.
         XCTAssertLessThan(Regeneration.delay(for: level(10)),
@@ -3271,35 +3272,53 @@ final class RegenerationTests: XCTestCase {
                                                 rearRank: 7, occupied: taken), "h7")
     }
 
-    /// The rear rank is Black's own back rank at level start, and it is *full*
-    /// — while the player's early kills are pawns on the rank in front of it,
-    /// which never free a back-rank square. Searching only the rear rank meant
-    /// every regeneration in the opening found nowhere to go.
-    func testSpawnWalksForwardWhenTheRearRankIsFull() {
-        let intact = Set("abcdefgh".map { "\($0)8" })
-            .union("abcdefgh".map { "\($0)7" })
+    /// A regenerated pawn goes *in front of* the formation where it can, not
+    /// behind it. It is a body in the way — and an armored one cannot be shot
+    /// at all — so it is worth far more shielding the queen and king than
+    /// tucked behind them where the player was never going to reach.
+    func testSpawnPrefersTheForwardRanks() {
+        XCTAssertEqual(Regeneration.spawnDepthOrder, [1, 2, 0],
+                       "second rank, then third, then the back rank")
+        // Whole fleet intact bar one hole on each of ranks 8, 7 and 6.
+        var occupied = Set("abcdefgh".flatMap { f in [6, 7, 8].map { "\(f)\($0)" } })
+        occupied.remove("a8"); occupied.remove("c7"); occupied.remove("e6")
+        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                                rearRank: 8, occupied: occupied),
+                       "c7", "the second rank wins over the back one")
+        // Second rank full: the third, still ahead of the back rank.
+        occupied.insert("c7")
+        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                                rearRank: 8, occupied: occupied),
+                       "e6")
+        // Both forward ranks full: the back rank is the fallback, because
+        // somewhere beats nowhere.
+        occupied.insert("e6")
+        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
+                                                rearRank: 8, occupied: occupied),
+                       "a8")
+        // And nowhere at all is still nowhere.
+        occupied.insert("a8")
         XCTAssertNil(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
-                                              rearRank: 8, depth: 2, occupied: intact),
-                     "a wholly intact fleet genuinely has nowhere")
+                                              rearRank: 8, occupied: occupied))
+    }
 
-        // One pawn shot off rank 7: the arrival takes that square, not nothing.
-        var opened = intact
-        opened.remove("c7")
-        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
-                                                rearRank: 8, depth: 2, occupied: opened),
-                       "c7")
-        // The rear rank still wins when it has room.
-        opened.remove("a8")
-        XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
-                                                rearRank: 8, depth: 2, occupied: opened),
-                       "a8", "as far back as possible")
-        // And it never looks outside the marching band.
-        let onlyRank6Free = Set("abcdefgh".map { "\($0)8" })
-            .union("abcdefgh".map { "\($0)7" })
-        XCTAssertNil(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
-                                              rearRank: 8, depth: 2,
-                                              occupied: onlyRank6Free),
-                     "rank 6 is outside a 2-rank band")
+    /// The player gets warned before a pawn starts arriving — the shimmer is
+    /// the warning once it is arriving, but by then it is too late to clear the
+    /// square. One warning covers any number of simultaneous arrivals.
+    func testTheWarningWindowOpensBeforeTheBeamIn() {
+        XCTAssertGreaterThan(Regeneration.warningLead, 1)
+        XCTAssertLessThan(Regeneration.warningLead,
+                          Regeneration.delay(for: level(10)),
+                          "the lead has to fit inside the shortest delay")
+        var queue = RegenerationQueue()
+        let delay = Regeneration.delay(for: level(9))
+        queue.schedule(after: delay)
+        queue.schedule(after: delay)
+        XCTAssertFalse(queue.isWarning)
+        _ = queue.tick(delay - Regeneration.warningLead + 0.01)
+        XCTAssertTrue(queue.isWarning, "and two due at once is still one warning")
+        _ = queue.tick(Regeneration.warningLead)
+        XCTAssertFalse(queue.isWarning, "spent arrivals stop warning")
     }
 
     /// The cap counts pawns that arrive, not attempts that were made — a slot

@@ -18,15 +18,27 @@ enum Regeneration {
     /// kill which caused it has left the player's head, so the pawn reads as
     /// arriving from nowhere rather than as a consequence.
     ///
-    /// Paced off the beat instead, like the descent and the firing: one and a
-    /// half turns, so it lands on the turn after next. That is six seconds at
-    /// most levels and four and a half at Blitz, and it stays in proportion
-    /// when the clock changes rather than becoming a different mechanic.
+    /// Paced off the beat instead, like the descent and the firing — one turn,
+    /// so it lands on the next one. Four seconds at most levels, three at
+    /// Blitz, and it stays in proportion when the clock changes rather than
+    /// becoming a different mechanic.
+    ///
+    /// One turn rather than the one-and-a-half it started at, because the
+    /// 1.8s beam-in is *part of the wait* and the player is watching it: the
+    /// gap the delay has to cover is only the invisible part. Kill to live pawn
+    /// is now 5.8s at most levels and 4.8s at Blitz, against 7.8s and 6.3s.
     static func delay(for level: LevelParameters) -> TimeInterval {
-        max(4, level.turnTimer * 1.5)
+        max(2.5, level.turnTimer)
     }
     /// §23.9's transporter beam-in. The piece cannot be shot while it runs.
     static let beamInDuration: TimeInterval = 1.8
+
+    /// How long before the beam-in the player is warned it is coming.
+    ///
+    /// The shimmer is the warning once a piece is arriving, but arriving is
+    /// already too late to do anything about: this is the window in which a
+    /// player can still clear the square, or decide to be somewhere else.
+    static let warningLead: TimeInterval = 1.5
     /// §10.1: half of the pawns regenerated from Level 9 arrive armored.
     static let armoredShare = 0.5
     /// §10.1: armor lasts three chess turns, counted on White's moves.
@@ -53,29 +65,35 @@ enum Regeneration {
         kingDamage == .cracked || kingDamage == .critical
     }
 
+    /// Where the formation's ranks are tried, counting forward from its rear.
+    ///
+    /// The second and third ranks before the back one, which inverts §23.9's
+    /// "back of the fleet". A regenerated pawn is a body in the way — and at
+    /// Level 8 an armored one is a body that cannot be shot at all — so it is
+    /// worth far more standing *in front of* the queen and king than tucked
+    /// behind them where the player was never going to reach anyway. The back
+    /// rank is still the fallback, because somewhere beats nowhere.
+    static let spawnDepthOrder = [1, 2, 0]
+
     /// Where a regenerated pawn materialises.
     ///
-    /// Defensive: the square directly in front of the king, toward White.
-    /// Standard: §23.9's "back of the fleet at a random column position" — but
-    /// searching *forward* from the rear rank rather than only at it.
+    /// Defensive: the square directly in front of the king, toward White — the
+    /// strongest version of the same idea.
     ///
-    /// Only at it does not work. The fleet's rear rank is Black's own back rank
-    /// at level start and it is full, while the player's early kills are pawns
-    /// on the rank in front of it — so the back rank stays occupied through the
-    /// whole opening and every early regeneration found nowhere to go. Walking
-    /// forward one rank at a time keeps the arrival as far back as it can be
-    /// while making "nowhere at all" the genuinely rare case it should be.
-    ///
-    /// `depth` is how far forward to look, which is the marching band: a pawn
-    /// materialising outside the formation would not sweep with it.
+    /// Standard: the first free file in `spawnDepthOrder`. Searching only the
+    /// rear rank did not work at all: it is Black's own back rank at level
+    /// start and it is full, while the player's early kills are pawns on the
+    /// rank in front of it, so the back rank stayed occupied through the whole
+    /// opening and every early regeneration found nowhere to go.
     static func spawnSquare(defensive: Bool, kingSquare: String?,
-                            rearRank: Int, depth: Int = FleetRules.formationRanks,
-                            occupied: Set<String>) -> String? {
+                            rearRank: Int, occupied: Set<String>) -> String? {
         if defensive, let kingSquare, let shielded = squareAhead(of: kingSquare),
            !occupied.contains(shielded) {
             return shielded
         }
-        for rank in stride(from: rearRank, through: max(1, rearRank - depth + 1), by: -1) {
+        for depth in spawnDepthOrder {
+            let rank = rearRank - depth
+            guard rank >= 1 else { continue }
             let free = "abcdefgh".map { "\($0)\(rank)" }.filter { !occupied.contains($0) }
             if let square = free.randomElement() { return square }
         }
@@ -115,6 +133,13 @@ struct RegenerationQueue {
     private(set) var slotsUsed = 0
 
     var waiting: Int { pending.count }
+
+    /// True while any pending arrival is inside its warning window, so the
+    /// scene can simply mirror this rather than counting events. Idempotent by
+    /// construction: two arrivals due at once raise one warning, not two.
+    var isWarning: Bool {
+        pending.contains { $0.remaining <= Regeneration.warningLead }
+    }
 
     mutating func schedule(after delay: TimeInterval) {
         pending.append(Pending(remaining: delay))

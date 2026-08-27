@@ -334,11 +334,22 @@ One system: armor arrives *only* through regeneration, so Level 9's banner is a
 promise Level 4's regeneration has to be built to keep.
 
 - **Regeneration** from Level 4, after *any* black death — shot, captured by a
-  chess move, or crushed by the fleet: a pawn replaces it after 1.5
-  beats — 6s at most levels, 4.5s at Blitz — capped by the level's slot count
-  (2 at Level 4, rising to 9). §23.9's flat 10s was written before the beat
-  settled at 4, and two and a half turns is long enough that the kill which
-  caused it has left the player's head.
+  chess move, or crushed by the fleet: a pawn replaces it after one
+  beat — 4s at most levels, 3s at Blitz — capped by the level's slot count (2 at
+  Level 4, rising to 9). §23.9's flat 10s was written before the beat settled at
+  4; and the 1.8s beam-in is part of the wait, so the delay only has to cover
+  the invisible part. Kill to live pawn is 5.8s, or 4.8s at Blitz.
+- **A green RESPAWNING warning** flashes in the left gutter for the 1.5s before
+  a pawn starts arriving — high for Black, low for White. Once it is beaming in
+  the shimmer is the warning, but by then the square cannot be cleared. It
+  mirrors state rather than reacting to events, so simultaneous arrivals raise
+  one warning and none can be stranded. White is unused: nothing white
+  regenerates yet, and the ship's own respawn stays silent
+- **Arrivals go in front of the formation**, not behind it — second rank, then
+  third, then the back rank as a fallback. This inverts §23.9's "back of the
+  fleet": a regenerated pawn is a body in the way, and at Level 8 an armored one
+  cannot be shot at all, so it is worth far more shielding the queen and king
+  than tucked behind them where the player was never going to reach
   A slot is spent when the timer is *set*, not when it lands, or a two-slot wave
   could queue twenty at once. A level ending cancels everything pending, which
   falls out of the queue living on the scene rather than needing its own rule.
