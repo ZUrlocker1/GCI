@@ -1024,15 +1024,36 @@ FPS reported as swinging 75 → 19, node count **42,170**.
       250ms, which reads 75 off a short frame and 19 off a long one while the
       other fourteen were fine — the reason a smooth-feeling game reported wild
       swings. It averages every frame in the window now
+- [x] **Log messages are `@autoclosure`.** Every call site interpolates a string
+      and there are eighty of them, the hot ones firing on every shot and every
+      hit. As a plain `String` parameter that interpolation ran *before* the
+      call, so a release build — where logging is compiled off — paid to build
+      and immediately discard tens of strings a second
+- [x] **The log trims in chunks of 200, not one line at a time.**
+      `removeFirst()` on an Array shifts every remaining element, so once the log
+      hit its 2000-line cap each new line moved two thousand of them. That cost
+      appears only after the log fills, which is precisely the shape of "CPU
+      climbs for the first few minutes and then settles"
 - [x] **The diagnostics log flushes at 10Hz instead of per frame.** The text view
       is append-only, but it called `isScrolledToBottom`, which reads
       `textView.bounds` and makes TextKit lay out the whole document — at the
       2000-line cap, up to sixty times a second, at a cost that grew as the log
       filled. Identical text, six times fewer forced layouts
 
-**Watch `nodeCount`.** It should now settle at roughly the same number after
-every level instead of stepping up by ~488. That single figure is the direct test
-of whether the leak is gone.
+**Result:** node count now stays under 900 across a session — flat, so the leak
+is gone — and CPU went from 38→84% to 38→58%.
+
+Two caveats on any further measurement, because both make a Debug build on a
+laptop look worse than the thing that ships:
+
+- **It is a Debug build.** Swift at `-Onone` is several times slower than `-O`
+  on anything compute-heavy, and the whole diagnostics layer — the log, the
+  sidebar, the node-count tree walk, the hitbox audit — is `#if DEBUG` and does
+  not exist in Release. Switching the scheme's Run configuration to Release is
+  free and is the only number that means anything for shipping
+- **A laptop downclocks under sustained load.** The same work takes a larger
+  share of a slower core, so a percentage that drifts upward over ten minutes is
+  not necessarily more work
 
 ### Still open
 
