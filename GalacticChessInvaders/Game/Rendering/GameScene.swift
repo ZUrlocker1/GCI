@@ -918,8 +918,10 @@ class GameScene: SKScene {
                                      subtitle: announcement.subtitle,
                                      sceneSize: size)
         addChild(banner)
-        DiagnosticsLog.shared.log(.level,
-            "\(announcement.title) — \(announcement.subtitle)")
+        // The title alone. The subtitle is on screen at the same moment in
+        // 26-point type, so repeating it here only pushed the lines either side
+        // of it off the top of the panel.
+        DiagnosticsLog.shared.log(.level, announcement.title)
 
         // Keyed, so a second announcement replaces this timer instead of
         // running alongside it — otherwise the first one to elapse would clear
