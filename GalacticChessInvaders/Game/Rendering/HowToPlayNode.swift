@@ -63,16 +63,18 @@ final class HowToPlayNode: SKNode {
     private func buildHeader(w: CGFloat, h: CGFloat) {
         let hud = Self.hudBase
 
-        // The game's name leads; "HOW TO PLAY" is what the panel is, not what it
-        // is about. 30pt over 23 characters is 690pt against 880pt of usable
-        // width, so it fits with room either side.
-        let title = label("GALACTIC CHESS INVADERS", 30, Self.cyan, .center)
-        title.position = CGPoint(x: w / 2, y: hud - 36)
-        addChild(title)
-
+        // "HOW TO PLAY" is the eyebrow — it names the panel, so it comes first
+        // and stays small. The game's name carries the weight underneath.
         let sub = label("HOW TO PLAY", 14, Self.cyan.withAlphaComponent(0.65), .center)
-        sub.position = CGPoint(x: w / 2, y: hud - 68)
+        sub.position = CGPoint(x: w / 2, y: hud - 20)
         addChild(sub)
+
+        // 30pt over 23 characters is 690pt against 880pt of usable width, so it
+        // fits with room either side. Baselines 42pt apart, which clears the
+        // 30pt caps with 12pt of air between the two lines.
+        let title = label("GALACTIC CHESS INVADERS", 30, Self.cyan, .center)
+        title.position = CGPoint(x: w / 2, y: hud - 62)
+        addChild(title)
 
         addChild(hline(x: 40, y: hud - 84, w: w - 80))
     }
@@ -138,14 +140,37 @@ final class HowToPlayNode: SKNode {
         }
 
         // — CREDIT —
-        // Cyan and named, because the scene opens the URL when it is clicked;
-        // 9pt because the line with the domain on it is 396pt against a 410pt
-        // column and 10pt would run off the panel.
-        let music = label("Music created by Zudio · mzurlocker.com/zudio",
-                          9, Self.cyan.withAlphaComponent(0.8), .left)
-        music.name = Self.musicLinkName
-        music.position = CGPoint(x: x, y: 88)
-        addChild(music)
+        // Two labels rather than one, so only the word that is a link looks
+        // like one. The bare URL is gone; the underline is what says it is
+        // clickable. 10pt to match the debug lines above it.
+        //
+        // Press Start 2P advances exactly one em per character, so "Music
+        // created by" is 16 × 10 = 160pt and the word after it can be placed by
+        // arithmetic rather than by measuring a node — with the em of space
+        // between them counted rather than trusted to a trailing space.
+        let creditY: CGFloat = 88
+        let credit = label("Music created by", 10, SKColor.white.withAlphaComponent(0.6), .left)
+        credit.position = CGPoint(x: x, y: creditY)
+        addChild(credit)
+
+        let linkX = x + 170
+        let linkW: CGFloat = 50          // "Zudio", 5 characters at 10pt
+        let link = label("Zudio", 10, Self.cyan.withAlphaComponent(0.9), .left)
+        link.position = CGPoint(x: linkX, y: creditY)
+        addChild(link)
+
+        let underline = SKShapeNode(rect: CGRect(x: linkX, y: creditY - 3, width: linkW, height: 0.9))
+        underline.fillColor = Self.cyan.withAlphaComponent(0.9)
+        underline.strokeColor = .clear
+        addChild(underline)
+
+        // A padded, invisible target over the word — five characters at 10pt is
+        // a 50×10 click box otherwise. Added last so `atPoint` returns it.
+        let hit = SKShapeNode(rect: CGRect(x: linkX - 6, y: creditY - 8, width: linkW + 12, height: 24))
+        hit.fillColor = .clear
+        hit.strokeColor = .clear
+        hit.name = Self.musicLinkName
+        addChild(hit)
     }
 
     // MARK: - Footer
