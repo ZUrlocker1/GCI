@@ -5,8 +5,11 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 
 ✅ done · 🟡 partial · ⬜ not started
 
-Ten levels play end to end, each with a mechanic of its own. **Raiders (6.x)**
-and **music (5)** are the next unbuilt systems.
+Ten levels play end to end, each with a mechanic of its own. The nearest gap is
+**Phase 7.2**, which is two items short of complete: the fleet rush, and the
+pawn promotion power-up — the only thing in the whole design that makes the
+*player* stronger rather than the fleet. After that, **music and settings (5)**,
+then **raiders (6.x)**, which is the largest unbuilt system.
 
 | Phase | Title | |
 |---|---|---|
@@ -22,7 +25,7 @@ and **music (5)** are the next unbuilt systems.
 | 6.1 | Raiders: scout & basic escort | ⬜ |
 | 6.2 | Raiders: flagship, variants, special scouts | ⬜ |
 | 7.1 | Level escalation: chess AI | ⬜ |
-| 7.2 | Level escalation: arcade mechanics | 🟡 |
+| 7.2 | Level escalation: arcade mechanics | 🟡 — fleet rush and the promotion power-up outstanding |
 | 8 | Visual polish | ⬜ |
 | 9 | Mac hardening & App Store release | ⬜ |
 
@@ -152,7 +155,7 @@ Deviations
       shows, plus a brief SKIP LEVEL notice in the gutter
 - [x] Hidden Auto Mode — `A` toggles; White auto-moves on a 1s beat, labelled
       TEST MODE in the gutter and logged; ends automatically at mate/stalemate
-- [ ] Lives hardcoded to 3 *(blocked until 3.2 — nothing can kill the ship yet)*
+- [x] Lives read from `SpaceshipState`, including on a HUD built mid-run
 
 Window resize works: the scene is a fixed 960×700 with `.aspectFit`, so layout is
 resize-safe. At the 640×500 minimum a square renders ~43pt — under the 48pt

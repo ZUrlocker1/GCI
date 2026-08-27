@@ -450,8 +450,12 @@ class GameScene: SKScene {
         hud.zPosition = 10
         addChild(hud)
         hudNode = hud
-        hud.updateLives(3)
-        hud.updateLevel(1)
+        // The live values where they exist. Hardcoding 3 here was fine while
+        // nothing could kill the ship; now a HUD built mid-run — the sidebar
+        // toggling, a pause rebuild — would show three lives to a player on
+        // their last.
+        hud.updateLives(shipState?.lives ?? SpaceshipState.startingLives)
+        hud.updateLevel(levels.level)
     }
 
     func hideHUD() {
