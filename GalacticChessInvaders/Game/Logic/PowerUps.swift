@@ -1,7 +1,7 @@
 // PowerUps.swift
-// §13's power-ups, as pure rules. Which special scout a level carries, what it
-// is worth, how long its effect runs. No SpriteKit — `RaiderNode` reads this to
-// know what to look like and `GameScene` reads it to know what to do.
+// §13's power-ups, as pure rules: which raider a level sends, what it carries,
+// what it is worth, how long its effect runs. No SpriteKit — `RaiderNode` reads
+// this to know what to look like and `GameScene` reads it to know what to do.
 //
 // §13.1's delivery rule is the whole design: there is no pickup to collect and
 // nothing falls. Shooting the scout *is* the power-up. That keeps the reward on
@@ -10,130 +10,137 @@
 
 import Foundation
 
-/// The four special scouts. §13.2 specifies five; Lightning is retired —
-/// its effect was "+1 laser slot", which is now what the ordinary green scout
-/// grants, and two scouts handing over the same reward is one scout too many.
+/// The five power-ups, one per raider. §13.2 lists five special scouts plus a
+/// plain one that grants nothing; this collapses that to five carriers, because
+/// the plain green scout now carries Rapid Fire — §7.2's promotion reward, moved
+/// to a target the player can actually go and hunt.
+///
+/// The Lightning Scout is retired. Its effect was "+1 laser slot", which is what
+/// Rapid Fire is; two ships handing over the same reward is one ship too many.
 enum PowerUp: String, CaseIterable {
+    /// The green Raider Scout. +1 simultaneous laser, stacking.
+    case rapidFire
     /// §13.2 Repair Scout — absorbs the next lethal hit.
     case shield
     /// §13.2 Ice Scout — three seconds where only the player moves.
     case freeze
-    /// §13.2 Bomb Scout — a shockwave that clears every enemy round in flight.
-    case nuke
     /// §13.2 Spread Scout — fifteen seconds of uncapped five-way auto-fire.
     case gatling
-
-    /// The level the type first appears, and from then on it stays in the pool.
-    ///
-    /// Each debut lands one level *before* the wave its effect answers, so the
-    /// player meets a power-up while they can still experiment with it and
-    /// already knows what it does by the time they need it:
-    ///
-    /// | Debut | Learned on | Paid off on |
-    /// |---|---|---|
-    /// | 2 | FIRE POWER — the first level that shoots back | every level after |
-    /// | 4 | RELENTLESS — faster, harder fire | 5, TRIPLE THREAT |
-    /// | 6 | WIDE ORBIT — a wider sweep | 7, CROSSFIRE |
-    /// | 8 | ARMORED PAWNS | 9, KING ACTIVATED, and Blitz |
-    ///
-    /// Level 1 has no special at all. It is the level where the player is
-    /// learning two control schemes at once, and the ordinary green scout —
-    /// which now carries Rapid Fire — is the only reward it needs.
-    var debutLevel: Int {
-        switch self {
-        case .shield:  return 2
-        case .freeze:  return 4
-        case .nuke:    return 6
-        case .gatling: return 8
-        }
-    }
+    /// §13.2 Bomb Scout — a shockwave that clears every enemy round in flight.
+    case nuke
 
     /// §13.2's values. The Bomb is worth most because it is the only one that
-    /// takes two hits.
+    /// takes two hits; Rapid Fire pays §9's plain-scout rate.
     var points: Int {
         switch self {
-        case .shield:  return 100
-        case .freeze:  return 150
-        case .nuke:    return 250
-        case .gatling: return 150
+        case .rapidFire: return RaiderRules.scoutPoints
+        case .shield:    return 100
+        case .freeze:    return 150
+        case .gatling:   return 150
+        case .nuke:      return 250
         }
     }
 
     /// §13.2: the Bomb Scout flashes on the first hit, like the flagship.
-    var hp: Int { self == .nuke ? 2 : 1 }
+    var hp: Int { self == .nuke ? 2 : RaiderRules.scoutHP }
 
     /// Against `RaiderRules.scoutSpeed`. Only the Ice Scout differs — §13.2 has
     /// it "drifting deliberately", which also makes the freeze the easiest of
-    /// the four to actually collect, and it is the one whose value most depends
-    /// on collecting it at a moment of your choosing.
+    /// the five to collect, and it is the one whose value most depends on
+    /// collecting it at a moment of your choosing.
     var speedMultiplier: Double { self == .freeze ? 0.6 : 1.0 }
 
     /// §13.2's Spread Scout is "visibly wider" — a fat squat disc with five
     /// exhaust ports. The only one whose silhouette changes proportion.
     var widthMultiplier: Double { self == .gatling ? 1.4 : 1.0 }
 
-    /// §13.3's flash at the destroy position.
+    /// §13.3's flash at the destroy position, and the standing line in the
+    /// player's alley while the effect is up.
     var label: String {
         switch self {
-        case .shield:  return "SHIELD UP"
-        case .freeze:  return "TIME FREEZE"
-        case .nuke:    return "NUKE"
-        case .gatling: return "SPREAD FIRE"
+        case .rapidFire: return "RAPID FIRE"
+        case .shield:    return "SHIELD UP"
+        case .freeze:    return "TIME FREEZE"
+        case .gatling:   return "SPREAD FIRE"
+        case .nuke:      return "NUKE"
         }
     }
 
-    /// How long the effect runs, or nil for the two that are not on a clock —
-    /// the shield lasts until it is spent, the nuke is over in its own 0.4s.
+    /// The ship, for the diagnostics log. `rawValue` names the *effect*, which
+    /// makes for lines like "rapidFire scout destroyed" — the log should say
+    /// which ship the player just shot, in the same words §13.2 uses for it.
+    var shipName: String {
+        switch self {
+        case .rapidFire: return "green"
+        case .shield:    return "repair"
+        case .freeze:    return "ice"
+        case .gatling:   return "spread"
+        case .nuke:      return "bomb"
+        }
+    }
+
+    /// How long the effect runs, or nil for the three that are not on a clock —
+    /// Rapid Fire lasts the wave, the shield until it is spent, the nuke is over
+    /// in its own 0.4 seconds.
     var duration: TimeInterval? {
         switch self {
         case .freeze:  return 3
         case .gatling: return 15
-        case .shield, .nuke: return nil
+        case .rapidFire, .shield, .nuke: return nil
         }
     }
 
-    /// Whether two of these can be up at once. §13.1 allows only one *effect*
-    /// at a time, which is really a statement about the timed ones: a shield
-    /// sitting unspent is not competing with anything.
+    /// Whether two of these can be up at once. §13.1 allows only one *effect* at
+    /// a time, which is really a statement about the timed ones: a shield
+    /// sitting unspent is not competing with anything, and neither is a laser
+    /// cap that has already been raised.
     var isTimed: Bool { duration != nil }
 }
 
 @MainActor
 enum PowerUps {
 
-    /// Every type available on a level, newest last.
-    static func unlocked(atLevel level: Int) -> [PowerUp] {
-        PowerUp.allCases
-            .filter { level >= $0.debutLevel }
-            .sorted { $0.debutLevel < $1.debutLevel }
+    /// Which raiders a level sends, in the order they arrive.
+    ///
+    /// A fixed table rather than an unlocking pool. The pool version let any
+    /// unlocked type turn up on any later level, which meant a player could not
+    /// answer "what is coming?" by knowing where they were — and a raider whose
+    /// identity is a surprise is a raider you cannot prepare for, which is the
+    /// opposite of what a rare reward should be. Here every level has one
+    /// answer, the same answer every run:
+    ///
+    /// | Level | Roster |
+    /// |---|---|
+    /// | 1, 2 | green — Rapid Fire |
+    /// | 3 | repair — Shield |
+    /// | 4 | ice — Time Freeze |
+    /// | 5 | green — Rapid Fire again, because it is the generally useful one |
+    /// | 6 | spread — Gatling Barrage |
+    /// | 7 | bomb — Nuke |
+    /// | 8 | green, then spread |
+    /// | 9, 10 | green, then spread, then ice |
+    ///
+    /// One offer for most of the run, then two and three as the levels get hard
+    /// enough to need them. The order within a level is smallest first, so the
+    /// player banks Rapid Fire before the barrage arrives and has more shots to
+    /// go after it with.
+    static func roster(forLevel level: Int) -> [PowerUp] {
+        switch max(1, level) {
+        case 1, 2: return [.rapidFire]
+        case 3:    return [.shield]
+        case 4:    return [.freeze]
+        case 5:    return [.rapidFire]
+        case 6:    return [.gatling]
+        case 7:    return [.nuke]
+        case 8:    return [.rapidFire, .gatling]
+        default:   return [.rapidFire, .gatling, .freeze]
+        }
     }
 
-    /// The one special scout this level carries, or nil below Level 2.
-    ///
-    /// A debut level always shows its new type rather than drawing for it. A
-    /// random draw would let a type the banner has effectively just promised
-    /// sit out the whole wave, and the first sight of a power-up is the only
-    /// chance the game gets to teach it.
-    static func special(forLevel level: Int) -> PowerUp? {
-        let pool = unlocked(atLevel: level)
-        guard !pool.isEmpty else { return nil }
-        if let debuting = pool.last, debuting.debutLevel == level { return debuting }
-        return pool.randomElement()
+    /// The level a power-up is first offered, for the record and for tests.
+    static func firstLevel(offering powerUp: PowerUp) -> Int? {
+        (1...LevelManager.finalLevel).first { roster(forLevel: $0).contains(powerUp) }
     }
-
-    /// Which crossing of the level is the special one, counting from zero.
-    ///
-    /// The first, always — and it has to be the first, because raids end when
-    /// the player shoots a raider down (`RaiderRules.endsAfterAKill`). Put the
-    /// special second and a player who shoots the opening green scout, which is
-    /// the reflex the whole game trains, ends the raids having never seen the
-    /// power-up the level was built around.
-    ///
-    /// First also makes the fallback the right way round: the special is the
-    /// offer, and the ordinary green scouts that follow if it gets away are the
-    /// consolation — still worth shooting, because Rapid Fire is still a
-    /// reward, just not the one that was on the table.
-    static let specialCrossingIndex = 0
 }
 
 /// The one timed effect that can be running, and its clock.

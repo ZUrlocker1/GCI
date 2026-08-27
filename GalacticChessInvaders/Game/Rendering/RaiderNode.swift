@@ -1,12 +1,12 @@
 // RaiderNode.swift
-// A Raider Scout: §6's "Space Invaders mystery ship". Crosses the board at a
-// fixed height, fires once straight down, exits the far side. 1 HP.
+// A Raider Scout: §6's "Space Invaders mystery ship". Crosses the board, fires
+// once on the way, exits the far side.
 //
 // Also the special scouts of §13.2, which are the same crossing wearing a
-// different hull: shooting one grants a power-up. One node type rather than
-// four, because everything that differs between them — colour, silhouette,
-// size, speed, HP — is data on `PowerUp`, and everything that does not differ
-// is the whole flight path.
+// different hull and flying a different path. One node type rather than five,
+// because everything that differs between them — colour, silhouette, size,
+// speed, HP, flight — is data on `PowerUp` and `RaiderRules`, and everything
+// that does not differ is the crossing itself.
 //
 // Pooled like everything else that appears during play (§18): two nodes, which
 // is `RaiderRules.maxOnScreen`, shown and hidden rather than allocated.
@@ -18,10 +18,11 @@ import SpriteKit
 extension PowerUp {
     var tint: SKColor {
         switch self {
-        case .shield:  return NeonPalette.transporterGreen
-        case .freeze:  return NeonPalette.iceBlue
-        case .nuke:    return NeonPalette.crimson
-        case .gatling: return NeonPalette.orange
+        case .rapidFire: return NeonPalette.acidGreen
+        case .shield:    return NeonPalette.transporterGreen
+        case .freeze:    return NeonPalette.iceBlue
+        case .gatling:   return NeonPalette.orange
+        case .nuke:      return NeonPalette.crimson
         }
     }
 }
@@ -34,6 +35,7 @@ final class RaiderNode: SKSpriteNode {
     /// passing bonus rather than part of the fleet.
     private static let displayHeight: CGFloat = 30
     private static let crossKey = "cross"
+    private static let damagedKey = "damaged"
     private static let hullName = "hull"
     private static let markingsName = "markings"
 
@@ -47,10 +49,9 @@ final class RaiderNode: SKSpriteNode {
 
     private(set) var isCrossing = false
     private(set) var hp = 0
-    /// The power-up this scout is carrying, or nil for an ordinary green one.
-    /// Read by the scene when the scout dies, so it never has to remember which
-    /// of the two pooled nodes was the special.
-    private(set) var powerUp: PowerUp?
+    /// What this scout is carrying. Read by the scene when it dies, so the scene
+    /// never has to remember which of the pooled nodes was which.
+    private(set) var powerUp: PowerUp = .rapidFire
 
     /// The unscaled silhouette, kept so each launch resizes from the source
     /// rather than compounding the last crossing's multipliers.
@@ -62,7 +63,7 @@ final class RaiderNode: SKSpriteNode {
         let scale = source.height > 0 ? Self.displayHeight / source.height : 1
         baseSize = CGSize(width: source.width * scale, height: Self.displayHeight)
         super.init(texture: texture, color: NeonPalette.acidGreen, size: baseSize)
-        colorBlendFactor = 0.55      // acid green over the sprite's own outline
+        colorBlendFactor = 0.55      // the carrier's colour over the sprite's outline
         zPosition = 8                // over the fleet, under the HUD
         isHidden = true
 
@@ -79,69 +80,69 @@ final class RaiderNode: SKSpriteNode {
         hull.zPosition = -0.1        // under this node's outline, still over the board
         addChild(hull)
 
+        physicsBody = Self.body(for: size)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    private static func body(for size: CGSize) -> SKPhysicsBody {
         let body = SKPhysicsBody(rectangleOf: size)
         body.isDynamic = false
         body.categoryBitMask = PhysicsCategory.none   // parked; set on launch
         body.contactTestBitMask = PhysicsCategory.none
         body.collisionBitMask = PhysicsCategory.none
-        physicsBody = body
+        return body
     }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
 
     // MARK: - Appearance
 
     /// Dresses the node for the crossing it is about to make.
     ///
     /// Called once per launch rather than per frame, so rebuilding the physics
-    /// body here is cheap — and it has to be rebuilt, because a `SKPhysicsBody`
+    /// body here is cheap — and it has to be rebuilt, because an `SKPhysicsBody`
     /// does not follow its node's size. A Spread Scout that looked 40% wider
     /// but kept the standard hitbox would be a scout you could visibly miss
     /// while aiming dead centre.
-    private func dress(as powerUp: PowerUp?) {
+    private func dress(as powerUp: PowerUp) {
         self.powerUp = powerUp
-        let width = baseSize.width * CGFloat(powerUp?.widthMultiplier ?? 1)
+        let width = baseSize.width * CGFloat(powerUp.widthMultiplier)
         // The Spread Scout is "fat and squat" (§13.2), not merely wide: without
         // losing a little height it reads as a scout that has been stretched.
         let height = baseSize.height * (powerUp == .gatling ? 0.85 : 1)
         size = CGSize(width: width, height: height)
-        color = powerUp?.tint ?? NeonPalette.acidGreen
+        color = powerUp.tint
 
         if let hull = childNode(withName: Self.hullName) as? SKSpriteNode {
             hull.size = size
-            // A special's hull takes a wash of its own colour, so the ship
-            // reads as its type even where the outline is thin.
-            hull.color = powerUp.map { $0.tint.blended(toward: Self.hullGrey, by: 0.72) }
-                ?? Self.hullGrey
+            // A special's hull takes a wash of its own colour, so the ship reads
+            // as its type even where the outline is thin. The green scout keeps
+            // bare machinery — it is the baseline the others are read against.
+            hull.color = powerUp == .rapidFire
+                ? Self.hullGrey
+                : powerUp.tint.blended(toward: Self.hullGrey, by: 0.72)
         }
 
         childNode(withName: Self.markingsName)?.removeFromParent()
-        if let powerUp {
-            let markings = Self.markings(for: powerUp, in: size)
+        if let markings = Self.markings(for: powerUp, in: size) {
             markings.name = Self.markingsName
             markings.zPosition = 0.1     // over the outline
             addChild(markings)
         }
 
-        physicsBody = {
-            let body = SKPhysicsBody(rectangleOf: size)
-            body.isDynamic = false
-            body.categoryBitMask = PhysicsCategory.none
-            body.contactTestBitMask = PhysicsCategory.none
-            body.collisionBitMask = PhysicsCategory.none
-            return body
-        }()
+        physicsBody = Self.body(for: size)
     }
 
     /// §13.2's silhouette cues, drawn rather than authored as sprites.
     ///
-    /// Four new ship sprites would be the better answer and are not in the
+    /// Five new ship sprites would be the better answer and are not in the
     /// atlas. These are built from the shapes each description turns on — the
     /// hexagonal grid, the crystalline facets, the sea-mine spikes, the row of
     /// exhaust ports — which is enough to tell them apart in the half-second
-    /// the player has to decide whether to give chase.
-    private static func markings(for powerUp: PowerUp, in size: CGSize) -> SKNode {
+    /// the player has to decide whether to give chase. The green scout has none:
+    /// it is the plain disc every other reading is relative to.
+    private static func markings(for powerUp: PowerUp, in size: CGSize) -> SKNode? {
+        guard powerUp != .rapidFire else { return nil }
         let node = SKNode()
         let tint = powerUp.tint
         func add(_ path: CGPath, width: CGFloat = 1.1, fill: SKColor = .clear) {
@@ -156,6 +157,9 @@ final class RaiderNode: SKSpriteNode {
         let h = size.height, w = size.width
 
         switch powerUp {
+        case .rapidFire:
+            return nil
+
         case .shield:
             // "A visible hexagonal grid overlay — looks armoured."
             for dx in [-w * 0.20, 0, w * 0.20] {
@@ -218,21 +222,27 @@ final class RaiderNode: SKSpriteNode {
 
     // MARK: - Crossing
 
-    /// Sends the scout across from `from` to `to` at `y`, firing once on the
-    /// way if `firing`. `powerUp` dresses it as one of §13.2's specials.
+    /// Sends the scout across from `fromX` to `toX`, entering at `y` and flying
+    /// `flight`, firing once on the way if `firing`.
+    ///
+    /// `bounds` is the vertical strip a raider may occupy: below the HUD, and
+    /// above the player's own lane. Every descending path is clamped to it here
+    /// rather than at the point the path is chosen, so a lane change can never
+    /// silently fly a raider through the ship.
     func cross(fromX: CGFloat, toX: CGFloat, y: CGFloat, firing: Bool,
-               weave: CGFloat = 4, powerUp: PowerUp? = nil) {
+               powerUp: PowerUp, flight: RaiderRules.Flight,
+               bounds: ClosedRange<CGFloat>) {
         stop()
         dress(as: powerUp)
         position = CGPoint(x: fromX, y: y)
         isHidden = false
         isCrossing = true
-        hp = powerUp?.hp ?? RaiderRules.scoutHP
+        hp = powerUp.hp
         // Only a live scout is a target — the same rule the lasers learned the
         // hard way, where a parked body that kept its category was still hit.
         physicsBody?.categoryBitMask = PhysicsCategory.raider
 
-        let speed = RaiderRules.scoutSpeed * CGFloat(powerUp?.speedMultiplier ?? 1)
+        let speed = RaiderRules.scoutSpeed * CGFloat(powerUp.speedMultiplier)
         let distance = abs(toX - fromX)
         let duration = TimeInterval(distance / speed)
         let travel = SKAction.moveTo(x: toX, duration: duration)
@@ -256,23 +266,58 @@ final class RaiderNode: SKSpriteNode {
         run(.sequence(sequence + [.run { [weak self] in self?.finish() }]),
             withKey: Self.crossKey)
 
-        // The vertical half of the path, running alongside the crossing.
-        // A few points is a hover; a whole square is the weave later levels
-        // fly, which makes aiming a vertical problem as well as a horizontal
-        // one. Eased, so it turns rather than bouncing.
-        let half = weave > 8 ? RaiderRules.weaveHalfPeriod : 0.5
-        let up = SKAction.moveBy(x: 0, y: weave, duration: half)
-        let down = SKAction.moveBy(x: 0, y: -weave, duration: half)
-        up.timingMode = .easeInEaseOut
-        down.timingMode = .easeInEaseOut
-        // Starts half a swing in, so the scout enters mid-curve rather than
-        // always at the top of one.
-        run(.sequence([
-            .moveBy(x: 0, y: weave / 2, duration: half / 2),
-            .repeatForever(.sequence([down, down, up, up])),
-        ]))
+        flyVertically(flight, duration: duration, entryY: y, bounds: bounds)
+        if powerUp != .rapidFire { markingsPulse(powerUp) }
+    }
 
-        if let powerUp { markingsPulse(powerUp) }
+    /// The vertical half of the path, running alongside the crossing.
+    private func flyVertically(_ flight: RaiderRules.Flight, duration: TimeInterval,
+                               entryY: CGFloat, bounds: ClosedRange<CGFloat>) {
+        let below = max(0, entryY - bounds.lowerBound)
+        let above = max(0, bounds.upperBound - entryY)
+
+        switch flight {
+        case .straight:
+            // Nothing at all. The green scout flies a true horizontal line —
+            // it used to carry a 4pt hover to stop it reading as a rail, and
+            // now that every other raider has a path of its own, the flat line
+            // is what makes this one instantly identifiable.
+            break
+
+        case .weave(let amplitude, let halfPeriod):
+            let room = min(amplitude, below, above)
+            guard room > 1 else { break }
+            // Symmetric about the lane: a quarter-cycle up to the crest, then
+            // full swings of 2×room. The first version offset by half the
+            // amplitude and then swung a full amplitude twice in each
+            // direction, which put the centre of the weave half an amplitude
+            // *below* the lane it was supposed to be flying and made the low
+            // excursion three times the high one.
+            let crest = SKAction.moveBy(x: 0, y: room, duration: halfPeriod / 2)
+            let down = SKAction.moveBy(x: 0, y: -room * 2, duration: halfPeriod)
+            let up = SKAction.moveBy(x: 0, y: room * 2, duration: halfPeriod)
+            for action in [crest, down, up] { action.timingMode = .easeInEaseOut }
+            run(.sequence([crest, .repeatForever(.sequence([down, up]))]))
+
+        case .glide(let drop):
+            let room = min(drop, below)
+            guard room > 1 else { break }
+            // Eased in, so it leaves the top gently and arrives with pace —
+            // a linear glide reads as a ramp rather than as a descent.
+            let glide = SKAction.moveBy(x: 0, y: -room, duration: duration)
+            glide.timingMode = .easeIn
+            run(glide)
+
+        case .swoop(let depth):
+            let room = min(depth, below)
+            guard room > 1 else { break }
+            let low = RaiderRules.swoopLowPoint
+            let dive = SKAction.moveBy(x: 0, y: -room, duration: duration * low)
+            let climb = SKAction.moveBy(x: 0, y: room, duration: duration * (1 - low))
+            dive.timingMode = .easeIn      // gathers speed on the way down
+            climb.timingMode = .easeOut    // and hangs at the bottom of the arc
+            run(.sequence([dive, climb]))
+        }
     }
 
     /// A slow breath on the markings, so a special reads as *carrying* something
@@ -291,14 +336,13 @@ final class RaiderNode: SKSpriteNode {
         guard isCrossing else { return false }
         hp -= 1
         guard hp <= 0 else {
-            // §13.2's Bomb Scout "flashes red on first hit". The only scout
-            // that survives one, so this is the tell that it is worth a second.
-            removeAction(forKey: "damaged")
+            // §13.2's Bomb Scout "flashes red on first hit". The only scout that
+            // survives one, so this is the tell that it is worth a second.
+            removeAction(forKey: Self.damagedKey)
             run(.repeat(.sequence([
                 .colorize(with: .white, colorBlendFactor: 1, duration: 0.06),
-                .colorize(with: powerUp?.tint ?? NeonPalette.acidGreen,
-                          colorBlendFactor: 0.55, duration: 0.12),
-            ]), count: 2), withKey: "damaged")
+                .colorize(with: powerUp.tint, colorBlendFactor: 0.55, duration: 0.12),
+            ]), count: 2), withKey: Self.damagedKey)
             return false
         }
         finish()

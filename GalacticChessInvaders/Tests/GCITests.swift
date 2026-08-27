@@ -3283,136 +3283,250 @@ final class PromotionRewardTests: XCTestCase {
 @MainActor
 final class RaiderTests: XCTestCase {
 
-    /// §6's Galaga precedent, tied to the pattern rather than to the level: a
-    /// free pass is owed only while the player has not seen that attack before.
-    ///
-    /// §6 gives one every level, which spends its own rationale the first time
-    /// and then keeps handing over a harmless raider forever.
-    func testAWarningPassIsOwedOncePerPattern() {
-        var schedule = RaiderSchedule()
-        // Nothing seen yet: the first scout of the run crosses silent.
-        schedule.reset(interval: 20, level: 1, patternsSeen: [])
-        XCTAssertTrue(schedule.owesWarningPass)
-        XCTAssertFalse(schedule.claimFiringPass(), "the first crosses silent")
-        XCTAssertFalse(schedule.owesWarningPass)
-        for _ in 0..<5 {
-            XCTAssertTrue(schedule.claimFiringPass(), "and the rest all fire")
-        }
+    private static let boardBottom: CGFloat = 120
+    /// The strip a raider may occupy, matching `RaiderController.flightBounds`.
+    private static let bounds =
+        (boardBottom - 10)...(boardBottom + BoardNode.boardSize + 20)
 
-        // A later level with the same pattern gets no second free pass.
-        schedule.reset(interval: 20, level: 2, patternsSeen: [.overTheBoard])
-        XCTAssertFalse(schedule.owesWarningPass)
-        XCTAssertTrue(schedule.claimFiringPass(), "already seen — it fires")
-
-        // Level 4 drops it to piece height, which is a new problem.
-        schedule.reset(interval: 20, level: 4, patternsSeen: [.overTheBoard])
-        XCTAssertTrue(schedule.owesWarningPass, "a genuinely new attack")
-        XCTAssertFalse(schedule.claimFiringPass())
-
-        // And once both are known, nothing is ever free again.
-        for level in [1, 4, 7, 10] {
-            schedule.reset(interval: 20, level: level,
-                           patternsSeen: [.overTheBoard, .atPieceHeight])
-            XCTAssertTrue(schedule.claimFiringPass(), "level \(level)")
+    private func entryY(for powerUp: PowerUp) -> CGFloat {
+        switch RaiderRules.lane(for: powerUp) {
+        case .overTheBoard:
+            return Self.boardBottom + BoardNode.boardSize + 14
+        case .rank(let rank):
+            return Self.boardBottom + (CGFloat(rank) - 0.5) * BoardNode.squareSize
         }
     }
 
-    /// Rank 4 and rank 5 are the same thing to learn, so seeing one must not
-    /// leave the other still owing a pass. Weaving is not.
-    func testPatternsGroupByWhatHasToBeLearned() {
-        XCTAssertEqual(RaiderRules.Crossing.rank(4).pattern, .atPieceHeight)
-        XCTAssertEqual(RaiderRules.Crossing.rank(5).pattern, .atPieceHeight)
-        XCTAssertEqual(RaiderRules.Crossing.overTheBoard.pattern, .overTheBoard)
-        XCTAssertEqual(RaiderRules.Crossing.weaving(4).pattern, .weaving)
-        XCTAssertEqual(RaiderRules.Crossing.weaving(5).pattern, .weaving)
+    // MARK: - The level roster (§13.1)
+
+    /// Every level sends at least one raider, and the table is fixed rather
+    /// than drawn from a pool — a raider whose identity is a surprise is one
+    /// the player cannot prepare for.
+    func testEveryLevelHasAFixedRoster() {
+        for level in 1...LevelManager.finalLevel {
+            let roster = PowerUps.roster(forLevel: level)
+            XCTAssertFalse(roster.isEmpty, "level \(level)")
+            // Fixed: the same answer every time it is asked.
+            for _ in 0..<20 {
+                XCTAssertEqual(PowerUps.roster(forLevel: level), roster)
+            }
+        }
     }
 
-    /// Three patterns, each arriving once and staying: straight over the board,
-    /// straight at piece height, then weaving.
-    func testTheCrossingEscalatesInThreeSteps() {
-        for level in 1...RaiderRules.aboveBoardThroughLevel {
-            XCTAssertEqual(RaiderRules.crossing(for: level).pattern, .overTheBoard,
+    /// The ladder as designed. Spelled out rather than derived, because this
+    /// table *is* the design and a test that recomputed it would agree with
+    /// any mistake.
+    func testTheRosterMatchesTheDesignedLadder() {
+        let expected: [Int: [PowerUp]] = [
+            1: [.rapidFire], 2: [.rapidFire], 3: [.shield], 4: [.freeze],
+            5: [.rapidFire], 6: [.gatling], 7: [.nuke],
+            8: [.rapidFire, .gatling],
+            9: [.rapidFire, .gatling, .freeze],
+            10: [.rapidFire, .gatling, .freeze],
+        ]
+        for (level, roster) in expected {
+            XCTAssertEqual(PowerUps.roster(forLevel: level), roster, "level \(level)")
+        }
+    }
+
+    /// Most of the run offers one power-up; the hard levels offer two and three.
+    func testOffersGrowOnlyAtTheHardLevels() {
+        for level in 1...7 {
+            XCTAssertEqual(PowerUps.roster(forLevel: level).count, 1, "level \(level)")
+        }
+        XCTAssertEqual(PowerUps.roster(forLevel: 8).count, 2)
+        XCTAssertEqual(PowerUps.roster(forLevel: 9).count, 3)
+        XCTAssertEqual(PowerUps.roster(forLevel: 10).count, 3)
+    }
+
+    /// Every power-up is reachable, and each is introduced on its own level
+    /// before ever sharing one — a level that debuts a type and stacks it with
+    /// two others gives the player no chance to learn it.
+    func testEveryPowerUpIsIntroducedAloneAndIsReachable() {
+        for powerUp in PowerUp.allCases {
+            guard let first = PowerUps.firstLevel(offering: powerUp) else {
+                return XCTFail("\(powerUp) is never offered")
+            }
+            XCTAssertEqual(PowerUps.roster(forLevel: first), [powerUp],
+                           "\(powerUp) must debut on a level of its own")
+        }
+    }
+
+    /// Where a level offers several, the cheapest comes first: the player banks
+    /// Rapid Fire before the barrage arrives and has more shots to chase it.
+    func testMultiOfferLevelsLeadWithRapidFire() {
+        for level in 8...LevelManager.finalLevel {
+            XCTAssertEqual(PowerUps.roster(forLevel: level).first, .rapidFire,
                            "level \(level)")
         }
-        for level in (RaiderRules.aboveBoardThroughLevel + 1)..<RaiderRules.weavesFromLevel {
-            XCTAssertEqual(RaiderRules.crossing(for: level).pattern, .atPieceHeight,
-                           "level \(level)")
+    }
+
+    // MARK: - Flight paths (§6.3)
+
+    /// The green scout flies dead level, and it is the only one that does.
+    /// It is the raider the player meets first and chases most often, so it is
+    /// the one that should be a pure horizontal aiming problem.
+    func testOnlyTheGreenScoutFliesStraight() {
+        for _ in 0..<50 {
+            XCTAssertEqual(RaiderRules.flight(for: .rapidFire, headroom: 500),
+                           .straight)
         }
-        for level in RaiderRules.weavesFromLevel...12 {
-            XCTAssertEqual(RaiderRules.crossing(for: level).pattern, .weaving,
-                           "level \(level)")
+        for powerUp in PowerUp.allCases where powerUp != .rapidFire {
+            for _ in 0..<20 {
+                XCTAssertNotEqual(RaiderRules.flight(for: powerUp, headroom: 500),
+                                  .straight, "\(powerUp)")
+            }
         }
     }
 
-    /// A weave must stay on the board — a scout that swings off the top or into
-    /// the ship's lane is a different mechanic, not a harder crossing.
-    func testTheWeaveStaysWithinTheBoard() {
-        let boardBottom: CGFloat = 120
-        for rank in [4, 5] {
-            let centre = boardBottom + (CGFloat(rank) - 0.5) * BoardNode.squareSize
-            let high = centre + RaiderRules.weaveAmplitude
-            let low = centre - RaiderRules.weaveAmplitude
-            XCTAssertLessThan(high, boardBottom + BoardNode.boardSize,
-                              "rank \(rank) swings above the board")
-            XCTAssertGreaterThan(low, boardBottom + BoardNode.squareSize,
-                                 "rank \(rank) swings into the low ranks")
+    /// Each kind flies its own shape, so the path is a second cue for what is
+    /// on offer — and the two weavers are told apart by scale, not by luck.
+    func testEachKindFliesItsOwnShape() {
+        func shape(_ powerUp: PowerUp) -> String {
+            switch RaiderRules.flight(for: powerUp, headroom: 500) {
+            case .straight: return "straight"
+            case .weave:    return "weave"
+            case .glide:    return "glide"
+            case .swoop:    return "swoop"
+            }
         }
-        // And it is a real weave, not a wobble.
-        XCTAssertGreaterThan(RaiderRules.weaveAmplitude, BoardNode.squareSize / 2)
+        XCTAssertEqual(shape(.rapidFire), "straight")
+        XCTAssertEqual(shape(.freeze), "weave")
+        XCTAssertEqual(shape(.gatling), "weave")
+        XCTAssertEqual(shape(.shield), "glide")
+        XCTAssertEqual(shape(.nuke), "swoop")
+
+        // The two weaves must not be confusable. Compared at the extremes, so
+        // no draw of one can pass for a draw of the other.
+        var iceMax: CGFloat = 0, spreadMin: CGFloat = .greatestFiniteMagnitude
+        var icePeriodMax: TimeInterval = 0, spreadPeriodMin = TimeInterval.infinity
+        for _ in 0..<200 {
+            if case .weave(let a, let p) = RaiderRules.flight(for: .freeze, headroom: 500) {
+                iceMax = max(iceMax, a); icePeriodMax = max(icePeriodMax, p)
+            }
+            if case .weave(let a, let p) = RaiderRules.flight(for: .gatling, headroom: 500) {
+                spreadMin = min(spreadMin, a); spreadPeriodMin = min(spreadPeriodMin, p)
+            }
+        }
+        XCTAssertGreaterThan(spreadMin, iceMax, "the spread always sweeps wider")
+        XCTAssertGreaterThan(spreadPeriodMin, icePeriodMax, "and always slower")
     }
+
+    /// A path must stay in the strip between the HUD and the player's own lane.
+    /// A raider that swings off the top or into the ship is a different
+    /// mechanic, not a harder crossing.
+    func testEveryFlightStaysInsideTheStrip() {
+        for powerUp in PowerUp.allCases {
+            let y = entryY(for: powerUp)
+            XCTAssertTrue(Self.bounds.contains(y), "\(powerUp) enters out of bounds")
+            let headroom = y - Self.bounds.lowerBound
+            for _ in 0..<200 {
+                switch RaiderRules.flight(for: powerUp, headroom: headroom) {
+                case .straight:
+                    break
+                case .weave(let amplitude, _):
+                    // The node clamps the swing to the room available either
+                    // side; this checks the *lane* leaves enough room for the
+                    // weave it was given, so the clamp is never what saves it.
+                    XCTAssertLessThanOrEqual(y + amplitude, Self.bounds.upperBound,
+                                             "\(powerUp) weaves above the strip")
+                    XCTAssertGreaterThanOrEqual(y - amplitude, Self.bounds.lowerBound,
+                                                "\(powerUp) weaves below the strip")
+                case .glide(let drop):
+                    XCTAssertGreaterThanOrEqual(y - drop, Self.bounds.lowerBound,
+                                                "\(powerUp) glides below the strip")
+                case .swoop(let depth):
+                    XCTAssertGreaterThanOrEqual(y - depth, Self.bounds.lowerBound,
+                                                "\(powerUp) dives below the strip")
+                }
+            }
+        }
+    }
+
+    /// The two descending paths have to actually get down to the player, or
+    /// "coming towards you" is a claim the geometry does not support.
+    func testTheDescendingPathsReachTheLowRanks() {
+        let deepest = { (powerUp: PowerUp) -> CGFloat in
+            let y = self.entryY(for: powerUp)
+            let headroom = y - Self.bounds.lowerBound
+            var lowest = y
+            for _ in 0..<200 {
+                switch RaiderRules.flight(for: powerUp, headroom: headroom) {
+                case .glide(let drop): lowest = min(lowest, y - drop)
+                case .swoop(let depth): lowest = min(lowest, y - depth)
+                default: break
+                }
+            }
+            return lowest
+        }
+        // Into the bottom two ranks of the board at the steep end of the range.
+        let secondRank = Self.boardBottom + BoardNode.squareSize * 2
+        XCTAssertLessThan(deepest(.shield), secondRank, "the shield never comes down")
+        XCTAssertLessThan(deepest(.nuke), secondRank, "the bomb never dives")
+    }
+
+    /// The dive bottoms out before halfway, so the climb out is the longer half
+    /// and the raider hangs at its lowest point rather than flicking through it.
+    func testTheSwoopBottomsOutBeforeHalfway() {
+        XCTAssertLessThan(RaiderRules.swoopLowPoint, 0.5)
+        XCTAssertGreaterThan(RaiderRules.swoopLowPoint, 0.3)
+    }
+
+    // MARK: - The free first pass (§6.3)
+
+    /// A pass is owed once per *ship*, per run. §6 gives one every level, which
+    /// spends its own rationale the first time and then keeps handing over a
+    /// harmless raider forever.
+    func testAPassIsOwedOncePerKindPerRun() {
+        XCTAssertFalse(RaiderRules.fires(kindAlreadySeen: false),
+                       "a ship never seen before makes its pass without firing")
+        XCTAssertTrue(RaiderRules.fires(kindAlreadySeen: true),
+                      "and every one after it fires")
+    }
+
+    /// Five ships, so five free passes in a run — one per new silhouette,
+    /// which is the case §6's rule was actually written for.
+    func testAllFivePassesAreEarnableAndNoMore() {
+        var seen: Set<PowerUp> = []
+        var free = 0
+        for level in 1...LevelManager.finalLevel {
+            for kind in PowerUps.roster(forLevel: level) where !seen.contains(kind) {
+                seen.insert(kind)
+                free += 1
+            }
+        }
+        XCTAssertEqual(free, PowerUp.allCases.count)
+        XCTAssertEqual(seen, Set(PowerUp.allCases))
+    }
+
+    // MARK: - Cadence
 
     /// The clock is real time, not the chess beat, and the cap holds a spawn
     /// rather than skipping it — a blocked raider is late, not cancelled.
     func testTheSpawnClockWaitsRatherThanSkipping() {
         var schedule = RaiderSchedule()
-        schedule.reset(interval: 20, level: 7)
-        XCTAssertFalse(schedule.tick(19, interval: 20, onScreen: 0), "not yet")
+        schedule.reset(interval: 20)
+        let lead = 20 * RaiderRules.openingLead
+        XCTAssertFalse(schedule.tick(lead - 1, interval: 20, onScreen: 0), "not yet")
         XCTAssertTrue(schedule.tick(2, interval: 20, onScreen: 0), "due")
         XCTAssertFalse(schedule.tick(19, interval: 20, onScreen: 0))
 
-        // Due, but the board is full: it stays due.
+        // Due, but one is already crossing: it stays due.
         XCTAssertFalse(schedule.tick(2, interval: 20,
-                                     onScreen: RaiderRules.maxOnScreen),
+                                     onScreen: RaiderRules.maxScoutsOnScreen),
                        "capped, so it holds")
         XCTAssertFalse(schedule.tick(0, interval: 20,
-                                     onScreen: RaiderRules.maxOnScreen))
-        XCTAssertTrue(schedule.tick(0, interval: 20, onScreen: 1),
+                                     onScreen: RaiderRules.maxScoutsOnScreen))
+        XCTAssertTrue(schedule.tick(0, interval: 20, onScreen: 0),
                       "and launches the moment there is room")
     }
 
-    /// Early levels fly it over the board, where the mystery ship belongs;
-    /// later ones drop it into §6's rank 4–5, which is a real escalation
-    /// because down there it is firing into traffic.
-    func testTheScoutFliesHighEarlyAndDropsLater() {
-        for level in 1...RaiderRules.aboveBoardThroughLevel {
-            XCTAssertEqual(RaiderRules.crossing(for: level), .overTheBoard,
-                           "level \(level)")
-        }
-        for level in (RaiderRules.aboveBoardThroughLevel + 1)...10 {
-            guard case .rank(let rank) = RaiderRules.crossing(for: level) else {
-                return XCTFail("level \(level) should cross at a rank")
-            }
-            XCTAssertTrue([4, 5].contains(rank), "§6: rank 4-5")
-        }
-    }
-
-    /// The height is held for the whole level, so a player who has seen one
-    /// crossing knows where the next will be.
-    func testTheCrossingHeightIsFixedForTheLevel() {
-        var schedule = RaiderSchedule()
-        schedule.reset(interval: 20, level: 7)
-        let crossing = schedule.crossing
-        for _ in 0..<10 {
-            _ = schedule.tick(1, interval: 20, onScreen: 0)
-            XCTAssertEqual(schedule.crossing, crossing, "held for the level")
-        }
-        // Only a new level rerolls it, and both heights stay reachable.
-        var seen = Set<Int>()
-        for _ in 0..<60 {
-            schedule.reset(interval: 20, level: 7)
-            if case .rank(let r) = schedule.crossing { seen.insert(r) }
-        }
-        XCTAssertEqual(seen, [4, 5])
+    /// One scout at a time. Two of the same ship on screen is the same offer
+    /// twice, and it closes the gap that stops raiders becoming wallpaper.
+    func testOnlyOneScoutCrossesAtATime() {
+        XCTAssertEqual(RaiderRules.maxScoutsOnScreen, 1)
+        XCTAssertLessThanOrEqual(RaiderRules.maxScoutsOnScreen, RaiderRules.maxOnScreen,
+                                 "the pool has to be able to hold the cap")
     }
 
     /// Level 1 gives the player two control schemes and no fleet fire; a scout
@@ -3424,7 +3538,7 @@ final class RaiderTests: XCTestCase {
         XCTAssertFalse(RaiderRules.waitsForThinnedRearRank(level: 3))
 
         var schedule = RaiderSchedule()
-        schedule.reset(interval: 20, level: 1)
+        schedule.reset(interval: 20)
         XCTAssertFalse(schedule.tick(25, interval: 20, onScreen: 0, blocked: true),
                        "overdue, but the rank is still crowded")
         XCTAssertFalse(schedule.tick(10, interval: 20, onScreen: 0, blocked: true))
@@ -3445,33 +3559,62 @@ final class RaiderTests: XCTestCase {
     /// The player has to be able to go after one. A scout faster than the ship
     /// can only ever be hit by already being in the right place, which is not a
     /// skill — the first version was 300 against the ship's 294.
-    func testTheShipCanCatchAScout() {
-        XCTAssertLessThan(RaiderRules.scoutSpeed, SpaceshipNode.speed,
-                          "a scout the ship cannot outrun is uncatchable")
-        // And by a margin that closes a gap in useful time, not eventually.
-        let closing = SpaceshipNode.speed - RaiderRules.scoutSpeed
-        XCTAssertGreaterThan(closing, 50, "closing at \(closing) px/s")
+    func testTheShipCanCatchEveryScout() {
+        for powerUp in PowerUp.allCases {
+            let speed = RaiderRules.scoutSpeed * CGFloat(powerUp.speedMultiplier)
+            XCTAssertLessThan(speed, SpaceshipNode.speed, "\(powerUp) is uncatchable")
+            let closing = SpaceshipNode.speed - speed
+            XCTAssertGreaterThan(closing, 50, "\(powerUp) closes at only \(closing) px/s")
+        }
     }
 
-    /// Every level gets clear sky between crossings. The gap is what the player
-    /// feels — capping the *share* at 60% still left 3.3s of quiet, which reads
-    /// as a stream of scouts rather than a raid with a breather after it.
+    /// Every level gets clear sky between crossings, and the gap tightens only
+    /// where the level is offering more than one power-up.
     func testThereIsAlwaysClearSkyBetweenScouts() {
         let crossing = RaiderRules.crossingDuration(sceneWidth: 960, scoutWidth: 58)
-        for level in 1...12 {
+        for level in 1...LevelManager.finalLevel {
             let table = LevelManager.parameters(for: level).raiderInterval
-            let used = RaiderRules.interval(forLevel: table, crossing: crossing)
+            let count = PowerUps.roster(forLevel: level).count
+            let used = RaiderRules.interval(forLevel: table, crossing: crossing,
+                                            rosterCount: count)
             XCTAssertGreaterThanOrEqual(used, table,
                                         "the rule may stretch the interval, never shorten it")
             XCTAssertGreaterThanOrEqual(used - crossing,
-                                        RaiderRules.minimumGap - 0.001,
+                                        RaiderRules.minimumGap(rosterCount: count) - 0.001,
                                         "level \(level) leaves too little quiet")
+            // The gap outlasts the crossing, so the sky is empty for more of a
+            // level than it is occupied.
+            XCTAssertGreaterThan(RaiderRules.minimumGap(rosterCount: count), crossing,
+                                 "level \(level)")
         }
-        // The gap outlasts the crossing, so the sky is empty for more of a
-        // level than it is occupied.
-        XCTAssertGreaterThan(RaiderRules.minimumGap, crossing)
-        // And an interval already long enough is left alone.
-        XCTAssertEqual(RaiderRules.interval(forLevel: 30, crossing: crossing), 30)
+        // An interval already long enough is left alone.
+        XCTAssertEqual(RaiderRules.interval(forLevel: 40, crossing: crossing), 40)
+    }
+
+    /// More on offer means less waiting, or a level advertising three power-ups
+    /// realistically hands over one.
+    func testTheGapTightensAsTheRosterGrows() {
+        let one = RaiderRules.minimumGap(rosterCount: 1)
+        let two = RaiderRules.minimumGap(rosterCount: 2)
+        let three = RaiderRules.minimumGap(rosterCount: 3)
+        XCTAssertGreaterThan(one, two)
+        XCTAssertGreaterThan(two, three)
+        // But never back to a stream: the old 7s gap was nine or ten a wave.
+        XCTAssertGreaterThan(three, 10)
+    }
+
+    /// A wave should see a handful of crossings, not a stream — and the first
+    /// has to arrive early enough that the power-up is actually offered.
+    func testAWaveSeesAFewCrossingsAndTheFirstArrivesEarly() {
+        let crossing = RaiderRules.crossingDuration(sceneWidth: 960, scoutWidth: 45)
+        let gap = RaiderRules.interval(forLevel: 20, crossing: crossing)
+        let first = gap * RaiderRules.openingLead
+
+        XCTAssertLessThan(first, 20, "the offer must land inside a short wave")
+        var time = first, crossings = 0
+        while time <= 90 { crossings += 1; time += gap }
+        XCTAssertGreaterThanOrEqual(crossings, 2)
+        XCTAssertLessThanOrEqual(crossings, 4, "more than this is traffic, not a raid")
     }
 
     /// The scout's round is 25% up on the fleet's, and never zero.
@@ -3501,6 +3644,8 @@ final class RaiderTests: XCTestCase {
         XCTAssertEqual(RaiderRules.scoutPoints, 100, "§9")
         XCTAssertEqual(RaiderRules.maxOnScreen, 2, "§6")
         // §21.1 already paced them: 20s at Level 1, tightening to a 6s floor.
+        // Now fully overridden by the gap rule — recorded so the override stays
+        // a decision rather than becoming a surprise.
         XCTAssertEqual(LevelManager.parameters(for: 1).raiderInterval, 20)
         XCTAssertEqual(LevelManager.parameters(for: 10).raiderInterval, 6)
     }
@@ -4492,55 +4637,6 @@ final class ScoringTableTests: XCTestCase {
 @MainActor
 final class PowerUpTests: XCTestCase {
 
-    // MARK: - Which level carries which special (§13.1)
-
-    /// Level 1 has no special at all, and every level above it has exactly one.
-    func testEveryLevelFromTwoOffersOneSpecial() {
-        XCTAssertNil(PowerUps.special(forLevel: 1),
-                     "Level 1 is learning two control schemes; the green scout is enough")
-        for level in 2...LevelManager.finalLevel {
-            XCTAssertNotNil(PowerUps.special(forLevel: level), "level \(level)")
-        }
-    }
-
-    /// A debut is a promise: the type that first becomes available on a level
-    /// is the one that level shows, never a random draw from the older pool.
-    func testDebutLevelsAlwaysShowTheirNewType() {
-        for powerUp in PowerUp.allCases {
-            for _ in 0..<50 {
-                XCTAssertEqual(PowerUps.special(forLevel: powerUp.debutLevel), powerUp,
-                               "\(powerUp) must appear on its own debut level")
-            }
-        }
-    }
-
-    /// Between debuts the level draws from everything unlocked so far, so the
-    /// pool grows rather than each type appearing once and vanishing.
-    func testNonDebutLevelsDrawFromTheWholeUnlockedPool() {
-        // Level 9 has all four unlocked and is not a debut.
-        let pool = Set(PowerUps.unlocked(atLevel: 9))
-        XCTAssertEqual(pool, Set(PowerUp.allCases))
-        var seen: Set<PowerUp> = []
-        for _ in 0..<400 { if let drawn = PowerUps.special(forLevel: 9) { seen.insert(drawn) } }
-        XCTAssertEqual(seen, pool, "400 draws should turn up all four")
-    }
-
-    /// Debuts are spread out and land before the wave each answers.
-    func testDebutsAreSpacedAndInsideTheLadder() {
-        let debuts = PowerUp.allCases.map(\.debutLevel).sorted()
-        XCTAssertEqual(debuts, [2, 4, 6, 8])
-        XCTAssertLessThan(debuts.last ?? 0, LevelManager.finalLevel,
-                          "the last type must be learnable before Blitz")
-    }
-
-    /// The special takes the level's *first* crossing. It has to: raids end
-    /// when the player shoots a raider down, so a special placed any later can
-    /// be skipped entirely by a player doing the obvious thing.
-    func testTheSpecialTakesTheFirstCrossing() {
-        XCTAssertEqual(PowerUps.specialCrossingIndex, 0)
-        XCTAssertTrue(RaiderRules.endsAfterAKill(level: 1))
-    }
-
     // MARK: - Per-type values (§13.2)
 
     /// The Bomb is the only two-hit scout and the only one worth over 200.
@@ -4552,30 +4648,47 @@ final class PowerUpTests: XCTestCase {
         XCTAssertGreaterThan(PowerUp.nuke.points, others.max() ?? 0)
     }
 
-    /// Every special is worth at least an ordinary scout, and the two that ask
-    /// most of the player pay most.
-    func testSpecialsAreWorthAtLeastAPlainScout() {
+    /// Every carrier is worth at least a plain scout, and Rapid Fire is exactly
+    /// §9's plain-scout rate — it is the plain scout.
+    func testEveryCarrierIsWorthAtLeastAPlainScout() {
+        XCTAssertEqual(PowerUp.rapidFire.points, RaiderRules.scoutPoints)
         for powerUp in PowerUp.allCases {
             XCTAssertGreaterThanOrEqual(powerUp.points, RaiderRules.scoutPoints,
                                         "\(powerUp)")
         }
     }
 
-    /// Every special must stay catchable: the ship closes at 294pt/s, and a
-    /// scout at or above that can only be hit by luck.
-    func testEverySpecialIsSlowerThanTheShip() {
-        for powerUp in PowerUp.allCases {
-            let speed = RaiderRules.scoutSpeed * CGFloat(powerUp.speedMultiplier)
-            XCTAssertLessThan(speed, SpaceshipNode.speed, "\(powerUp)")
-        }
-    }
-
     /// Only the two clocked effects have a duration, and §13.1's
-    /// one-at-a-time rule is about exactly those.
+    /// one-at-a-time rule is about exactly those. Rapid Fire lasts the wave and
+    /// the shield until it is spent, so neither is on this clock.
     func testOnlyTheClockedEffectsAreTimed() {
         XCTAssertEqual(Set(PowerUp.allCases.filter(\.isTimed)), [.freeze, .gatling])
         XCTAssertEqual(PowerUp.freeze.duration, 3)
         XCTAssertEqual(PowerUp.gatling.duration, 15)
+        for powerUp in [PowerUp.rapidFire, .shield, .nuke] {
+            XCTAssertNil(powerUp.duration, "\(powerUp)")
+        }
+    }
+
+    /// Every carrier needs a label and a ship name: the label is flashed at the
+    /// kill and stands in the player's alley, the ship name is what the log
+    /// calls the thing the player just shot.
+    func testEveryCarrierHasALabelAndAShipName() {
+        for powerUp in PowerUp.allCases {
+            XCTAssertFalse(powerUp.shipName.isEmpty, "\(powerUp)")
+        }
+        XCTAssertEqual(Set(PowerUp.allCases.map(\.shipName)).count,
+                       PowerUp.allCases.count, "no two ships share a name")
+        XCTAssertEqual(PowerUp.rapidFire.shipName, "green",
+                       "the plain scout is named for what the player sees")
+
+        for powerUp in PowerUp.allCases {
+            XCTAssertFalse(powerUp.label.isEmpty, "\(powerUp)")
+            XCTAssertEqual(powerUp.label, powerUp.label.uppercased(),
+                           "the alley and the flash are both caps")
+        }
+        XCTAssertEqual(Set(PowerUp.allCases.map(\.label)).count,
+                       PowerUp.allCases.count, "no two carriers share a label")
     }
 
     // MARK: - The effect clock
@@ -4592,6 +4705,17 @@ final class PowerUpTests: XCTestCase {
         XCTAssertTrue(state.isGatling)
         XCTAssertFalse(state.isFrozen)
         XCTAssertEqual(state.remaining, PowerUp.gatling.duration)
+    }
+
+    /// The untimed carriers never take the clock — a shield or a laser slot
+    /// must not evict a running barrage.
+    func testAnUntimedPowerUpNeverTakesTheClock() {
+        var state = PowerUpState()
+        state.begin(.gatling)
+        for powerUp in [PowerUp.rapidFire, .shield, .nuke] {
+            XCTAssertNil(state.begin(powerUp), "\(powerUp)")
+            XCTAssertTrue(state.isGatling, "\(powerUp) evicted the barrage")
+        }
     }
 
     /// Re-collecting the same type refreshes its clock rather than reporting
@@ -4639,35 +4763,7 @@ final class PowerUpTests: XCTestCase {
         XCTAssertEqual(state.remaining, 0)
     }
 
-    // MARK: - Raider cadence (§6.2, revised)
-
-    /// The gap between crossings is set by `minimumGap`, not by §21.1's table:
-    /// every level's own interval is now shorter than one crossing plus the
-    /// gap, so the table no longer reaches. Recorded here because it means
-    /// raider frequency is deliberately flat across the ladder.
-    func testTheMinimumGapOverridesEveryLevelInterval() {
-        let crossing = RaiderRules.crossingDuration(sceneWidth: 960, scoutWidth: 45)
-        for level in 1...LevelManager.finalLevel {
-            let table = LevelManager.parameters(for: level).raiderInterval
-            XCTAssertEqual(RaiderRules.interval(forLevel: table, crossing: crossing),
-                           crossing + RaiderRules.minimumGap, accuracy: 0.001,
-                           "level \(level)")
-        }
-    }
-
-    /// A wave should see a handful of crossings, not a stream — and the first
-    /// has to arrive early enough that the power-up is actually offered.
-    func testAWaveSeesAFewCrossingsAndTheFirstArrivesEarly() {
-        let crossing = RaiderRules.crossingDuration(sceneWidth: 960, scoutWidth: 45)
-        let gap = RaiderRules.interval(forLevel: 20, crossing: crossing)
-        let first = gap * RaiderRules.openingLead
-
-        XCTAssertLessThan(first, 20, "the offer must land inside a short wave")
-        var time = first, crossings = 0
-        while time <= 90 { crossings += 1; time += gap }
-        XCTAssertGreaterThanOrEqual(crossings, 2)
-        XCTAssertLessThanOrEqual(crossings, 4, "more than this is traffic, not a raid")
-    }
+    // MARK: - Gatling geometry
 
     /// The pool has to cover a full Gatling barrage: five rounds eight times a
     /// second, each in the air for as long as its own angle takes to fly out.
@@ -4678,5 +4774,15 @@ final class PowerUpTests: XCTestCase {
             .reduce(0, +) / GameScene.gatlingInterval
         XCTAssertGreaterThan(LaserPool.playerCapacity, Int(inFlight.rounded(.up)),
                              "a starved pool silently drops arms of the spread")
+    }
+
+    /// §13.2's centre, ±20°, ±40°. Stored as slopes because `LaserNode.fire`
+    /// takes sideways travel per unit of forward travel, not an angle — so the
+    /// angles are worth checking rather than trusting the constants to be right.
+    func testTheSpreadIsCentrePlusMinusTwentyAndForty() {
+        let degrees = GameScene.gatlingLeans
+            .map { (atan($0) * 180 / .pi).rounded() }
+            .sorted()
+        XCTAssertEqual(degrees, [-40, -20, 0, 20, 40])
     }
 }

@@ -1,6 +1,6 @@
 // RaiderController.swift
-// Spawns and owns the raiders (§6.1). Decisions live in `RaiderRules`; this
-// file owns only the nodes and the timing.
+// Spawns and owns the raiders (§6.1). Decisions live in `RaiderRules` and
+// `PowerUps`; this file owns only the nodes and the timing.
 //
 // The architecture the rest of 6.x hangs off: escorts, the flagship and the
 // special scouts all arrive through the same pool, cap and clock.
@@ -14,9 +14,10 @@ final class RaiderController {
     typealias ExitHandler = (RaiderNode, _ destroyed: Bool) -> Void
     /// A scout fired, from this point in scene coordinates.
     typealias FireHandler = (CGPoint) -> Void
-    /// A warning pass was spent on this pattern. The controller is rebuilt
-    /// every level, so the scene keeps the record for the whole run.
-    var onPatternPreviewed: ((RaiderRules.Pattern) -> Void)?
+    /// A kind of raider was seen for the first time and spent its free pass.
+    /// The controller is rebuilt every level, so the scene keeps the record for
+    /// the whole run.
+    var onKindPreviewed: ((PowerUp) -> Void)?
 
     var onExit: ExitHandler?
     var onScoutFire: FireHandler?
@@ -26,6 +27,13 @@ final class RaiderController {
     private let boardBottomY: CGFloat
     private var scouts: [RaiderNode] = []
     private var schedule = RaiderSchedule()
+
+    /// The vertical strip a raider may occupy: from just below the board's
+    /// bottom edge — under the pieces but clear of the ship's own lane at y=62 —
+    /// up to just above the board's top. Every descending path is clamped to it.
+    private var flightBounds: ClosedRange<CGFloat> {
+        (boardBottomY - 10)...(boardBottomY + BoardNode.boardSize + 20)
+    }
 
     init(parent: SKNode, sceneWidth: CGFloat, boardBottomY: CGFloat) {
         self.parent = parent
@@ -57,37 +65,43 @@ final class RaiderController {
            : AudioManager.shared.stop(.scoutEnterLoop)
     }
 
-    /// §13.1: the one special scout this level carries, and the crossing it
-    /// takes over. Nil once it has flown — a level offers the power-up once,
-    /// whether or not the player took it.
-    private var pendingSpecial: PowerUp?
-    private var crossingsThisLevel = 0
-    /// Set the moment a raider is shot down. `RaiderRules.endsAfterAKill`: the
-    /// level offers one power-up, and once it has been taken there is nothing
-    /// left for another crossing to give.
-    private var huntOver = false
-    private var endsAfterAKill = true
+    // MARK: - The level's roster
 
-    func reset(interval: TimeInterval, level: Int,
-               patternsSeen: Set<RaiderRules.Pattern> = []) {
+    /// What this level still has to offer, in order. Emptied from the front:
+    /// the raider at index 0 keeps crossing until the player shoots it down, and
+    /// only then does the next one start arriving.
+    ///
+    /// That is the whole cadence rule. A level with one entry sends raiders
+    /// until one is hit and then goes quiet, which is what most levels want. A
+    /// level with three sends three in sequence, each earned. And *missing*
+    /// costs nothing but time — the same offer comes round again — so how many
+    /// raiders a wave sees depends on how long the player takes to hit them,
+    /// which is the right thing for it to depend on.
+    private var remaining: [PowerUp] = []
+    /// Kept for the cadence, which stretches or tightens with how much the level
+    /// is offering rather than with the level number.
+    private var rosterCount = 1
+
+    /// Which kinds have already spent their free pass this run.
+    private var kindsSeen: Set<PowerUp> = []
+
+    func reset(interval: TimeInterval, level: Int, kindsSeen: Set<PowerUp> = []) {
         scouts.forEach { $0.stop() }
         setWarble(false)
-        schedule.reset(interval: paced(interval), level: level,
-                       patternsSeen: patternsSeen)
-        crossingsThisLevel = 0
-        huntOver = false
-        endsAfterAKill = RaiderRules.endsAfterAKill(level: level)
-        pendingSpecial = PowerUps.special(forLevel: level)
+        remaining = PowerUps.roster(forLevel: level)
+        rosterCount = remaining.count
+        self.kindsSeen = kindsSeen
+        schedule.reset(interval: paced(interval))
     }
 
-    /// The level's interval, stretched if it would put a raider on screen more
-    /// than `maxScreenShare` of the time.
+    /// The level's interval, stretched to keep clear sky between crossings.
     private func paced(_ levelInterval: TimeInterval) -> TimeInterval {
         let width = scouts.first?.size.width ?? 0
         return RaiderRules.interval(
             forLevel: levelInterval,
             crossing: RaiderRules.crossingDuration(sceneWidth: sceneWidth,
-                                                   scoutWidth: width))
+                                                   scoutWidth: width),
+            rosterCount: rosterCount)
     }
 
     /// Removes the raiders from the scene. The controller is rebuilt per level,
@@ -105,40 +119,45 @@ final class RaiderController {
     /// for progress rather than as one more thing to parse on a full board.
     func update(deltaTime: TimeInterval, interval: TimeInterval,
                 level: Int, rearRankPieces: Int) {
-        guard !huntOver else { return }
+        guard let offering = remaining.first else { return }
         let blocked = RaiderRules.waitsForThinnedRearRank(level: level)
             && rearRankPieces > RaiderRules.crowdedRearRank
         guard schedule.tick(deltaTime, interval: paced(interval),
                             onScreen: onScreen, blocked: blocked),
               let scout = scouts.first(where: { !$0.isCrossing }) else { return }
-        launch(scout)
+        launch(scout, carrying: offering)
     }
 
-    private func launch(_ scout: RaiderNode) {
+    private func launch(_ scout: RaiderNode, carrying powerUp: PowerUp) {
         // Off-screen at both ends, so it slides in and out rather than
         // appearing at the edge.
         let margin = scout.size.width
         let leftToRight = Bool.random()
         let fromX = leftToRight ? -margin : sceneWidth + margin
         let toX = leftToRight ? sceneWidth + margin : -margin
-        // Over the board: between the board's top edge and the HUD, so it
-        // clears every piece however far the fleet has descended.
-        let y = schedule.crossing.rank.map {
-            boardBottomY + (CGFloat($0) - 0.5) * BoardNode.squareSize
-        } ?? boardBottomY + BoardNode.boardSize + 14
 
-        // §13.1: the special *replaces* a standard crossing rather than adding
-        // one, so it is chosen here, at the point a scout was going to launch
-        // anyway. Always the level's first crossing — see
-        // `PowerUps.specialCrossingIndex` for why.
-        let special: PowerUp? = crossingsThisLevel == PowerUps.specialCrossingIndex
-            ? pendingSpecial : nil
-        if special != nil { pendingSpecial = nil }
-        crossingsThisLevel += 1
+        let bounds = flightBounds
+        let entryY: CGFloat
+        switch RaiderRules.lane(for: powerUp) {
+        case .overTheBoard:
+            // Between the board's top edge and the HUD, so it clears every
+            // piece however far the fleet has descended.
+            entryY = boardBottomY + BoardNode.boardSize + 14
+        case .rank(let rank):
+            entryY = boardBottomY + (CGFloat(rank) - 0.5) * BoardNode.squareSize
+        }
+        let flight = RaiderRules.flight(for: powerUp,
+                                       headroom: entryY - bounds.lowerBound)
 
-        let owed = schedule.owesWarningPass
-        let firing = schedule.claimFiringPass()
-        if owed { onPatternPreviewed?(schedule.crossing.pattern) }
+        // §6.3's free pass, once per kind per run: the first sight of a new
+        // silhouette flying a new path is exactly the case the rule is for.
+        let owed = !kindsSeen.contains(powerUp)
+        let firing = RaiderRules.fires(kindAlreadySeen: !owed)
+        if owed {
+            kindsSeen.insert(powerUp)
+            onKindPreviewed?(powerUp)
+        }
+
         scout.onFire = { [weak self] point in self?.onScoutFire?(point) }
         scout.onExit = { [weak self, weak scout] in
             guard let self, let scout else { return }
@@ -146,24 +165,38 @@ final class RaiderController {
             // actually left in the air.
             if self.onScreen == 0 { self.setWarble(false) }
             // `hp` is zero only when a shot took it; a completed crossing
-            // leaves it at one. That is what tells the two endings apart
+            // leaves it above zero. That is what tells the two endings apart
             // without a second flag to keep in step.
             let destroyed = scout.hp <= 0
-            if destroyed, self.endsAfterAKill {
-                self.huntOver = true
-                self.pendingSpecial = nil
-                DiagnosticsLog.shared.log(.raider, "raids over for this level")
+            if destroyed, self.remaining.first == powerUp {
+                self.remaining.removeFirst()
+                DiagnosticsLog.shared.log(.raider, self.remaining.isEmpty
+                    ? "raids over for this level"
+                    : "next up: \(self.remaining[0].shipName) scout")
             }
             self.onExit?(scout, destroyed)
         }
-        scout.cross(fromX: fromX, toX: toX, y: y, firing: firing,
-                    weave: schedule.crossing.weaveAmplitude, powerUp: special)
+        scout.cross(fromX: fromX, toX: toX, y: entryY, firing: firing,
+                    powerUp: powerUp, flight: flight, bounds: bounds)
         setWarble(true)
 
-        let weaving = schedule.crossing.pattern == .weaving ? " weaving" : ""
-        let kind = special.map { "\($0.rawValue) scout" } ?? "scout"
         DiagnosticsLog.shared.log(.raider,
-            "\(kind)\(weaving) \(firing ? "firing" : "warning") pass")
+            "\(powerUp.shipName) scout \(firing ? "firing" : "warning") pass")
+    }
+
+    /// Launches the level's current offer immediately, for the `R` test key.
+    ///
+    /// Returns what went up, or nil if there is nothing to send — the roster is
+    /// exhausted, or both pooled nodes are already crossing. It resets the clock
+    /// as a real launch does, so pressing `R` does not also leave a scheduled
+    /// crossing about to arrive on top of the summoned one.
+    @discardableResult
+    func summonNext() -> PowerUp? {
+        guard let offering = remaining.first,
+              let scout = scouts.first(where: { !$0.isCrossing }),
+              onScreen < RaiderRules.maxScoutsOnScreen else { return nil }
+        launch(scout, carrying: offering)
+        return offering
     }
 
     func setPaused(_ paused: Bool) {
