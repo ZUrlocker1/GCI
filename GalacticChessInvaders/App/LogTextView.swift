@@ -7,7 +7,6 @@
 // ⌘A. NSTextView gives that for free, and appending to its storage is cheaper
 // than rebuilding a list of a couple of thousand views.
 
-#if DEBUG
 import SwiftUI
 import AppKit
 import QuartzCore
@@ -138,4 +137,3 @@ struct LogTextView: NSViewRepresentable {
         }
     }
 }
-#endif
