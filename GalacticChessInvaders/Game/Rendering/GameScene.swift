@@ -507,21 +507,33 @@ class GameScene: SKScene {
     /// level, not a way to farm one.
     private func skipLevel() {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        // Level 10 is the last one, so there is nothing to skip to. Say so
-        // rather than silently building an eleventh level that has no design.
-        guard !levels.isFinalLevel else {
-            DiagnosticsLog.shared.log(.auto,
-                "SKIP LEVEL refused — \(LevelManager.finalLevel) is the last")
-            flashGutterNotice("LAST LEVEL")
-            return
-        }
-        DiagnosticsLog.shared.log(.auto, "skip to \(levels.level + 1)")
+        // Past the last level it wraps to the first, so holding `V` walks the
+        // whole ladder round and round. It never builds an eleventh level —
+        // there is no design for one — and it never ends the run, because
+        // stopping the loop at the top is the opposite of what a test pass
+        // wants. The score carries over; only the ladder restarts.
+        let wrapping = levels.isFinalLevel
+        DiagnosticsLog.shared.log(.auto,
+            wrapping ? "skip wraps to 1" : "skip to \(levels.level + 1)")
         // buildPlayfield tears the board down and back up, so the notice has to
         // be raised afterwards or it is removed with everything else. The
         // mechanic banner still shows, so a skip is a way to *see* a level's
         // announcement rather than a way past it.
-        startNextLevel()
-        flashGutterNotice("SKIP LEVEL")
+        if wrapping {
+            restartLadder()
+        } else {
+            startNextLevel()
+        }
+        flashGutterNotice(wrapping ? "LEVEL 1" : "SKIP LEVEL")
+    }
+
+    /// Back to Level 1 with the run intact, for the `V` loop.
+    private func restartLadder() {
+        levels.reset()
+        ScoreManager.shared.restartLadder()
+        shipState?.resetForNewLevel()
+        buildPlayfield(announceLevel: true)
+        logLevel()
     }
 
     /// A brief label in the gutter slot AUTO MODE uses, for developer actions
