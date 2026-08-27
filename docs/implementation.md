@@ -415,10 +415,14 @@ turn, so the board pulses together; a raider ignores that entirely.
   Invaders' mystery ship belongs. From Level 4 it drops into §6's rank 4–5,
   which is a real escalation — down there it is firing into traffic. Fixed for
   the level either way, so one crossing teaches where the next will be
-- **The first scout of a level does not fire** (§6's Galaga precedent), and on
-  Levels 1–2 it does not arrive at all until the fleet's rear rank is down to
-  half: the first one should be a reward for making progress, not one more
-  thing to parse on an untouched board
+- **A warning pass is owed once per attack pattern, per run** — the first scout
+  of the game, and the first one after it drops to piece height at Level 4.
+  §6 gives one every level, which spends its own rationale ("the player sees
+  the attack pattern before being shot at") the first time and then keeps
+  handing over a harmless raider forever. Two per run, and everything else fires
+- On Levels 1–2 the scout does not arrive at all until the fleet's rear rank is
+  down to half: the first one should be a reward for making progress, not one
+  more thing to parse on an untouched board
 - 220 px/s, and the constraint is the ship's 294: a scout the player cannot
   outrun can only be hit by already standing under it. Closing at 74 px/s means
   a missed pass is recoverable

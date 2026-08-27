@@ -67,6 +67,9 @@ class GameScene: SKScene {
     private var explosions: ExplosionPool?
     private var shatters: ShatterPool?
     private var raiders: RaiderController?
+    /// Attack patterns the player has already been shown once, for the whole
+    /// run — the controller is rebuilt every level and cannot remember.
+    private var raiderPatternsSeen: Set<RaiderRules.Pattern> = []
 
     /// §24.1's shake, applied to `bloomNode` rather than to a camera.
     ///
@@ -611,6 +614,8 @@ class GameScene: SKScene {
     /// A brand new game: score and level reset.
     func showBoard() {
         levels.reset()
+        // A new run has seen nothing, so both patterns owe a warning pass again.
+        raiderPatternsSeen.removeAll()
         hasOfferedHighScore = false
         ScoreManager.shared.resetForNewGame()
         shipState = SpaceshipState()
@@ -682,8 +687,12 @@ class GameScene: SKScene {
         raiderController.onExit = { [weak self] node, destroyed in
             self?.resolveRaiderExit(node, destroyed: destroyed)
         }
+        raiderController.onPatternPreviewed = { [weak self] pattern in
+            self?.raiderPatternsSeen.insert(pattern)
+        }
         raiderController.reset(interval: levels.parameters.raiderInterval,
-                               level: levels.level)
+                               level: levels.level,
+                               patternsSeen: raiderPatternsSeen)
         raiders = raiderController
         scorePops = ScorePopPool(parent: bloomNode)
         explosions = ExplosionPool(parent: bloomNode)
