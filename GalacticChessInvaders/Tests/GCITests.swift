@@ -3380,6 +3380,17 @@ final class RaiderTests: XCTestCase {
         }
     }
 
+    /// The player has to be able to go after one. A scout faster than the ship
+    /// can only ever be hit by already being in the right place, which is not a
+    /// skill — the first version was 300 against the ship's 294.
+    func testTheShipCanCatchAScout() {
+        XCTAssertLessThan(RaiderRules.scoutSpeed, SpaceshipNode.speed,
+                          "a scout the ship cannot outrun is uncatchable")
+        // And by a margin that closes a gap in useful time, not eventually.
+        let closing = SpaceshipNode.speed - RaiderRules.scoutSpeed
+        XCTAssertGreaterThan(closing, 50, "closing at \(closing) px/s")
+    }
+
     func testScoutMatchesTheDesignTable() {
         XCTAssertEqual(RaiderRules.scoutHP, 1, "§6")
         XCTAssertEqual(RaiderRules.scoutPoints, 100, "§9")

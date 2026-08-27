@@ -793,7 +793,10 @@ class GameScene: SKScene {
         shatters?.reset()
         regeneration.reset()
         materialising.removeAll()
-        raiders?.reset(interval: levels.parameters.raiderInterval, level: levels.level)
+        // Torn down, not just reset: `buildPlayfield` makes a fresh controller
+        // every level, so resetting the old one left its nodes parented.
+        raiders?.teardown()
+        raiders = nil
         for side in [PieceColor.black, .white] { setRespawnWarning(side, on: false) }
         shake = .none
         shakeElapsed = 0
