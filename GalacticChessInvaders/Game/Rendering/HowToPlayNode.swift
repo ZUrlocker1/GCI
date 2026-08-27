@@ -86,7 +86,7 @@ final class HowToPlayNode: SKNode {
         chip("← →",   "Move your ship",                    x: x, y: 393)
         chip("SPACE",  "Fire laser",                        x: x, y: 349)
         chip("CLICK",  "Pick piece, then new square",        x: x, y: 305)
-        chip("▼ 5s",   "Turn timer — CPU moves if stall",   x: x, y: 261)
+        chip("ESC",    "Press Escape to pause",             x: x, y: 261)
 
         // — HISTORY —
         heading("HISTORY", Self.magenta, x: x, y: 203)
