@@ -44,11 +44,33 @@ enum PowerUp: String, CaseIterable {
     /// §13.2: the Bomb Scout flashes on the first hit, like the flagship.
     var hp: Int { self == .nuke ? 2 : RaiderRules.scoutHP }
 
-    /// Against `RaiderRules.scoutSpeed`. Only the Ice Scout differs — §13.2 has
-    /// it "drifting deliberately", which also makes the freeze the easiest of
-    /// the five to collect, and it is the one whose value most depends on
-    /// collecting it at a moment of your choosing.
-    var speedMultiplier: Double { self == .freeze ? 0.6 : 1.0 }
+    /// Against `RaiderRules.scoutSpeed`.
+    ///
+    /// The Ice Scout drifts at 0.6× — §13.2's "drifting deliberately", which
+    /// also makes the freeze the easiest of the five to collect, and it is the
+    /// one whose value most depends on collecting it at a moment of your
+    /// choosing.
+    ///
+    /// The Bomb Scout is 20% slower than standard, and it needs to be: it is the
+    /// only carrier that takes two hits, and the only one that *swoops* — diving
+    /// to rank 1–2 at mid-crossing and climbing out. A target moving fast
+    /// vertically is far harder to lead with a vertical laser than one flying
+    /// level, so at full speed two hits inside one crossing asked for more than
+    /// the reward is worth.
+    ///
+    /// The green scout is 7% off standard, which sounds like nothing and is not:
+    /// what the player feels is the *closing* speed, and the ship only has 74
+    /// px/s of it at full scout speed. Taking 7% off the scout adds 15 to the
+    /// closing rate — a fifth more — because the margin, not the speed, is what
+    /// the chase is made of.
+    var speedMultiplier: Double {
+        switch self {
+        case .freeze:    return 0.6
+        case .nuke:      return 0.8
+        case .rapidFire: return 0.93
+        default:         return 1.0
+        }
+    }
 
     /// §13.2's Spread Scout is "visibly wider" — a fat squat disc with five
     /// exhaust ports. The only one whose silhouette changes proportion.
@@ -122,12 +144,20 @@ enum PowerUps {
     /// | 6 | spread — Gatling Barrage |
     /// | 7 | bomb — Nuke |
     /// | 8 | green, then spread |
-    /// | 9, 10 | green, then spread, then ice |
+    /// | 9 | green, then spread, then ice |
+    /// | 10 | green, then spread, then ice, then bomb |
     ///
-    /// One offer for most of the run, then two and three as the levels get hard
-    /// enough to need them. The order within a level is smallest first, so the
-    /// player banks Rapid Fire before the barrage arrives and has more shots to
-    /// go after it with.
+    /// One offer for most of the run, then two, three and four as the levels get
+    /// hard enough to need them. The order within a level is cheapest first, so
+    /// the player banks Rapid Fire before the spray arrives and has more shots
+    /// to go after it with — and the bomb comes last on Blitz because it is the
+    /// only two-hit carrier, so it belongs behind the ones that make hitting it
+    /// easier.
+    ///
+    /// Blitz is also the only level that offers all four, which is what stops
+    /// the Nuke from appearing exactly once in a run: the stacked levels are
+    /// otherwise green/spread/ice, so without this the bomb scout showed up on
+    /// Level 7 and never again.
     static func roster(forLevel level: Int) -> [PowerUp] {
         switch max(1, level) {
         case 1, 2: return [.rapidFire]
@@ -137,7 +167,8 @@ enum PowerUps {
         case 6:    return [.gatling]
         case 7:    return [.nuke]
         case 8:    return [.rapidFire, .gatling]
-        default:   return [.rapidFire, .gatling, .freeze]
+        case 9:    return [.rapidFire, .gatling, .freeze]
+        default:   return [.rapidFire, .gatling, .freeze, .nuke]
         }
     }
 

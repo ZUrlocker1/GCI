@@ -2075,10 +2075,12 @@ class GameScene: SKScene {
     // MARK: - Regeneration (§23.9) and armored pawns (§10.1)
 
     private static let respawnWarningName = "respawnWarning"
-    /// Two lines: the untimed power-ups on one, a running timed effect on the
-    /// other. Two is what fits, and two is all that can be up at once — see the
-    /// gutter map below.
-    static let powerUpAlleyLines = 2
+    /// One line per active power-up: Rapid Fire, a shield, a running timed
+    /// effect. Three at once is only reachable with the `P` test key in play —
+    /// the shield is offered on Level 3 alone, where Rapid Fire is not — but
+    /// each gets a line of its own regardless, because a shared line reads as
+    /// one status rather than two.
+    static let powerUpAlleyLines = 3
     private static let powerUpLineName = "powerUpLine"
 
     /// The left gutter is fuller than it looks. Measured at x=112, top down:
@@ -2100,12 +2102,19 @@ class GameScene: SKScene {
     /// table: the next person to add a gutter line should not have to rediscover
     /// this.
     ///
-    /// Two 9pt lines are 18pt of the 27, so the 9 left over goes 3.5pt under the
-    /// bottom line, 3pt between them and 2pt over the top one: lines at 90 and
-    /// 102. `PowerUpAlleyLayoutTests` pins that against both neighbours, because
-    /// eyeballing it is what produced the collision in the first place.
-    static let powerUpAlleyBottomY = GameScene.boardBottomY - 30
-    static let powerUpAlleyStep: CGFloat = 12
+    /// Three 9pt lines with 5pt of air between them need 37pt. The band under
+    /// the status line is 27, which is why the readout lived there while it was
+    /// two lines and cannot stay now: two lines at a 5pt gap already left only
+    /// 1pt of clearance at the top.
+    ///
+    /// So it moves to the other side of the turn timer. Above the timer's caption
+    /// the gutter is empty all the way to the HUD at y=664 — 476pt, against the
+    /// 37 needed — so the block sits just clear of the caption and grows upward
+    /// into space nothing else wants. `PowerUpAlleyLayoutTests` pins it against
+    /// every neighbour, because eyeballing this is what produced the first
+    /// collision.
+    static let powerUpAlleyBottomY: CGFloat = 196
+    static let powerUpAlleyStep: CGFloat = 14      // 9pt of type, 5pt of air
     static let powerUpAlleyFontSize: CGFloat = 9
     /// The stack the notice is currently showing, so it only flares when the
     /// number actually changes rather than on every frame.
@@ -2120,25 +2129,18 @@ class GameScene: SKScene {
     /// are carrying, not catch it in passing. Mirrors the state rather than
     /// latching, so no line can outlive the thing it describes.
     ///
-    /// Two lines, because two is what the gutter has room for and two is all
-    /// that can be up at once: Rapid Fire shares a line with the shield, which
-    /// costs nothing because the two can never co-occur in play — the shield is
-    /// only offered on Level 3 and Rapid Fire is not offered there. The test key
-    /// can stack them, so the line joins them rather than dropping one.
+    /// One line each, never shared: two statuses on one line read as one.
     private func syncPowerUpAlley() {
         var lines: [(text: String, color: SKColor)] = []
 
         let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
             - SpaceshipState.baseLaserCap
-        var badges: [String] = []
         if stacks > 0 {
-            badges.append("\(PowerUp.rapidFire.label) \(shipState?.laserCap ?? 0)")
+            lines.append(("\(PowerUp.rapidFire.label) \(shipState?.laserCap ?? 0)",
+                          NeonPalette.transporterGreen))
         }
-        if powerUps.hasShield { badges.append(PowerUp.shield.label) }
-        if !badges.isEmpty {
-            lines.append((badges.joined(separator: " · "),
-                          stacks > 0 ? NeonPalette.transporterGreen
-                                     : PowerUp.shield.tint))
+        if powerUps.hasShield {
+            lines.append((PowerUp.shield.label, PowerUp.shield.tint))
         }
         if let active = powerUps.active, active.duration != nil {
             // A number rather than §13.2's countdown bar. The bar needed a row
@@ -2157,8 +2159,8 @@ class GameScene: SKScene {
             label.isHidden = false
             label.text = lines[index].text
             label.fontColor = lines[index].color
-            // Bottom-up, so the timed line with its ticking number always sits
-            // in the same place and a new line pushes the other one up.
+            // Bottom-up from a fixed floor, so the first line the player earns
+            // stays where they last read it and later ones stack above it.
             label.position = CGPoint(
                 x: 112,
                 y: Self.powerUpAlleyBottomY

@@ -3322,7 +3322,7 @@ final class RaiderTests: XCTestCase {
             5: [.rapidFire], 6: [.gatling], 7: [.nuke],
             8: [.rapidFire, .gatling],
             9: [.rapidFire, .gatling, .freeze],
-            10: [.rapidFire, .gatling, .freeze],
+            10: [.rapidFire, .gatling, .freeze, .nuke],
         ]
         for (level, roster) in expected {
             XCTAssertEqual(PowerUps.roster(forLevel: level), roster, "level \(level)")
@@ -3336,7 +3336,19 @@ final class RaiderTests: XCTestCase {
         }
         XCTAssertEqual(PowerUps.roster(forLevel: 8).count, 2)
         XCTAssertEqual(PowerUps.roster(forLevel: 9).count, 3)
-        XCTAssertEqual(PowerUps.roster(forLevel: 10).count, 3)
+        XCTAssertEqual(PowerUps.roster(forLevel: 10).count, 4)
+    }
+
+    /// Every power-up has to come round again after its debut, or it is a
+    /// mechanic the player meets once and never uses. The Nuke only just
+    /// qualifies — Level 7 and then Blitz.
+    func testNoPowerUpAppearsOnlyOnce() {
+        for powerUp in PowerUp.allCases {
+            let levels = (1...LevelManager.finalLevel)
+                .filter { PowerUps.roster(forLevel: $0).contains(powerUp) }
+            XCTAssertGreaterThan(levels.count, 1,
+                                 "\(powerUp) is offered only on level \(levels)")
+        }
     }
 
     /// Every power-up is reachable, and each is introduced on its own level
@@ -4854,6 +4866,7 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
         ("status side label",   128...138),
         ("status state label",  108.5...123.5),
         ("the ship's lane",     42...82),
+        ("the HUD",             664...700),
     ]
 
     private var alleyBands: [ClosedRange<CGFloat>] {
@@ -4883,26 +4896,26 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
                              "the step has to clear a whole line of type")
     }
 
-    /// It sits in the one band wide enough to hold it — below the status line
-    /// and above the ship. Every other gap in the gutter is under 8pt.
-    func testTheReadoutUsesTheOnlyBandThatFits() {
-        let bands: [ClosedRange<CGFloat>] = Self.occupants
-            .map(\.band)
-            .sorted { $0.lowerBound < $1.lowerBound }
-        var gaps: [CGFloat] = []
-        for (lower, upper) in zip(bands, bands.dropFirst()) {
-            gaps.append(upper.lowerBound - lower.upperBound)
-        }
-        let widest: CGFloat = gaps.max() ?? 0
-        XCTAssertEqual(widest, 26.5, accuracy: 0.01, "the 82–108.5 band")
-        for gap in gaps where gap != widest {
-            XCTAssertLessThan(gap, GameScene.powerUpAlleyFontSize,
-                              "a second usable band would make this test wrong")
-        }
-        // And the readout is in it.
-        let lowest = alleyBands.map(\.lowerBound).min() ?? 0
+    /// Each line gets its own row, with room to breathe between them.
+    func testEachLineHasFivePointsOfAirBelowIt() {
+        let gap = GameScene.powerUpAlleyStep - GameScene.powerUpAlleyFontSize
+        XCTAssertGreaterThanOrEqual(gap, 4, "lines any closer read as one block")
+        XCTAssertLessThanOrEqual(gap, 5, "and any further apart as unrelated")
+    }
+
+    /// The block sits above the turn timer, which is the only side of the gutter
+    /// with room for three lines: the band under the status line is 27pt and
+    /// three 9pt lines with 5pt gaps need 37.
+    func testThreeLinesWouldNotHaveFitUnderTheStatusLine() {
+        let needed = CGFloat(GameScene.powerUpAlleyLines) * GameScene.powerUpAlleyFontSize
+            + CGFloat(GameScene.powerUpAlleyLines - 1)
+                * (GameScene.powerUpAlleyStep - GameScene.powerUpAlleyFontSize)
+        XCTAssertGreaterThan(needed, 26.5,
+                             "if this ever fits, the readout can move back down")
+        // Above the timer's caption there is nothing until the HUD.
         let highest = alleyBands.map(\.upperBound).max() ?? 0
-        XCTAssertGreaterThan(lowest, 82)
-        XCTAssertLessThan(highest, 108.5)
+        let lowest = alleyBands.map(\.lowerBound).min() ?? 0
+        XCTAssertGreaterThan(lowest, 188, "clear of the turn-timer caption")
+        XCTAssertLessThan(highest, 664, "clear of the HUD")
     }
 }
