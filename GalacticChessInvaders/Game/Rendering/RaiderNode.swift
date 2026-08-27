@@ -112,6 +112,13 @@ final class RaiderNode: SKSpriteNode {
         let height = baseSize.height * (powerUp == .gatling ? 0.85 : 1)
         size = CGSize(width: width, height: height)
         color = powerUp.tint
+        // The specials wear their colour nearly solid; the green scout keeps the
+        // lighter 0.55 blend it was built with. At 0.55 a special's tint is
+        // mixed half-and-half with the sprite's own art, which is close enough
+        // to the acid green of the plain scout that crimson came out reading as
+        // orange — and telling the five ships apart at a glance is the entire
+        // reason they have colours.
+        colorBlendFactor = powerUp == .rapidFire ? 0.55 : 0.85
 
         if let hull = childNode(withName: Self.hullName) as? SKSpriteNode {
             hull.size = size

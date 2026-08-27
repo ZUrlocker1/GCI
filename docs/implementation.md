@@ -677,19 +677,38 @@ the arcade half of the game, where the player already has to aim.
 
 ### The roster
 
-A fixed table of which raider each level sends. Every level has one answer, the
-same answer every run.
+A fixed table of which raider each level sends, and what it is carrying. Every
+level has one answer, the same answer every run.
 
-| Level | Sends | Carrying |
-|---|---|---|
-| 1, 2 | green scout | Rapid Fire — +1 laser slot, stacks to 6 |
-| 3 | repair, green-cyan hexes | Shield — absorbs one lethal hit, + 0.8s grace |
-| 4 | ice, pale blue, 0.6× speed | Time Freeze — 3s where only the player moves |
-| 5 | green scout | Rapid Fire, because it is the generally useful one |
-| 6 | spread, orange, 1.4× wide | Spread Fire — 7s of uncapped swept spray, held |
-| 7 | bomb, crimson spikes, 2 HP | Nuke — a ring that clears every enemy round in flight |
-| 8 | green, then spread | two offers |
-| 9, 10 | green, then spread, then ice | three offers |
+| Lv | Name | Scouts, in order | Power-ups, in order |
+|---|---|---|---|
+| 1 | — | green | RAPID FIRE |
+| 2 | FIRE POWER | green | RAPID FIRE |
+| 3 | DOUBLE TROUBLE | repair | SHIELD UP |
+| 4 | RELENTLESS | ice | TIME FREEZE |
+| 5 | TRIPLE THREAT | green | RAPID FIRE |
+| 6 | WIDE ORBIT | spread | SPREAD FIRE |
+| 7 | CROSSFIRE | bomb | NUKE |
+| 8 | ARMORED PAWNS | green → spread | RAPID FIRE → SPREAD FIRE |
+| 9 | KING ACTIVATED | green → spread → ice | RAPID FIRE → SPREAD FIRE → TIME FREEZE |
+| 10 | BLITZ! | green → spread → ice → bomb | RAPID FIRE → SPREAD FIRE → TIME FREEZE → NUKE |
+
+Scout speeds and HP, since they are what decide whether a carrier is catchable:
+
+| Scout | Speed | Closing rate | Crossing | HP |
+|---|---|---|---|---|
+| green | 205 px/s (0.93×) | 89 px/s | 5.1s | 1 |
+| repair | 220 px/s | 74 px/s | 4.8s | 1 |
+| ice | 132 px/s (0.6×) | 162 px/s | 8.0s | 1 |
+| spread | 220 px/s | 74 px/s | 4.8s | 1 |
+| bomb | 176 px/s (0.8×) | 118 px/s | 6.0s | **2** |
+
+The closing rate is what the player actually feels, and it is why the green
+scout's modest 7% cut matters: the ship only has 74 px/s of margin at full scout
+speed, so taking 7% off the scout adds a fifth to the closing rate. The bomb is
+slower again because it is the only two-hit carrier *and* the only one that
+swoops — a target moving fast vertically is far harder to lead with a vertical
+laser, and two hits inside one crossing asked more than the reward is worth.
 
 - **One kind at a time, and it keeps coming back until it is shot down.** The
   entry at the front of the roster crosses, and only a kill advances to the next.
@@ -697,12 +716,19 @@ same answer every run.
   long the player takes to hit one — which is the right thing for it to depend
   on. Most levels therefore go quiet after a single kill
 - Every power-up **debuts on a level of its own**, so it is met and learned
-  before it ever shares a wave. Levels 8–10 then stack what the player already
-  knows, cheapest first: Rapid Fire is banked before the barrage arrives, so
-  there are more shots to go after it with
+  before it ever shares a wave, and **every one comes round again** — a mechanic
+  the player meets once and never uses is not worth building. Both are pinned by
+  tests. Blitz offering all four is what earns the Nuke its second outing: the
+  other stacked levels are green/spread/ice, so without it the bomb scout
+  appeared on Level 7 and never again
+- Levels 8–10 stack what the player already knows, cheapest first: Rapid Fire is
+  banked before the spray arrives, so there are more shots to go after it with,
+  and Blitz puts the two-hit bomb last, behind the two carriers that make hitting
+  it easier
 - The gap between crossings **tightens with the roster** — 22s / 15s / 12s for
-  one, two and three offers — because on those levels every miss costs a full
-  gap and a level advertising three power-ups would realistically hand over one
+  one, two and three-or-more offers — because on those levels every miss costs a
+  full gap and a level advertising three power-ups would realistically hand over
+  one
 - This replaced an unlocking-pool version, where any unlocked type could turn up
   on any later level. A raider whose identity is a surprise is one the player
   cannot prepare for, which is the opposite of what a rare reward should be
@@ -720,6 +746,10 @@ randomised per crossing, so a learned shape still has to be read.
 | spread | the same at twice the scale — ±74–104pt over 1.9–2.6s | rank 5–6 |
 | repair | a long eased glide down, giving up 55–95% of its headroom | above the board |
 | bomb | one dive and climb, 70–95% deep, bottoming out at 45% across | above the board |
+
+The bomb's dive is what makes its second hit gettable — it is closest at
+mid-crossing — and also why it needed slowing: closest is also where it is moving
+most steeply.
 
 - The green scout is flat *because* the others are not: it is the raider the
   player meets first and chases most often, so it stays a pure horizontal aiming
@@ -818,21 +848,21 @@ randomised per crossing, so a learned shape still has to be read.
 - The four special hulls are drawn as shape overlays on the existing scout
   sprite — the hexagonal grid, crystalline facets, sea-mine spikes, the row of
   exhaust ports. Five new sprites would be better and are not in the atlas
-- Every active power-up shows as a standing line in the player's alley, in the
-  band between the status line and the ship's own lane. Two lines: Rapid Fire
-  shares one with the shield — free, because the two can never co-occur in play
-  (the shield is only offered on Level 3 and Rapid Fire is not offered there) —
-  and a running timed effect takes the other, with its remaining seconds
-  appended. That number replaces §13.2's countdown bar, which needed a row of its
-  own and there is no row to spare.
+- Every active power-up shows as a standing line in the player's alley, **one
+  line each** — two statuses sharing a line read as one status — with 5pt of air
+  between them. A timed effect carries its remaining seconds, which replaces
+  §13.2's countdown bar: the bar needed a row of its own beneath the label, and
+  the number says more in the same space.
 
-  The gutter is fuller than it looks: measured, its only usable band is **82 to
-  109**, and every other gap between the turn timer, the transient notice and the
-  status line is 0.5 to 7.5pt — too narrow for a 9pt line. The readout was first
-  placed by eye against the turn timer's *centre* at 166 without accounting for
-  its caption 18pt above, so it landed on top of the caption. The measurements
-  are now a table in the code and a test that fails on any overlap, since
-  eyeballing it is what caused the collision
+  The block sits **above** the turn timer, which took two attempts. The gutter is
+  fuller than it looks: below the status line there are 27pt, and every gap
+  between the timer, the transient notice and the status line is 0.5 to 7.5pt —
+  too narrow for a 9pt line. Two lines fitted in that 27pt band; three at a 5pt
+  gap need 37. Above the timer's caption the gutter is empty to the HUD at
+  y=664, so that is where it went. The first version was placed by eye against
+  the timer's *centre* at 166 without accounting for its caption 18pt above and
+  landed on top of the caption — so the measurements are now a table in the code
+  and a test that fails on any overlap
 - The two Ice sounds are synthesised (`Resources/sfx/generated/`): a swept-noise
   whoosh falling 2.4kHz → 180Hz with a comb-delay tail and a crystalline ring
   over the last third, and a shorter rising version for the expiry
