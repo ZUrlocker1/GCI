@@ -69,7 +69,10 @@ class GameScene: SKScene {
     private var raiders: RaiderController?
     /// Attack patterns the player has already been shown once, for the whole
     /// run — the controller is rebuilt every level and cannot remember.
-    private var raiderPatternsSeen: Set<RaiderRules.Pattern> = []
+    /// Which kinds of raider have already spent their free first pass, for
+    /// the whole run rather than the level — the controller is rebuilt each
+    /// wave, so it cannot remember this itself.
+    private var raiderKindsSeen: Set<PowerUp> = []
 
     /// §24.1's shake, applied to `bloomNode` rather than to a camera.
     ///
@@ -522,6 +525,27 @@ class GameScene: SKScene {
         stateMachine.enter(TitleState.self)
     }
 
+    /// Hidden developer aid: send the level's next raider in immediately.
+    ///
+    /// Raiders are on a ~28-second clock and most levels go quiet once one has
+    /// been shot down, so testing a power-up otherwise means waiting for a
+    /// crossing that may not come. This launches whatever the roster is
+    /// currently offering — so on a level with two or three, shooting one down
+    /// and pressing `R` again brings the next.
+    ///
+    /// Deliberately routed through the same launch path as the clock rather
+    /// than a shortcut of its own: a test key that flies a raider differently
+    /// from the real one is worse than no test key.
+    private func summonRaider() {
+        guard stateMachine.currentState is PlayingState, !isEndingGame,
+              let raiders else { return }
+        guard let launched = raiders.summonNext() else {
+            DiagnosticsLog.shared.log(.raider, "nothing left to send")
+            return
+        }
+        DiagnosticsLog.shared.log(.auto, "sent \(launched.shipName) scout")
+    }
+
     /// Hidden developer aid: jump straight to the next level, keeping score and
     /// lives. Rebuilds the playfield exactly as finishing a wave does, but with
     /// no wave-clear overlay and no bonus — it is a shortcut for reaching a
@@ -621,7 +645,7 @@ class GameScene: SKScene {
     func showBoard() {
         levels.reset()
         // A new run has seen nothing, so both patterns owe a warning pass again.
-        raiderPatternsSeen.removeAll()
+        raiderKindsSeen.removeAll()
         hasOfferedHighScore = false
         ScoreManager.shared.resetForNewGame()
         shipState = SpaceshipState()
@@ -699,12 +723,12 @@ class GameScene: SKScene {
         raiderController.onExit = { [weak self] node, destroyed in
             self?.resolveRaiderExit(node, destroyed: destroyed)
         }
-        raiderController.onPatternPreviewed = { [weak self] pattern in
-            self?.raiderPatternsSeen.insert(pattern)
+        raiderController.onKindPreviewed = { [weak self] kind in
+            self?.raiderKindsSeen.insert(kind)
         }
         raiderController.reset(interval: levels.parameters.raiderInterval,
                                level: levels.level,
-                               patternsSeen: raiderPatternsSeen)
+                               kindsSeen: raiderKindsSeen)
         raiders = raiderController
         scorePops = ScorePopPool(parent: bloomNode)
         explosions = ExplosionPool(parent: bloomNode)
@@ -2042,7 +2066,7 @@ class GameScene: SKScene {
         let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
             - SpaceshipState.baseLaserCap
         if stacks > 0 {
-            lines.append(("RAPID FIRE \(shipState?.laserCap ?? 0)",
+            lines.append(("\(PowerUp.rapidFire.label) \(shipState?.laserCap ?? 0)",
                           NeonPalette.transporterGreen, nil))
         }
         if powerUps.hasShield {
@@ -2211,31 +2235,17 @@ class GameScene: SKScene {
         guard destroyed else { return }
         let at = bloomPosition(of: node)
         let powerUp = node.powerUp
-        let tint = powerUp?.tint ?? NeonPalette.acidGreen
-        let value = powerUp?.points ?? RaiderRules.scoutPoints
-        let points = ScoreManager.shared.scaled(value)
-        // §13.3: a special goes up bigger than a standard scout, in its own
+        let points = ScoreManager.shared.scaled(powerUp.points)
+        // §13.3: a special goes up bigger than the plain green scout, in its own
         // colour, and says what it just handed over.
-        explosions?.burst(at: at, color: tint, scale: powerUp == nil ? 1.4 : 2.2)
-        scorePops?.pop(points, at: at, color: tint)
-        ScoreManager.shared.addPoints(value, logged: false)
+        explosions?.burst(at: at, color: powerUp.tint,
+                          scale: powerUp == .rapidFire ? 1.4 : 2.2)
+        scorePops?.pop(points, at: at, color: powerUp.tint)
+        ScoreManager.shared.addPoints(powerUp.points, logged: false)
         refreshHUD()
-
-        guard let powerUp else {
-            // §13.1 reserves power-ups for the special scouts, but the ordinary
-            // green one is not nothing: it carries Rapid Fire, which used to be
-            // the promotion reward. Crowning a pawn is far too rare to be the
-            // only way to earn it — most runs never see one — and hanging it on
-            // the scout puts the reward where the player can actually go and
-            // take it.
-            AudioManager.shared.play(.raiderDestroyed)
-            grantRapidFire()
-            DiagnosticsLog.shared.log(.raider, "scout destroyed (\(points))")
-            return
-        }
         activate(powerUp, at: at)
         DiagnosticsLog.shared.log(.raider,
-            "\(powerUp.rawValue) scout destroyed (\(points))")
+            "\(powerUp.shipName) scout destroyed (\(points))")
     }
 
     // MARK: - Power-ups (§13)
@@ -2249,6 +2259,14 @@ class GameScene: SKScene {
         flashPowerUpLabel(powerUp, at: point)
 
         switch powerUp {
+        case .rapidFire:
+            // §13.1 reserves power-ups for the special scouts; the plain green
+            // one carries this instead. It was the promotion reward, and
+            // crowning a pawn is far too rare to be the only source — most runs
+            // never see one, so the reward effectively did not exist.
+            AudioManager.shared.play(.raiderDestroyed)
+            grantRapidFire()
+
         case .shield:
             powerUps.raiseShield()
             ship?.applyShield()
@@ -2295,7 +2313,7 @@ class GameScene: SKScene {
             // barrage should start the instant the scout dies.
             gatlingCooldown = 0
 
-        case .shield, .nuke:
+        case .rapidFire, .shield, .nuke:
             break
         }
     }
@@ -2320,7 +2338,7 @@ class GameScene: SKScene {
         case .gatling:
             AudioManager.shared.play(.uiSciFiPing)
 
-        case .shield, .nuke:
+        case .rapidFire, .shield, .nuke:
             break
         }
     }
@@ -3023,7 +3041,7 @@ class GameScene: SKScene {
             // frame a freeze ends on is already a running frame.
             if let expired = powerUps.tick(dt) {
                 lift(expired)
-                DiagnosticsLog.shared.log(.raider, "\(expired.rawValue) ends")
+                DiagnosticsLog.shared.log(.raider, "\(expired.label.lowercased()) ends")
             }
             advanceGatling(dt)
         }
@@ -3164,6 +3182,13 @@ class GameScene: SKScene {
         if stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "a" {
             toggleAutoMode()
+            return
+        }
+
+        // Hidden: R sends the level's next raider in now, for testing.
+        if stateMachine.currentState is PlayingState,
+           event.charactersIgnoringModifiers?.lowercased() == "r" {
+            summonRaider()
             return
         }
 

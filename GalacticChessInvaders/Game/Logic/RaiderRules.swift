@@ -6,6 +6,9 @@
 // regeneration — is paced off the turn, so the whole board pulses together and
 // a player learns to think in beats. A raider ignores that rhythm entirely, and
 // is the only thing on screen that does.
+//
+// What flies on which level is `PowerUps.roster`. This file owns how it flies,
+// how often, and whether it shoots.
 
 import CoreGraphics
 import Foundation
@@ -23,15 +26,15 @@ enum RaiderRules {
     /// 74 px/s, so a missed pass is recoverable rather than final.
     ///
     /// It was 300 first, which is *faster than the ship*, and uncatchable by
-    /// construction. The cost of slowing it is frequency: a crossing is 5.6s,
-    /// which is 28% of Level 1's interval but 94% of Level 10's, so by Blitz
-    /// there is nearly always one on screen. Catchable is worth more than rare.
+    /// construction.
     static let scoutSpeed: CGFloat = 220
     static let scoutHP = 1
+    /// §9's table.
+    static let scoutPoints = 100
 
     /// The scout's round travels 25% faster than the fleet's.
     ///
-    /// It also starts much higher — over the board at the early levels, a whole
+    /// It also starts much higher — over the board for most kinds, a whole
     /// board above the ship — so at fleet speed it was the slowest thing on
     /// screen to arrive despite coming from the most exposed position. The
     /// scout is a raid; its shot should not amble.
@@ -51,142 +54,173 @@ enum RaiderRules {
     static func shotSpeed(level: LevelParameters) -> CGFloat {
         max(baseShotSpeed, level.projectileSpeed) * shotSpeedMultiplier
     }
-    /// §9's table.
-    static let scoutPoints = 100
-    /// §6: at most two raiders on screen; a third waits.
+
+    /// Nodes in the pool. Two, because §6 caps raiders on screen at two and the
+    /// escorts and flagship still to come will want the second slot.
     static let maxOnScreen = 2
 
-    /// Clear sky between one scout leaving and the next arriving.
+    /// How many scouts may be crossing at once — one.
     ///
-    /// The gap is the thing the player feels, not the share of time a scout is
-    /// up. Capping the share at 60% still left only 3.3 seconds of quiet
-    /// between crossings at the tighter levels, which reads as a stream of
-    /// scouts rather than as a raid you get a breather from.
+    /// §6's cap is two, written for a mix of scouts, escorts and a flagship.
+    /// With the roster offering one kind at a time, two of the same scout on
+    /// screen is the same offer twice, and the gap between crossings — the thing
+    /// that stops raiders becoming wallpaper — stops being clear sky at all.
+    /// One at a time also makes "which raider is this level's" answerable by
+    /// looking, which is the point of a fixed roster.
+    static let maxScoutsOnScreen = 1
+
+    // MARK: - Cadence
+
+    /// Clear sky between one crossing and the next, by how many power-ups the
+    /// level is offering.
     ///
-    /// Seven seconds fixed that and was still far too many raiders: a crossing
-    /// plus seven is a scout every 12.6s, which over a two-minute wave is nine
-    /// or ten of them — a constant presence rather than an event. A raider is
-    /// meant to *interrupt*. Twenty-two puts a crossing every ~28s, so a wave
-    /// sees a handful, and combined with `endsAfterAKill` most waves see two or
-    /// three before the player brings one down and the sky clears for good.
-    static let minimumGap: TimeInterval = 22
+    /// The gap is what the player feels, not the share of time a scout is up.
+    /// Twenty-two seconds gives a crossing every ~28s: a wave sees two to four,
+    /// so each is an event. (It was seven, which is a crossing every 12.6s and
+    /// nine or ten in a wave — a constant presence rather than a raid.)
+    ///
+    /// It shortens where the roster is longer, because on those levels the
+    /// player has to bring down two or three raiders in one wave and every miss
+    /// costs a full gap. Without this, Levels 9 and 10 would advertise three
+    /// power-ups and realistically hand over one.
+    static func minimumGap(rosterCount: Int) -> TimeInterval {
+        switch max(1, rosterCount) {
+        case 1:  return 22
+        case 2:  return 15
+        default: return 12
+        }
+    }
 
     /// The first crossing of a level comes at a fraction of the full gap.
     ///
-    /// At the full 28s the opening scout arrived so late that on a short wave
-    /// it never came at all — and from Level 2 the *first* scout is the one
-    /// carrying the level's power-up (`PowerUps.specialCrossingIndex`), so a
-    /// late first crossing is a power-up the player never gets offered. The
-    /// long gaps are what stop raiders becoming wallpaper; they are not needed
-    /// before the first one has been seen.
+    /// At the full gap the opening scout arrived so late that on a short wave it
+    /// never came at all — and the first crossing carries the level's first
+    /// power-up, so a late first pass is an offer never made. The long gaps are
+    /// what stop raiders becoming wallpaper; they are not needed before the
+    /// first one has been seen.
     static let openingLead = 0.55
 
-    /// Whether shooting a raider down ends the level's raids.
-    ///
-    /// The level offers one power-up. Once the player has taken it, further
-    /// crossings are either a second power-up — which §13.1 rules out — or a
-    /// scout with nothing to give, which is just more traffic on a board that
-    /// is already the busiest thing in the game.
-    ///
-    /// Missing is what keeps them coming: a scout that gets across unharmed
-    /// leaves the offer open, and the next one carries it again. So the number
-    /// of raiders a wave sees is set by how long the player takes to hit one,
-    /// which is the right thing for it to depend on.
-    ///
-    /// Uniform for now. Levels 7-10 are the candidates for relaxing it — by
-    /// then the player is fast enough that one kill can arrive very early — but
-    /// that is a playtest question, not a guess.
-    static func endsAfterAKill(level: Int) -> Bool { true }
-
-    /// The interval actually used: the level's, or one crossing plus the
-    /// minimum gap, whichever is longer.
+    /// The interval actually used: the level's, or one crossing plus the gap,
+    /// whichever is longer.
     ///
     /// Derived from the crossing rather than written into §21.1's table, so
-    /// changing the scout's speed cannot silently close the gap again.
+    /// changing a scout's speed cannot silently close the gap again. Note that
+    /// this overrides §21.1's `raiderInterval` at every level — raider frequency
+    /// is set by the roster, not by the level's own escalation.
     static func interval(forLevel levelInterval: TimeInterval,
-                         crossing: TimeInterval) -> TimeInterval {
-        max(levelInterval, crossing + minimumGap)
+                         crossing: TimeInterval,
+                         rosterCount: Int = 1) -> TimeInterval {
+        max(levelInterval, crossing + minimumGap(rosterCount: rosterCount))
     }
 
     /// How long one crossing takes, entry to exit, including the off-screen
     /// margin at both ends.
-    static func crossingDuration(sceneWidth: CGFloat, scoutWidth: CGFloat) -> TimeInterval {
-        TimeInterval((sceneWidth + scoutWidth * 2) / scoutSpeed)
+    static func crossingDuration(sceneWidth: CGFloat, scoutWidth: CGFloat,
+                                 speedMultiplier: Double = 1) -> TimeInterval {
+        TimeInterval((sceneWidth + scoutWidth * 2) / (scoutSpeed * CGFloat(speedMultiplier)))
     }
 
-    /// Where the scout crosses, held for the whole level so a player who has
-    /// seen one crossing knows where the next will be.
+    // MARK: - Flight paths (§6.3)
+
+    /// The vertical shape of a crossing. Tied to the *kind* of raider rather
+    /// than to the level, so the path is part of the ship's identity: once the
+    /// player has seen an ice scout weave, every ice scout weaves on every
+    /// level, and the path becomes a second cue for what is on offer.
     ///
-    /// Three patterns, each a real escalation on the last:
-    ///
-    /// * **over the board** (Levels 1–3) — above every piece, which is where
-    ///   Space Invaders' mystery ship flies and what makes it read as a passing
-    ///   bonus rather than as part of the fleet;
-    /// * **piece height** (4–6) — §6's rank 4–5, where it is firing into
-    ///   traffic;
-    /// * **weaving** (7+) — the same crossing with the height no longer
-    ///   constant, so aiming stops being a purely horizontal problem.
-    ///
-    /// Each earns its own warning pass the first time it appears in a run.
-    enum Crossing: Equatable {
+    /// Each case carries its own numbers rather than reading shared constants,
+    /// because they are randomised per crossing — the same ship, flown a little
+    /// differently each time.
+    enum Flight: Equatable {
+        /// Dead level, all the way across. The green scout's, and deliberately
+        /// the only one: it is the raider the player meets first and chases most
+        /// often, so it should be a pure horizontal aiming problem with nothing
+        /// else going on.
+        case straight
+        /// A sine weave: how far it strays either side of its lane, and how long
+        /// half a cycle takes.
+        case weave(amplitude: CGFloat, halfPeriod: TimeInterval)
+        /// Enters high and descends steadily across the whole crossing, exiting
+        /// low. Reads as coming down to meet the player.
+        case glide(drop: CGFloat)
+        /// One dive and climb: down to `depth` below the entry lane by
+        /// mid-crossing, back out by the far edge.
+        case swoop(depth: CGFloat)
+    }
+
+    /// Where a crossing begins.
+    enum Lane: Equatable {
+        /// Above every piece however far the fleet has descended — where Space
+        /// Invaders' mystery ship flies, and what makes a raider read as a
+        /// passing bonus rather than as part of the fleet.
         case overTheBoard
+        /// Centred on a board rank, in among the pieces (§6's rank 4-5).
         case rank(Int)
-        /// Same crossing, but weaving up and down through it.
-        case weaving(Int)
+    }
 
-        /// What the player has to *learn*, as opposed to where exactly this
-        /// one flies. Rank 4 and rank 5 are the same problem, so seeing one
-        /// counts as having seen the other.
-        var pattern: Pattern {
-            switch self {
-            case .overTheBoard: return .overTheBoard
-            case .rank:         return .atPieceHeight
-            case .weaving:      return .weaving
-            }
-        }
-
-        /// How far it strays vertically from its line, in points.
-        var weaveAmplitude: CGFloat {
-            switch self {
-            // Not zero even when flying straight: a few points of drift keeps
-            // the disc hovering rather than sliding along a rail.
-            case .overTheBoard, .rank: return 4
-            case .weaving:             return RaiderRules.weaveAmplitude
-            }
-        }
-
-        /// The rank it is centred on, if any.
-        var rank: Int? {
-            switch self {
-            case .overTheBoard:        return nil
-            case .rank(let r):         return r
-            case .weaving(let r):      return r
-            }
+    /// The lane each kind enters on.
+    static func lane(for powerUp: PowerUp) -> Lane {
+        switch powerUp {
+        // The two that come down to the player start from the top, so the
+        // descent has the whole screen to be visible in.
+        case .rapidFire, .shield, .nuke: return .overTheBoard
+        // The two weavers fly in traffic, which is where a weave costs the
+        // player something: the pieces are the reason a vertical guess is hard.
+        case .freeze:  return .rank(Bool.random() ? 4 : 5)
+        case .gatling: return .rank(Bool.random() ? 5 : 6)
         }
     }
 
-    enum Pattern: Hashable { case overTheBoard, atPieceHeight, weaving }
+    /// A fresh flight path for one crossing. Randomised inside each kind's
+    /// character, so a player who has learned the shape still has to read this
+    /// particular one.
+    ///
+    /// `headroom` is how far the entry lane sits above the lowest point a raider
+    /// may reach, so the descending paths use the space that actually exists
+    /// rather than a number that assumes a lane.
+    static func flight(for powerUp: PowerUp, headroom: CGFloat) -> Flight {
+        switch powerUp {
+        case .rapidFire:
+            return .straight
 
-    /// Just under a square either side of the line, so the weave costs the
-    /// player a vertical guess as well as a horizontal one without ever taking
-    /// the scout somewhere it could not have been.
-    static let weaveAmplitude: CGFloat = 55
-    /// Half a cycle. About 2.7 full waves across a crossing — enough to read
-    /// as a rhythm rather than as a wobble, slow enough to aim against.
-    static let weaveHalfPeriod: TimeInterval = 0.9
-    /// From here the scout stops flying in a straight line.
-    static let weavesFromLevel = 7
+        case .freeze:
+            // Tight and quick against its slow travel: about three full waves
+            // across a crossing, so it reads as a rhythm you can aim against.
+            // Just under a square either side, so it never goes anywhere it
+            // could not have been.
+            return .weave(amplitude: .random(in: 46...60),
+                          halfPeriod: .random(in: 0.75...1.05))
 
-    static func crossing(for level: Int) -> Crossing {
-        let rank = Bool.random() ? 4 : 5
-        if level <= aboveBoardThroughLevel { return .overTheBoard }
-        return level >= weavesFromLevel ? .weaving(rank) : .rank(rank)
+        case .gatling:
+            // The same idea at a different scale — nearly twice the amplitude
+            // over more than twice the period, so it sweeps rather than
+            // ripples. Distinct from the ice scout at a glance, which is the
+            // requirement: two weavers that look alike are one wasted path.
+            return .weave(amplitude: .random(in: 74...104),
+                          halfPeriod: .random(in: 1.9...2.6))
+
+        case .shield:
+            // A long shallow diagonal. The angle is the variation: at the
+            // shallow end it barely leaves the top of the board, at the steep
+            // end it arrives in the player's own strip by the far edge.
+            return .glide(drop: headroom * .random(in: 0.55...0.95))
+
+        case .nuke:
+            // The aggressive one, and the only one that comes at the player and
+            // leaves again. Two hits to kill, so the dive is what makes the
+            // second one gettable: it is closest at mid-crossing, which is also
+            // when it is moving most steeply and hardest to lead.
+            return .swoop(depth: headroom * .random(in: 0.7...0.95))
+        }
     }
 
-    static let aboveBoardThroughLevel = 3
+    /// Where a dive bottoms out, as a fraction of the crossing. Just before
+    /// halfway, so the climb out is longer than the dive in and the raider
+    /// spends its slowest moment low, near the player.
+    static let swoopLowPoint = 0.45
 
-    /// Early levels hold the scout back until the fleet's rear rank has
-    /// thinned.
+    // MARK: - Firing
+
+    /// Early levels hold the scout back until the fleet's rear rank has thinned.
     ///
     /// Level 1 is where the player is learning two control schemes at once, and
     /// §21.1 already gives it no fleet fire at all — a scout arriving over an
@@ -204,45 +238,39 @@ enum RaiderRules {
     /// unreadable, and one fired as it leaves is unavoidable.
     static func fireFraction() -> CGFloat { .random(in: 0.25...0.7) }
 
-    /// §6's Galaga precedent, tied to the *pattern* rather than to the level.
+    /// §6's Galaga precedent, tied to the *kind* of raider.
     ///
     /// §6 gives a free pass to the first scout of every level. That spends its
     /// rationale — "the player sees the attack pattern before being shot at" —
-    /// the first time, and then keeps handing over a harmless raider forever:
-    /// by Level 8 the player has seen thirty of them and still gets one a wave.
+    /// the first time, and then keeps handing over a harmless raider forever: by
+    /// Level 8 the player has seen thirty of them and still gets one a wave.
     ///
-    /// A pass is now owed only while a pattern is genuinely new, which happens
-    /// twice in a run: the first scout of the game, and the first one after it
-    /// drops to piece height at Level 4, where it really is a different problem.
-    static func fires(patternAlreadySeen: Bool) -> Bool { patternAlreadySeen }
+    /// A pass is owed once per *ship*, per run: the first green scout, the first
+    /// repair scout, the first ice scout, and so on. Five in a run, each one
+    /// genuinely the first sight of a new silhouette flying a new path — which
+    /// is exactly the case §6's rule was written for.
+    static func fires(kindAlreadySeen: Bool) -> Bool { kindAlreadySeen }
 }
 
 /// The real-time spawn clock (§21.1's `raiderInterval`).
 ///
-/// Held by the scene and ticked per frame, like `RegenerationQueue` — which
+/// Held by the controller and ticked per frame, like `RegenerationQueue` — which
 /// also means §23.9's rule about pending work dying with the level falls out of
 /// teardown rather than needing to be written down twice.
 @MainActor
 struct RaiderSchedule {
 
     private var untilNext: TimeInterval = 0
-    /// Whether this level's crossing pattern still owes the player a look at it.
-    private(set) var owesWarningPass = false
-    /// The height every scout in this level crosses at.
-    private(set) var crossing = RaiderRules.Crossing.overTheBoard
 
     /// Restarts the clock for a new level. The first raider is not due
     /// immediately: a wave should open on the chess position, not on a UFO.
-    mutating func reset(interval: TimeInterval, level: Int,
-                        patternsSeen: Set<RaiderRules.Pattern> = []) {
+    mutating func reset(interval: TimeInterval) {
         untilNext = interval * RaiderRules.openingLead
-        crossing = RaiderRules.crossing(for: level)
-        owesWarningPass = !patternsSeen.contains(crossing.pattern)
     }
 
-    /// True when a raider is due. `onScreen` is the cap check, folded in here
-    /// so a blocked spawn does not silently reset the clock and skip a turn —
-    /// it stays due until there is room.
+    /// True when a raider is due. `onScreen` is the cap check, folded in here so
+    /// a blocked spawn does not silently reset the clock and skip a turn — it
+    /// stays due until there is room.
     mutating func tick(_ dt: TimeInterval, interval: TimeInterval,
                        onScreen: Int, blocked: Bool = false) -> Bool {
         untilNext -= dt
@@ -250,16 +278,8 @@ struct RaiderSchedule {
         // Due but capped, or held back by a crowded rear rank: leave the clock
         // expired so it launches the moment the way is clear. Resetting it here
         // would silently skip a raider.
-        guard !blocked, onScreen < RaiderRules.maxOnScreen else { return false }
+        guard !blocked, onScreen < RaiderRules.maxScoutsOnScreen else { return false }
         untilNext = interval
         return true
-    }
-
-    /// Whether the scout being spawned right now fires, spending the warning
-    /// pass if one was owed.
-    mutating func claimFiringPass() -> Bool {
-        let fires = RaiderRules.fires(patternAlreadySeen: !owesWarningPass)
-        owesWarningPass = false
-        return fires
     }
 }
