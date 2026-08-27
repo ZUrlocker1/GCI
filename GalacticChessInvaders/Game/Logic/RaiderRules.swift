@@ -28,6 +28,29 @@ enum RaiderRules {
     /// there is nearly always one on screen. Catchable is worth more than rare.
     static let scoutSpeed: CGFloat = 220
     static let scoutHP = 1
+
+    /// The scout's round travels 25% faster than the fleet's.
+    ///
+    /// It also starts much higher — over the board at the early levels, a whole
+    /// board above the ship — so at fleet speed it was the slowest thing on
+    /// screen to arrive despite coming from the most exposed position. The
+    /// scout is a raid; its shot should not amble.
+    static let shotSpeedMultiplier: CGFloat = 1.25
+
+    /// The floor under a scout's round, and the reason it is not simply the
+    /// level's projectile speed.
+    ///
+    /// §21.1 gives Level 1 a projectile speed of *zero*, because the fleet does
+    /// not fire there. Deriving the scout's shot from it therefore produced a
+    /// round of speed zero, which `LaserNode.fire` refuses outright — so the
+    /// scout could never shoot on Level 1, the one level where §6 makes it the
+    /// player's only repeatable incoming fire. 180 is what the fleet fires at
+    /// when it starts firing, at Level 2.
+    static let baseShotSpeed: CGFloat = 180
+
+    static func shotSpeed(level: LevelParameters) -> CGFloat {
+        max(baseShotSpeed, level.projectileSpeed) * shotSpeedMultiplier
+    }
     /// §9's table.
     static let scoutPoints = 100
     /// §6: at most two raiders on screen; a third waits.
