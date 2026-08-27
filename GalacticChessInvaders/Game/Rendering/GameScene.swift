@@ -3709,6 +3709,10 @@ class GameScene: SKScene {
             if hit.name == "backButton" || hit.parent?.name == "backButton" {
                 AudioManager.shared.play(.uiButtonClick)
                 hideHowToPlay()
+            } else if hit.name == HowToPlayNode.musicLinkName,
+                      let url = URL(string: "https://www.mzurlocker.com/zudio") {
+                AudioManager.shared.play(.uiButtonClick)
+                NSWorkspace.shared.open(url)
             }
             return
         }
