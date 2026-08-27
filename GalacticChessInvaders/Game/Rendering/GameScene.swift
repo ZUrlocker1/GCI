@@ -608,6 +608,21 @@ class GameScene: SKScene {
         hudNode = nil
     }
 
+    /// The one thing on screen that should show a pointing hand: the Zudio
+    /// link on the info panel. `KeyboardFocusedSKView` turns this into a cursor
+    /// rect; nil means there is nothing to point at.
+    var pointerCursorRect: CGRect? {
+        guard let overlay = howToPlayNode, !overlay.linkRect.isEmpty else { return nil }
+        return overlay.linkRect
+    }
+
+    /// Cursor rects are cached by the window until something says otherwise, so
+    /// every path that opens or closes the info panel has to say so.
+    private func refreshCursorRects() {
+        guard let view else { return }
+        view.window?.invalidateCursorRects(for: view)
+    }
+
     func showHowToPlay() {
         guard howToPlayNode == nil else { return }
         let overlay = HowToPlayNode(sceneSize: size)
@@ -615,6 +630,7 @@ class GameScene: SKScene {
         overlay.zPosition = 20
         addChild(overlay)
         howToPlayNode = overlay
+        refreshCursorRects()
 
         // Opening it during gameplay pauses immediately (§10): freeze the beat,
         // stop the ship drifting, and duck the music.
@@ -632,6 +648,7 @@ class GameScene: SKScene {
         guard howToPlayNode != nil else { return }
         howToPlayNode?.removeFromParent()
         howToPlayNode = nil
+        refreshCursorRects()
 
         if stateMachine.currentState is PlayingState {
             isPaused = false
@@ -643,6 +660,7 @@ class GameScene: SKScene {
 
     func resetToTitle() {
         howToPlayNode?.removeFromParent(); howToPlayNode = nil
+        refreshCursorRects()
         titleOverlay?.removeFromParent(); titleOverlay = nil
         // Clear any pause the info overlay applied, or the title screen would
         // arrive with its animations frozen.
