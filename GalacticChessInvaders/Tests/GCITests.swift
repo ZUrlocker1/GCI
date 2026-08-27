@@ -4837,3 +4837,72 @@ final class PowerUpTests: XCTestCase {
         XCTAssertLessThan(rounds, 140, "and fewer than the five-way version fired")
     }
 }
+
+@MainActor
+final class PowerUpAlleyLayoutTests: XCTestCase {
+
+    // The left gutter's other occupants, measured at x=112 as glyph bands. Not
+    // derived from the nodes — half of them are built inside `GameStatusNode`
+    // and `TurnTimerNode` at local offsets — so this is a written-down
+    // measurement, and it is the whole point of the test: the readout was first
+    // placed by eye against the turn timer's centre without accounting for its
+    // caption 18pt above, and landed straight on top of the caption.
+    private static let occupants: [(name: String, band: ClosedRange<CGFloat>)] = [
+        ("turn-timer caption",  180...188),
+        ("turn-timer digits",   155...177),
+        ("transient notice",    145.5...154.5),
+        ("status side label",   128...138),
+        ("status state label",  108.5...123.5),
+        ("the ship's lane",     42...82),
+    ]
+
+    private var alleyBands: [ClosedRange<CGFloat>] {
+        let half = GameScene.powerUpAlleyFontSize / 2
+        return (0..<GameScene.powerUpAlleyLines).map { index in
+            let y = GameScene.powerUpAlleyBottomY
+                + CGFloat(index) * GameScene.powerUpAlleyStep
+            return (y - half)...(y + half)
+        }
+    }
+
+    /// No power-up line may touch anything else in the gutter.
+    func testTheReadoutTouchesNothingElseInTheGutter() {
+        for (index, line) in alleyBands.enumerated() {
+            for occupant in Self.occupants {
+                XCTAssertFalse(line.overlaps(occupant.band),
+                               "alley line \(index) (\(line)) collides with "
+                               + "\(occupant.name) (\(occupant.band))")
+            }
+        }
+    }
+
+    /// And the lines may not touch each other.
+    func testTheLinesDoNotOverlapEachOther() {
+        XCTAssertGreaterThan(GameScene.powerUpAlleyStep,
+                             GameScene.powerUpAlleyFontSize,
+                             "the step has to clear a whole line of type")
+    }
+
+    /// It sits in the one band wide enough to hold it — below the status line
+    /// and above the ship. Every other gap in the gutter is under 8pt.
+    func testTheReadoutUsesTheOnlyBandThatFits() {
+        let bands: [ClosedRange<CGFloat>] = Self.occupants
+            .map(\.band)
+            .sorted { $0.lowerBound < $1.lowerBound }
+        var gaps: [CGFloat] = []
+        for (lower, upper) in zip(bands, bands.dropFirst()) {
+            gaps.append(upper.lowerBound - lower.upperBound)
+        }
+        let widest: CGFloat = gaps.max() ?? 0
+        XCTAssertEqual(widest, 26.5, accuracy: 0.01, "the 82–108.5 band")
+        for gap in gaps where gap != widest {
+            XCTAssertLessThan(gap, GameScene.powerUpAlleyFontSize,
+                              "a second usable band would make this test wrong")
+        }
+        // And the readout is in it.
+        let lowest = alleyBands.map(\.lowerBound).min() ?? 0
+        let highest = alleyBands.map(\.upperBound).max() ?? 0
+        XCTAssertGreaterThan(lowest, 82)
+        XCTAssertLessThan(highest, 108.5)
+    }
+}

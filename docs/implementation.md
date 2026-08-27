@@ -818,8 +818,21 @@ randomised per crossing, so a learned shape still has to be read.
 - The four special hulls are drawn as shape overlays on the existing scout
   sprite — the hexagonal grid, crystalline facets, sea-mine spikes, the row of
   exhaust ports. Five new sprites would be better and are not in the atlas
-- Every active power-up shows as a standing line in the player's alley, stacked
-  above the turn-timer slot, with a countdown bar on the timed one
+- Every active power-up shows as a standing line in the player's alley, in the
+  band between the status line and the ship's own lane. Two lines: Rapid Fire
+  shares one with the shield — free, because the two can never co-occur in play
+  (the shield is only offered on Level 3 and Rapid Fire is not offered there) —
+  and a running timed effect takes the other, with its remaining seconds
+  appended. That number replaces §13.2's countdown bar, which needed a row of its
+  own and there is no row to spare.
+
+  The gutter is fuller than it looks: measured, its only usable band is **82 to
+  109**, and every other gap between the turn timer, the transient notice and the
+  status line is 0.5 to 7.5pt — too narrow for a 9pt line. The readout was first
+  placed by eye against the turn timer's *centre* at 166 without accounting for
+  its caption 18pt above, so it landed on top of the caption. The measurements
+  are now a table in the code and a test that fails on any overlap, since
+  eyeballing it is what caused the collision
 - The two Ice sounds are synthesised (`Resources/sfx/generated/`): a swept-noise
   whoosh falling 2.4kHz → 180Hz with a comb-delay tail and a crystalline ring
   over the last third, and a shorter rising version for the expiry
