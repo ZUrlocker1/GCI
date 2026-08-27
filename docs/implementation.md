@@ -411,12 +411,14 @@ turn, so the board pulses together; a raider ignores that entirely.
   one acid-green shot straight down, 1 HP, 100 points, a two-tone woop every
   0.85s while it crosses. Two on screen at once; a spawn blocked by the cap
   stays due rather than being skipped
-- **Levels 1–3 fly it over the board**, above every piece, where Space
-  Invaders' mystery ship belongs. From Level 4 it drops into §6's rank 4–5,
-  which is a real escalation — down there it is firing into traffic. Fixed for
-  the level either way, so one crossing teaches where the next will be
-- **A warning pass is owed once per attack pattern, per run** — the first scout
-  of the game, and the first one after it drops to piece height at Level 4.
+- **Three crossing patterns**, each a real escalation and each fixed for the
+  level so one sighting teaches the next: **over the board** (L1–3), above every
+  piece, where the mystery ship belongs; **piece height** (L4–6), §6's rank 4–5,
+  firing into traffic; **weaving** (L7+), the same crossing with the height no
+  longer constant, so aiming stops being a purely horizontal problem. The weave
+  is ±55pt — most of a square, and inside the board at either rank
+- **A warning pass is owed once per attack pattern, per run** — three in a run,
+  at Levels 1, 4 and 7, as each new pattern first appears.
   §6 gives one every level, which spends its own rationale ("the player sees
   the attack pattern before being shot at") the first time and then keeps
   handing over a harmless raider forever. Two per run, and everything else fires

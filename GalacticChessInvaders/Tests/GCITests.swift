@@ -3317,11 +3317,47 @@ final class RaiderTests: XCTestCase {
     }
 
     /// Rank 4 and rank 5 are the same thing to learn, so seeing one must not
-    /// leave the other still owing a pass.
-    func testTheTwoRankHeightsAreOnePattern() {
+    /// leave the other still owing a pass. Weaving is not.
+    func testPatternsGroupByWhatHasToBeLearned() {
         XCTAssertEqual(RaiderRules.Crossing.rank(4).pattern, .atPieceHeight)
         XCTAssertEqual(RaiderRules.Crossing.rank(5).pattern, .atPieceHeight)
         XCTAssertEqual(RaiderRules.Crossing.overTheBoard.pattern, .overTheBoard)
+        XCTAssertEqual(RaiderRules.Crossing.weaving(4).pattern, .weaving)
+        XCTAssertEqual(RaiderRules.Crossing.weaving(5).pattern, .weaving)
+    }
+
+    /// Three patterns, each arriving once and staying: straight over the board,
+    /// straight at piece height, then weaving.
+    func testTheCrossingEscalatesInThreeSteps() {
+        for level in 1...RaiderRules.aboveBoardThroughLevel {
+            XCTAssertEqual(RaiderRules.crossing(for: level).pattern, .overTheBoard,
+                           "level \(level)")
+        }
+        for level in (RaiderRules.aboveBoardThroughLevel + 1)..<RaiderRules.weavesFromLevel {
+            XCTAssertEqual(RaiderRules.crossing(for: level).pattern, .atPieceHeight,
+                           "level \(level)")
+        }
+        for level in RaiderRules.weavesFromLevel...12 {
+            XCTAssertEqual(RaiderRules.crossing(for: level).pattern, .weaving,
+                           "level \(level)")
+        }
+    }
+
+    /// A weave must stay on the board — a scout that swings off the top or into
+    /// the ship's lane is a different mechanic, not a harder crossing.
+    func testTheWeaveStaysWithinTheBoard() {
+        let boardBottom: CGFloat = 120
+        for rank in [4, 5] {
+            let centre = boardBottom + (CGFloat(rank) - 0.5) * BoardNode.squareSize
+            let high = centre + RaiderRules.weaveAmplitude
+            let low = centre - RaiderRules.weaveAmplitude
+            XCTAssertLessThan(high, boardBottom + BoardNode.boardSize,
+                              "rank \(rank) swings above the board")
+            XCTAssertGreaterThan(low, boardBottom + BoardNode.squareSize,
+                                 "rank \(rank) swings into the low ranks")
+        }
+        // And it is a real weave, not a wobble.
+        XCTAssertGreaterThan(RaiderRules.weaveAmplitude, BoardNode.squareSize / 2)
     }
 
     /// The clock is real time, not the chess beat, and the cap holds a spawn
