@@ -108,6 +108,13 @@ if orphans:
 # so the literal search that guards *missing* art cannot also find *unused*
 # art — it would call every piece an orphan. The generated set is enumerated
 # instead, and anything matching neither that nor a literal is genuinely stray.
+music = sorted((root / "Resources").glob("*.m4a"))
+if music:
+    total = sum(f.stat().st_size for f in music)
+    print(f"• {len(music)} music track(s), {total/1e6:.1f} MB:")
+    for f in music:
+        print(f"    {f.name}  {f.stat().st_size/1e6:.1f} MB")
+
 generated = {f"chess-{c}-{t}{d}"
              for c in ("w", "b")
              for t in ("pawn", "knight", "bishop", "rook", "queen", "king")
