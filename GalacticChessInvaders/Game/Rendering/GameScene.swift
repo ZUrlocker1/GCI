@@ -3934,22 +3934,29 @@ class GameScene: SKScene {
     /// took it off the node. Those have entirely different culprits.
     /// Raises a red line in the left gutter once anything has logged an error.
     ///
-    /// Under the status readout, where there is clear space between it and the
-    /// ship's lane. Parented to the scene above `GameOverNode`'s z, not to
-    /// `bloomNode`: game over draws a full-scene scrim, and a flag that a run
-    /// went wrong is exactly what must survive the end of the run. Hidden while
-    /// a panel is open, since those own the whole screen.
+    /// The bottom-left corner, out of everything's way: below the gutter stack,
+    /// which ends with the status readout at y=108; below the ship's lane,
+    /// which spans 42 to 82 and reaches this far left; and well clear of the
+    /// board's left edge at x=224.
+    ///
+    /// Parented to the scene at a z above `GameOverNode`, not to `bloomNode`.
+    /// Game over draws a scrim over the whole scene and the end banner sits at
+    /// 24 — a flag saying the run went wrong is exactly what has to outlast
+    /// both. Hidden only while a panel is open, since those own the screen.
+    ///
+    /// The pulse bottoms out at 0.6 rather than fading away: this has to be
+    /// readable at every instant, not merely eye-catching.
     private func raiseErrorFlag() {
         guard DiagnosticsLog.shared.errorCount > 0, errorFlag == nil else { return }
         let flag = SKLabelNode(fontNamed: "PressStart2P-Regular")
         flag.text = "ERROR - SEE LOG"
-        flag.fontSize = 9
+        flag.fontSize = 10
         flag.fontColor = NeonPalette.magenta
-        flag.horizontalAlignmentMode = .center
-        flag.position = CGPoint(x: 112, y: Self.boardBottomY - 32 - Self.gutterDrop)
+        flag.horizontalAlignmentMode = .left
+        flag.position = CGPoint(x: 50, y: 30)
         flag.zPosition = 26
         flag.run(.repeatForever(.sequence([
-            .fadeAlpha(to: 0.35, duration: 0.7), .fadeAlpha(to: 1.0, duration: 0.7),
+            .fadeAlpha(to: 0.6, duration: 0.7), .fadeAlpha(to: 1.0, duration: 0.7),
         ])))
         addChild(flag)
         errorFlag = flag
