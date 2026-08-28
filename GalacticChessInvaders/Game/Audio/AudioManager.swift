@@ -217,6 +217,11 @@ final class AudioManager {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
             return
         }
+        // Cancels anything a fade has queued. Without this a hand-over
+        // scheduled 1.7s out survived the trip back to the title — X during a
+        // level change stopped the music, started GCI-intro, and then let the
+        // queued level track land on the title screen.
+        fadeGeneration += 1
         musicPlayer?.stop()
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
@@ -270,6 +275,7 @@ final class AudioManager {
     }
 
     func stopMusic() {
+        fadeGeneration += 1
         pausedByGame = false
         musicPlayer?.stop()
         musicPlayer = nil
