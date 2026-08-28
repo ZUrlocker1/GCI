@@ -772,10 +772,34 @@ Much of this phase landed early — score pops, banner animations, the high scor
 table, the game over and level clear screens, per-piece destruction sounds. What
 is genuinely outstanding:
 
-- [ ] **Fourth starfield tier.** Three are built (46 / 26 / 12 sprites at
-      20 / 58 / 140 px/s); §12.4 asks for four
-- [ ] **Wireframe geometric debris** in a foreground layer, Asteroids Recharged
-      style — the one piece of the art direction with nothing built against it
+- [ ] **Nebula haze and wireframe debris.** §12.4 asks for four parallax layers:
+      dense stars, mid stars, nebula wisps, debris. Three *star* tiers are built
+      (46 / 26 / 12 sprites at 20 / 58 / 140 px/s, opposing drift so they do not
+      read as one sheet), which is richer than the two the doc specifies — what
+      is actually missing is the nebula and the debris, not a fourth star tier
+- [ ] **Background evolution per level** (§12.5). Not built; `backgroundColor` is
+      hardcoded pure black. §12.5's own table ramps the void from `#07070F` to
+      `#160304`, which is a few RGB points against black under a bloom layer —
+      almost certainly invisible. The haze is what should carry it: one stretched
+      radial-gradient sprite, tinted per level, at low alpha, outside `bloomNode`
+      so it does not smear. One draw call, no shader, per §12.4's performance rule.
+
+      Keyed to each level's mechanic rather than ramped cold-to-hot, because
+      that is how everything else here works — a linear red ramp says "later",
+      this says *which* wave you are on.
+
+| Level | Void | Haze | Why this colour |
+|---|---|---|---|
+| 1–2 | `#000000` | none | The opening is the reference every later level is read against. Nothing has escalated, so nothing has changed |
+| 3 | `#04050C` | indigo, low and wide | DOUBLE TROUBLE — the first hint that something is arriving |
+| 4 | `#06050E` | indigo | RELENTLESS — the same, deeper |
+| 5 | `#08040F` | violet | TRIPLE THREAT |
+| 6 | `#0A0410` | violet, spread wider | WIDE ORBIT — the haze widens as the sweep does |
+| 7 | `#0D0412` | magenta, diagonal grain | CROSSFIRE — the grain lies along the bishops' own diagonals |
+| 8 | `#0A0C08` | green | ARMORED PAWNS — the armour's own green, so the sky wears what the threat wears. Deliberately off the heat ramp |
+| 9 | `#100509` | amber, glowing from the top rank | KING ACTIVATED — the light comes from where he sits |
+| 10 | `#140306` | crimson, and the starfield accelerates | BLITZ |
+
 - [ ] **8-frame explosion sprite sheets per piece type.** Explosions are
       currently pooled particle bursts tinted per piece, which reads well enough
       that this may not be worth doing
@@ -924,6 +948,43 @@ oversights, and so the next person does not re-derive them.
 texture in a single draw call; `Silhouette`'s flood fill is measured once per
 texture and cached; diagnostics publish at 4Hz; every laser, explosion, score
 pop, shatter and raider is pooled, so gameplay allocates nothing.
+
+## Changing assets
+
+Every asset failure in this project has been silent. A missing texture draws a
+grey X and logs nothing; a missing sound simply does not play; a missing font
+falls back to Helvetica and the game still runs. Three have actually happened:
+four power-up sounds that were never copied into `Resources/`, camel walk frames
+written to the atlas but not the bundle, and an illegal-move cue deleted along
+with a file two keys were sharing.
+
+`typecheck.sh` runs the first four of these on every invocation, and fails:
+
+| Check | Catches |
+|---|---|
+| Sprites named in code exist | A texture that would draw a grey X |
+| Sounds the code *plays* exist | A cue that would go silent |
+| Music named in `playMusic` exists | A track that would not start |
+| Fonts named in code exist | Every label falling back to Helvetica |
+
+Only sounds the code actually calls `play`/`stop` on are required, because
+`SoundKey` deliberately names cues for features that were never built.
+
+`./typecheck.sh --assets` adds two advisory reports, which are the ones to run
+*before* adding or removing anything:
+
+- **Files backing more than one key.** This is the trap that produced the
+  illegal-move regression: a file added for one cue turned out to already be
+  serving another, so deleting "the one I added" silenced something else
+- **Bundled files nothing names**, with their total size — dead weight in the
+  DMG, and the other direction of the same mistake
+
+Two rules that no script can enforce:
+
+- **Delete by key, not by filename.** Find the key that owns the asset, remove
+  it, then check whether any other key still resolves to that file
+- **Adding a file to `assets/` does not bundle it.** The app loads from
+  `Resources/`; the two are copied by hand and have drifted twice
 
 ## Verification notes
 
