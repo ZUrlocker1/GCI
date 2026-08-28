@@ -9,8 +9,8 @@ Ten levels play end to end, each with a mechanic of its own, with all five
 power-ups and full arcade audio. The three things left that a player would
 notice, in the order they are worth doing:
 
-1. **Music and a settings screen** (5) — one track plays everywhere and there is
-   no way to change the volume. Blocked only on choosing tracks
+1. **Music per level** (5) — one track plays everywhere. The settings screen is
+   built; this is blocked only on choosing tracks
 2. **Polish and release** (8, 9) — attract mode, a fourth starfield tier, then
    balance, icon, DMG and notarization
 
@@ -31,7 +31,7 @@ existed; they are a checklist, not a running order.
 | 3.2 | Arcade layer: shooting & collision | ✅ |
 | 3.3 | Arcade layer: damage states & juice | ✅ |
 | 4 | Basic sound effects | 🟡 |
-| 5 | Background music + settings | ⬜ |
+| 5 | Background music + settings | 🟡 — settings screen done, music per level not |
 | 6.1 | Raiders: scout & basic escort | ✅ — Scout built, Escort cut |
 | 6.2 | Raiders: flagship, variants, special scouts | ✅ — special scouts built, Flagship and variants cut |
 | 7.1 | Level escalation: chess AI | ✅ — built with the level ladder |
@@ -910,9 +910,9 @@ order has diverged.
 
 Ordered within each group by what it would cost to *not* have at ship.
 
-### Music and settings (§20 Phase 5) — not started
+### Music and settings (§20 Phase 5) — settings done, music not
 
-The largest single gap, and the only one a player would notice immediately.
+The settings screen shipped in 0.2. What is left here is the soundtrack.
 
 - [ ] **Per-level music.** One track (`GCI-intro.m4a`) is bundled and plays
       everywhere. §5 wants a pool drawn from per level. **Blocked on track
@@ -921,15 +921,21 @@ The largest single gap, and the only one a player would notice immediately.
 - [ ] **Level clear fanfare** (3–4s) and **game over riff**, both specced in §5
       and currently standing in with `levelClear` / `gameOver` one-shots
 - [ ] **Title screen music**, stopping cleanly when the game starts
-- [ ] **`SettingsView.swift`** — master / music / SFX volume sliders, music
-      on/off, persisted via `UserDefaults`. `AudioManager` already exposes
-      `setMusicVolume` and a per-key gain and ceiling, so the plumbing is
-      in place and only the screen and the persistence are missing
-- [ ] Stubbed Gameplay / Controls / Display sections in Settings, so adding
-      difficulty and key remapping later needs no rework
-- [ ] Settings entry points: a title-screen button and a gameplay shortcut that
-      pauses while open. §5 is explicit that the pause overlay stays a plain
-      overlay with no menu — that part is already true
+- [x] **Settings screen** — `SettingsNode`, not §20's SwiftUI `SettingsView`:
+      every other full-screen panel is a SpriteKit node, and a SwiftUI sheet
+      would arrive in system chrome in the middle of an arcade cabinet. Twelve
+      controls, persisted in `GameSettings`
+- [x] Gameplay / Controls / Display sections, built rather than stubbed.
+      Master volume was cut — with two buses and macOS's own volume it is the
+      slider people drag when they meant one of the other two. Key remapping was
+      dropped: it is a four-key game
+- [x] **Cadet difficulty.** Scales the tuning rather than borrowing an earlier
+      level's row, because the table caps moves and shots at Level 5 and a row
+      shift did almost nothing from Level 6 up. `LevelParameters.eased` leaves
+      `level` alone, so Crossfire, Armored Pawns, King Activated and Blitz still
+      fire on the wave that owns them and the banner keeps telling the truth
+- [x] Settings entry points: `S`, plus a gear in the top right of the HUD and
+      the title screen. The pause overlay stays a plain overlay, as §5 requires
 - [ ] **Music ducking** under priority SFX. `AudioManager.duckMusic` exists and
       is not called from anywhere
 

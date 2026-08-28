@@ -26,7 +26,7 @@ clock and comes apart as you play it.
 
 [![Level 10, Blitz — the fleet at full strength against a three-second clock](docs/GCI%20blitz.jpg)](https://www.youtube.com/watch?v=yVaNIPDnGa0)
 
-[Download for macOS](https://github.com/ZUrlocker1/GCI/releases/download/v0.1/GCI-0.1.dmg)
+[Download for macOS](https://github.com/ZUrlocker1/GCI/releases/download/v0.2/GCI-0.2.dmg)
 
 Current release: `0.2` (build 2). Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
