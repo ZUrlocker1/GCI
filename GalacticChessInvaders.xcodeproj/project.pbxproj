@@ -32,6 +32,7 @@
 		2D6AEAFFDB4E3817A7AA8A3F /* HowToPlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */; };
 		3203C80A87E53941D3CA57FE /* chess-w-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 9AB88E2F8252175EF285AF23 /* chess-w-rook-d2.png */; };
 		346FAE43588F07BD3A9E0EE8 /* chess-w-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F7658142CFF640B25888ADBB /* chess-w-knight-d2.png */; };
+		348F0B7DFA3E37B07AE5AB69 /* Rattert-Z-Machine.m4a in Resources */ = {isa = PBXBuildFile; fileRef = CA740CF88621E46EC7AC43DB /* Rattert-Z-Machine.m4a */; };
 		34AD541D2F64A6C3EA248AFD /* BlitzSchnork.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */; };
 		362A63B60EAE25EE61172DB1 /* ExplosionPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815CA288511D02127E0E884F /* ExplosionPool.swift */; };
 		368610872B731D709369E6BC /* Chess.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11C903C797D394A807E396 /* Chess.swift */; };
@@ -42,7 +43,6 @@
 		452008C69273C0B918DFAA99 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7548E55F1B1E37D9A6AA88 /* GameState.swift */; };
 		456435234471D2982DBDDA74 /* GCITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E88C786A6B62EF1391252D /* GCITests.swift */; };
 		46AAE105A315B67E0A9A7C86 /* GalacticChessInvadersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77F960CE5B7791CFFB374A6A /* GalacticChessInvadersApp.swift */; };
-		46AF7880E03B247DCAFA8FD4 /* ZeigSchnork-Zero.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 27003B2989AF08E5D07E9F05 /* ZeigSchnork-Zero.m4a */; };
 		496150C3B2737728E85A0830 /* chess-w-king.png in Resources */ = {isa = PBXBuildFile; fileRef = 8339E5F18F16FA9DBF8CC7E2 /* chess-w-king.png */; };
 		4AAEA0F579F05B5F2CA173E8 /* chess-w-bishop.png in Resources */ = {isa = PBXBuildFile; fileRef = 358C1653386A6A77FA844C99 /* chess-w-bishop.png */; };
 		4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */; };
@@ -148,7 +148,6 @@
 		21E7C6E4E5697A906A277064 /* chess-b-king.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king.png"; sourceTree = "<group>"; };
 		2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetFiring.swift; sourceTree = "<group>"; };
 		266106237B707A5FFEC1D5FC /* GCI-intro.m4a */ = {isa = PBXFileReference; path = "GCI-intro.m4a"; sourceTree = "<group>"; };
-		27003B2989AF08E5D07E9F05 /* ZeigSchnork-Zero.m4a */ = {isa = PBXFileReference; path = "ZeigSchnork-Zero.m4a"; sourceTree = "<group>"; };
 		2B2151BC597FBC6006588FF8 /* ship-scout.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-scout.png"; sourceTree = "<group>"; };
 		2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-queen-d2.png"; sourceTree = "<group>"; };
 		2C700B2F09ADAB666A66E141 /* LevelBannerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBannerNode.swift; sourceTree = "<group>"; };
@@ -226,6 +225,7 @@
 		C85D5AC26FD4179831878F66 /* chess-b-knight-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-knight-d1.png"; sourceTree = "<group>"; };
 		C9811D7E64799129FF1929B9 /* ship-camel-b.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel-b.png"; sourceTree = "<group>"; };
 		CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarfieldTiling.swift; sourceTree = "<group>"; };
+		CA740CF88621E46EC7AC43DB /* Rattert-Z-Machine.m4a */ = {isa = PBXFileReference; path = "Rattert-Z-Machine.m4a"; sourceTree = "<group>"; };
 		CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackdropNode.swift; sourceTree = "<group>"; };
 		D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king-d2.png"; sourceTree = "<group>"; };
 		D52D7B60FB53896B80DB403D /* RaiderRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaiderRules.swift; sourceTree = "<group>"; };
@@ -384,9 +384,9 @@
 				6285CF5C055E05DC5DF49661 /* Leipzig-1999.m4a */,
 				89B3000A0C60845A2545F718 /* Leise-Dunkels.m4a */,
 				A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */,
+				CA740CF88621E46EC7AC43DB /* Rattert-Z-Machine.m4a */,
 				A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */,
 				31141BE721EAB7CAD042DF96 /* WelleZ-Machine.m4a */,
-				27003B2989AF08E5D07E9F05 /* ZeigSchnork-Zero.m4a */,
 				1F94F04B5CC0E27D8292565C /* Sprites */,
 			);
 			path = Resources;
@@ -583,9 +583,9 @@
 				253ACA6FD2491409DCCCB0B8 /* Leipzig-1999.m4a in Resources */,
 				87A704F32866D6D7CDFE29A7 /* Leise-Dunkels.m4a in Resources */,
 				D3641D21830DBEB3CE620C6B /* PressStart2P-Regular.ttf in Resources */,
+				348F0B7DFA3E37B07AE5AB69 /* Rattert-Z-Machine.m4a in Resources */,
 				4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */,
 				6A84246D039FB0BB24C3CCD5 /* WelleZ-Machine.m4a in Resources */,
-				46AF7880E03B247DCAFA8FD4 /* ZeigSchnork-Zero.m4a in Resources */,
 				AD625EB17A39A9FE68462D86 /* chess-b-bishop-d1.png in Resources */,
 				B67633A0D0D31669ED91AEDA /* chess-b-bishop-d2.png in Resources */,
 				1FBE4ACA89D5247C2820022A /* chess-b-bishop.png in Resources */,

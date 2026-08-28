@@ -890,7 +890,8 @@ class GameScene: SKScene {
     private func restoreScreenMusic() {
         AudioManager.shared.fadeTo(pool: stateMachine.currentState is TitleState
             ? MusicLibrary.titlePool
-            : MusicLibrary.pool(forLevel: levels.level))
+            : MusicLibrary.pool(forLevel: levels.level),
+            over: MusicLibrary.levelFade, gap: MusicLibrary.levelGap)
     }
 
     func resetToTitle() {
@@ -1110,7 +1111,9 @@ class GameScene: SKScene {
         // change lands behind the mechanic banner rather than mid-play.
         backgroundColor = backdropNode.apply(level: levels.level)
         starfieldRate = BackdropNode.starfieldSpeed(forLevel: levels.level)
-        AudioManager.shared.playMusic(from: MusicLibrary.pool(forLevel: levels.level))
+        AudioManager.shared.fadeTo(pool: MusicLibrary.pool(forLevel: levels.level),
+                                   over: MusicLibrary.levelFade,
+                                   gap: MusicLibrary.levelGap)
         starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
 
         let node = BoardNode()

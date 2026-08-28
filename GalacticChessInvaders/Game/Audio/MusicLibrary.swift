@@ -23,6 +23,14 @@ enum MusicLibrary {
     /// is why the hand-over only has to fade the outgoing track.
     static let panelTrack = "GCI-intro"
 
+    /// How a wave's music takes over. Slower than the panel hand-over, with a
+    /// beat of silence in the middle: a level start is a bigger seam than
+    /// stepping into a menu, and cutting straight from one arcade track to
+    /// another sounds like a mistake. The gap is what makes it read as
+    /// deliberate rather than as a glitch.
+    static let levelFade: TimeInterval = 1.2
+    static let levelGap: TimeInterval = 0.5
+
     /// The title screen and the attract-free menu behind it.
     static var titlePool: [String] { ["GCI-intro"] }
 
@@ -49,7 +57,7 @@ enum MusicLibrary {
         case 1:  return ["Leise-Dunkels"]        // 125 E Mixolydian, relaxed
         case 2:  return ["WelleZ-Machine"]       // 134 E Aeolian, intense
         case 3:  return ["BlitzSchnork"]         // 138 C Mixolydian, peppy
-        case 4:  return ["ZeigSchnork-Zero"]     // 139 B Dorian, focused
+        case 4:  return ["Rattert-Z-Machine"]    // 140 C Lydian, peppy
         case 5:  return ["Frankfurt-Overdrive"]  // 140 A Dorian, intense
         case 6:  return ["KraftSchmaltz"]        // 137 A Lydian, peppy — the breath
         case 7:  return ["Bochum-Level"]         // 156 C Phrygian, peppy — the jolt

@@ -167,13 +167,14 @@ final class AudioManager {
     /// half a second is long enough to not be a splice without being a wait.
     /// Timed with `asyncAfter`, not an `SKAction`: opening a panel pauses the
     /// scene, which stops actions for the whole tree.
-    func fadeTo(track: String, over duration: TimeInterval = 0.5) {
+    func fadeTo(track: String, over duration: TimeInterval = 0.5,
+                gap: TimeInterval = 0) {
         guard track != currentTrack else { return }
         guard let player = musicPlayer else { playMusic(track); return }
         fadeGeneration += 1
         let token = fadeGeneration
         player.setVolume(0, fadeDuration: duration)
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + gap) { [weak self] in
             guard let self, self.fadeGeneration == token else { return }
             self.playMusic(track)
         }
@@ -182,9 +183,10 @@ final class AudioManager {
     /// The same hand-over, choosing from a pool. Does nothing when the pool's
     /// pick is already playing, so a level break inside one band does not
     /// restart the track it is already on.
-    func fadeTo(pool: [String], over duration: TimeInterval = 0.5) {
+    func fadeTo(pool: [String], over duration: TimeInterval = 0.5,
+                gap: TimeInterval = 0) {
         fadeTo(track: MusicLibrary.choose(from: pool, avoiding: currentTrack),
-               over: duration)
+               over: duration, gap: gap)
     }
 
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {
