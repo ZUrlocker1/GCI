@@ -243,7 +243,6 @@ class GameScene: SKScene {
     private var pendingReveal: (() -> Void)?
     /// Hidden Auto Mode: White auto-moves on a short beat so a whole game plays
     /// out without waiting on the countdown, but slowly enough to follow.
-    private static let autoBeatDuration: TimeInterval = 1.0
     /// Awarded for checkmating Black (§Scoring), before the level multiplier.
     private static let checkmateBonus = 300
     private static let endBannerName = "endBanner"
@@ -262,7 +261,11 @@ class GameScene: SKScene {
     /// captured, or crushed (§9). Stacks with `checkmateBonus` for the 800-pt
     /// combo when the king dies while a checkmate is also standing.
     private static let kingFallBonus = 500
-    private var isAutoMode = false
+    /// The `A` key and the settings screen's CHESS control are one thing. It
+    /// used to be a second, almost-identical mode with its own one-second beat,
+    /// which meant two ways to auto-play White that behaved differently and
+    /// neither of which knew about the other.
+    private var isAutoMode: Bool { GameSettings.shared.autoChess }
 
     // MARK: - Lifecycle
 
@@ -768,6 +771,10 @@ class GameScene: SKScene {
         applyGlowSetting()
         boardNode?.applyDisplaySettings()
         AudioManager.shared.applyMusicSettings()
+        // The update loop drives this too, but it does not run while a panel
+        // holds the scene paused — so switching Auto Chess on from Settings
+        // would leave the gutter blank until play resumed.
+        autoModeLabel?.isHidden = !isAutoMode
         // Cheap and idempotent, so it rides along with every change rather than
         // needing the panel to know which switch was the sidebar's.
         NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
@@ -911,22 +918,17 @@ class GameScene: SKScene {
     /// Hidden developer aid: White stops waiting for the player and the beat
     /// collapses to a fraction of a second, so a whole game plays through quickly.
     private func toggleAutoMode() {
-        setAutoMode(!isAutoMode, retimingBeat: true)
+        setAutoMode(!isAutoMode)
     }
 
     /// Idempotent. `retimingBeat` restarts the beat in flight so a toggle takes
     /// effect immediately; the automatic switch-off at mate skips that, since the
     /// beat is about to stop anyway.
-    private func setAutoMode(_ on: Bool, retimingBeat: Bool) {
+    private func setAutoMode(_ on: Bool) {
         guard on != isAutoMode else { return }
-        isAutoMode = on
+        GameSettings.shared.autoChess = on
         autoModeLabel?.isHidden = !on
         DiagnosticsLog.shared.log(.auto, on ? "ON" : "OFF")
-
-        guard retimingBeat, turnTimer.isRunning, !isEndingGame else { return }
-        turnTimer.start(level: levels.parameters,
-                        inCheck: board.turn == .white && board.isCheck,
-                        override: on ? Self.autoBeatDuration : nil)
     }
 
     /// Straight into a fresh game, skipping the title screen — the Y answer to
@@ -1047,7 +1049,7 @@ class GameScene: SKScene {
         statusNode = status
 
         let autoLabel = SKLabelNode(fontNamed: "PressStart2P-Regular")
-        autoLabel.text = "AUTO MODE"
+        autoLabel.text = "AUTO CHESS"
         autoLabel.fontSize = 9
         autoLabel.fontColor = NeonPalette.orange
         autoLabel.horizontalAlignmentMode = .center
@@ -1316,8 +1318,7 @@ class GameScene: SKScene {
         refreshKingForcefield()
         whiteHasMovedThisBeat = false
         let inCheck = board.turn == .white && board.isCheck
-        turnTimer.start(level: levels.parameters, inCheck: inCheck,
-                        override: isAutoMode ? Self.autoBeatDuration : nil)
+        turnTimer.start(level: levels.parameters, inCheck: inCheck)
         turnTimerNode?.refresh(from: turnTimer)
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
@@ -1387,10 +1388,6 @@ class GameScene: SKScene {
         let loser = board.turn
         guard board.isMate || board.isStalemate || board.isDrawn else { return false }
 
-        // A test run has served its purpose once the game reaches a conclusion,
-        // so it does not silently carry into the next one.
-        setAutoMode(false, retimingBeat: false)
-
         if board.isMate, loser == .black {
             winLevel(bonus: Self.checkmateBonus, label: "checkmate")
             return true
@@ -1429,7 +1426,6 @@ class GameScene: SKScene {
     /// instant cannot both try to end the level.
     private func winLevel(bonus: Int, label: String, banner: String? = nil) {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        setAutoMode(false, retimingBeat: false)
         if let banner { showEndBanner(banner, color: NeonPalette.cyan) }
         isEndingGame = true
         turnTimer.stop()
@@ -1453,7 +1449,6 @@ class GameScene: SKScene {
     /// ending flow, generalized for a cause that isn't a chess fact.
     private func loseGame(outcome newOutcome: GameOverNode.Outcome, banner: String? = nil) {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        setAutoMode(false, retimingBeat: false)
         outcome = newOutcome
         DiagnosticsLog.shared.log(.white, newOutcome.detail.lowercased())
 
@@ -3691,13 +3686,13 @@ class GameScene: SKScene {
             }
             // The countdown is the player's own clock, so it appears only while
             // White may still move: not while Black is thinking, and not after
-            // White has already moved this beat.
-            // In Auto Mode the beat is far too short to read, so the slot shows
-            // AUTO MODE instead of a countdown flickering on and off.
+            // White has already moved this beat. The countdown stays up in
+            // Auto Chess — it now runs at the level's own beat, so it reads
+            // fine and tells the player when the engine will move for them.
             let awaitingWhite = isAwaitingWhiteMove
-            turnTimerNode?.isHidden = isAutoMode || !awaitingWhite
+            turnTimerNode?.isHidden = !awaitingWhite
             autoModeLabel?.isHidden = !isAutoMode
-            if awaitingWhite, !isAutoMode {
+            if awaitingWhite {
                 tickTimerWarning()
                 turnTimerNode?.refresh(from: turnTimer)
             } else {
