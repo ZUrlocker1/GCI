@@ -14,14 +14,20 @@ struct ContentView: View {
 
             DiagnosticsSidebarView(isExpanded: $showSidebar)
         }
-        // Re-reads rather than flips. Two things change this — the `L` key and
-        // the settings switch — and a notification that meant "toggle" would
-        // close the panel when the switch was set to the state it was already
-        // in. Re-reading the one stored value is idempotent, so it cannot.
+        // Re-reads rather than flips, so setting the switch to the state it is
+        // already in cannot close the panel.
         .onReceive(NotificationCenter.default.publisher(for: .gciSidebarChanged)) { _ in
             guard showSidebar != GameSettings.shared.logPanel else { return }
             showSidebar = GameSettings.shared.logPanel
             DiagnosticsLog.shared.log(.startup, "Sidebar \(showSidebar ? "shown" : "hidden")")
+        }
+        // The sidebar has its own close button and open tab, which move this
+        // binding without going through GameSettings. Writing back keeps the
+        // two in step — without it, closing by hand left `logPanel` true, and
+        // the next `L` set it to false to match a panel that was already shut,
+        // so the key looked dead until pressed a second time.
+        .onChange(of: showSidebar) { _, isOpen in
+            GameSettings.shared.logPanel = isOpen
         }
     }
 }
