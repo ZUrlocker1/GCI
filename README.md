@@ -22,7 +22,7 @@ diagonal, regenerated pawns arrive armoured and immune to lasers, the black king
 and draws its own weapon — and Blitz, the last wave, which takes most of that back at a three-second
 clock and comes apart as you play it.
 
-**Watch the demo:** [Galactic Chess Invaders](https://www.youtube.com/watch?v=yVaNIPDnGa0) on YouTube
+**Watch a 90-second demo:** [Galactic Chess Invaders](https://www.youtube.com/watch?v=yVaNIPDnGa0) on YouTube
 
 [Download for macOS](https://github.com/ZUrlocker1/GCI/releases/download/v0.1/GCI-0.1.dmg)
 
