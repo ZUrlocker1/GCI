@@ -81,9 +81,12 @@ final class BackdropNode: SKNode {
                 color: rgb(0xC02A78), alpha: 0.15,
                 center: CGPoint(x: 0.37, y: 0.58), scale: CGSize(width: 2.6, height: 1.05),
                 rotation: .pi / 5))
-        case 8:   // ARMORED PAWNS — the armour's own green, deliberately off the ramp
+        case 8:   // ARMORED PAWNS — the armour's green, deliberately off the ramp
+            // Lightened and pulled toward aqua. The armour's own #35B45A is a
+            // saturated grass green, which on black at this size read as sickly
+            // rather than as armour; blue in the mix cools it and lifts it.
             return Look(void: rgb(0x0A0C08), haze: Haze(
-                color: rgb(0x35B45A), alpha: 0.15,
+                color: rgb(0x62CBAE), alpha: 0.13,
                 center: CGPoint(x: 0.5, y: 0.62), scale: CGSize(width: 1.7, height: 0.9),
                 rotation: 0))
         case 9:   // KING ACTIVATED — the light comes from where he sits
@@ -92,8 +95,10 @@ final class BackdropNode: SKNode {
                 center: CGPoint(x: 0.5, y: 0.94), scale: CGSize(width: 1.8, height: 0.7),
                 rotation: 0))
         default:  // BLITZ
+            // Faded. A pure hot red at 0.24 competed with the magenta pieces
+            // it sits behind, which are the thing that has to be read.
             return Look(void: rgb(0x140306), haze: Haze(
-                color: rgb(0xD01830), alpha: 0.24,
+                color: rgb(0xB8394A), alpha: 0.15,
                 center: CGPoint(x: 0.5, y: 0.5), scale: CGSize(width: 2.2, height: 1.4),
                 rotation: 0))
         }
