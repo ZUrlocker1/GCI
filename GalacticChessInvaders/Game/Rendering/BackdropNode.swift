@@ -1,0 +1,182 @@
+// BackdropNode.swift
+// §12.5's per-level background evolution: a void colour and a coloured haze
+// behind the starfield, changing with the wave.
+//
+// §12.5 gives a table ramping the void from #07070F to #160304. Those differ by
+// a handful of RGB points against black, under a bloom layer — measured against
+// each other they are essentially the same colour. So the void here stays close
+// to black and the *haze* carries the change: it has shape and edges, which is
+// what the eye actually reads.
+//
+// Keyed to each level's own mechanic rather than ramped cold-to-hot. A monotonic
+// red ramp says "later"; Crossfire's diagonal and Armored Pawns' green say
+// *which* wave you are on, which is how the rest of the game is built.
+//
+// Performance, against §12.4's rule that the background may not cost a shader:
+// one procedurally drawn texture, shared by at most two sprites, so at most two
+// draw calls. Colour and alpha are static properties set once per level. The
+// drift is a single `SKAction` on a node that is not the starfield. Nothing here
+// runs per frame.
+
+import SpriteKit
+
+@MainActor
+final class BackdropNode: SKNode {
+
+    /// One wave's sky.
+    struct Look {
+        let void: SKColor
+        /// nil for the opening levels, which stay pure black.
+        let haze: Haze?
+    }
+
+    struct Haze {
+        let color: SKColor
+        let alpha: CGFloat
+        /// Fraction of the scene: where the blob sits and how big it is.
+        let center: CGPoint
+        let scale: CGSize
+        let rotation: CGFloat
+    }
+
+    private static func rgb(_ hex: UInt32) -> SKColor {
+        SKColor(red: CGFloat((hex >> 16) & 0xFF) / 255,
+                green: CGFloat((hex >> 8) & 0xFF) / 255,
+                blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
+    }
+
+    /// The table from `docs/implementation.md`. Levels 1–2 are deliberately
+    /// untouched: the opening is the reference every later wave is read against,
+    /// and nothing has escalated yet.
+    static func look(forLevel level: Int) -> Look {
+        let black = SKColor.black
+        switch max(1, level) {
+        case 1, 2:
+            return Look(void: black, haze: nil)
+        case 3:   // DOUBLE TROUBLE — the first hint that something is arriving
+            return Look(void: rgb(0x04050C), haze: Haze(
+                color: rgb(0x3A46B4), alpha: 0.16,
+                center: CGPoint(x: 0.5, y: 0.16), scale: CGSize(width: 1.5, height: 0.55),
+                rotation: 0))
+        case 4:   // RELENTLESS — the same, deeper
+            return Look(void: rgb(0x06050E), haze: Haze(
+                color: rgb(0x4040C0), alpha: 0.20,
+                center: CGPoint(x: 0.5, y: 0.22), scale: CGSize(width: 1.5, height: 0.7),
+                rotation: 0))
+        case 5:   // TRIPLE THREAT
+            return Look(void: rgb(0x08040F), haze: Haze(
+                color: rgb(0x6A32C0), alpha: 0.20,
+                center: CGPoint(x: 0.45, y: 0.35), scale: CGSize(width: 1.4, height: 0.9),
+                rotation: 0))
+        case 6:   // WIDE ORBIT — the haze widens as the sweep does
+            return Look(void: rgb(0x0A0410), haze: Haze(
+                color: rgb(0x7A2EC8), alpha: 0.20,
+                center: CGPoint(x: 0.5, y: 0.45), scale: CGSize(width: 2.1, height: 0.8),
+                rotation: 0))
+        case 7:   // CROSSFIRE — the grain lies along the bishops' own diagonals
+            return Look(void: rgb(0x0D0412), haze: Haze(
+                color: rgb(0xC02A78), alpha: 0.18,
+                center: CGPoint(x: 0.5, y: 0.5), scale: CGSize(width: 2.4, height: 0.30),
+                rotation: .pi / 5))
+        case 8:   // ARMORED PAWNS — the armour's own green, deliberately off the ramp
+            return Look(void: rgb(0x0A0C08), haze: Haze(
+                color: rgb(0x35B45A), alpha: 0.15,
+                center: CGPoint(x: 0.5, y: 0.62), scale: CGSize(width: 1.7, height: 0.9),
+                rotation: 0))
+        case 9:   // KING ACTIVATED — the light comes from where he sits
+            return Look(void: rgb(0x100509), haze: Haze(
+                color: rgb(0xD08828), alpha: 0.20,
+                center: CGPoint(x: 0.5, y: 0.94), scale: CGSize(width: 1.8, height: 0.7),
+                rotation: 0))
+        default:  // BLITZ
+            return Look(void: rgb(0x140306), haze: Haze(
+                color: rgb(0xD01830), alpha: 0.24,
+                center: CGPoint(x: 0.5, y: 0.5), scale: CGSize(width: 2.2, height: 1.4),
+                rotation: 0))
+        }
+    }
+
+    /// Blitz runs the starfield faster. The only level that touches it.
+    static func starfieldSpeed(forLevel level: Int) -> CGFloat {
+        level >= 10 ? 1.35 : 1
+    }
+
+    private let sceneSize: CGSize
+    private let blob: SKSpriteNode
+
+    init(sceneSize: CGSize) {
+        self.sceneSize = sceneSize
+        blob = SKSpriteNode(texture: Self.hazeTexture())
+        super.init()
+
+        // Additive, so a haze on near-black can only add light. Alpha blending
+        // at this opacity would grey the void instead of colouring it.
+        blob.blendMode = .add
+        blob.alpha = 0
+        addChild(blob)
+
+        // A slow lateral wander, so the sky is not a static gradient. Long
+        // enough that it never reads as motion during a wave.
+        blob.run(.repeatForever(.sequence([
+            .moveBy(x: 26, y: 0, duration: 19).withTimingMode(.easeInEaseOut),
+            .moveBy(x: -26, y: 0, duration: 19).withTimingMode(.easeInEaseOut),
+        ])))
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    /// Applies a wave's sky. Returns the void colour for the caller to set on
+    /// the scene, since a node cannot set its own scene's background.
+    @discardableResult
+    func apply(level: Int) -> SKColor {
+        let look = Self.look(forLevel: level)
+        guard let haze = look.haze else {
+            blob.alpha = 0
+            return look.void
+        }
+        blob.color = haze.color
+        blob.colorBlendFactor = 1
+        blob.alpha = haze.alpha
+        blob.zRotation = haze.rotation
+        blob.size = CGSize(width: sceneSize.width * haze.scale.width,
+                           height: sceneSize.height * haze.scale.height)
+        blob.position = CGPoint(x: sceneSize.width * haze.center.x,
+                                y: sceneSize.height * haze.center.y)
+        return look.void
+    }
+
+    /// A soft elliptical falloff, drawn once at launch and shared. White, so the
+    /// sprite's own `color` decides the hue.
+    private static func hazeTexture(diameter: CGFloat = 256) -> SKTexture {
+        let pixels = Int(diameter)
+        let space = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: nil, width: pixels, height: pixels,
+            bitsPerComponent: 8, bytesPerRow: 0, space: space,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+            // A gentler curve than the star dot's: the midpoint sits low so the
+            // blob has a wide, weak skirt rather than a defined edge.
+            let gradient = CGGradient(
+                colorsSpace: space,
+                colors: [SKColor.white.withAlphaComponent(1).cgColor,
+                         SKColor.white.withAlphaComponent(0.34).cgColor,
+                         SKColor.white.withAlphaComponent(0).cgColor] as CFArray,
+                locations: [0, 0.42, 1])
+        else { return SKTexture() }
+
+        let mid = CGPoint(x: diameter / 2, y: diameter / 2)
+        context.drawRadialGradient(gradient, startCenter: mid, startRadius: 0,
+                                   endCenter: mid, endRadius: diameter / 2,
+                                   options: [])
+        guard let image = context.makeImage() else { return SKTexture() }
+        return SKTexture(cgImage: image)
+    }
+}
+
+private extension SKAction {
+    func withTimingMode(_ mode: SKActionTimingMode) -> SKAction {
+        timingMode = mode
+        return self
+    }
+}

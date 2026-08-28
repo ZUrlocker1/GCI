@@ -22,6 +22,11 @@ class GameScene: SKScene {
     // All glowing game content lives inside bloomNode so the CIBloom filter applies
     private var bloomNode: SKEffectNode!
     private var starfieldNode: SKNode!
+    private var backdropNode: BackdropNode!
+    /// The starfield's own rate for this wave — Blitz runs it faster. Slow
+    /// motion multiplies this rather than replacing it, or a Nuke on Level 10
+    /// would leave the sky at ordinary speed for the rest of the run.
+    private var starfieldRate: CGFloat = 1
     private var titleOverlay: TitleOverlayNode?
     private var boardNode: BoardNode?
     private var settingsNode: SettingsNode?
@@ -146,7 +151,7 @@ class GameScene: SKScene {
         guard abs(scale - appliedTimeScale) > 0.001 else { return }
         appliedTimeScale = scale
         bloomNode.speed = CGFloat(scale)
-        starfieldNode.speed = CGFloat(scale)
+        starfieldNode.speed = starfieldRate * CGFloat(scale)
         if scale >= 1 { endSlowMotionAudio() }
     }
 
@@ -172,7 +177,7 @@ class GameScene: SKScene {
         slowMoRemaining = 0
         appliedTimeScale = 1
         bloomNode.speed = 1
-        starfieldNode.speed = 1
+        starfieldNode.speed = starfieldRate
         endSlowMotionAudio()
     }
 
@@ -381,6 +386,12 @@ class GameScene: SKScene {
     }
 
     private func setupStarfield() {
+        // Behind the stars, which are themselves behind bloomNode — the haze
+        // must not be bloomed or it smears into a wash.
+        backdropNode = BackdropNode(sceneSize: size)
+        backdropNode.zPosition = -2
+        addChild(backdropNode)
+
         starfieldNode = SKNode()
         addChild(starfieldNode)   // behind bloomNode so stars don't get extra bloom
 
@@ -1008,6 +1019,12 @@ class GameScene: SKScene {
         // more hits. Applied here so the extra HP is in place before any node
         // reads it.
         if levels.parameters.kingActivated { board.applyKingForcefield() }
+
+        // §12.5's sky for this wave, applied as the board is built so the
+        // change lands behind the mechanic banner rather than mid-play.
+        backgroundColor = backdropNode.apply(level: levels.level)
+        starfieldRate = BackdropNode.starfieldSpeed(forLevel: levels.level)
+        starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
 
         let node = BoardNode()
         node.position = CGPoint(x: (size.width - BoardNode.boardSize) / 2, y: Self.boardBottomY)

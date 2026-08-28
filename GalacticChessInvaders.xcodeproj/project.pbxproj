@@ -49,6 +49,7 @@
 		5E76F03CD7162A626D28F7BD /* CollisionResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D61821669CACEBC196A65C /* CollisionResolver.swift */; };
 		605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB7404F3713FE581B43A87 /* ContentView.swift */; };
 		61169CA3823DC981272E489B /* ship-player.png in Resources */ = {isa = PBXBuildFile; fileRef = DFEC1D27CBD2B19429587528 /* ship-player.png */; };
+		6395169375D2CD8541C11AFA /* BackdropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */; };
 		761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */; };
 		7705CF0A074223E6B67350F7 /* sfx in Resources */ = {isa = PBXBuildFile; fileRef = 998968842203016A0E563C6A /* sfx */; };
 		7A28A7F7E08CDA7442C26B99 /* chess-b-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */; };
@@ -204,6 +205,7 @@
 		C85D5AC26FD4179831878F66 /* chess-b-knight-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-knight-d1.png"; sourceTree = "<group>"; };
 		C9811D7E64799129FF1929B9 /* ship-camel-b.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel-b.png"; sourceTree = "<group>"; };
 		CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarfieldTiling.swift; sourceTree = "<group>"; };
+		CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackdropNode.swift; sourceTree = "<group>"; };
 		D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king-d2.png"; sourceTree = "<group>"; };
 		D52D7B60FB53896B80DB403D /* RaiderRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaiderRules.swift; sourceTree = "<group>"; };
 		D6E00200878F5A414C7AA097 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
@@ -396,6 +398,7 @@
 		AB99D7336D4B4377EA975237 /* Rendering */ = {
 			isa = PBXGroup;
 			children = (
+				CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */,
 				C108E7EAE6358A3CF47A3F77 /* BoardNode.swift */,
 				741746F275F1126EB8D73A8C /* CheckPathNode.swift */,
 				8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */,
@@ -601,6 +604,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E382860009AA1E103879DF01 /* AudioManager.swift in Sources */,
+				6395169375D2CD8541C11AFA /* BackdropNode.swift in Sources */,
 				C88BE784BCDFF9D800B631C4 /* BoardNode.swift in Sources */,
 				A5723D032739FA8C59CB6091 /* CheckPathNode.swift in Sources */,
 				368610872B731D709369E6BC /* Chess.swift in Sources */,
