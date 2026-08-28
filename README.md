@@ -28,15 +28,25 @@ clock and comes apart as you play it.
 
 [Download for macOS](https://github.com/ZUrlocker1/GCI/releases/download/v0.1/GCI-0.1.dmg)
 
-Current release: `0.1` (build 1). Universal binary — runs natively on both Apple Silicon and Intel
+Current release: `0.2` (build 2). Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
+
+**What's new in v0.2:**
+
+- **Settings panel** — press `S`, or the gear in the top right. Music and sound effects each get a
+  switch and a volume slider, and the display settings include a board grid you can dial from open
+  space up to named rows and columns.
+- **Cadet mode** — an easier on ramp, and the same ten levels with the same mechanics. The chess
+  clock never drops below seven seconds, the fleet and its shots are slower, you get five lives, and
+  power-ups carry across a level break instead of being taken back.
+- Settings persist between sessions.
 
 **Status:** The game is fully functional and feature complete. It is playable with all ten levels,
 power-ups and full arcade audio. Press `L` in game for the log diagnostics panel if you want to look
 behind the scenes. There are also 4 debug keys:
 
-- `A` plays White automatically
+- `A` plays White automatically, at speed
 - `P` grants the next power-up
 - `R` sends the next raider
 - `V` skips to the next level
@@ -45,7 +55,6 @@ behind the scenes. There are also 4 debug keys:
 
 - Play testing to adjust levels, speed, difficulty, etc. Feedback welcome!
 - Add arcade soundtrack for each specific level
-- Add setup screen to modify game parameters, music and sfx levels, etc
 
 **History:**
 
