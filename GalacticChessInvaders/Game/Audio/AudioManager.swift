@@ -85,13 +85,16 @@ final class AudioManager {
 
     // MARK: - Playback
 
-    func play(_ key: SoundKey) {
+    /// `scale` is for the rare caller that wants this one cue quieter than its
+    /// mix position — the title screen's flyby, which is decoration behind a
+    /// menu rather than an event in a game.
+    func play(_ key: SoundKey, scale: Float = 1) {
         let settings = GameSettings.shared
         guard settings.soundOn else { return }
         // Applied here rather than at preload: the player can move the slider
         // mid-game, and a level baked into a pooled `AVAudioPlayer` would stay
         // wherever it was when the app launched.
-        let level = Self.volume(for: key) * settings.soundVolume
+        let level = Self.volume(for: key) * settings.soundVolume * scale
         if key.loops {
             loopPlayers[key]?.volume = level
             loopPlayers[key]?.play()
