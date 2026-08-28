@@ -380,6 +380,7 @@ class GameScene: SKScene {
 
     private func setupBloomNode() {
         bloomNode = SKEffectNode()
+        bloomNode.name = "bloom"
         // Not rasterized. Rasterizing caches an effect node's rendered output
         // and invalidates it whenever the subtree changes — and every moving
         // thing in the game is a child of this node, so the cache is invalidated
@@ -415,6 +416,7 @@ class GameScene: SKScene {
         addChild(backdropNode)
 
         starfieldNode = SKNode()
+        starfieldNode.name = "starfield"
         addChild(starfieldNode)   // behind bloomNode so stars don't get extra bloom
 
         // One texture shared by every star. Sprites that share a texture and blend
@@ -3992,8 +3994,21 @@ class GameScene: SKScene {
             let onBoard = board.piece(at: node.square)
                 .map { "\($0.color) \($0.type)" } ?? "nothing"
             let parked = node.hasActions() ? "stalled" : "cancelled"
+            // `stalled a100` means the removal action was added and never
+            // advanced a single frame, which is an ancestor problem rather than
+            // anything about the piece: something above it is paused, or has a
+            // speed of zero. Walking up names the culprit outright.
+            var frozenBy = "none", speed = 1.0
+            var ancestor: SKNode? = node
+            while let n = ancestor {
+                if n.isPaused, frozenBy == "none" { frozenBy = n.name ?? "\(type(of: n))" }
+                speed *= Double(n.speed)
+                ancestor = n.parent
+            }
             DiagnosticsLog.shared.log(.error, "ghost \(node.piece.type) \(node.square) "
-                + "\(parked) a\(Int(node.alpha * 100)) board:\(onBoard)")
+                + "\(parked) a\(Int(node.alpha * 100)) board:\(onBoard) "
+                + "parent:\(node.parent?.name ?? "\(type(of: node.parent))") "
+                + "pausedBy:\(frozenBy) speed:\(String(format: "%.2f", speed))")
         }
         ghostFirstSeen = ghostFirstSeen.filter { stillHere.contains($0.key) }
     }

@@ -91,6 +91,7 @@ final class BoardNode: SKNode {
 
     override init() {
         super.init()
+        name = "board"
         if Self.showsGrid { buildGrid() }
         applyDisplaySettings()
         buildSelection()
