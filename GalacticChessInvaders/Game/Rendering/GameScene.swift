@@ -36,6 +36,8 @@ class GameScene: SKScene {
     private var sidebarObserver: NSObjectProtocol?
     /// Reported once each, or a stranded piece fills the log at 4Hz.
     private var reportedGhosts: Set<ObjectIdentifier> = []
+    /// Raised in the gutter the first time anything logs an error, and left up.
+    private var errorFlag: SKLabelNode?
     /// One raider drifting across the title screen, purely as decoration.
     private var titleRaider: RaiderNode?
     private static let titleRaiderKey = "titleRaider"
@@ -793,6 +795,7 @@ class GameScene: SKScene {
         let entry = MusicLibrary.panelEntry()
         AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack,
                                    startAt: entry.startAt, fadeIn: entry.fadeIn)
+        errorFlag?.isHidden = true
         DiagnosticsLog.shared.log(.info, "game paused")
     }
 
@@ -803,6 +806,7 @@ class GameScene: SKScene {
         howToPlayNode = nil
         refreshCursorRects()
         restoreScreenMusic()
+        errorFlag?.isHidden = false
 
         if stateMachine.currentState is PlayingState {
             isPaused = false
@@ -863,6 +867,7 @@ class GameScene: SKScene {
         let entry = MusicLibrary.panelEntry()
         AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack,
                                    startAt: entry.startAt, fadeIn: entry.fadeIn)
+        errorFlag?.isHidden = true
         DiagnosticsLog.shared.log(.info, "settings open")
     }
 
@@ -873,6 +878,7 @@ class GameScene: SKScene {
         settingsNode = nil
         applyLiveSettings()
         restoreScreenMusic()
+        errorFlag?.isHidden = false
 
         if stateMachine.currentState is PlayingState {
             isPaused = false
@@ -3878,6 +3884,7 @@ class GameScene: SKScene {
         lastStatsUpdate = now
         auditHitboxes()
         auditGhosts()
+        raiseErrorFlag()
         // Averaged over the interval, not sampled from one frame.
         //
         // A single sample every 250ms is a wildly noisy estimator: it reads 75
@@ -3925,6 +3932,29 @@ class GameScene: SKScene {
     /// ones that separate the candidate causes. `stalled` means the removal
     /// action is still queued and not advancing; `cancelled` means something
     /// took it off the node. Those have entirely different culprits.
+    /// Raises a red line in the left gutter once anything has logged an error.
+    ///
+    /// Under the status readout, where there is clear space between it and the
+    /// ship's lane. Parented to the scene above `GameOverNode`'s z, not to
+    /// `bloomNode`: game over draws a full-scene scrim, and a flag that a run
+    /// went wrong is exactly what must survive the end of the run. Hidden while
+    /// a panel is open, since those own the whole screen.
+    private func raiseErrorFlag() {
+        guard DiagnosticsLog.shared.errorCount > 0, errorFlag == nil else { return }
+        let flag = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        flag.text = "ERROR - SEE LOG"
+        flag.fontSize = 9
+        flag.fontColor = NeonPalette.magenta
+        flag.horizontalAlignmentMode = .center
+        flag.position = CGPoint(x: 112, y: Self.boardBottomY - 32 - Self.gutterDrop)
+        flag.zPosition = 26
+        flag.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0.35, duration: 0.7), .fadeAlpha(to: 1.0, duration: 0.7),
+        ])))
+        addChild(flag)
+        errorFlag = flag
+    }
+
     private func auditGhosts() {
         guard stateMachine.currentState is PlayingState, let boardNode else { return }
         let live = Set(pieceNodes.values.map(ObjectIdentifier.init))
