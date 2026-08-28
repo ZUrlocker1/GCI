@@ -88,9 +88,28 @@ final class AudioManager {
     /// `scale` is for the rare caller that wants this one cue quieter than its
     /// mix position — the title screen's flyby, which is decoration behind a
     /// menu rather than an event in a game.
+    /// The eight keys that sum into a wall. Each has its own pool of four, so a
+    /// rank clearing could put 32 voices into the mixer at once.
+    private static let destructionKeys: Set<SoundKey> = [
+        .pawnDestroyed, .knightDestroyed, .bishopDestroyed, .rookDestroyed,
+        .queenDestroyed, .kingDestroyed, .playerShipDestroyed, .bombShockwave,
+    ]
+    /// §12 caps critical crackle at three for the same reason: past that the
+    /// ear cannot separate them, and the screen is carrying it anyway.
+    private static let destructionVoiceCap = 3
+
     func play(_ key: SoundKey, scale: Float = 1) {
         let settings = GameSettings.shared
         guard settings.soundOn else { return }
+
+        // Dropped rather than queued. A late explosion is worse than a missing
+        // one — the sound would arrive after the thing it belongs to is gone.
+        if Self.destructionKeys.contains(key) {
+            let live = Self.destructionKeys.reduce(0) { total, other in
+                total + (sfxPools[other]?.count(where: \.isPlaying) ?? 0)
+            }
+            guard live < Self.destructionVoiceCap else { return }
+        }
         // Applied here rather than at preload: the player can move the slider
         // mid-game, and a level baked into a pooled `AVAudioPlayer` would stay
         // wherever it was when the app launched.
