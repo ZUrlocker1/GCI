@@ -18,6 +18,9 @@ struct LogTextView: NSViewRepresentable {
     private static let fontSize: CGFloat = 11
     private static let categoryColor = NSColor.systemGreen
     private static let messageColor = NSColor.white
+    /// Errors go red end to end. Green label plus white text is the shape the
+    /// eye skims past, and an error is the one line worth stopping on.
+    private static let errorColor = NSColor.systemRed
 
     func makeNSView(context: Context) -> NSScrollView {
         let textView = NSTextView()
@@ -110,12 +113,17 @@ struct LogTextView: NSViewRepresentable {
 
         private static func rendered(_ line: LogLine) -> NSAttributedString {
             let font = NSFont.monospacedSystemFont(ofSize: LogTextView.fontSize, weight: .regular)
+            let isError = line.category == .error
             let result = NSMutableAttributedString(
                 string: line.categoryLabel,
-                attributes: [.font: font, .foregroundColor: LogTextView.categoryColor])
+                attributes: [.font: font,
+                             .foregroundColor: isError ? LogTextView.errorColor
+                                                       : LogTextView.categoryColor])
             result.append(NSAttributedString(
                 string: line.message + "\n",
-                attributes: [.font: font, .foregroundColor: LogTextView.messageColor]))
+                attributes: [.font: font,
+                             .foregroundColor: isError ? LogTextView.errorColor
+                                                       : LogTextView.messageColor]))
             return result
         }
     }
