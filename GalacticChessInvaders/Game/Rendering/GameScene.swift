@@ -695,25 +695,29 @@ class GameScene: SKScene {
         }
     }
 
-    /// A brief bright fill over a button that was just clicked.
+    /// A button pushes in and springs back, then does its job.
     ///
-    /// Parented to the scene at a z above every panel, not to the button. Every
-    /// one of these buttons either opens a panel over itself or sits on a panel
-    /// that rebuilds when clicked, so a flash owned by the button would be
-    /// covered or destroyed before it could be seen.
-    private func flashPress(_ node: SKNode) {
-        guard let parent = node.parent, let name = node.name else { return }
-        // The hit may be the label rather than the box behind it; both carry
-        // the button's name, and the box is the shape worth lighting up.
-        let box = parent.children.first { $0.name == name && $0 is SKShapeNode } ?? node
-        let frame = box.calculateAccumulatedFrame()
-        let flash = SKShapeNode(rect: CGRect(origin: convert(frame.origin, from: parent),
-                                             size: frame.size), cornerRadius: 3)
-        flash.fillColor = NeonPalette.cyan.withAlphaComponent(0.55)
-        flash.strokeColor = .clear
-        flash.zPosition = 100
-        addChild(flash)
-        flash.run(.sequence([.fadeOut(withDuration: 0.22), .removeFromParent()]))
+    /// No colour change: the button is lit neon already, and re-tinting it read
+    /// as a state change rather than a press. Two points down and back is the
+    /// whole effect.
+    ///
+    /// Timer-driven rather than an `SKAction`, and that is not a style choice.
+    /// Opening a panel sets `isPaused` on the scene, which stops actions for
+    /// the entire tree — so an action-based press on a panel's own BACK button
+    /// would never run a single frame. The delayed call also gives the push
+    /// somewhere to be seen, since every one of these buttons is about to be
+    /// covered by the panel it opens or torn down by the one it closes.
+    private func pressButton(_ node: SKNode, then action: @escaping () -> Void) {
+        guard let parent = node.parent, let name = node.name else { action(); return }
+        // The box, its label and any icon are siblings sharing the button's
+        // name, so they travel together.
+        let group = parent.children.filter { $0.name == name }
+        let homes = group.map(\.position)
+        for part in group { part.position.y -= 2 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
+            for (part, home) in zip(group, homes) { part.position = home }
+            action()
+        }
     }
 
     // MARK: - Settings (§20 Phase 5)
@@ -3907,9 +3911,8 @@ class GameScene: SKScene {
         if let panel = settingsNode {
             let hit = atPoint(location)
             if hit.name == "backButton" || hit.parent?.name == "backButton" {
-                flashPress(hit)
                 AudioManager.shared.play(.uiSettingsBlip)
-                hideSettings()
+                pressButton(hit) { [weak self] in self?.hideSettings() }
             } else {
                 panel.handleClick(at: location)
             }
@@ -3920,9 +3923,8 @@ class GameScene: SKScene {
         if howToPlayNode != nil {
             let hit = atPoint(location)
             if hit.name == "backButton" || hit.parent?.name == "backButton" {
-                flashPress(hit)
                 AudioManager.shared.play(.uiButtonClick)
-                hideHowToPlay()
+                pressButton(hit) { [weak self] in self?.hideHowToPlay() }
             } else if hit.name == HowToPlayNode.musicLinkName,
                       let url = URL(string: "https://www.mzurlocker.com/zudio") {
                 AudioManager.shared.play(.uiButtonClick)
@@ -3934,13 +3936,11 @@ class GameScene: SKScene {
         // INFO button opens How To Play from any game state.
         let hit = atPoint(location)
         if hit.name == "infoButton" || hit.parent?.name == "infoButton" {
-            flashPress(hit)
-            showHowToPlay()
+            pressButton(hit) { [weak self] in self?.showHowToPlay() }
             return
         }
         if hit.name == "settingsButton" || hit.parent?.name == "settingsButton" {
-            flashPress(hit)
-            showSettings()
+            pressButton(hit) { [weak self] in self?.showSettings() }
             return
         }
 
