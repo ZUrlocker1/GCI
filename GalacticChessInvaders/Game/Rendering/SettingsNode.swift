@@ -334,15 +334,17 @@ final class SettingsNode: SKNode {
             content.addChild(fill)
         }
 
-        // Below the track rather than on it. It has to live outside the knob's
-        // 8x16 footprint or it would be invisible at exactly the value it
-        // marks — which is where the knob sits by default and where the mark
-        // matters most.
-        let notch = SKShapeNode(rect: CGRect(x: barX + barW * defaultMark - 1.5, y: y - 15,
-                                             width: 3, height: 7))
-        notch.fillColor   = Self.cyan.withAlphaComponent(dimmed ? 0.30 : 0.85)
-        notch.strokeColor = .clear
-        content.addChild(notch)
+        // A tick above and below, framing the track. Both sit outside the
+        // knob's 8x16 footprint, or the mark would vanish at exactly the value
+        // it marks — where the knob rests by default, and where it matters
+        // most.
+        for top in [y + 8, y - 15] {
+            let notch = SKShapeNode(rect: CGRect(x: barX + barW * defaultMark - 1.5, y: top,
+                                                 width: 3, height: 7))
+            notch.fillColor   = Self.cyan.withAlphaComponent(dimmed ? 0.30 : 0.85)
+            notch.strokeColor = .clear
+            content.addChild(notch)
+        }
 
         let knob = SKShapeNode(rect: CGRect(x: barX + barW * value - 4, y: y - 8,
                                             width: 8, height: 16))
