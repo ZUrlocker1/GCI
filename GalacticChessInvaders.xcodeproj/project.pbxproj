@@ -42,6 +42,7 @@
 		496150C3B2737728E85A0830 /* chess-w-king.png in Resources */ = {isa = PBXBuildFile; fileRef = 8339E5F18F16FA9DBF8CC7E2 /* chess-w-king.png */; };
 		4AAEA0F579F05B5F2CA173E8 /* chess-w-bishop.png in Resources */ = {isa = PBXBuildFile; fileRef = 358C1653386A6A77FA844C99 /* chess-w-bishop.png */; };
 		501B3D6BAA54B7D6543315E0 /* chess-b-pawn-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */; };
+		51DBACEE06DE99EE2BCD7260 /* SettingsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */; };
 		56547221A27CECF071477604 /* chess-b-queen-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */; };
 		5C00B24FA3687609673B10AC /* chess-b-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */; };
 		5E5F85935F04C28062E9F04F /* Regeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58B64ABA847AF8604BB2BF /* Regeneration.swift */; };
@@ -83,6 +84,7 @@
 		CED029BF45680E976218AD47 /* chess-w-queen.png in Resources */ = {isa = PBXBuildFile; fileRef = 83910C58D45F81C5E632B8BD /* chess-w-queen.png */; };
 		D3641D21830DBEB3CE620C6B /* PressStart2P-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */; };
 		D96554076A4F6BFF8CB7D2D2 /* FleetRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A14B880553E1506AF871A55 /* FleetRules.swift */; };
+		DAADEF5196A423E549D68CDB /* GameSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CE9C9E6605254BA0A685BC /* GameSettings.swift */; };
 		DE340400464B4B709FE0F477 /* LogTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284B42A60842EE3D06208D3 /* LogTextView.swift */; };
 		DEE6A588A0E118BDB71E32F6 /* chess-w-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */; };
 		DF73E7ACF955B7FBAAA31DFA /* ChessRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5CBD6F2CC804D886BB6FCB2 /* ChessRules.swift */; };
@@ -180,6 +182,7 @@
 		89C03C76F77C2116A0D5D2BB /* chess-b-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop.png"; sourceTree = "<group>"; };
 		8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollisionHandler.swift; sourceTree = "<group>"; };
 		8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		95CE9C9E6605254BA0A685BC /* GameSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSettings.swift; sourceTree = "<group>"; };
 		978A170453B8B07C0F41C526 /* chess-b-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d1.png"; sourceTree = "<group>"; };
 		998968842203016A0E563C6A /* sfx */ = {isa = PBXFileReference; lastKnownFileType = folder; name = sfx; path = GalacticChessInvaders/Resources/sfx; sourceTree = SOURCE_ROOT; };
 		9A14B880553E1506AF871A55 /* FleetRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetRules.swift; sourceTree = "<group>"; };
@@ -205,6 +208,7 @@
 		D52D7B60FB53896B80DB403D /* RaiderRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaiderRules.swift; sourceTree = "<group>"; };
 		D6E00200878F5A414C7AA097 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		D8C800709B09587557941485 /* Piece.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
+		D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNode.swift; sourceTree = "<group>"; };
 		DBF33ADCAAD8AE9F65CD5E50 /* chess-b-pawn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-pawn.png"; sourceTree = "<group>"; };
 		DFA8FE0D63A1CAAA9CBA031E /* SoundKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundKey.swift; sourceTree = "<group>"; };
 		DFEC1D27CBD2B19429587528 /* ship-player.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-player.png"; sourceTree = "<group>"; };
@@ -305,6 +309,7 @@
 				9C108816F834B07B96432B59 /* DiagnosticsLog.swift */,
 				2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */,
 				9A14B880553E1506AF871A55 /* FleetRules.swift */,
+				95CE9C9E6605254BA0A685BC /* GameSettings.swift */,
 				3B7548E55F1B1E37D9A6AA88 /* GameState.swift */,
 				9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */,
 				360CD5A00CE701C3BACFB1BA /* Juice.swift */,
@@ -410,6 +415,7 @@
 				5830D14669A091B96610D580 /* RaiderController.swift */,
 				09E4C7B6130F1ECEECE00289 /* RaiderNode.swift */,
 				096490D7A6278EF53261317B /* ScorePopPool.swift */,
+				D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */,
 				C85CA9EDA2CA72A635DCD707 /* Silhouette.swift */,
 				433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */,
 				CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */,
@@ -615,6 +621,7 @@
 				82FBE8F0FE17EC1EED7ECC03 /* GameOverNode.swift in Sources */,
 				E363DB037B78F53FB632EDEC /* GameOverScene.swift in Sources */,
 				97361A240335FEBD8B2AFA78 /* GameScene.swift in Sources */,
+				DAADEF5196A423E549D68CDB /* GameSettings.swift in Sources */,
 				452008C69273C0B918DFAA99 /* GameState.swift in Sources */,
 				85830BC31A121E884D7C827C /* GameStatusNode.swift in Sources */,
 				031533BB438B7A4BC1CE82C9 /* HUDNode.swift in Sources */,
@@ -639,6 +646,7 @@
 				5E5F85935F04C28062E9F04F /* Regeneration.swift in Sources */,
 				24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */,
 				E417F771A182BF6A6C7A8D29 /* ScorePopPool.swift in Sources */,
+				51DBACEE06DE99EE2BCD7260 /* SettingsNode.swift in Sources */,
 				EF4BE7455C8F7D6914EFAF95 /* Silhouette.swift in Sources */,
 				92F5117575286012F40FFBAC /* SoundKey.swift in Sources */,
 				E08464B23F92D11F3F247DAB /* SpaceshipNode.swift in Sources */,

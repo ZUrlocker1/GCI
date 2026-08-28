@@ -49,6 +49,37 @@ struct LevelParameters {
     }
 }
 
+extension LevelParameters {
+    /// The player's difficulty applied to the level's own numbers.
+    ///
+    /// Only the *tuning* moves. `level` is left alone, so Crossfire, Armored
+    /// Pawns, King Activated and Blitz all still fire on the wave that owns
+    /// them — a Cadet Level 7 is still Crossfire, just slower. Shifting the
+    /// whole row would have been tidier to write and would have made the
+    /// banner lie.
+    ///
+    /// Scaled rather than borrowed from an earlier row for a second reason:
+    /// the table caps moves and shots at Level 5, so a row shift did nearly
+    /// nothing from Level 6 up — exactly where the help is needed.
+    /// Main-actor bound because `GameSettings` is; `LevelParameters` itself
+    /// stays a plain value type the engine can read from anywhere.
+    @MainActor
+    func eased(by settings: GameSettings) -> LevelParameters {
+        guard settings.difficulty == .cadet else { return self }
+        return LevelParameters(
+            level: level,
+            fleetSpeed: fleetSpeed * settings.fleetSpeedScale,
+            blackMovesPerTurn: blackMovesPerTurn,
+            shotsPerTurn: shotsPerTurn,
+            projectileSpeed: projectileSpeed * settings.enemyShotScale,
+            turnTimer: turnTimer + settings.turnClockBonus,
+            regenSlots: regenSlots,
+            raiderInterval: raiderInterval,
+            isAggressive: isAggressive,
+            sweepAmplitudeRatio: sweepAmplitudeRatio)
+    }
+}
+
 @MainActor
 final class LevelManager {
 
@@ -57,7 +88,9 @@ final class LevelManager {
 
     private(set) var level: Int = 1
 
-    var parameters: LevelParameters { Self.parameters(for: level) }
+    var parameters: LevelParameters {
+        Self.parameters(for: level).eased(by: GameSettings.shared)
+    }
 
     /// The last wave. Clearing it wins the run outright rather than rolling into
     /// another generically-harder level — §10.1's "no ceiling" gave the game no

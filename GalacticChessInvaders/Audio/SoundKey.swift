@@ -247,6 +247,10 @@ extension SoundKey {
         // The king's own weapon should cut over ordinary fleet fire.
         case .kingLaserFire:                        return 1.0
         case .crossfireLaserFire:                   return 1.0
+        // 30% down from the default. UI clicks are the one family the player
+        // triggers deliberately and hears in isolation, with no gunfire under
+        // them, so the default balance read as a shout.
+        case .uiButtonClick:                        return 0.40
         default:                                    return 0.8
         }
     }

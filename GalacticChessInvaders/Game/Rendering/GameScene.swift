@@ -24,6 +24,7 @@ class GameScene: SKScene {
     private var starfieldNode: SKNode!
     private var titleOverlay: TitleOverlayNode?
     private var boardNode: BoardNode?
+    private var settingsNode: SettingsNode?
     private var ship: SpaceshipNode?
     private var hudNode: HUDNode?
     private var howToPlayNode: HowToPlayNode?
@@ -343,11 +344,21 @@ class GameScene: SKScene {
         // Apple's own guidance is to rasterize only when contents rarely change.
         // §18.9 asked for it, written before there was anything moving inside.
         bloomNode.shouldRasterize = false
-        bloomNode.filter = CIFilter(name: "CIBloom", parameters: [
-            "inputRadius": 6.0,
-            "inputIntensity": 0.9
-        ])
+        applyGlowSetting()
         addChild(bloomNode)
+    }
+
+    /// The glow is a full-screen `CIBloom` and the single largest GPU cost in
+    /// the game, so turning it off is the one switch that can rescue an older
+    /// Mac. Detaching the filter — rather than zeroing its intensity — is what
+    /// actually skips the offscreen pass.
+    private func applyGlowSetting() {
+        bloomNode.filter = GameSettings.shared.neonGlow
+            ? CIFilter(name: "CIBloom", parameters: [
+                "inputRadius": 6.0,
+                "inputIntensity": 0.9
+              ])
+            : nil
     }
 
     private func setupStarfield() {
@@ -626,6 +637,12 @@ class GameScene: SKScene {
     func showHowToPlay() {
         guard howToPlayNode == nil else { return }
 
+        // Here rather than at each entry point. There are five ways in — the
+        // INFO button, `I`, `?`, ⌘I, and the shortcut while paused — and only
+        // the button used to make a sound, so the same action was audible or
+        // silent depending on how it was reached.
+        AudioManager.shared.play(.uiButtonClick)
+
         // A level banner underneath shows through the panel's 0.97 ground and
         // is still counting down when the panel closes. End it rather than
         // stack on it — properly, via `endLevelAnnouncement`, because the
@@ -666,8 +683,59 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - Settings (§20 Phase 5)
+
+    func showSettings() {
+        guard settingsNode == nil, howToPlayNode == nil else { return }
+        AudioManager.shared.play(.uiButtonClick)
+        endLevelAnnouncement()
+        removeEndBanner()
+
+        let panel = SettingsNode()
+        panel.position = .zero
+        panel.zPosition = 20
+        panel.onChange = { [weak self] in self?.applyLiveSettings() }
+        addChild(panel)
+        settingsNode = panel
+
+        // Same hold as How To Play: freeze the beat and stop the ship drifting,
+        // but leave the music alone — changing the volume is the main reason
+        // anyone opens this, and it has to be audible while they do.
+        if stateMachine.currentState is PlayingState {
+            turnTimer.pause()
+            ship?.direction = 0
+            isPaused = true
+        }
+        DiagnosticsLog.shared.log(.info, "settings open")
+    }
+
+    /// BACK always returns to play — never to the title.
+    func hideSettings() {
+        guard settingsNode != nil else { return }
+        settingsNode?.removeFromParent()
+        settingsNode = nil
+        applyLiveSettings()
+
+        if stateMachine.currentState is PlayingState {
+            isPaused = false
+            turnTimer.resume()
+            lastUpdateTime = 0
+        }
+    }
+
+    /// Everything a settings change should show immediately. The values that
+    /// cannot apply mid-run — lives, and the difficulty tuning already baked
+    /// into the current wave — take effect at the next level or the next game,
+    /// which is the honest place for them.
+    private func applyLiveSettings() {
+        applyGlowSetting()
+        boardNode?.applyDisplaySettings()
+        AudioManager.shared.applyMusicSettings()
+    }
+
     func resetToTitle() {
         howToPlayNode?.removeFromParent(); howToPlayNode = nil
+        settingsNode?.removeFromParent(); settingsNode = nil
         refreshCursorRects()
         titleOverlay?.removeFromParent(); titleOverlay = nil
         // Clear any pause the info overlay applied, or the title screen would
@@ -844,7 +912,7 @@ class GameScene: SKScene {
         raiderKindsSeen.removeAll()
         hasOfferedHighScore = false
         ScoreManager.shared.resetForNewGame()
-        shipState = SpaceshipState()
+        shipState = SpaceshipState(lives: GameSettings.shared.lives)
         buildPlayfield()
     }
 
@@ -1054,9 +1122,17 @@ class GameScene: SKScene {
         // §13.2: neither the shield nor a running clock carries to the next
         // level. Lifting the effect first puts the world back before the state
         // that describes it is thrown away.
+        //
+        // Cadet keeps an unused shield, which is the one part of that rule it
+        // inverts. A *running* effect still ends either way — Freeze is three
+        // seconds and Gatling seven, so carrying one across a level break would
+        // mean nothing except a clock ticking over a board that no longer
+        // exists.
         cancelSlowMotion()
         if let running = powerUps.cancel() { lift(running) }
+        let keepsShield = GameSettings.shared.keepsPowerUps && powerUps.hasShield
         powerUps.reset()
+        if keepsShield { powerUps.raiseShield() }
         gatlingCooldown = 0
         gatlingPhase = 0
         isFireHeld = false
@@ -1676,6 +1752,13 @@ class GameScene: SKScene {
     private var canAcceptChessInput: Bool {
         stateMachine.currentState is PlayingState
             && howToPlayNode == nil
+            && settingsNode == nil
+            // Auto Chess wires in here and nowhere else. It is not a mechanics
+            // change — `resolveBeat` already engine-moves White whenever the
+            // player doesn't — so refusing the input is the whole of it, and
+            // selection, the legal-move dots and the capture tethers all fall
+            // silent together because they all pass through this one gate.
+            && !GameSettings.shared.autoChess
             && !isEndingGame
             && !isEngineThinking
             && !isResolvingBeat
@@ -2019,7 +2102,7 @@ class GameScene: SKScene {
         laser.onDeactivate = { [weak shipState] in shipState?.laserResolved() }
         let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
         laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
-                  speed: ProjectileState.playerLaserSpeed,
+                  speed: GameSettings.shared.playerLaserSpeed,
                   travelDistance: size.height - origin.y)
         AudioManager.shared.play(.playerLaserFire)
         DiagnosticsLog.shared.log(.shoot, "ship fires \(shipState.activeLasers)/\(shipState.laserCap)")
@@ -3666,6 +3749,14 @@ class GameScene: SKScene {
             return
         }
 
+        // Any key returns to the game, the same as How To Play — the footer of
+        // both panels says so, and two full-screen panels that dismiss
+        // differently would be a worse trap than an accidental keystroke.
+        if settingsNode != nil {
+            hideSettings()
+            return
+        }
+
         // While How To Play is open, any key dismisses it (§10).
         if howToPlayNode != nil {
             InputHandler.shared.handleOverlayKeyDown()
@@ -3675,6 +3766,14 @@ class GameScene: SKScene {
         // Name entry owns the keyboard while it is up.
         if let highScoreEntry {
             highScoreEntry.handleKey(event)
+            return
+        }
+
+        // S opens Settings from anywhere. Its own key rather than a menu, in
+        // the same spirit as `I` — and §12.9 is explicit that pause must never
+        // become a settings menu.
+        if event.charactersIgnoringModifiers?.lowercased() == "s" {
+            showSettings()
             return
         }
 
@@ -3753,12 +3852,32 @@ class GameScene: SKScene {
         InputHandler.shared.handleKeyDown(event, inTitleScreen: inTitle)
     }
 
+    override func mouseDragged(with event: NSEvent) {
+        settingsNode?.handleDrag(at: event.location(in: self))
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        settingsNode?.endDrag()
+    }
+
     override func keyUp(with event: NSEvent) {
         InputHandler.shared.handleKeyUp(event)
     }
 
     override func mouseDown(with event: NSEvent) {
         let location = event.location(in: self)
+
+        // Settings intercepts all clicks: BACK first, then its own controls.
+        if let panel = settingsNode {
+            let hit = atPoint(location)
+            if hit.name == "backButton" || hit.parent?.name == "backButton" {
+                AudioManager.shared.play(.uiButtonClick)
+                hideSettings()
+            } else {
+                panel.handleClick(at: location)
+            }
+            return
+        }
 
         // How To Play overlay intercepts all clicks; BACK closes it.
         if howToPlayNode != nil {
@@ -3777,8 +3896,11 @@ class GameScene: SKScene {
         // INFO button opens How To Play from any game state.
         let hit = atPoint(location)
         if hit.name == "infoButton" || hit.parent?.name == "infoButton" {
-            AudioManager.shared.play(.uiButtonClick)
             showHowToPlay()
+            return
+        }
+        if hit.name == "settingsButton" || hit.parent?.name == "settingsButton" {
+            showSettings()
             return
         }
 

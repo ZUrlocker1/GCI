@@ -86,11 +86,19 @@ final class AudioManager {
     // MARK: - Playback
 
     func play(_ key: SoundKey) {
+        let settings = GameSettings.shared
+        guard settings.soundOn else { return }
+        // Applied here rather than at preload: the player can move the slider
+        // mid-game, and a level baked into a pooled `AVAudioPlayer` would stay
+        // wherever it was when the app launched.
+        let level = Self.volume(for: key) * settings.soundVolume
         if key.loops {
+            loopPlayers[key]?.volume = level
             loopPlayers[key]?.play()
         } else {
             guard let pool = sfxPools[key] else { return }
             let player = pool.first(where: { !$0.isPlaying }) ?? pool[0]
+            player.volume = level
             player.currentTime = 0
             player.play()
         }
@@ -104,10 +112,10 @@ final class AudioManager {
 
     // MARK: - Music
 
-    /// The `M` key. Lives here rather than in the scene because the music
-    /// restarts on its own — every level change calls `playMusic` — and a flag
-    /// the scene owned would be silently overridden by the next track.
-    private(set) var isMusicMuted = false
+    /// The `M` key and the settings screen's Music switch are the same state,
+    /// held in `GameSettings` so it persists and so there is only ever one
+    /// answer to "is the music on".
+    var isMusicMuted: Bool { !GameSettings.shared.musicOn }
     /// The other, independent reason the music can be silent. Kept apart from
     /// the mute so neither one can resume over the top of the other: unmuting
     /// mid-pause must not start the music, and resuming from a pause must not
@@ -117,14 +125,21 @@ final class AudioManager {
     /// Returns the new state — true when the music is now off.
     @discardableResult
     func toggleMusic() -> Bool {
-        isMusicMuted.toggle()
+        GameSettings.shared.musicOn.toggle()
+        applyMusicSettings()
+        DiagnosticsLog.shared.log(.audio, "Music \(isMusicMuted ? "off" : "on")")
+        return isMusicMuted
+    }
+
+    /// Brings the running track into line with the settings — after a slider
+    /// move, a switch, or a restore. Safe to call when nothing is playing.
+    func applyMusicSettings() {
+        musicPlayer?.volume = Self.musicVolume * GameSettings.shared.musicVolume
         if isMusicMuted {
             musicPlayer?.pause()
         } else if !pausedByGame {
             musicPlayer?.play()
         }
-        DiagnosticsLog.shared.log(.audio, "Music \(isMusicMuted ? "off" : "on")")
-        return isMusicMuted
     }
 
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {
@@ -136,7 +151,7 @@ final class AudioManager {
         pausedByGame = false
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
-        player.volume = volume
+        player.volume = volume * GameSettings.shared.musicVolume
         // §13.2's Time Freeze slows the music to 0.5×. `rate` is ignored unless
         // this is set *before* the player is prepared, so it has to be armed
         // here whether or not a freeze ever happens.

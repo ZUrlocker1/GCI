@@ -10,7 +10,12 @@ final class SpaceshipNode: SKSpriteNode {
     /// Points per second. 420 originally; 30% slower after playtest — at full
     /// speed the shortest tap overshot the file you were aiming at, and aiming
     /// is the whole game once the fleet sweep opens narrow lanes.
-    static let speed: CGFloat = 294
+    static let baseSpeed: CGFloat = 294
+    /// The playtested speed with the player's own adjustment applied. The
+    /// slider is clamped narrow in `GameSettings` so the finding above cannot
+    /// be undone wholesale.
+    @MainActor
+    static var speed: CGFloat { baseSpeed * GameSettings.shared.shipSpeedScale }
     /// Not private: the spray's ceiling is derived from where the muzzle sits,
     /// which is the ship's lane plus half its hull.
     static let displayHeight: CGFloat = 40
