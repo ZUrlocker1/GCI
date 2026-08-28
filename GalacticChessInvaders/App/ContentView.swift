@@ -3,9 +3,10 @@ import SpriteKit
 
 struct ContentView: View {
     // Closed by default. The panel ships — a tester who wants to look behind
-    // the scenes, or send a log back, can open it with `L` — but nobody should
-    // meet the game for the first time next to a wall of green text.
-    @State private var showSidebar = GameSettings.shared.logPanelAtStart
+    // the scenes, or send a log back, can open it with `L` or from Settings —
+    // but nobody should meet the game for the first time next to a wall of
+    // green text.
+    @State private var showSidebar = GameSettings.shared.logPanel
 
     var body: some View {
         HStack(spacing: 0) {
@@ -13,8 +14,13 @@ struct ContentView: View {
 
             DiagnosticsSidebarView(isExpanded: $showSidebar)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .gciToggleSidebar)) { _ in
-            showSidebar.toggle()
+        // Re-reads rather than flips. Two things change this — the `L` key and
+        // the settings switch — and a notification that meant "toggle" would
+        // close the panel when the switch was set to the state it was already
+        // in. Re-reading the one stored value is idempotent, so it cannot.
+        .onReceive(NotificationCenter.default.publisher(for: .gciSidebarChanged)) { _ in
+            guard showSidebar != GameSettings.shared.logPanel else { return }
+            showSidebar = GameSettings.shared.logPanel
             DiagnosticsLog.shared.log(.startup, "Sidebar \(showSidebar ? "shown" : "hidden")")
         }
     }
@@ -98,7 +104,7 @@ final class KeyboardFocusedSKView: SKView {
 }
 
 extension Notification.Name {
-    static let gciToggleSidebar = Notification.Name("gciToggleSidebar")
+    static let gciSidebarChanged = Notification.Name("gciSidebarChanged")
 }
 
 // MARK: - Diagnostics Sidebar

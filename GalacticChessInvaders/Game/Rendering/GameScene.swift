@@ -520,7 +520,10 @@ class GameScene: SKScene {
     private func handle(_ action: GameAction) {
         switch action {
         case .toggleDiagnostics:
-            NotificationCenter.default.post(name: .gciToggleSidebar, object: nil)
+            // `L` and the settings switch are the same control reached two
+            // ways, so the key writes the setting rather than the view.
+            GameSettings.shared.logPanel.toggle()
+            NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
 
         case .moveLeft:   ship?.direction = -1
         case .moveRight:  ship?.direction =  1
@@ -731,6 +734,9 @@ class GameScene: SKScene {
         applyGlowSetting()
         boardNode?.applyDisplaySettings()
         AudioManager.shared.applyMusicSettings()
+        // Cheap and idempotent, so it rides along with every change rather than
+        // needing the panel to know which switch was the sidebar's.
+        NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
     }
 
     func resetToTitle() {

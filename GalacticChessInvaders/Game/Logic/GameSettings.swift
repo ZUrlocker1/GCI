@@ -50,7 +50,10 @@ final class GameSettings {
     /// it disappears, which is the look §12.3 originally specified.
     var boardGrid: CGFloat      { didSet { persist() } }
     var homeZones: Bool         { didSet { persist() } }
-    var logPanelAtStart: Bool   { didSet { persist() } }
+    /// Whether the diagnostics sidebar is open. The `L` key and the settings
+    /// switch both write here and neither owns it, so the two can never
+    /// disagree about what the panel is doing.
+    var logPanel: Bool          { didSet { persist() } }
 
     // MARK: - Controls
 
@@ -98,7 +101,7 @@ final class GameSettings {
         static let neonGlow        = "GCI_NeonGlow"
         static let boardGrid       = "GCI_BoardGrid"
         static let homeZones       = "GCI_HomeZones"
-        static let logPanelAtStart = "GCI_LogPanelAtStart"
+        static let logPanel        = "GCI_LogPanel"
         static let shipSpeedScale  = "GCI_ShipSpeedScale"
     }
 
@@ -127,7 +130,7 @@ final class GameSettings {
         neonGlow        = flag(Key.neonGlow, default: true)
         boardGrid       = CGFloat(number(Key.boardGrid, default: 0.5))
         homeZones       = flag(Key.homeZones, default: true)
-        logPanelAtStart = flag(Key.logPanelAtStart, default: false)
+        logPanel        = flag(Key.logPanel, default: false)
         shipSpeedScale  = CGFloat(number(Key.shipSpeedScale, default: 1.0))
     }
 
@@ -143,7 +146,7 @@ final class GameSettings {
         store.set(neonGlow,                forKey: Key.neonGlow)
         store.set(Double(boardGrid),       forKey: Key.boardGrid)
         store.set(homeZones,               forKey: Key.homeZones)
-        store.set(logPanelAtStart,         forKey: Key.logPanelAtStart)
+        store.set(logPanel,                forKey: Key.logPanel)
         store.set(Double(shipSpeedScale),  forKey: Key.shipSpeedScale)
     }
 
@@ -154,7 +157,7 @@ final class GameSettings {
         soundOn = true;         soundVolume = 1.0
         difficulty = .pilot;    autoChess = false
         neonGlow = true;        boardGrid = 0.5
-        homeZones = true;       logPanelAtStart = false
+        homeZones = true;       logPanel = false
         shipSpeedScale = 1.0
         isPersisting = false
         persist()

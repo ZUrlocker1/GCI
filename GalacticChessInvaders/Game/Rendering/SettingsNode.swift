@@ -187,9 +187,10 @@ final class SettingsNode: SKNode {
         toggleRow("HOME ZONE BANDS", x: x, w: w, y: 408, value: settings.homeZones) {
             self.settings.homeZones = $0
         }
-        toggleRow("LOG PANEL AT START", x: x, w: w, y: 376, value: settings.logPanelAtStart) {
-            self.settings.logPanelAtStart = $0
+        toggleRow("LOG PANEL", x: x, w: w, y: 376, value: settings.logPanel) {
+            self.settings.logPanel = $0
         }
+        explain("SAME AS THE L KEY", x: x, y: 354)
 
         heading("CONTROLS", Self.cyan, x: x, y: 320)
         let range = GameSettings.shipSpeedRange
