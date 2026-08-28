@@ -86,6 +86,7 @@ enum SoundKey: String, CaseIterable {
     case mechanicBannerTier2    // DSGNBram Cinematic Horn Braam -32.wav (gdc-bundle)
     case mechanicBannerTier3    // Transition Braam Slow Dark Creepy.wav (gdc-bundle)
     case uiButtonClick          // UIMisc_Kalimba 3 Up.wav   (gdc-bundle)
+    case uiPanelOpen            // pepSound3.wav             (kenney-digital)
     case uiSciFiPing            // Interface Sci-Fi Ping Down.wav (gdc-bundle)
     case ambientSpaceLoop       // Roomtone Space Ship Interior Muted.wav (gdc-bundle) — loop
 
@@ -182,6 +183,7 @@ extension SoundKey {
         case .mechanicBannerTier2:      return "gdc-bundle/DSGNBram____Cinematic Horn Braam, Epic, Cinematic, Dark, Instrument, Huge-32.caf"
         case .mechanicBannerTier3:      return "gdc-bundle/Transition Braam Slow Dark Creepy.caf"
         case .uiButtonClick:            return "gdc-bundle/UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.caf"
+        case .uiPanelOpen:              return "kenney-digital/pepSound3.caf"
         case .uiSciFiPing:              return "gdc-bundle/Interface Sci-Fi Ping Down.caf"
         case .ambientSpaceLoop:         return "gdc-bundle/Roomtone Space Ship Interior Muted.caf"
         // Minter ships
@@ -258,6 +260,18 @@ extension SoundKey {
         // player triggers deliberately and hears in isolation, with no gunfire
         // underneath, so the default read as a shout.
         case .uiButtonClick:                        return 0.40
+        // Opening a panel and nudging a control should not sound alike, so this
+        // is a digital blip against the kalimba's plucked note — and the whole
+        // point is that it sits *under* the thing it introduces.
+        //
+        // 0.06 rather than something near the default because these files are
+        // genuinely loud. Measured two ways that disagree on principle and
+        // agreed on the answer: by global RMS pepSound3 wants 0.065 to sit a
+        // quarter under the kalimba, and by loudest-50ms — the proxy §12's
+        // armorRicochet note argues for, since a short sound is heard at its
+        // peak rather than its average — it wants 0.061. It is the shortest of
+        // the seven candidates at 0.39s audible.
+        case .uiPanelOpen:                          return 0.06
         default:                                    return 0.8
         }
     }
