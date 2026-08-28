@@ -153,21 +153,28 @@ final class SettingsNode: SKNode {
         let x = Self.lx, w = Self.lw
 
         heading("AUDIO", Self.cyan, x: x, y: 540)
+        // Both audio sliders are shown as a fraction of `audioMax`, so the
+        // shipped level reads as 75% with room above it — see `audioMax`.
+        let top = CGFloat(GameSettings.audioMax)
+        let shipped = 1.0 / top
+
         toggleRow("MUSIC", x: x, w: w, y: 512, value: settings.musicOn) {
             self.settings.musicOn = $0
         }
-        sliderRow("VOLUME", x: x, w: w, y: 480, fraction: CGFloat(settings.musicVolume),
-                  readout: percent(CGFloat(settings.musicVolume)), dimmed: !settings.musicOn,
-                  defaultMark: 1.0) {
-            self.settings.musicVolume = Float($0)
+        let music = CGFloat(settings.musicVolume) / top
+        sliderRow("VOLUME", x: x, w: w, y: 480, fraction: music,
+                  readout: percent(music), dimmed: !settings.musicOn,
+                  defaultMark: shipped) {
+            self.settings.musicVolume = Float($0 * top)
         }
         toggleRow("SOUND FX", x: x, w: w, y: 444, value: settings.soundOn) {
             self.settings.soundOn = $0
         }
-        sliderRow("VOLUME", x: x, w: w, y: 412, fraction: CGFloat(settings.soundVolume),
-                  readout: percent(CGFloat(settings.soundVolume)), dimmed: !settings.soundOn,
-                  defaultMark: 1.0) {
-            self.settings.soundVolume = Float($0)
+        let effects = CGFloat(settings.soundVolume) / top
+        sliderRow("VOLUME", x: x, w: w, y: 412, fraction: effects,
+                  readout: percent(effects), dimmed: !settings.soundOn,
+                  defaultMark: shipped) {
+            self.settings.soundVolume = Float($0 * top)
         }
 
         heading("GAMEPLAY", Self.magenta, x: x, y: 356)
