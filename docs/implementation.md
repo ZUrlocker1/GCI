@@ -809,8 +809,12 @@ is genuinely outstanding:
       currently pooled particle bursts tinted per piece, which reads well enough
       that this may not be worth doing
 - [ ] **Hyperspace jump on level clear**
-- [ ] **Attract mode** — §14.2's 5-slide cycle on a 12s timeout. `HowToPlayNode`
-      and `TitleOverlayNode` exist; nothing cycles
+- [ ] **Attract mode** — §14.2's 5-slide cycle on a 12s timeout. **Unlikely.**
+      It is a coin-op convention: a cabinet nobody is standing at has to sell
+      itself to the room. An app someone chose to launch is already past that,
+      and a window that starts playing to itself is just odd. The title screen's
+      cycling haze covers the part that was actually worth having — a title
+      screen that is not inert
 
 ### Shipping (§20 Phase 9)
 
