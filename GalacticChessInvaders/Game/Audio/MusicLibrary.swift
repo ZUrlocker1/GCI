@@ -33,8 +33,14 @@ enum MusicLibrary {
     /// gets the brightest mode in the set and a slower beat, as a breath before
     /// Crossfire. The modes alternate major-feeling and minor-feeling and never
     /// run three the same way, so no stretch of the game sounds like one long
-    /// piece. Crossfire's harmonic minor is the most unsettled thing here, and
-    /// Blitz gets the fastest track and the darkest mode.
+    /// piece.
+    ///
+    /// Blitz takes the harmonic minor — the most unsettled thing in the set —
+    /// rather than the fastest track. Both tracks above 150 BPM are hinted
+    /// "peppy", so nothing here is fast *and* dark, and a bright finale would
+    /// undercut a three-second clock worse than a slower menacing one does. The
+    /// last three waves fall 156 to 147 to 140 while getting darker, which is
+    /// the trade this library forces.
     ///
     /// Written by Zudio in its Motorik Arcade style, re-encoded to 80k/32kHz to
     /// match GCI-intro — 128k/44.1k would have put 28MB of music in a 7MB app.
@@ -46,10 +52,10 @@ enum MusicLibrary {
         case 4:  return ["ZeigSchnork-Zero"]     // 139 B Dorian, focused
         case 5:  return ["Frankfurt-Overdrive"]  // 140 A Dorian, intense
         case 6:  return ["KraftSchmaltz"]        // 137 A Lydian, peppy — the breath
-        case 7:  return ["BierWunderwaffe"]      // 140 G HarmonicMinor, intense
+        case 7:  return ["Bochum-Level"]         // 156 C Phrygian, peppy — the jolt
         case 8:  return ["SchnorkPunkt"]         // 147 B Mixolydian, focused
         case 9:  return ["Leipzig-1999"]         // 147 B Aeolian, focused
-        default: return ["Bochum-Level"]         // 156 C Phrygian — Blitz
+        default: return ["BierWunderwaffe"]      // 140 G HarmonicMinor, intense — Blitz
         }
     }
 

@@ -138,7 +138,8 @@ RES=GalacticChessInvaders/Resources
 # the tables are where the typos will be.
 for track in $(
     { grep -rhoE 'playMusic\("[^"]+"' --include="*.swift" GalacticChessInvaders | sed 's/.*("//;s/"//'
-      grep -hoE '"[A-Za-z0-9][A-Za-z0-9 .-]*"' GalacticChessInvaders/Game/Audio/MusicLibrary.swift | tr -d '"'
+      grep -v '^[[:space:]]*//' GalacticChessInvaders/Game/Audio/MusicLibrary.swift \
+        | grep -hoE '"[A-Za-z0-9][A-Za-z0-9 .-]*"' | tr -d '"'
     } | sort -u); do
   [ -f "$RES/$track.m4a" ] || { echo "✗ Music referenced but not bundled: $track.m4a"; exit 1; }
 done
