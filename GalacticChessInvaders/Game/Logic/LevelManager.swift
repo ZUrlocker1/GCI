@@ -72,7 +72,7 @@ extension LevelParameters {
             blackMovesPerTurn: blackMovesPerTurn,
             shotsPerTurn: shotsPerTurn,
             projectileSpeed: projectileSpeed * settings.enemyShotScale,
-            turnTimer: turnTimer + settings.turnClockBonus,
+            turnTimer: max(turnTimer, settings.turnClockFloor),
             regenSlots: regenSlots,
             raiderInterval: raiderInterval,
             isAggressive: isAggressive,
