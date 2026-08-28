@@ -152,45 +152,47 @@ final class SettingsNode: SKNode {
     private func buildLeftColumn() {
         let x = Self.lx, w = Self.lw
 
-        heading("AUDIO", Self.cyan, x: x, y: 540)
+        // Gameplay leads. Difficulty is the most consequential control on the
+        // screen, and it used to sit underneath two volume sliders.
+        heading("GAMEPLAY", Self.magenta, x: x, y: 540)
+        segmentRow("DIFFICULTY", x: x, w: w, y: 512,
+                   options: ["CADET", "PILOT"],
+                   selected: settings.difficulty == .cadet ? 0 : 1) { index in
+            self.settings.difficulty = index == 0 ? .cadet : .pilot
+        }
+        explain("EASIER GAMEPLAY. SAME TEN LEVELS.", x: x, y: 488)
+
+        segmentRow("CHESS", x: x, w: w, y: 456,
+                   options: ["YOU PLAY", "AUTO"],
+                   selected: settings.autoChess ? 1 : 0) { index in
+            self.settings.autoChess = index == 1
+        }
+        explain("AUTOMATIC FAST CHESS PLAY FOR WHITE.", x: x, y: 432)
+
+        heading("AUDIO", Self.cyan, x: x, y: 376)
         // Both audio sliders are shown as a fraction of `audioMax`, so the
         // shipped level reads as 75% with room above it — see `audioMax`.
         let top = CGFloat(GameSettings.audioMax)
         let shipped = 1.0 / top
 
-        toggleRow("MUSIC", x: x, w: w, y: 512, value: settings.musicOn) {
+        toggleRow("MUSIC", x: x, w: w, y: 348, value: settings.musicOn) {
             self.settings.musicOn = $0
         }
         let music = CGFloat(settings.musicVolume) / top
-        sliderRow("VOLUME", x: x, w: w, y: 480, fraction: music,
+        sliderRow("VOLUME", x: x, w: w, y: 316, fraction: music,
                   readout: percent(music), dimmed: !settings.musicOn,
                   defaultMark: shipped) {
             self.settings.musicVolume = Float($0 * top)
         }
-        toggleRow("SOUND FX", x: x, w: w, y: 444, value: settings.soundOn) {
+        toggleRow("SOUND FX", x: x, w: w, y: 280, value: settings.soundOn) {
             self.settings.soundOn = $0
         }
         let effects = CGFloat(settings.soundVolume) / top
-        sliderRow("VOLUME", x: x, w: w, y: 412, fraction: effects,
+        sliderRow("VOLUME", x: x, w: w, y: 248, fraction: effects,
                   readout: percent(effects), dimmed: !settings.soundOn,
                   defaultMark: shipped) {
             self.settings.soundVolume = Float($0 * top)
         }
-
-        heading("GAMEPLAY", Self.magenta, x: x, y: 356)
-        segmentRow("DIFFICULTY", x: x, w: w, y: 328,
-                   options: ["CADET", "PILOT"],
-                   selected: settings.difficulty == .cadet ? 0 : 1) { index in
-            self.settings.difficulty = index == 0 ? .cadet : .pilot
-        }
-        explain("EASIER GAMEPLAY. SAME TEN LEVELS.", x: x, y: 304)
-
-        segmentRow("CHESS", x: x, w: w, y: 272,
-                   options: ["YOU PLAY", "AUTO"],
-                   selected: settings.autoChess ? 1 : 0) { index in
-            self.settings.autoChess = index == 1
-        }
-        explain("AUTOMATIC FAST CHESS PLAY FOR WHITE.", x: x, y: 248)
     }
 
     private func buildRightColumn() {
