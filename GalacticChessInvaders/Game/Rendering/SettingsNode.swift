@@ -182,7 +182,7 @@ final class SettingsNode: SKNode {
                   readout: percent(settings.boardGrid), dimmed: false, defaultMark: 0.5) {
             self.settings.boardGrid = $0
         }
-        explain("AT 0% THE BOARD IS OPEN SPACE", x: x, y: 438)
+        explain("AT 0% THE BOARD IS OPEN SPACE", x: x, y: 435)
 
         toggleRow("HOME ZONE BANDS", x: x, w: w, y: 408, value: settings.homeZones) {
             self.settings.homeZones = $0
@@ -201,7 +201,7 @@ final class SettingsNode: SKNode {
                   defaultMark: 0.5) { fraction in
             self.settings.shipSpeedScale = range.lowerBound + fraction * span
         }
-        explain("DEFAULT IS PLAYTESTED", x: x, y: 270)
+        explain("DEFAULT IS PLAYTESTED", x: x, y: 267)
 
         heading("DATA", Self.magenta, x: x, y: 214)
         buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 186, tint: Self.magenta) {
@@ -334,11 +334,13 @@ final class SettingsNode: SKNode {
             content.addChild(fill)
         }
 
-        // Below the track rather than on it, so it reads as a scale mark and
-        // never has to fight the knob for the same pixels.
-        let notch = SKShapeNode(rect: CGRect(x: barX + barW * defaultMark - 0.5, y: y - 13,
-                                             width: 1, height: 5))
-        notch.fillColor   = Self.cyan.withAlphaComponent(dimmed ? 0.16 : 0.45)
+        // Below the track rather than on it. It has to live outside the knob's
+        // 8x16 footprint or it would be invisible at exactly the value it
+        // marks — which is where the knob sits by default and where the mark
+        // matters most.
+        let notch = SKShapeNode(rect: CGRect(x: barX + barW * defaultMark - 1.5, y: y - 15,
+                                             width: 3, height: 7))
+        notch.fillColor   = Self.cyan.withAlphaComponent(dimmed ? 0.30 : 0.85)
         notch.strokeColor = .clear
         content.addChild(notch)
 
