@@ -25,7 +25,7 @@ existed; they are a checklist, not a running order.
 |---|---|---|
 | 0 | Skeleton — app runs, title screen, music | ✅ |
 | 1 | Chess logic | ✅ |
-| 2.1 | Playfield: chess functional | 🟡 |
+| 2.1 | Playfield: chess functional | ✅ |
 | 2.2 | Playfield: Recharged visual treatment | ✅ |
 | 3.1 | Arcade layer: fleet movement | ✅ |
 | 3.2 | Arcade layer: shooting & collision | ✅ |
@@ -132,7 +132,7 @@ Deviations
 - Engine variation: positional term + repetition penalty + random tie-break among
   near-equal moves, after it was caught shuffling one rook forever
 
-## Phase 2.1 — Playfield: Chess Functional 🟡
+## Phase 2.1 — Playfield: Chess Functional ✅
 
 - [x] `BoardNode` — coordinate mapping, selection, legal-move markers, **no grid**
 - [x] `PieceNode` — square-fitted, side-tinted, damage-state swaps
@@ -163,8 +163,10 @@ Deviations
 - [x] Hidden `V` skips to the next level mid-game, keeping score and lives —
       no wave-clear overlay and no bonus, but the mechanic banner still
       shows, plus a brief SKIP LEVEL notice in the gutter
-- [x] Hidden Auto Mode — `A` toggles; White auto-moves on a 1s beat, labelled
-      TEST MODE in the gutter and logged; ends automatically at mate/stalemate
+- [x] Auto Chess — `A` toggles it, and so does the Settings screen's CHESS
+      control: one persisted setting, not two almost-identical modes. White
+      auto-moves on a 1s beat, the gutter reads AUTO CHESS and the countdown
+      hides, since at that beat it only flickers
 - [x] Hidden `R` sends a raider in immediately — raiders are on a ~28s clock and
       most levels go quiet after one is shot down, so otherwise testing a
       power-up means waiting for a crossing that may never come. Successive
