@@ -653,10 +653,7 @@ class GameScene: SKScene {
         // INFO button, `I`, `?`, ⌘I, and the shortcut while paused — and only
         // the button used to make a sound, so the same action was audible or
         // silent depending on how it was reached.
-        //
-        // The same note as opening Settings: both are "a panel arrived", and
-        // the kalimba is reserved for touching a control.
-        AudioManager.shared.play(.uiPanelOpen)
+        AudioManager.shared.play(.uiButtonClick)
 
         // A level banner underneath shows through the panel's 0.97 ground and
         // is still counting down when the panel closes. End it rather than
@@ -702,7 +699,7 @@ class GameScene: SKScene {
 
     func showSettings() {
         guard settingsNode == nil, howToPlayNode == nil else { return }
-        AudioManager.shared.play(.uiPanelOpen)
+        AudioManager.shared.play(.uiSettingsBlip)
         endLevelAnnouncement()
         removeEndBanner()
 
@@ -3889,7 +3886,7 @@ class GameScene: SKScene {
         if let panel = settingsNode {
             let hit = atPoint(location)
             if hit.name == "backButton" || hit.parent?.name == "backButton" {
-                AudioManager.shared.play(.uiButtonClick)
+                AudioManager.shared.play(.uiSettingsBlip)
                 hideSettings()
             } else {
                 panel.handleClick(at: location)
