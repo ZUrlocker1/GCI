@@ -56,10 +56,16 @@ final class GameSettings {
     // MARK: - Display
 
     var neonGlow: Bool          { didSet { persist() } }
-    /// 0...1. Drives the lattice's stroke alpha and line width together; at 0
-    /// it disappears, which is the look §12.3 originally specified.
+    /// 0...1, and everything drawn on the board rides it: the lattice's alpha
+    /// and line width, the deployment bands, and the a-h/1-8 labels at the very
+    /// top. At 0 the board is the open space §12.3 originally specified.
+    ///
+    /// One slider rather than a slider and a switch. "Home zone bands" named an
+    /// effect nobody could picture from the words, and it belongs on the same
+    /// ramp as the grid — both are the board telling you where its squares are.
     var boardGrid: CGFloat      { didSet { persist() } }
-    var homeZones: Bool         { didSet { persist() } }
+    /// §12.5's per-level haze.
+    var nebula: Bool            { didSet { persist() } }
     /// Whether the diagnostics sidebar is open. The `L` key and the settings
     /// switch both write here and neither owns it, so the two can never
     /// disagree about what the panel is doing.
@@ -135,7 +141,7 @@ final class GameSettings {
         static let autoChess       = "GCI_AutoChess"
         static let neonGlow        = "GCI_NeonGlow"
         static let boardGrid       = "GCI_BoardGrid"
-        static let homeZones       = "GCI_HomeZones"
+        static let nebula          = "GCI_Nebula"
         static let logPanel        = "GCI_LogPanel"
         static let shipSpeedScale  = "GCI_ShipSpeedScale"
     }
@@ -164,7 +170,7 @@ final class GameSettings {
         autoChess       = flag(Key.autoChess, default: false)
         neonGlow        = flag(Key.neonGlow, default: true)
         boardGrid       = CGFloat(number(Key.boardGrid, default: 0.5))
-        homeZones       = flag(Key.homeZones, default: true)
+        nebula          = flag(Key.nebula, default: true)
         logPanel        = flag(Key.logPanel, default: false)
         shipSpeedScale  = CGFloat(number(Key.shipSpeedScale, default: 1.0))
     }
@@ -180,7 +186,7 @@ final class GameSettings {
         store.set(autoChess,               forKey: Key.autoChess)
         store.set(neonGlow,                forKey: Key.neonGlow)
         store.set(Double(boardGrid),       forKey: Key.boardGrid)
-        store.set(homeZones,               forKey: Key.homeZones)
+        store.set(nebula,                  forKey: Key.nebula)
         store.set(logPanel,                forKey: Key.logPanel)
         store.set(Double(shipSpeedScale),  forKey: Key.shipSpeedScale)
     }
@@ -192,7 +198,7 @@ final class GameSettings {
         soundOn = true;         soundVolume = 1.0
         difficulty = .pilot;    autoChess = false
         neonGlow = true;        boardGrid = 0.5
-        homeZones = true;       logPanel = false
+        nebula = true;          logPanel = false
         shipSpeedScale = 1.0
         isPersisting = false
         persist()

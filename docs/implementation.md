@@ -794,13 +794,14 @@ is genuinely outstanding:
 
 | Level | Void | Haze | Why this colour |
 |---|---|---|---|
-| 1–2 | `#000000` | none | The opening is the reference every later level is read against. Nothing has escalated, so nothing has changed |
-| 3 | `#04050C` | indigo, low and wide | DOUBLE TROUBLE — the first hint that something is arriving |
+| 1 | `#000000` | none | The reference every later level is read against |
+| 2 | `#03040A` | indigo, very faint, low | FIRE POWER — the faintest first hint, barely there |
+| 3 | `#04050C` | indigo, low and wide | DOUBLE TROUBLE |
 | 4 | `#06050E` | indigo | RELENTLESS — the same, deeper |
 | 5 | `#08040F` | violet | TRIPLE THREAT |
 | 6 | `#0A0410` | violet, spread wider | WIDE ORBIT — the haze widens as the sweep does |
 | 7 | `#0D0412` | magenta, diagonal grain | CROSSFIRE — the grain lies along the bishops' own diagonals |
-| 8 | `#0A0C08` | green | ARMORED PAWNS — the armour's own green, so the sky wears what the threat wears. Deliberately off the heat ramp |
+| 8 | `#0A0C08` | aqua-green | ARMORED PAWNS — the armour's colour, lightened and cooled; its own saturated green read as sickly. Deliberately off the heat ramp |
 | 9 | `#100509` | amber, glowing from the top rank | KING ACTIVATED — the light comes from where he sits |
 | 10 | `#140306` | crimson, and the starfield accelerates | BLITZ |
 
