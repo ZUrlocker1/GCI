@@ -190,7 +190,7 @@ final class SettingsNode: SKNode {
                    selected: settings.autoChess ? 1 : 0) { index in
             self.settings.autoChess = index == 1
         }
-        explain("AUTO LETS THE ENGINE MOVE WHITE.", x: x, y: 248)
+        explain("AUTOMATIC FAST CHESS PLAY FOR WHITE.", x: x, y: 248)
     }
 
     private func buildRightColumn() {
