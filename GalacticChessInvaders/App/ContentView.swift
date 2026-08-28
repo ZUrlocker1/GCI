@@ -27,7 +27,13 @@ struct ContentView: View {
         // the next `L` set it to false to match a panel that was already shut,
         // so the key looked dead until pressed a second time.
         .onChange(of: showSidebar) { _, isOpen in
+            guard GameSettings.shared.logPanel != isOpen else { return }
             GameSettings.shared.logPanel = isOpen
+            // And say so, or an open Settings panel keeps showing the old
+            // answer: it only redraws when told to. The re-read above makes
+            // this safe to bounce back — by now the two already agree, so it
+            // returns immediately rather than looping.
+            NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
         }
     }
 }
