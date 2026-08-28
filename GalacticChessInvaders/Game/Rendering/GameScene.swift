@@ -669,10 +669,15 @@ class GameScene: SKScene {
         let carrier = PowerUp.allCases.randomElement() ?? .rapidFire
         let margin = scout.size.width
         let leftToRight = Bool.random()
-        // Well below the title block and well above the footer, so it crosses
-        // open sky rather than the words.
-        let lane = size.height * CGFloat.random(in: 0.22...0.34)
-        let bounds = (lane - 40)...(lane + 40)
+        // Anywhere on screen. It sits behind the title type, so a crossing that
+        // passes through the words is fine and is most of the point — a fixed
+        // lane made it a decoration that repeated. The range stops short of the
+        // edges only so the sprite never clips, and of the top only so it does
+        // not run under the SET and INFO buttons.
+        let lane = size.height * CGFloat.random(in: 0.08...0.88)
+        let low = max(40, lane - 90)
+        let high = min(size.height - 70, lane + 90)
+        let bounds = low...max(low + 1, high)
 
         scout.onExit = { [weak self] in
             AudioManager.shared.stop(.scoutEnterLoop)
@@ -681,7 +686,7 @@ class GameScene: SKScene {
         scout.cross(fromX: leftToRight ? -margin : size.width + margin,
                     toX: leftToRight ? size.width + margin : -margin,
                     y: lane, firing: false, powerUp: carrier,
-                    flight: RaiderRules.flight(for: carrier, headroom: 40),
+                    flight: RaiderRules.flight(for: carrier, headroom: lane - low),
                     bounds: bounds)
         // Decoration, not a target: nothing on this screen may collide with it.
         scout.physicsBody?.categoryBitMask = PhysicsCategory.none
