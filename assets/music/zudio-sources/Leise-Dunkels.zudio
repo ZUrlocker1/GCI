@@ -1,0 +1,68 @@
+=== Zudio Song Analysis Log ===
+Title:          Leise Dunkels
+Generated:      2026-08-28 12:59:26
+Zudio Version:  2.4 (129)
+Seed:           7581705296869994468
+Style:          Motorik
+Tempo Override: 125
+Key:            E  Mixolydian
+Tempo:          125 BPM
+Bars:           92
+Mood:           Bright
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 84         (82 bars)
+  outro      Bars  85– 92         (8 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=b7  type=power
+  Bars   3– 22         root=b7  type=power
+  Bars  23– 42         root=2  type=minor
+  Bars  43– 62         root=1  type=dom7
+  Bars  63– 84         root=b7  type=major
+  Bars  85– 92         root=1  type=sus2
+
+--- Note Counts Per Track ---
+  Lead 1       63 notes
+  Lead 2       83 notes
+  Pads         234 notes
+  Rhythm       501 notes
+  Bass         344 notes
+  Drums        1472 notes
+
+--- Generation Log ---
+  SONG             Leise Dunkels
+  Style            Motorik Arcade – 130 bpm
+  Form             Steady A section
+  Chords           E Mixolydian Modal rock
+  MOT-DRUM-001     Motorik Apache beat
+  MOT-BASS-025     Electro Pump
+  MOT-PADS-006     Half-bar Breathe
+  MOT-LD1-020      Synth Hook
+  MOT-LD2-009      Bounce Arp
+  MOT-RTHM-001     8th-note Stride
+  MOT-TEX-000      No texture
+  Instruments      L1:81 L2:90 Pd:94 Ry:28 Bs:39 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar fade in
+  Bar 003    Section A    82 bars
+  Bar 010    Drums        crash + open hat
+  Bar 011    Drums        back on hi-hat
+  Bar 013    Lead 1       steps up
+  Bar 017    Lead 2       steps back
+  Bar 018    Drums        crash + open hat
+  Bar 019    Drums        back on hi-hat
+  Bar 021    Bass         pattern evolving
+  Bar 034    Drums        crash + open hat
+  Bar 036    Lead 2       steps up
+  Bar 042    Drums        crash + open hat
+  Bar 058    Drums        crash + open hat
+  Bar 065    Lead 2       steps back
+  Bar 066    Drums        switching to ride
+  Bar 074    Drums        switching to ride
+  Bar 081    Lead 2       steps up
+  Bar 082    Drums        crash + open hat
+  Bar 085    Outro        8 bar dissolve
+

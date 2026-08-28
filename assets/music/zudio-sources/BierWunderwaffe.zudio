@@ -1,0 +1,65 @@
+=== Zudio Song Analysis Log ===
+Title:          BierWunderwaffe
+Generated:      2026-08-11 18:26:18
+Zudio Version:  2.3 (128)
+Seed:           15062382748039979195
+Style:          Motorik
+Tempo Override: 140
+Key:            G  HarmonicMinor
+Tempo:          140 BPM
+Bars:           92
+Mood:           Free
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 84         (82 bars)
+  outro      Bars  85– 92         (8 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=1  type=minor
+  Bars   3– 43         root=1  type=minor
+  Bars  44– 84         root=4  type=sus2
+  Bars  85– 92         root=1  type=dom7
+
+--- Note Counts Per Track ---
+  Lead 1       258 notes
+  Rhythm       1122 notes
+  Texture      8 notes
+  Bass         404 notes
+  Drums        1558 notes
+
+--- Generation Log ---
+  SONG             BierWunderwaffe
+  Style            Motorik Noir – 140 bpm
+  Form             Steady A section
+  Chords           G HarmonicMinor tonic I
+  MOT-DRUM-005     Albatross Grid
+  MOT-BASS-017     Annalisa Riff
+  MOT-PADS-000     No pads
+  MOT-LD1-011      Melodic Spiral
+  MOT-LD2-000      No lead 2
+  MOT-RTHM-007     Chord Chug
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-008     Phase slip
+  Instruments      L1:13081 Ry:30 Tx:96 Bs:39 Dr:40
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar fade in
+  Bar 003    Section A    82 bars
+  Bar 006    Texture      steps back
+  Bar 011    Lead 1       steps up
+  Bar 021    Bass         pattern evolving
+  Bar 028    Texture      steps up
+  Bar 029    Lead 1       steps up
+  Bar 042    Drums        crash + open hat
+  Bar 044    Drums        back on hi-hat
+  Bar 046    Texture      steps up
+  Bar 050    Drums        switching to ride
+  Bar 053    Lead 1       steps back
+  Bar 054    Drums        back on hi-hat
+  Bar 058    Drums        crash + open hat
+  Bar 073    Lead 1       steps up
+  Bar 074    Drums        crash + open hat
+  Bar 082    Drums        switching to ride
+  Bar 085    Outro        8 bar dissolve
+

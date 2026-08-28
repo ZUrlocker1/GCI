@@ -1,0 +1,78 @@
+=== Zudio Song Analysis Log ===
+Title:          Rattert Z-Machine
+Generated:      2026-08-28 13:00:31
+Zudio Version:  2.4 (129)
+Seed:           3088922353799625094
+Style:          Motorik
+Key:            C  Lydian
+Tempo:          140 BPM
+Bars:           88
+Mood:           Free
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 34         (32 bars)
+  B          Bars  35– 52         (18 bars)
+  A          Bars  53– 84         (32 bars)
+  outro      Bars  85– 88         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=1  type=power
+  Bars   3– 18         root=1  type=power
+  Bars  19– 34         root=6  type=sus2
+  Bars  35– 40         root=7  type=minor
+  Bars  41– 46         root=6  type=minor
+  Bars  47– 52         root=5  type=major
+  Bars  53– 62         root=1  type=major
+  Bars  63– 72         root=6  type=power
+  Bars  73– 84         root=7  type=minor
+  Bars  85– 88         root=1  type=sus2
+
+--- Note Counts Per Track ---
+  Lead 1       210 notes
+  Lead 2       182 notes
+  Rhythm       79 notes
+  Bass         482 notes
+  Drums        1510 notes
+
+--- Generation Log ---
+  SONG             Plotz Trieb
+  Style            Motorik Arcade – 140 bpm
+  Form             Moderate A/B
+  Chords           C Lydian Two chord I
+  MOT-DRUM-001     Motorik Apache beat
+  MOT-BASS-024     Arcade Drive
+  MOT-PADS-000     No pads
+  MOT-LD1-016      Machine Answer
+  MOT-LD2-008      Gate Arp
+  MOT-RTHM-002     Quarter stride
+  MOT-RTHM-006     Harmonia arpeggio
+  MOT-TEX-000      No texture
+  Instruments      L1:81 L2:90 Ry:28 Bs:39 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar lock in
+  Bar 003    Section A    32 bars
+  Bar 010    Drums        switching to ride
+  Bar 010    Lead 1       steps up
+  Bar 015    Lead 2       steps back
+  Bar 017    Drums        back on hi-hat
+  Bar 017    Rhythm       is back
+  Bar 017    Bass         pattern evolving
+  Bar 018    Drums        crash + open hat
+  Bar 019    Drums        back on hi-hat
+  Bar 026    Drums        crash + open hat
+  Bar 035    Form         Enter B section
+  Bar 037    Bass         pattern evolving
+  Bar 042    Drums        crash + open hat
+  Bar 049    Lead 2       steps up
+  Bar 049    Rhythm       steps back
+  Bar 053    Form         Return to A section
+  Bar 053    Bass         pattern evolving
+  Bar 058    Drums        switching to ride
+  Bar 065    Lead 2       steps back
+  Bar 081    Lead 2       steps up
+  Bar 082    Drums        crash + open hat
+  Bar 082    Rhythm       is back
+  Bar 085    Outro        4 bar dissolve
+

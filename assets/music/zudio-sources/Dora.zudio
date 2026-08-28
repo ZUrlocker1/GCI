@@ -1,0 +1,88 @@
+=== Zudio Song Analysis Log ===
+Title:          Dora
+Generated:      2026-08-28 13:04:05
+Zudio Version:  2.4 (129)
+Seed:           17734553622174181544
+Style:          Motorik
+Key:            C  Ionian
+Tempo:          135 BPM
+Bars:           120
+Mood:           Free
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 82         (80 bars)
+  B          Bars  83–116         (34 bars)
+  outro      Bars 117–120         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=2  type=power
+  Bars   3– 42         root=2  type=power
+  Bars  43– 82         root=3  type=minor
+  Bars  83– 93         root=6  type=sus2
+  Bars  94–104         root=2  type=sus2
+  Bars 105–116         root=6  type=minor
+  Bars 117–120         root=1  type=sus2
+
+--- Note Counts Per Track ---
+  Lead 1       35 notes
+  Lead 2       131 notes
+  Pads         198 notes
+  Rhythm       342 notes
+  Texture      15 notes
+  Bass         614 notes
+  Drums        2641 notes
+
+--- Generation Log ---
+  SONG             ZugV2
+  Style            Motorik – 135 bpm
+  Form             Subtle A/B
+  Chords           C Ionian Minor loop
+  MOT-DRUM-004     Mostly Motorik
+  MOT-BASS-009     Vitamin Hook
+  MOT-PADS-001     Harmonia sustained notes
+  MOT-PADS-005     Harmonia charleston
+  MOT-LD1-007      Vanishing solo
+  MOT-LD2-005      Descending line
+  MOT-RTHM-004     2-bar Melodic Riff
+  MOT-RTHM-006     Harmonia arpeggio
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-005     Eno Cluster breath release
+  MOT-TEXT-007     Pedal drone
+  Instruments      L1:13081 L2:39 Pd:94 Ry:8038 Tx:11089 Bs:87 Dr:26
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar cold start
+  Bar 002    Lead 1       steps back
+  Bar 003    Section A    80 bars
+  Bar 008    Drum fill    2 beat snare and toms
+  Bar 014    Texture      steps back
+  Bar 016    Drum fill    2 beat double-time roll
+  Bar 017    Pads         is back
+  Bar 017    Rhythm       steps back
+  Bar 027    Drum fill    2 beat double-time roll
+  Bar 028    Lead 1       steps up
+  Bar 033    Rhythm       is back
+  Bar 035    Drum fill    2 beat double-time roll
+  Bar 036                 Extended solo Vanishing solo
+  Bar 036    Lead 2       steps back
+  Bar 036    Texture      steps up
+  Bar 041    Bass         pattern evolving
+  Bar 045    Drum fill    3 beat crescendo roll
+  Bar 046    Lead 1       steps back
+  Bar 049    Drum fill    2 beat double-time roll
+  Bar 058    Drum fill    2 beat Bonham tom roll
+  Bar 059    Texture      steps up
+  Bar 065    Lead 2       steps back
+  Bar 065    Pads         steps back
+  Bar 080    Drum fill    2 beat Bonham tom roll
+  Bar 081    Lead 2       steps up
+  Bar 082    Texture      steps up
+  Bar 083    Form         Enter B section
+  Bar 083    Pads         pattern changes
+  Bar 085    Bass         pattern evolving
+  Bar 108    Texture      steps up
+  Bar 112    Drum fill    2 beat Bonham tom roll
+  Bar 113    Pads         is back
+  Bar 117    Outro        4 bar fade
+

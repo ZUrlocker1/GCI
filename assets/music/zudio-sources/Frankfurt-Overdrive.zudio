@@ -1,0 +1,75 @@
+=== Zudio Song Analysis Log ===
+Title:          Frankfurt Overdrive
+Generated:      2026-08-28 13:04:21
+Zudio Version:  2.4 (129)
+Seed:           5292438155419784098
+Style:          Motorik
+Key:            A  Dorian
+Tempo:          140 BPM
+Bars:           108
+Mood:           Bright
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 52         (48 bars)
+  B          Bars  53–104         (52 bars)
+  outro      Bars 105–108         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=4  type=dom7
+  Bars   5– 20         root=4  type=dom7
+  Bars  21– 36         root=b7  type=sus2
+  Bars  37– 52         root=2  type=minor
+  Bars  53– 65         root=b7  type=major
+  Bars  66– 78         root=2  type=minor
+  Bars  79– 91         root=1  type=minor
+  Bars  92–104         root=2  type=min7
+  Bars 105–108         root=1  type=sus2
+
+--- Note Counts Per Track ---
+  Lead 1       295 notes
+  Lead 2       69 notes
+  Pads         64 notes
+  Rhythm       958 notes
+  Texture      28 notes
+  Bass         796 notes
+  Drums        1849 notes
+
+--- Generation Log ---
+  SONG             Frankfurt Overdrive
+  Style            Motorik Arcade – 140 bpm
+  Form             Subtle A/B
+  Chords           A Dorian Minor loop
+  MOT-DRUM-011     Light Four
+  MOT-BASS-008     Moroder Pulse
+  MOT-PADS-003     Pulsed
+  MOT-LD1-019      Triad Climb
+  MOT-LD2-001      Counter-response
+  MOT-RTHM-005     Chord Stab
+  MOT-RTHM-007     Chord Chug
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-003     Spatial sweep
+  Instruments      L1:81 L2:87 Pd:94 Ry:28 Tx:11089 Bs:87 Dr:26
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar lock in
+  Bar 005    Section A    48 bars
+  Bar 008    Pads         steps back
+  Bar 009    Bass         pattern evolving
+  Bar 010    Lead 1       steps up
+  Bar 010    Texture      steps back
+  Bar 025    Pads         is back
+  Bar 028    Drums        crash + open hat
+  Bar 029    Drums        back on hi-hat
+  Bar 033    Texture      steps up
+  Bar 036    Drums        crash + open hat
+  Bar 038    Drums        back on hi-hat
+  Bar 045    Drums        switching to ride
+  Bar 053    Form         Enter B section
+  Bar 053    Bass         pattern evolving
+  Bar 053    Rhythm       pattern changes
+  Bar 058    Texture      steps up
+  Bar 075    Texture      steps back
+  Bar 076    Drums        switching to ride
+  Bar 105    Outro        4 bar cold stop
+

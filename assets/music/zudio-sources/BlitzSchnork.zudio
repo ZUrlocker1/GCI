@@ -1,0 +1,77 @@
+=== Zudio Song Analysis Log ===
+Title:          BlitzSchnork
+Generated:      2026-08-28 13:02:24
+Zudio Version:  2.4 (129)
+Seed:           5080191542901477286
+Style:          Motorik
+Key:            C  Mixolydian
+Tempo:          138 BPM
+Bars:           84
+Mood:           Bright
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 50         (48 bars)
+  B          Bars  51– 80         (30 bars)
+  outro      Bars  81– 84         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=1  type=dom7
+  Bars   3– 26         root=1  type=dom7
+  Bars  27– 50         root=b7  type=major
+  Bars  51– 57         root=6  type=min7
+  Bars  58– 64         root=5  type=sus2
+  Bars  65– 71         root=b7  type=major
+  Bars  72– 80         root=b7  type=sus2
+  Bars  81– 84         root=1  type=sus2
+
+--- Note Counts Per Track ---
+  Lead 1       412 notes
+  Lead 2       42 notes
+  Pads         364 notes
+  Rhythm       643 notes
+  Texture      9 notes
+  Bass         1224 notes
+  Drums        1573 notes
+
+--- Generation Log ---
+  SONG             Dusseldorf Overdrive
+  Style            Motorik Arcade – 138 bpm
+  Form             Subtle A/B
+  Chords           C Mixolydian tonic I
+  MOT-DRUM-009     Four on the Floor
+  MOT-BASS-012     Moroder Chase
+  MOT-PADS-007     Backbeat Stabs
+  MOT-LD1-018      Octave Bounce
+  MOT-LD2-003      Rhythmic Counter
+  MOT-RTHM-001     8th-note Stride
+  MOT-RTHM-007     Chord Chug
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-007     Pedal drone
+  Instruments      L1:13081 L2:90 Pd:92 Ry:28 Tx:99 Bs:39 Dr:26
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar lock in
+  Bar 003    Section A    48 bars
+  Bar 010    Drums        switching to ride
+  Bar 010    Lead 1       steps up
+  Bar 018    Drums        crash + open hat
+  Bar 019    Drums        back on hi-hat
+  Bar 021    Texture      steps up
+  Bar 025    Pads         steps back
+  Bar 025    Bass         pattern evolving
+  Bar 027    Drums        switching to ride
+  Bar 033    Rhythm       steps back
+  Bar 034    Drums        crash + open hat
+  Bar 035    Drums        back on hi-hat
+  Bar 040    Lead 2       steps back
+  Bar 045    Texture      steps up
+  Bar 049    Pads         steps back
+  Bar 051    Form         Enter B section
+  Bar 051    Drums        crash + open hat
+  Bar 053    Bass         pattern evolving
+  Bar 059    Lead 2       steps back
+  Bar 073    Pads         is back
+  Bar 076    Texture      steps up
+  Bar 081    Outro        4 bar dissolve
+

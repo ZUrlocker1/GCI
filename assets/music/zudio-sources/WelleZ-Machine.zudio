@@ -1,0 +1,69 @@
+=== Zudio Song Analysis Log ===
+Title:          WelleZ-Machine
+Generated:      2026-08-28 13:07:26
+Zudio Version:  2.4 (129)
+Seed:           15703864321671018647
+Style:          Motorik
+Tempo Override: 134
+Key:            E  Aeolian
+Tempo:          134 BPM
+Bars:           108
+Mood:           Deep
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3–100         (98 bars)
+  outro      Bars 101–108         (8 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=5  type=minor
+  Bars   3– 51         root=5  type=minor
+  Bars  52–100         root=4  type=min7
+  Bars 101–108         root=1  type=major
+
+--- Note Counts Per Track ---
+  Lead 1       108 notes
+  Pads         14 notes
+  Rhythm       339 notes
+  Bass         412 notes
+  Drums        1521 notes
+
+--- Generation Log ---
+  SONG             WelleZ-Machine
+  Style            Motorik Noir – 134 bpm
+  Form             Steady A section
+  Chords           E Aeolian Minor loop
+  MOT-DRUM-006     Post-Punk March
+  MOT-BASS-021     Modal Bass Walk
+  MOT-PADS-003     Pulsed
+  MOT-LD1-012      Chromatic Descent
+  MOT-LD2-000      No lead 2
+  MOT-RTHM-012     Void Stab
+  MOT-TEX-000      No texture
+  Instruments      L1:80 Pd:95 Ry:30 Bs:11038 Dr:24
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar cold start
+  Bar 003    Section A    98 bars
+  Bar 010    Drums        switching to ride
+  Bar 012    Lead 1       steps up
+  Bar 013    Bass         pattern evolving
+  Bar 014    Drums        back on hi-hat
+  Bar 018    Drums        crash + open hat
+  Bar 019    Drums        back on hi-hat
+  Bar 023    Pads         is back
+  Bar 026    Drums        crash + open hat
+  Bar 027    Drums        open hat on & of 4
+  Bar 033    Drums        switching to ride
+  Bar 039    Lead 1       steps back
+  Bar 043    Drums        open hat on & of 4
+  Bar 044    Pads         steps back
+  Bar 057    Drums        open hat on & of 4
+  Bar 061    Pads         is back
+  Bar 072    Drums        open hat on & of 4
+  Bar 074    Drums        crash + open hat
+  Bar 075    Drums        open hat on & of 4
+  Bar 089    Drums        open hat on & of 4
+  Bar 091    Pads         is back
+  Bar 101    Outro        8 bar cold stop
+
