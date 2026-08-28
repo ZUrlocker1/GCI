@@ -197,7 +197,13 @@ final class BackdropNode: SKNode {
             arc.append(.fadeAlpha(to: 0, duration: 4).withTimingMode(.easeInEaseOut))
             arc.append(.wait(forDuration: 2))
         }
-        blob.alpha = 0
+        // Opened at full alpha rather than at zero. The arc's first step is a
+        // four-second ease-in-out fade up, which spends its first second or two
+        // indistinguishable from nothing — so the title screen arrived with no
+        // sky at all and grew one while you were reading the menu. Starting at
+        // the target makes that first step a hold instead, and every colour
+        // after it fades in normally.
+        blob.alpha = 0.15
         blob.color = Self.rgb(stops[0].0)
         blob.run(.repeatForever(.sequence(arc)), withKey: Self.cycleKey)
 

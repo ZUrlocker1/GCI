@@ -585,7 +585,7 @@ slower menacing one.
 
 | Level | Track | Style | BPM | Key | Mood |
 |---|---|---|---|---|---|
-| Title, Settings, Info | `GCI-intro` *(Pre-Solstice)* | — | 88 | E Dorian | Dream |
+| Title, Settings, Info | `GCI-intro` *(Pre-Solstice)* | Kosmic Drift | 88 | E Dorian | Dream |
 | 1 | `Leise-Dunkels` | relaxed | 125 | E Mixolydian | Bright |
 | 2 | `WelleZ-Machine` | intense | 134 | E Aeolian | Deep |
 | 3 | `BlitzSchnork` | peppy | 138 | C Mixolydian | Bright |
@@ -599,9 +599,10 @@ slower menacing one.
 
 Style is the word the composer attached to each export, and was one of the three
 inputs to the ordering alongside tempo and mode. Not to be confused with the
-`Style:` field inside a `.zudio` file, which is the generator's own: every level
-track is **Motorik Arcade**, and the intro is **Kosmic** — slower, dreamier, and
-the reason it sits under a menu rather than a wave.
+`Style:` field inside a `.zudio` file, except for the intro, where they agree.
+Every level track is **Motorik Arcade**, a Zudio style built for arcade music;
+the intro is **Kosmic Drift** — slower and dreamier, which is why it sits under
+a menu rather than a wave.
 
 The full `.zudio` logs are in `assets/music/zudio-sources/` — structure, chord
 plan, per-track note counts, and the generator seed, which recreates a track
