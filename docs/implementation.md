@@ -6,13 +6,13 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 ✅ done · 🟡 partial · ⬜ not started
 
 Ten levels play end to end, each with a mechanic of its own, with all five
-power-ups and full arcade audio. The three things left that a player would
-notice, in the order they are worth doing:
+power-ups, a settings screen and full arcade audio. Signed, notarized and
+shipping as a DMG. The two things left that a player would notice:
 
-1. **Music per level** (5) — one track plays everywhere. The settings screen is
-   built; this is blocked only on choosing tracks
-2. **Polish and release** (8, 9) — attract mode, a fourth starfield tier, then
-   balance, icon, DMG and notarization
+1. **Music per level** (5) — one track plays everywhere. Blocked only on
+   choosing tracks
+2. **Polish** (8) — attract mode and a fourth starfield tier, then a balance
+   pass, an app icon, and running the test suite once
 
 The raiders are done and the rest of §6 is **cut** — no Escort, Flagship,
 Kamikaze or Llama. Gameplay is feature-complete; what is left is production.
@@ -37,7 +37,7 @@ existed; they are a checklist, not a running order.
 | 7.1 | Level escalation: chess AI | ✅ — built with the level ladder |
 | 7.2 | Level escalation: arcade mechanics | ✅ |
 | 8 | Visual polish | 🟡 — score pops, banners, high scores, end screens done |
-| 9 | Mac hardening & App Store release | ⬜ |
+| 9 | Mac hardening & release | 🟡 — signed, notarized, shipping as a DMG |
 
 ---
 
@@ -307,145 +307,51 @@ all — except King Activated, which stays one wave's character.
 
 ### Combat, as it stands
 
-**White's auto-move pushes pawns.** Promotion is worth reaching, and a depth-2
-search can never see it coming — a pawn on rank 2 is six moves from rank 8, so
-the reward is invisible and the engine advances a pawn only by accident. A
-White-pawn advancement term in the evaluation (rank², `pawnAdvanceStep`) lays a
-gradient the shallow search can climb. It has to be in the *evaluation*: a bonus
-on the root move measured at 3% of games promoting, no better than
-none, because the search still sees Black take the pawn on the reply. Measured
-with the eval term: 7% on a full board, and **97% once Black is thinned to a
-king and four pieces** — which is what GCI becomes as soon as the player starts
-shooting — in a median of eight White moves, losing no material. Never set for
-Black, which promotes by reaching rank 1, i.e. by breaching.
-
-**Promoting a pawn is the player's only reward** (§7.2). Reaching rank 8 raises
-the laser cap by one, stacking to six, reset at each wave. The hull fills the
-same green an armored pawn wears, brightening with the stack — the gutter notice
-is gone in a second, and the fill is the standing reminder of what the ship is
-carrying. `Silhouette` finds the fillable shape inside a hollow outline by
-flooding in from the image border; the pawn and the ship share it. The cap is
-*concurrency* — `canFire` is `activeLasers < laserCap` and a slot frees the
-moment its round lands — so it pays only when shots are missing, which is what
-happens at range and under pressure: 1.7 shots/second at two, 5.0 at six. It is
-also the one mechanic that needs the chess half and the arcade half at the same
-time, since the pawn has to be walked up the board while the player dodges.
-
-**Who shoots.** Pawns are the fleet's gunners from Level 2; bishops add
-diagonals at Crossfire, and the black king its own heavy weapon at King
-Activated. Arming a *type* replaces §5.3's weighting toward pawns: the weighting
-was real (84% of shots) but invisible, and a rule is something a banner can
-promise and a player can act on. Two guards keep it honest — with no pawns left
-everything remaining takes over, and at most half the gunners fire in a beat, so
-the charge-up never lights the whole rank.
-
-**The telegraph.** Every round charges for 0.35s before it leaves. The piece
-lights from within — a tinted additive copy of its own texture, so no new shape
-appears and it cannot be confused with the check halo — and a tick grows out of
-its foot along the exact line the round will take, from the same `atan2` that
-aims the round.
-
-**Angles.** Bishops lean toward one of White's actual pieces, 17°–45°, at
-§21.3's 160 px/s. The king inflects instead: 9°–31°, on 45% of its rounds, at
-30% above its own straight speed, since a lean lengthens the path and would
-otherwise make the angled round the weaker of the two. Aiming at real targets
-rather than a fixed 45° is what keeps the shot on the board — from the back rank
-a true diagonal crosses seven files before it reaches White.
-
-**Rounds shoot each other down.** Black's fire can take a player laser out of
-the air. §20's bitmask spec excluded that; it is a deliberate departure and a
-costly one, since a laser eaten in flight still counts against the two-round cap
-until it clears. The clash throws cyan and magenta along their own two headings
-around a white core.
-
-**Formation membership goes both ways.** A black piece rejoins the fleet on a
-chess move back into the marching band, and a rank descent sweeps up any stray
-it comes down onto — sliding into step over 0.2s, since the fleet transform is
-shared and a joining piece must land on the formation's current offset. The band
-has a front edge only: nothing is behind the fleet to be separated from, so a
-king retreating to rank 8 after the fleet has descended still marches, and the
-formation is deeper than `formationRanks` by design. Its rear rank comes from the
-descent count, not from where the members happen to be.
-
-**A damaged piece keeps its identity.** The art erodes bottom-up, which takes
-the profile with it — a Cracked pawn, bishop, queen and knight were all "a blob
-with debris". A full-height slice of one side, 34% of the ink width, is drawn
-from the undamaged texture underneath the damage. No new art: every damage state
-shares the full sprite's canvas, so a sub-texture lands exactly where that part
-of the piece was, and a test pins that invariant against a re-export. The
-surviving side is the one the shot missed, taken from the contact point and
-fixed by the first hit; a centre hit tosses a coin. The hitbox is compound, so
-the wedge is hittable without also covering the gap between it and the top.
+- **White's auto-move pushes pawns** — a rank² term in the *evaluation*, not a
+  bonus on the root move, or the shallow search sees Black take the pawn on the
+  reply. Never set for Black, which promotes by breaching to rank 1
+- **Promotion raises the laser cap** by one, stacking to six, reset each wave
+  (Cadet carries it over). The cap is concurrency, not ammunition, so it pays
+  only when shots are missing: 1.7 shots/second at two, 5.0 at six
+- **Who shoots** — pawns from Level 2, bishops on the diagonal at Crossfire, the
+  black king at King Activated. With no pawns left the rest take over, and at
+  most half the gunners fire in a beat
+- **Every round telegraphs for 0.35s** — the piece lights from within and a tick
+  grows from its foot along the exact line the round will take
+- **Angles** — bishops lean 17°–45° toward a real White piece at 160 px/s; the
+  king inflects 9°–31° on 45% of its rounds, 30% faster to pay for the longer path
+- **Rounds shoot each other down.** A deliberate departure from §20's bitmask
+  spec, and a costly one: a laser eaten in flight still holds its slot
+- **Formation membership goes both ways** — a chess move back into the band
+  rejoins it, a descent sweeps up strays. The band has a front edge only, so its
+  rear rank comes from the descent count rather than from where members are
+- **A damaged piece keeps its identity** — a full-height slice of one side, 34%
+  of the ink width, drawn from the undamaged texture underneath. The surviving
+  side is the one the shot missed, fixed by the first hit
 
 ### Regeneration and armored pawns (§23.9, §10.1)
 
-One system: armor arrives *only* through regeneration, so Level 9's banner is a
+One system: armor arrives *only* through regeneration, so Level 8's banner is a
 promise Level 4's regeneration has to be built to keep.
 
-- **Regeneration** from Level 4, after *any* black death — shot, captured by a
-  chess move, or crushed by the fleet: a pawn replaces it after one
-  beat — 4s at most levels, 3s at Blitz — capped by the level's slot count (2 at
-  Level 4, rising to 9). §23.9's flat 10s was written before the beat settled at
-  4; and the 1.8s beam-in is part of the wait, so the delay only has to cover
-  the invisible part. Kill to live pawn is 5.8s, or 4.8s at Blitz.
-- **A green RESPAWNING warning** flashes in the left gutter for the 1.5s before
-  a pawn starts arriving — high for Black, low for White. Once it is beaming in
-  the shimmer is the warning, but by then the square cannot be cleared. It
-  mirrors state rather than reacting to events, so simultaneous arrivals raise
-  one warning and none can be stranded. White is unused: nothing white
-  regenerates yet, and the ship's own respawn stays silent
-- **Arrivals go in front of the formation**, not behind it — second rank, then
-  third, then the back rank as a fallback. This inverts §23.9's "back of the
-  fleet": a regenerated pawn is a body in the way, and at Level 8 an armored one
-  cannot be shot at all, so it is worth far more shielding the queen and king
-  than tucked behind them where the player was never going to reach
-  A slot is spent when the timer is *set*, not when it lands, or a two-slot wave
-  could queue twenty at once. A level ending cancels everything pending, which
-  falls out of the queue living on the scene rather than needing its own rule.
-  The king never regenerates
-- **Transporter beam-in**, 1.8s: a shaft of light four squares tall striking
-  into the square, flecks falling through it, and the piece strobing into
-  existence rather than fading up — a linear fade spends most of its time as a
-  faint ghost, which is the part nobody sees. It resolves with a white frame and
-  a burst. The pawn has no hitbox until it finishes: §23.9's "the shimmering
-  column is the warning" is the entire UI for that state. Green-white normally,
-  blue-white in defensive mode
-- **Defensive mode**: once the black king is Cracked or worse, pawns stop
-  scattering along the rear rank and materialise directly in front of him.
-  §23.9's rook and bishop defensive spawns are not built
-- **Armored pawns** (Level 8, and again at Blitz): half of every regenerated pawn arrives with its
-  interior filled the same translucent green the transporter column arrived in —
-  outline untouched, so it reads as the same pawn wearing something rather than
-  as a different piece — and immune to laser fire for three White moves. One
-  colour for one event, and complementary to Black's magenta. The sprites are hollow, so the fill is a
-  silhouette found by flooding inward from the image border: transparent pixels
-  the flood cannot reach are the ones the outline encloses. Cached per texture,
-  beside the ink bounds. A hit ricochets — orange sparks,
-  a metallic clunk, the outline flares — and does nothing. Only a chess capture
-  removes it, which is the point of the level: it asks the player to solve
-  something with the board rather than the trigger. Armor expires with a crack
-  and a shatter, and the pawn underneath is ordinary
+- **From Level 4**, after any black death — shot, captured or crushed — a pawn
+  replaces it one beat later, capped by the level's slots (2 at Level 4, rising
+  to 9). Kill to live pawn is 5.8s, or 4.8s at Blitz. The king never regenerates
+- **A green RESPAWNING warning** flashes in the left gutter 1.5s ahead. It
+  mirrors state rather than events, so simultaneous arrivals raise one warning
+- **Arrivals go in front of the formation** — second rank, then third, then the
+  back rank. This inverts §23.9: a regenerated pawn is a body in the way, worth
+  far more shielding the queen than tucked behind her
+- **1.8s transporter beam-in**, with no hitbox until it lands. Green-white
+  normally, blue-white in defensive mode
+- **Defensive mode** — once the black king is Cracked or worse, pawns
+  materialise in front of him instead of scattering along the rear rank
+- **Armored pawns** (Level 8, again at Blitz) — half of every regenerated pawn
+  arrives immune to laser fire for three White moves, its hollow interior filled
+  translucent green. Hits ricochet. Only a chess capture removes it, which is
+  the point of the level: it asks the player to solve something with the board
 - A regenerated pawn is worth 15 rather than 25 (§9), and `ChessEngine.forceAdd`
-  keeps the engine's own board in step — without it the search moves other
-  pieces straight through the new pawn, the same class of bug as `forcePlace`
-- **Nothing deferred may carry a square.** Two bugs, one shape: an arriving
-  pawn's beam-in and the Nuke's shrapnel both captured a square and acted on it
-  later, and the fleet descends on the beat, so by then the square belonged to
-  something else. Carry the node and read `node.square` when the work runs
-- **A pool must outlive the thing it serves.** `reset()` hides a pool's nodes; it
-  does not unparent them. The laser, score-pop, explosion and shatter pools were
-  rebuilt by `buildPlayfield` — once per level *and* once per skip — while their
-  nodes hang off `bloomNode`, which is not rebuilt. Every level orphaned 288
-  nodes, 40 of them carrying physics bodies, and left them in the scene graph to
-  be walked every frame for the rest of the run. They are built once with the
-  scene now
-- **A beam-in is tracked by node, not by square.** An arriving pawn has no
-  physics body until it lands (§23.9), and its square can change underneath it —
-  the fleet descends on the beat and a beam-in lasts 1.8s. Keyed by square, the
-  completion rejected itself and the pawn stayed permanently immune to laser
-  fire, silently. `isMaterialising` is a flag on the node, and debug builds audit
-  hitboxes four times a second: any piece with no body and no beam-in running is
-  repaired and logged
+  keeps the engine's own board in step
 
 ### Traps worth remembering
 
@@ -478,6 +384,10 @@ Each one is a mistake that is easy to make again.
   `typecheck.sh` and by the sound audit
 - **Hitboxes follow the art, not the frame** — ink bounds measured and cached per
   texture
+- **A pool must outlive the thing it serves.** `reset()` hides a pool's nodes
+  without unparenting them, so rebuilding a pool per level orphaned 288 nodes
+  and 40 physics bodies into the scene graph every time. Built once with the
+  scene now
 - **Clear the previous message before showing a new one**, or banners stack
 
 ### Deviations from the design doc
@@ -792,66 +702,27 @@ to carry it, which is now cut.
 
 ### The effects
 
-- **Rapid Fire** — +1 simultaneous laser, stacking to 6, reset each wave. This
-  was §7.2's promotion reward; crowning a pawn is far too rare to be the only
-  source, so most runs never saw it
-- **Shield** — absorbs one lethal hit, plus 0.8s of grace so the next round of
-  the same volley does not simply kill you. Drawn as a hexagon, never a circle,
-  so it cannot be confused with the black king's forcefield: one means protected,
-  the other means unshootable
-- **Time Freeze** — 3s. Stops the fleet, the raiders, enemy rounds, the starfield
-  and the chess turn timer, and drops the music to `rate` 0.5 (§13.2's one
-  sanctioned use of `rate`). The player's own movement, fire and rounds in flight
-  are untouched, which is the whole effect
-- **Spread Fire** — a swept hose, not a fan. One stream, 12 rounds a second,
-  the angle oscillating through ±20° on a 1.8s sweep, for 7s, **only while the
-  fire key is held**.
-
-  §13.2 specifies five simultaneous streams at fixed angles, auto-firing. A fixed
-  fan covers every angle at once and leaves nothing to aim: it swept 244% of the
-  board area, so collecting it ended the wave. A single sweeping stream is a
-  different weapon rather than a smaller one — only one round is ever on its way
-  to a given place, which is what lets ±20° be generous. Auto-fire went for the
-  same reason it sounded generous: it took the trigger away at the moment it
-  handed over the firepower.
-
-  The sweep period is set against the fire rate rather than by feel — 10.8 rounds
-  per half-sweep, 3.7° and ~24pt apart at full reach, which is dense enough to
-  read as a ribbon. Its phase advances whether or not the trigger is down, so
-  releasing and pressing again picks the hose up where it had got to.
-
-  Range is a **ceiling**, not a distance: rounds burn out at y=556, past the
-  middle of a rank-7 piece and 12pt clear of rank 8. The seventh row is
-  reachable; the eighth is earned the ordinary way. Rounds fade over their last
-  0.18s, since this is the only laser in the game that expires in view
-- **Nuke** — a magenta-to-white ring that clears every enemy round it passes over
-  **and detonates the nearest black pieces**. §13.2's version only cleared
-  projectiles, which is invisible: deleting things is not an effect you can see.
-
-  Up to three victims, at least one wherever anything is left, chosen by distance
-  with no radius limit — a range cap would make the reward depend on where a
-  swooping scout happened to die. Each gets a **fragment** thrown from the blast
-  centre, timed to arrive exactly as the ring does, which is what draws the line
-  from cause to effect. Victims are destroyed outright; armor still stops it
-  (§10.1), or Level 8 loses its identity.
-
-  **The black king is passed over** while anything else stands, so the rarest
-  power-up is never spent on the one target it cannot kill — he gets a forcefield
-  flare and a clang instead, or the ring looks like it missed the obvious thing.
-  When he is the last piece left he *is* the target, for 6 damage floored at 1 HP.
-
-  **The blast runs in slow motion**, which is most of what makes it land. The
-  ring opens over 0.85s and the world drops to 0.3× for 1.3s: `dt` scaled for
-  everything the update loop drives, `bloomNode.speed` for everything on an
-  action. Measured, the ring's full expansion takes 1.6s of real time and the
-  fragments land between 0.24s and 1.0s, spread across the window. The ramp holds
-  at the floor for the first 45% and then *accelerates* back — a linear return
-  reads as recovering from a stall, where lingering low and snapping back reads
-  as a decision. Music drops to `rate` 0.7, shallower than Time Freeze's 0.5 so
-  the two are distinct, and restores to whatever the world is actually doing
+- **Rapid Fire** — +1 simultaneous laser, stacking to 6, reset each wave
+- **Shield** — absorbs one lethal hit plus 0.8s of grace, so the next round of
+  the same volley cannot simply kill you. A hexagon, never a circle, so it is
+  not confused with the black king's forcefield
+- **Time Freeze** — 3s. Stops the fleet, raiders, enemy rounds, starfield and
+  turn timer, and drops the music to `rate` 0.5. The player's own movement and
+  fire are untouched, which is the whole effect
+- **Spread Fire** — a swept hose, not a fan: one stream at 12 rounds a second,
+  oscillating ±20° on a 1.8s sweep, for 7s, **only while the fire key is held**.
+  §13.2's five fixed streams covered 244% of the board and ended the wave.
+  Range is a ceiling at y=556 — the seventh rank is reachable, the eighth is
+  earned the ordinary way
+- **Nuke** — a magenta-to-white ring that clears every enemy round it passes and
+  detonates up to three of the nearest black pieces, at least one wherever
+  anything is left. Each victim gets a fragment thrown from the blast centre,
+  timed to arrive with the ring. Armor still stops it. **The black king is
+  passed over** while anything else stands, and takes 6 damage floored at 1 HP
+  when he is all that is left. The blast runs at 0.3× for 1.3s, holding at the
+  floor and then accelerating back
 - Only the two clocked effects are exclusive (§13.1); a second replaces the
-  first, and the displaced one has its world changes lifted before the new one
-  applies
+  first, and the displaced one has its world changes lifted first
 
 ### How it is built
 
@@ -903,12 +774,8 @@ is what Rapid Fire is; two ships handing over the same reward is one too many.
 
 ## Roadmap — what is left
 
-Ten levels play end to end with every mechanic, all five power-ups, and full
-arcade audio. What remains, grouped by what it is rather than by §20's phase
-numbers — those were a plan written before any of this existed, and the running
-order has diverged.
-
-Ordered within each group by what it would cost to *not* have at ship.
+Grouped by what it is rather than by §20's phase numbers, and ordered within
+each group by what it would cost to *not* have at ship.
 
 ### Music and settings (§20 Phase 5) — settings done, music not
 
@@ -961,24 +828,6 @@ five power-ups, five flight paths and a roster that changes every level.
   carried all of it. It is a seam that will not now be used, which is the right
   outcome to record rather than quietly leave open
 
-### Gameplay decisions still open
-
-Not bugs and not missing features — things playtesting raised that have no answer
-yet.
-
-- [ ] **Should Rapid Fire outlast its level?** It resets every wave, which was
-      right when a promotion granted it and is arguable now that a scout does.
-      Carrying it over would make the green scout the most valuable raider in the
-      game, which may be the point or may be too much
-- [x] **The one-kill rule is settled.** It was never a flat one-kill: raids stop
-      when the level's roster is exhausted, and the roster loses one entry per
-      kill. Levels 8, 9 and 10 need 2, 3 and 4 kills. Level 7 was the last late
-      wave still silenced by one, and now sends two camels — 2 kills at a 15s
-      gap, and the player's first sight of a wave that keeps coming
-- [ ] **Level 11+.** Level 10 (Blitz) is deliberately the last wave and clearing
-      it wins the run. A twelfth mechanic would need a reason to exist beyond
-      "harder"
-
 ### Visual polish (§20 Phase 8)
 
 Much of this phase landed early — score pops, banner animations, the high score
@@ -998,18 +847,18 @@ is genuinely outstanding:
 
 ### Shipping (§20 Phase 9)
 
+Signing, notarization and direct distribution are done — `release-dmg.sh` wraps
+an Xcode-exported app, and 0.2 is out. What is left:
+
 - [ ] **Balance pass from outside playtesters.** §9's own criteria: is Level 1
       learnable in one attempt, Level 3 urgent, Level 5 overwhelming-but-fair
-- [ ] **Bundle size** — see Phase 4. Every remaining GDC stem needs trimming
 - [ ] **App icon**, all sizes
-- [ ] **DMG** for direct distribution, then App Store: sandbox entitlements,
-      notarization, screenshots, metadata
+- [ ] **Run the XCTest suite.** It typechecks but has never been executed —
+      `⌘U` in Xcode is the single highest-value verification step left
 - [ ] **Instruments passes** — Allocations over 30 minutes for leaks, Time
-      Profiler for the frame budget. See "Potential optimizations" for where to
-      look first
-- [ ] **XCTest cannot run in this environment**, so the whole suite has been
-      typechecked but never executed. Running it once in Xcode is the single
-      highest-value verification step left
+      Profiler for the frame budget
+- [ ] **App Store**, if it ever goes there: screenshots and metadata. The
+      sandbox entitlements and hardened runtime are already in place
 
 ### Not scheduled
 
@@ -1020,7 +869,9 @@ is genuinely outstanding:
 
 ---
 
-## Known performance characteristics
+## Performance
+
+### Measured
 
 - Depth-2 search: **0.40ms** from the opening, **1.95ms** midgame, against a
   50ms budget. The engine is not a bottleneck and needs no pruning
@@ -1031,8 +882,6 @@ is genuinely outstanding:
   so per-frame writes invalidated the sidebar 60 times a second
 - Starfield is ~170 batched sprites in one draw call; `SKShapeNode` cannot batch
   and would have cost one draw call each
-
-## Performance
 
 ### Done
 
@@ -1157,59 +1006,29 @@ pop, shatter and raider is pooled, so gameplay allocates nothing.
   in a row. `typecheck.sh` now detects the plugin failure and fails the whole
   run rather than filtering it out; a clean run is only trustworthy when it
   actually says so. A real build remains the authority regardless
-- **Fixed a serious desync between the chess engine's own board and the
-  rendering-facing `pieces` dictionary.** `GCIBoard.forcePlace` (the fleet's
-  only way to move a piece) updated `pieces` but never told `ChessEngine`'s own
-  `position` — so after any descent, the engine went on believing every
-  descended piece was still at its pre-descent square, forever. When the
-  engine later proposed a move from that stale square, `applyChessMove` looked
-  up whichever piece had since occupied it *for real* and moved that one
-  instead. Reported directly from playtest as two pieces rendered on the same
-  square; reproduced and pinned with a standalone harness before fixing, since
-  `swift-plugin-server` flakiness was actively unreliable at the time. Fixed
-  by `ChessEngine.forceRelocate(from:to:)`, called from `forcePlace`
+- **Anything that moves a piece must tell `ChessEngine`.** `forcePlace` once
+  updated the rendering-facing `pieces` dictionary and not the engine's own
+  `position`, so after any descent the engine believed every descended piece
+  was still where it started, and later moved whatever had since taken that
+  square. `forceRelocate(from:to:)` closes it
 
 ## Full-codebase review
 
-Three parallel agents (logic, rendering, input/audio/app) read every source
-file. Findings, and what was done about each:
+A read of every source file. What came out of it:
 
-- [x] `NeonPalette.swift` — the cyan/magenta/orange constants were copy-pasted
-      verbatim into 8 rendering files plus a handful of inline literals in
-      `GameScene.swift`/`SpaceshipNode.swift`. Now one shared enum; every file
-      keeps its own `private static let cyan = NeonPalette.cyan`-style alias,
-      so no call site changed. Orange turned out to be two *deliberately*
-      distinct shades (UI chrome vs. a hotter title-screen/AUTO-flash accent)
-      — kept both, named `orange` and `alertOrange`, not merged
-- [x] Stale header comments in `ChessRules.swift`, `ChessFEN.swift`,
-      `Chess.swift` claiming castling/en passant are absent and there's no
-      fifty-move/threefold tracking — all three are implemented; the comments
-      were simply never updated when that changed. Corrected
-- [x] `InputHandler.swift` — Escape and P each had their own `case ... : return
-      isDown ? .pause : nil` line; collapsed to one `case 53, 35:`
-- [x] `GCITests.swift` — the FEN-to-`Position` unwrap helper was duplicated
-      verbatim across `ChessRulesTests` and `AutoMoveTests`; moved to a shared
-      `XCTestCase` extension
-- [x] `AudioManager.setVolume(_:for:)` — zero call sites anywhere, removed
-- [ ] `GameOverNode`/`HighScoreEntryNode`/`HowToPlayNode` each have their own
-      `label(...)` builder. Looked like the same boilerplate; on inspection
-      they're not identical (`HowToPlayNode`'s uses baseline vertical
-      alignment and a variable horizontal alignment; `GameOverNode`'s sets a
-      `zPosition` the others don't). Left alone — collapsing them safely would
-      need a more flexible shared signature than the ~20 lines saved justify
-- Confirmed dead but left alone as accurate phase-status markers, not bugs:
-  `LaserNode.swift` (unreferenced, Phase-1+ stub), `SpaceshipNode`'s
-  shield/invincibility API (unreferenced), `GameAction.confirmRestart` /
-  `.returnToMenu` (never constructed), ~40 `SoundKey` cases with no asset yet
-  (already self-reported by `AudioManager.preloadAll`'s own log line),
-  `.fireLaser` (dispatched by Space, no handler yet)
-- Noted, not changed — real but out of scope for a mechanical pass:
-  `GameState.swift` imports SpriteKit and calls into `GameScene` directly,
-  the one Logic-layer file that isn't SpriteKit-free per the architecture
-  rule; `GameScene` writes `DiagnosticsLog.fps`/`.nodeCount` (Rendering
-  writing into Logic state). Both are pre-existing structural choices, not
-  something to "fix" without a design conversation
-- Checked and NOT a bug: `PlayingState.didEnter`'s hardcoded `"Level 1
-  started"` log line. Verified it only ever fires on a fresh game (Title →
-  Playing); leveling up 2+ takes a different path (`GameScene.startNextLevel`)
-  that logs the real level number without re-entering `PlayingState`
+- [x] `NeonPalette` — the cyan/magenta/orange constants had been copy-pasted
+      into 8 files. Now one shared enum. Orange was two *deliberately* distinct
+      shades, kept as `orange` and `alertOrange`
+- [x] Stale header comments in `ChessRules`, `ChessFEN` and `Chess` claiming
+      castling, en passant and draw tracking were absent. All three exist
+- [x] Duplicated FEN helper in the tests, and a dead
+      `AudioManager.setVolume(_:for:)`, both removed
+- [ ] `GameOverNode` / `HighScoreEntryNode` / `HowToPlayNode` each have their
+      own `label(...)`. They look identical and are not; left alone
+- [ ] `GameState.swift` imports SpriteKit and calls into `GameScene`, the one
+      Logic-layer file that breaks the architecture rule. `GameScene` also
+      writes `DiagnosticsLog.fps`/`.nodeCount`, which is Rendering writing into
+      Logic. Both pre-date the rule and need a design conversation, not a patch
+- Confirmed dead but kept as accurate phase markers: `LaserNode`'s Phase-1 stub,
+  `SpaceshipNode`'s shield API, `GameAction.confirmRestart` / `.returnToMenu`,
+  and the `SoundKey` cases with no asset yet
