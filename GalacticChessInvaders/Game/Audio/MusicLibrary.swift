@@ -17,6 +17,12 @@ enum MusicLibrary {
     /// The track bundled since the beginning, and the fallback for every pool.
     static let fallback = "GCI-intro"
 
+    /// What plays over Settings and How To Play, at any point in a run. The
+    /// panels are a step out of the game, and the title theme is what the game
+    /// sounds like when you are not in it. It opens on a fade of its own, which
+    /// is why the hand-over only has to fade the outgoing track.
+    static let panelTrack = "GCI-intro"
+
     /// The title screen and the attract-free menu behind it.
     static var titlePool: [String] { ["GCI-intro"] }
 

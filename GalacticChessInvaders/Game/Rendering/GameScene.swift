@@ -773,8 +773,11 @@ class GameScene: SKScene {
             turnTimer.pause()
             ship?.direction = 0
             isPaused = true
-            // Music keeps playing — the info screen is a glance, not a break.
         }
+        // A panel is a step out of the game, so the game's music steps out with
+        // it. Runs whatever the state, since the panels open from the title too
+        // — where the title theme is already playing and this does nothing.
+        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack)
         DiagnosticsLog.shared.log(.info, "game paused")
     }
 
@@ -784,6 +787,7 @@ class GameScene: SKScene {
         howToPlayNode?.removeFromParent()
         howToPlayNode = nil
         refreshCursorRects()
+        restoreScreenMusic()
 
         if stateMachine.currentState is PlayingState {
             isPaused = false
@@ -841,6 +845,7 @@ class GameScene: SKScene {
             ship?.direction = 0
             isPaused = true
         }
+        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack)
         DiagnosticsLog.shared.log(.info, "settings open")
     }
 
@@ -850,6 +855,7 @@ class GameScene: SKScene {
         settingsNode?.removeFromParent()
         settingsNode = nil
         applyLiveSettings()
+        restoreScreenMusic()
 
         if stateMachine.currentState is PlayingState {
             isPaused = false
@@ -878,6 +884,13 @@ class GameScene: SKScene {
         // Cheap and idempotent, so it rides along with every change rather than
         // needing the panel to know which switch was the sidebar's.
         NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
+    }
+
+    /// Hands the music back to whatever screen the player is returning to.
+    private func restoreScreenMusic() {
+        AudioManager.shared.fadeTo(pool: stateMachine.currentState is TitleState
+            ? MusicLibrary.titlePool
+            : MusicLibrary.pool(forLevel: levels.level))
     }
 
     func resetToTitle() {
