@@ -40,6 +40,10 @@ final class SettingsNode: SKNode {
     private struct Hit {
         let rect: CGRect
         let isSlider: Bool
+        /// Buttons get a press flash; a toggle or a segment already shows what
+        /// it did by lighting up in its new state.
+        var isButton = false
+        var sound: SoundKey = .uiSettingsBlip
         /// Point is in this node's coordinates. Sliders read its x; everything
         /// else ignores it.
         let apply: (CGPoint) -> Void
@@ -73,10 +77,22 @@ final class SettingsNode: SKNode {
         guard let hit = hits.first(where: { $0.rect.contains(point) }) else { return false }
         dragging = hit.isSlider ? hit : nil
         hit.apply(point)
-        AudioManager.shared.play(.uiSettingsBlip)
+        AudioManager.shared.play(hit.sound)
+        if hit.isButton { flashPress(hit.rect) }
         rebuild()
         onChange?()
         return true
+    }
+
+    /// Parented to this node rather than to `content`, which `rebuild` empties
+    /// on the very click that asks for the flash.
+    private func flashPress(_ rect: CGRect) {
+        let flash = SKShapeNode(rect: rect, cornerRadius: 2)
+        flash.fillColor = Self.cyan.withAlphaComponent(0.55)
+        flash.strokeColor = .clear
+        flash.zPosition = 5
+        addChild(flash)
+        flash.run(.sequence([.fadeOut(withDuration: 0.22), .removeFromParent()]))
     }
 
     /// Sliders keep tracking while the button is down, including past the ends
@@ -182,7 +198,7 @@ final class SettingsNode: SKNode {
                   readout: percent(settings.boardGrid), dimmed: false, defaultMark: 0.5) {
             self.settings.boardGrid = $0
         }
-        explain("AT 0% THE BOARD IS OPEN SPACE", x: x, y: 435)
+        explain("0% = OPEN SPACE, 100% = NAMED ROWS, COLS", x: x, y: 435)
 
         toggleRow("HOME ZONE BANDS", x: x, w: w, y: 408, value: settings.homeZones) {
             self.settings.homeZones = $0
@@ -204,11 +220,13 @@ final class SettingsNode: SKNode {
         explain("DEFAULT IS PLAYTESTED", x: x, y: 267)
 
         heading("DATA", Self.magenta, x: x, y: 214)
-        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 186, tint: Self.magenta) {
+        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 186, tint: Self.magenta,
+                  sound: .uiDestructive) {
             ScoreManager.shared.clearHighScores()
         }
         explain("BACK TO ORIGINAL SCORES", x: x, y: 164)
-        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 136, tint: Self.cyan) {
+        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 136, tint: Self.cyan,
+                  sound: .uiDestructive) {
             self.settings.restoreDefaults()
         }
     }
@@ -366,7 +384,8 @@ final class SettingsNode: SKNode {
     }
 
     private func buttonRow(_ text: String, _ action: String, x: CGFloat, w: CGFloat,
-                           y: CGFloat, tint: SKColor, run: @escaping () -> Void) {
+                           y: CGFloat, tint: SKColor, sound: SoundKey = .uiSettingsBlip,
+                           run: @escaping () -> Void) {
         rowLabel(text, x: x, y: y)
 
         let bw = CGFloat(action.count) * 8 + 24, h: CGFloat = 22
@@ -383,7 +402,8 @@ final class SettingsNode: SKNode {
         lbl.position = CGPoint(x: rect.midX, y: rect.midY)
         content.addChild(lbl)
 
-        hits.append(Hit(rect: rect, isSlider: false) { _ in run() })
+        hits.append(Hit(rect: rect, isSlider: false, isButton: true,
+                        sound: sound) { _ in run() })
     }
 
     // MARK: - Primitives
