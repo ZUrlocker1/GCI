@@ -538,12 +538,6 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       fleet heartbeat (an 88→52Hz double-thump)
 - [x] `lightningScoutDestroyed` removed — the Lightning Scout is retired, so
       there is no ship left to make the sound
-- [ ] 3 sounds still need generating: `llamaBleat`, `camelHonk` (Minter ships,
-      not built) and nothing else — the rest of `generated/` is done
-- [ ] 12 keys reference files that are not bundled, all belonging to unbuilt
-      features (escorts, the flagship, the Minter ships) or to large GDC stems
-      not yet trimmed (`criticalCrackleEerie` 24MB, `ambientSpaceLoop` 28MB,
-      `mechanicBannerTier2/3`, `fleetRankDrop`)
 - [x] **Dead assets removed** (27 Aug 2026). Nine sprites: the Escort, Flagship
       and Llama, which are cut; the five purpose-built special-scout sprites that
       were tried and lost to the drawn overlays; and `chess-b-pawn-armored`,
@@ -558,25 +552,15 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       than assumed: duration, peak and RMS across four slices of the envelope are
       identical to four decimal places. Resources are 10.3 MB, from 15.1
 - [x] **Every GDC sound resampled to 44.1 kHz, and five downmixed to mono.**
-      Which five was measured, not assumed: for each stereo file, the RMS of the
-      side signal `(L−R)/2` against the mid `(L+R)/2` says how much width there
-      actually is.
-
-      | sound | side/mid | kept |
-      |---|---|---|
-      | nuke shockwave | 1.87 | **stereo** |
-      | UI button click | 0.55 | **stereo** |
-      | armor ricochet | 0.32 | **stereo** |
-      | game-over sting | 0.013 | mono |
-      | level clear | 0.006 | mono |
-      | promotion, illegal move, sci-fi ping | 0.000 | mono |
-
-      Three of the eight carry real width and keep it — the nuke's most of all,
-      which is §13.2 delivered rather than a coincidence: it asks for "a resonant
-      wave of sound that sweeps across the stereo field". The other five measure
-      at or near zero, so they were mono already and the second channel was
-      storing a duplicate. Each conversion was checked for unchanged duration and
-      RMS before it replaced the original
+      Which five was measured rather than assumed, from the RMS of each file's
+      side signal against its mid. Three carry real width and keep it — the nuke
+      shockwave most of all, which is §13.2's "resonant wave that sweeps across
+      the stereo field" delivered rather than a coincidence
+- [ ] **8 keys reference files that are not bundled**, all for features that were
+      never built (escorts, the flagship) or large GDC stems not yet trimmed
+      (`ambientSpaceLoop` 28MB, `mechanicBannerTier2/3`, `fleetRankDrop`).
+      Nothing the game plays is among them, and `typecheck.sh` now fails if that
+      stops being true
 
 ## Phase 6.1 — Raiders: Scout ✅
 
@@ -725,54 +709,6 @@ to carry it, which is now cut.
   floor and then accelerating back
 - Only the two clocked effects are exclusive (§13.1); a second replaces the
   first, and the displaced one has its world changes lifted first
-
-### How it is built
-
-- **Spread Fire and the Nuke fire outside `SpaceshipState`.** The laser cap
-  counts rounds in flight and frees a slot as each resolves; a spray borrowing
-  those slots would strand the count wherever the last round left it and the
-  player would come out of the power-up unable to fire. The player pool is 24,
-  measured: a round is in the air 0.97s over its 474pt range, so 12 a second put
-  11.6 up at once, plus the manual cap of 6
-- **Spray rounds pass through White's own pieces**, by dropping `friendlyPiece`
-  from the round's contact mask rather than by ignoring the hit — a round that
-  will do nothing should fly through, not be consumed. The sweep aims them, not
-  the player, so friendly fire had the reward demolish White's position as a side
-  effect of being used
-- **Repair, Ice and Spread are the plain scout disc with drawn overlays** — a
-  hexagonal grid, crystalline facets, a row of exhaust ports — at 58 × 30pt, with
-  Spread squashed to 82 × 26 for §13.2's "fat, squat disc". All three have
-  purpose-built sprites in the atlas and all three read better drawn; the sprites
-  stay there unused. Worth recording as a result rather than a preference
-- **The Nuke flies §6.4's Mutant Camel.** Half again a scout's height, and the
-  only carrier with a voice — a generated low bray on entry, so you hear it
-  before you have picked it out of the board. Sizes are measured rather than
-  uniform: each multiplier equalises visible ink against the scout's 49.6 ×
-  21.2pt, with the camel left at 1.71× for presence
-- **The camel walks** — three drawings, four frames, 0.2s each. The two swung
-  poses are separated by the neutral one, because cycling straight between them
-  reads as a twitch: the legs cross the middle without being seen there. The
-  swung frames are generated by shearing the atlas sprite about the hip line at
-  y=141, by an offset proportional to how far below the hip each row sits, so a
-  leg pivots instead of sliding; front and rear swing in opposite phase. Two
-  animations, since the hull is a separate node and a static fill behind moving
-  legs hangs in the air. A 1.5pt bob ties the walk to ground the camel does not
-  have
-- Textures load from `Resources/Sprites/`, not `assets/GCI.spriteatlas` — a
-  missing one compiles cleanly, renders as SpriteKit's grey placeholder and logs
-  nothing, so `typecheck.sh` cross-checks every `chess-`/`ship-` string literal
-  against the bundled PNGs
-- Every active power-up shows as a standing line in the player's alley, one line
-  each with 5pt between, and §13.2's countdown bar under the bottom line. No
-  numbers: neither the laser cap nor the remaining seconds was actionable, and a
-  shrinking bar is read without being read. The block sits above the turn timer,
-  the only part of the gutter with room — the measurements are a table in the
-  code and a test that fails on any overlap
-- The two Ice sounds and the camel's bray are synthesised into
-  `Resources/sfx/generated/`
-
-**Lightning Scout is retired.** §13.2's fifth type grants "+1 laser slot", which
-is what Rapid Fire is; two ships handing over the same reward is one too many.
 
 ## Roadmap — what is left
 
