@@ -35,7 +35,11 @@ class GameScene: SKScene {
     /// told, or its LOG PANEL switch sits there showing the old answer.
     private var sidebarObserver: NSObjectProtocol?
     /// Reported once each, or a stranded piece fills the log at 4Hz.
+    /// Reported once each, or a stranded piece fills the log at 4Hz.
     private var reportedGhosts: Set<ObjectIdentifier> = []
+    /// When each unregistered node was first seen. A teardown legitimately
+    /// spends 0.18s unregistered and fading, so presence alone means nothing.
+    private var ghostFirstSeen: [ObjectIdentifier: TimeInterval] = [:]
     /// Raised in the gutter the first time anything logs an error, and left up.
     private var errorFlag: SKLabelNode?
     /// One raider drifting across the title screen, purely as decoration.
@@ -931,6 +935,11 @@ class GameScene: SKScene {
         removePausedOverlay()
         AudioManager.shared.stopMusic()
         DiagnosticsLog.shared.clear()
+        // The flag and what it was raised for go with the log it points at.
+        errorFlag?.removeFromParent()
+        errorFlag = nil
+        reportedGhosts.removeAll()
+        ghostFirstSeen.removeAll()
         DiagnosticsLog.shared.log(.restart, "")
         stateMachine.enter(TitleState.self)
     }
@@ -3965,15 +3974,28 @@ class GameScene: SKScene {
     private func auditGhosts() {
         guard stateMachine.currentState is PlayingState, let boardNode else { return }
         let live = Set(pieceNodes.values.map(ObjectIdentifier.init))
-        for case let node as PieceNode in boardNode.children
-        where !live.contains(ObjectIdentifier(node))
-              && reportedGhosts.insert(ObjectIdentifier(node)).inserted {
+        let now = CACurrentMediaTime()
+        var stillHere: Set<ObjectIdentifier> = []
+
+        for case let node as PieceNode in boardNode.children {
+            let id = ObjectIdentifier(node)
+            guard !live.contains(id) else { continue }
+            stillHere.insert(id)
+            let since = ghostFirstSeen[id] ?? now
+            ghostFirstSeen[id] = since
+            // A teardown that is merely in progress is not a ghost. The fade
+            // runs 0.18s and this sweep runs every 0.25s, so every capture
+            // straddling a tick looked like one — six in a single wave, all of
+            // them gone by the next line in the log. Only a node still
+            // unregistered a second later has actually stranded.
+            guard now - since > 1.0, reportedGhosts.insert(id).inserted else { continue }
             let onBoard = board.piece(at: node.square)
                 .map { "\($0.color) \($0.type)" } ?? "nothing"
             let parked = node.hasActions() ? "stalled" : "cancelled"
             DiagnosticsLog.shared.log(.error, "ghost \(node.piece.type) \(node.square) "
                 + "\(parked) a\(Int(node.alpha * 100)) board:\(onBoard)")
         }
+        ghostFirstSeen = ghostFirstSeen.filter { stillHere.contains($0.key) }
     }
 
     private func auditHitboxes() {
