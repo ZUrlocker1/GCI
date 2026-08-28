@@ -87,6 +87,7 @@ enum SoundKey: String, CaseIterable {
     case mechanicBannerTier3    // Transition Braam Slow Dark Creepy.wav (gdc-bundle)
     case uiButtonClick          // UIMisc_Kalimba 3 Up.wav   (gdc-bundle)
     case uiSettingsBlip            // pepSound3.wav             (kenney-digital)
+    case uiDestructive             // Interface Deny Low Fat Dark.wav (gdc-bundle)
     case uiSciFiPing            // Interface Sci-Fi Ping Down.wav (gdc-bundle)
     case ambientSpaceLoop       // Roomtone Space Ship Interior Muted.wav (gdc-bundle) — loop
 
@@ -184,6 +185,7 @@ extension SoundKey {
         case .mechanicBannerTier3:      return "gdc-bundle/Transition Braam Slow Dark Creepy.caf"
         case .uiButtonClick:            return "gdc-bundle/UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.caf"
         case .uiSettingsBlip:              return "kenney-digital/pepSound3.caf"
+        case .uiDestructive:               return "gdc-bundle/Interface Deny Low Fat Dark.caf"
         case .uiSciFiPing:              return "gdc-bundle/Interface Sci-Fi Ping Down.caf"
         case .ambientSpaceLoop:         return "gdc-bundle/Roomtone Space Ship Interior Muted.caf"
         // Minter ships
@@ -273,6 +275,11 @@ extension SoundKey {
         // peak rather than its average — it wants 0.061. It is the shortest of
         // the seven candidates at 0.39s audible.
         case .uiSettingsBlip:                          return 0.06
+        // RESET and RESTORE throw something away, so they do not get the same
+        // cheerful blip as nudging a slider. Low and dark, and 0.44s — the
+        // shortest candidate with any weight to it. 0.185 puts its loudest 50ms
+        // level with the blip's, so it reads as different rather than louder.
+        case .uiDestructive:                           return 0.185
         default:                                    return 0.8
         }
     }

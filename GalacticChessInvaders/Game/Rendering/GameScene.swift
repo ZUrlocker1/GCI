@@ -695,6 +695,27 @@ class GameScene: SKScene {
         }
     }
 
+    /// A brief bright fill over a button that was just clicked.
+    ///
+    /// Parented to the scene at a z above every panel, not to the button. Every
+    /// one of these buttons either opens a panel over itself or sits on a panel
+    /// that rebuilds when clicked, so a flash owned by the button would be
+    /// covered or destroyed before it could be seen.
+    private func flashPress(_ node: SKNode) {
+        guard let parent = node.parent, let name = node.name else { return }
+        // The hit may be the label rather than the box behind it; both carry
+        // the button's name, and the box is the shape worth lighting up.
+        let box = parent.children.first { $0.name == name && $0 is SKShapeNode } ?? node
+        let frame = box.calculateAccumulatedFrame()
+        let flash = SKShapeNode(rect: CGRect(origin: convert(frame.origin, from: parent),
+                                             size: frame.size), cornerRadius: 3)
+        flash.fillColor = NeonPalette.cyan.withAlphaComponent(0.55)
+        flash.strokeColor = .clear
+        flash.zPosition = 100
+        addChild(flash)
+        flash.run(.sequence([.fadeOut(withDuration: 0.22), .removeFromParent()]))
+    }
+
     // MARK: - Settings (§20 Phase 5)
 
     func showSettings() {
@@ -3886,6 +3907,7 @@ class GameScene: SKScene {
         if let panel = settingsNode {
             let hit = atPoint(location)
             if hit.name == "backButton" || hit.parent?.name == "backButton" {
+                flashPress(hit)
                 AudioManager.shared.play(.uiSettingsBlip)
                 hideSettings()
             } else {
@@ -3898,6 +3920,7 @@ class GameScene: SKScene {
         if howToPlayNode != nil {
             let hit = atPoint(location)
             if hit.name == "backButton" || hit.parent?.name == "backButton" {
+                flashPress(hit)
                 AudioManager.shared.play(.uiButtonClick)
                 hideHowToPlay()
             } else if hit.name == HowToPlayNode.musicLinkName,
@@ -3911,10 +3934,12 @@ class GameScene: SKScene {
         // INFO button opens How To Play from any game state.
         let hit = atPoint(location)
         if hit.name == "infoButton" || hit.parent?.name == "infoButton" {
+            flashPress(hit)
             showHowToPlay()
             return
         }
         if hit.name == "settingsButton" || hit.parent?.name == "settingsButton" {
+            flashPress(hit)
             showSettings()
             return
         }

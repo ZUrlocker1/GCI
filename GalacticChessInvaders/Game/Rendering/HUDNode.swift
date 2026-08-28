@@ -70,8 +70,12 @@ final class HUDNode: SKNode {
     /// than repeating the numbers.
     static func makeNavButtons() -> SKNode {
         let nav = SKNode()
-        for (name, text, x) in [("settingsButton", "* SET", CGFloat(742)),
-                                ("infoButton",    "? INFO", CGFloat(820))] {
+        // `hotkey` is the index of the character that is also the keyboard
+        // shortcut. Press Start 2P advances exactly one em per character, so
+        // the rule under it is arithmetic rather than a measured guess.
+        for (name, text, x, centre, hotkey) in
+            [("settingsButton", "SET",    CGFloat(742), CGFloat(44), 0),
+             ("infoButton",     "? INFO", CGFloat(820), CGFloat(35), 2)] {
             let btn = SKShapeNode(rect: CGRect(x: x, y: 7, width: 70, height: 22), cornerRadius: 3)
             btn.fillColor = HUDNode.cyan.withAlphaComponent(0.12)
             btn.strokeColor = HUDNode.cyan; btn.lineWidth = 1; btn.name = name
@@ -80,11 +84,46 @@ final class HUDNode: SKNode {
             let lbl = SKLabelNode(fontNamed: HUDNode.font)
             lbl.text = text; lbl.fontSize = 8; lbl.fontColor = HUDNode.cyan
             lbl.horizontalAlignmentMode = .center; lbl.verticalAlignmentMode = .center
-            lbl.position = CGPoint(x: x + 35, y: 18)
+            lbl.position = CGPoint(x: x + centre, y: 18)
             lbl.name = name
             nav.addChild(lbl)
+
+            let charX = x + centre - CGFloat(text.count) * 4 + CGFloat(hotkey) * 8
+            let rule = SKShapeNode(rect: CGRect(x: charX + 0.5, y: 11, width: 7, height: 1))
+            rule.fillColor = HUDNode.cyan
+            rule.strokeColor = .clear
+            rule.name = name
+            nav.addChild(rule)
+
+            if name == "settingsButton" {
+                let gear = HUDNode.gearIcon()
+                gear.position = CGPoint(x: x + 17, y: 18)
+                gear.name = name
+                nav.addChild(gear)
+            }
         }
         return nav
+    }
+
+    /// A gear, drawn rather than typed: Press Start 2P has no such glyph, and a
+    /// Unicode one would fall back to a system font in the middle of a row of
+    /// arcade type. A ring, a hub and eight teeth — the least that still reads
+    /// as a gear at this size rather than as a sun.
+    static func gearIcon(radius r: CGFloat = 4.2) -> SKShapeNode {
+        let path = CGMutablePath()
+        path.addEllipse(in: CGRect(x: -r, y: -r, width: r * 2, height: r * 2))
+        path.addEllipse(in: CGRect(x: -r * 0.34, y: -r * 0.34,
+                                   width: r * 0.68, height: r * 0.68))
+        for tooth in 0..<8 {
+            let angle = CGFloat(tooth) * .pi / 4
+            path.move(to: CGPoint(x: cos(angle) * r, y: sin(angle) * r))
+            path.addLine(to: CGPoint(x: cos(angle) * (r + 2.2), y: sin(angle) * (r + 2.2)))
+        }
+        let node = SKShapeNode(path: path)
+        node.strokeColor = HUDNode.cyan
+        node.lineWidth = 1.3
+        node.fillColor = .clear
+        return node
     }
 
     private func place(_ node: SKLabelNode, _ text: String, _ color: SKColor,
