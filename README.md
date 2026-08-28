@@ -24,7 +24,7 @@ clock and comes apart as you play it.
 
 **Watch a 90-second demo:** [Galactic Chess Invaders](https://www.youtube.com/watch?v=yVaNIPDnGa0) on YouTube
 
-[![Level 10, Blitz — the fleet at full strength against a three-second clock](docs/GCI%20blitz.jpg)](https://www.youtube.com/watch?v=yVaNIPDnGa0)
+<a href="https://www.youtube.com/watch?v=yVaNIPDnGa0"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
 
 [Download for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-0.2.dmg)
 
@@ -37,9 +37,8 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 - **Settings panel** — press `S`, or the gear in the top right. Music and sound effects each get a
   switch and a volume slider, and the display settings include a board grid you can dial from open
   space up to named rows and columns.
-- **Cadet mode** — an easier on ramp, and the same ten levels with the same mechanics. The chess
-  clock never drops below seven seconds, the fleet and its shots are slower, you get five lives, and
-  power-ups carry across a level break instead of being taken back.
+- **Cadet mode** — an easier on ramp for new players. The chess clock runs long, the fleet and its
+  shots are slower, you get five lives, and power-ups carry across levels. Still hugely challenging!
 - Settings persist between sessions.
 
 **Status:** The game is fully functional and feature complete. It is playable with all ten levels,
