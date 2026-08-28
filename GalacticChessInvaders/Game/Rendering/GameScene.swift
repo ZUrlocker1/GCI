@@ -119,6 +119,17 @@ class GameScene: SKScene {
     static let slowMoDuration: TimeInterval = 1.3
     /// Roughly a third speed. Deeper than this and the ship stops answering the
     /// keys in a way that reads as a hang rather than as an effect.
+    /// How far the music slows under the Nuke and Time Freeze.
+    ///
+    /// 0.9, not §13.2's 0.5–0.7. Those were tuned against the single ambient
+    /// track the game shipped with — an 88 BPM Kosmic pad barely registers a
+    /// time-stretch. The Motorik Arcade soundtrack is built on a steady kick,
+    /// and a 140 BPM track dropping to 98 does not read as slow motion; it
+    /// reads as the machine struggling, which is a bad impression for this game
+    /// in particular. One depth for both effects: this shallow there is no
+    /// telling 0.9 from 0.85, and the blue wash, the ring and the world at 0.3x
+    /// are what tell them apart.
+    static let slowMoMusicRate: Float = 0.9
     static let slowMoFloor: Double = 0.3
     /// The share of the window spent at full slow before the ramp back begins.
     static let slowMoHold = 0.45
@@ -155,7 +166,7 @@ class GameScene: SKScene {
         appliedTimeScale = scale
         bloomNode.speed = CGFloat(scale)
         starfieldNode.speed = starfieldRate * CGFloat(scale)
-        if scale >= 1 { endSlowMotionAudio() }
+        syncMusicRate()
     }
 
     /// Drops the world into slow motion. Called by the Nuke, and deliberately
@@ -163,16 +174,16 @@ class GameScene: SKScene {
     private func beginSlowMotion() {
         slowMoRemaining = Self.slowMoDuration
         applyTimeScale()
-        // Same trick as Time Freeze, at a shallower depth so the two are not
-        // mistaken for each other — that one stops the world, this one leans on
-        // it. §13.2 sanctions `rate` for exactly this.
-        AudioManager.shared.setMusicRate(0.7)
     }
 
-    private func endSlowMotionAudio() {
-        // Back to whatever the world is actually doing: a Time Freeze may still
-        // be running underneath, and it owns 0.5 until it expires.
-        AudioManager.shared.setMusicRate(powerUps.isFrozen ? 0.5 : 1.0)
+    /// Derived, not toggled. The rate used to be set in one function and
+    /// restored in another, on the single frame the scale crossed back through
+    /// 1 — so any path that missed that crossing left the music slow. This
+    /// answers "is anything slowing time right now" every time the scale moves,
+    /// which cannot drift out of step with itself.
+    private func syncMusicRate() {
+        let slowed = appliedTimeScale < 0.999 || powerUps.isFrozen
+        AudioManager.shared.setMusicRate(slowed ? Self.slowMoMusicRate : 1.0)
     }
 
     private func cancelSlowMotion() {
@@ -181,7 +192,7 @@ class GameScene: SKScene {
         appliedTimeScale = 1
         bloomNode.speed = 1
         starfieldNode.speed = starfieldRate
-        endSlowMotionAudio()
+        syncMusicRate()
     }
 
     /// §13's power-ups. The clock and the shield charge; everything the effects
@@ -2825,9 +2836,7 @@ class GameScene: SKScene {
             raiders?.setPaused(true)
             laserPool?.setPaused(true, owner: .enemy)
             starfieldNode.isPaused = true
-            // §13.2's one sanctioned use of `rate`: the music slows and deepens
-            // rather than a separate sound announcing the freeze.
-            AudioManager.shared.setMusicRate(0.5)
+            syncMusicRate()
             washScreen(NeonPalette.iceBlue)
 
         case .gatling:
@@ -2856,7 +2865,7 @@ class GameScene: SKScene {
                 laserPool?.setPaused(false, owner: .enemy)
                 starfieldNode.isPaused = false
             }
-            AudioManager.shared.setMusicRate(1.0)
+            syncMusicRate()
 
         case .gatling:
             AudioManager.shared.play(.uiSciFiPing)
