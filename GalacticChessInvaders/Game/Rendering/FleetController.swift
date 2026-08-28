@@ -189,6 +189,12 @@ final class FleetController {
         }
         node.removeAllActions()
         node.alpha = 1
+        // And un-pause it. Time Freeze pauses `fleetNode`, and a piece released
+        // during one carried that state out with it — its teardown was added
+        // and never advanced a frame, leaving a fully opaque, unshootable piece
+        // on the board for the rest of the run. Whatever was holding the fleet
+        // still is not this node's business once it has left.
+        node.isPaused = false
         node.removeFromParent()
         return wasMember
     }
