@@ -157,6 +157,36 @@ final class AudioManager {
         playMusic(next)
     }
 
+    /// Rising each time a fade is scheduled, so a panel opened and shut inside
+    /// half a second cannot leave two hand-overs racing to start a track.
+    private var fadeGeneration = 0
+
+    /// Fades the current track out and starts `track` when it has gone.
+    ///
+    /// A fade rather than a cut because these hand-overs happen mid-bar, and
+    /// half a second is long enough to not be a splice without being a wait.
+    /// Timed with `asyncAfter`, not an `SKAction`: opening a panel pauses the
+    /// scene, which stops actions for the whole tree.
+    func fadeTo(track: String, over duration: TimeInterval = 0.5) {
+        guard track != currentTrack else { return }
+        guard let player = musicPlayer else { playMusic(track); return }
+        fadeGeneration += 1
+        let token = fadeGeneration
+        player.setVolume(0, fadeDuration: duration)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self, self.fadeGeneration == token else { return }
+            self.playMusic(track)
+        }
+    }
+
+    /// The same hand-over, choosing from a pool. Does nothing when the pool's
+    /// pick is already playing, so a level break inside one band does not
+    /// restart the track it is already on.
+    func fadeTo(pool: [String], over duration: TimeInterval = 0.5) {
+        fadeTo(track: MusicLibrary.choose(from: pool, avoiding: currentTrack),
+               over: duration)
+    }
+
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {
         guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a") else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
