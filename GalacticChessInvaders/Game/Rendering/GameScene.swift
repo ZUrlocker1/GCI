@@ -34,6 +34,8 @@ class GameScene: SKScene {
     /// beside the game rather than in it — so an open Settings panel has to be
     /// told, or its LOG PANEL switch sits there showing the old answer.
     private var sidebarObserver: NSObjectProtocol?
+    /// Reported once each, or a stranded piece fills the log at 4Hz.
+    private var reportedGhosts: Set<ObjectIdentifier> = []
     /// One raider drifting across the title screen, purely as decoration.
     private var titleRaider: RaiderNode?
     private static let titleRaiderKey = "titleRaider"
@@ -1405,7 +1407,7 @@ class GameScene: SKScene {
                 scheduleRegeneration(after: victim.piece.type)
             }
             detachFromFleet(victim)
-            victim.runDestructionAnimation {}
+            tearDown(victim, at: victim.square)
         }
         AudioManager.shared.play(.pieceHitHeavy)
 
@@ -1978,7 +1980,7 @@ class GameScene: SKScene {
                 scheduleRegeneration(after: victim.piece.type)
             }
             detachFromFleet(victim)
-            victim.runDestructionAnimation {}
+            tearDown(victim, at: victim.square)
         }
 
         // Only the player's captures score; Black taking White pieces must not
@@ -3637,7 +3639,7 @@ class GameScene: SKScene {
         celebrateDestruction(of: node, type: type,
                              points: ScoreManager.shared.scaled(points),
                              color: NeonPalette.magenta)
-        node.runDestructionAnimation {}
+        tearDown(node, at: square)
         AudioManager.shared.play(destroyedSound(for: type))
         ScoreManager.shared.addPoints(points, source: "\(type.rawValue) (shot)")
         refreshHUD()
@@ -3670,7 +3672,7 @@ class GameScene: SKScene {
                           scale: node.piece.type == .king ? 2.4 : 1.0)
         if node.piece.type == .king { flashScreen() }
         startShake(Juice.shake(forDestroying: node.piece.type))
-        node.runDestructionAnimation {}
+        tearDown(node, at: square)
         AudioManager.shared.play(destroyedSound(for: node.piece.type))
 
         if node.piece.type == .king {
@@ -3875,6 +3877,7 @@ class GameScene: SKScene {
         guard now - lastStatsUpdate >= Self.statsInterval else { return }
         lastStatsUpdate = now
         auditHitboxes()
+        auditGhosts()
         // Averaged over the interval, not sampled from one frame.
         //
         // A single sample every 250ms is a wildly noisy estimator: it reads 75
@@ -3900,6 +3903,42 @@ class GameScene: SKScene {
     ///
     /// Repairs as well as reports: a wave that has already gone wrong is better
     /// off playable, and the log line is what says it happened.
+    /// Announces both ends of a teardown.
+    ///
+    /// A piece leaves by an `SKAction` that ends in `removeFromParent`, and a
+    /// stranded one — visible, unshootable, absent from the board — means that
+    /// action never finished. Nothing recorded whether it did, so an occurrence
+    /// produced a screenshot and no evidence. A DESTROY with no matching
+    /// "gone" line now names the piece that stayed.
+    private func tearDown(_ node: PieceNode, at square: String) {
+        let who = "\(node.piece.color) \(node.piece.type) \(square)"
+        node.runDestructionAnimation {
+            DiagnosticsLog.shared.log(.destroy, "\(who) gone")
+        }
+    }
+
+    /// Pieces on screen that the board no longer knows about.
+    ///
+    /// Reports, and deliberately does not repair: a janitor would hide the
+    /// cause, and the ghost is harmless — no physics body, so it cannot be hit,
+    /// and no board entry, so it cannot fire. The five facts logged are the
+    /// ones that separate the candidate causes. `stalled` means the removal
+    /// action is still queued and not advancing; `cancelled` means something
+    /// took it off the node. Those have entirely different culprits.
+    private func auditGhosts() {
+        guard stateMachine.currentState is PlayingState, let boardNode else { return }
+        let live = Set(pieceNodes.values.map(ObjectIdentifier.init))
+        for case let node as PieceNode in boardNode.children
+        where !live.contains(ObjectIdentifier(node))
+              && reportedGhosts.insert(ObjectIdentifier(node)).inserted {
+            let onBoard = board.piece(at: node.square)
+                .map { "\($0.color) \($0.type)" } ?? "nothing"
+            let parked = node.hasActions() ? "stalled" : "cancelled"
+            DiagnosticsLog.shared.log(.error, "ghost \(node.piece.type) \(node.square) "
+                + "\(parked) a\(Int(node.alpha * 100)) board:\(onBoard)")
+        }
+    }
+
     private func auditHitboxes() {
         for (square, node) in pieceNodes
         where node.physicsBody == nil && !node.isMaterialising {

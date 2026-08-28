@@ -745,6 +745,13 @@ final class PieceNode: SKSpriteNode {
         // no damage. With a 2-shot cap that also stalls the fire rate, which
         // reads as shots randomly not counting.
         physicsBody = nil
+        // The charge cues are children with actions of their own, and they were
+        // outliving the teardown that removes the flicker and the vent. A piece
+        // caught mid-telegraph took its glow and its tick down with it only
+        // because the parent happened to leave; anything that keeps the parent
+        // alive keeps them lit.
+        childNode(withName: Self.chargeGlowName)?.removeFromParent()
+        children.filter { $0 is SKShapeNode }.forEach { $0.removeFromParent() }
         run(SKAction.sequence([
             SKAction.group([
                 SKAction.scale(to: 1.35, duration: 0.18),
