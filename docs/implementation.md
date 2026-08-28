@@ -772,11 +772,12 @@ Much of this phase landed early — score pops, banner animations, the high scor
 table, the game over and level clear screens, per-piece destruction sounds. What
 is genuinely outstanding:
 
-- [ ] **Nebula haze and wireframe debris.** §12.4 asks for four parallax layers:
+- [ ] **Wireframe debris.** §12.4 asks for four parallax layers:
       dense stars, mid stars, nebula wisps, debris. Three *star* tiers are built
       (46 / 26 / 12 sprites at 20 / 58 / 140 px/s, opposing drift so they do not
-      read as one sheet), which is richer than the two the doc specifies — what
-      is actually missing is the nebula and the debris, not a fourth star tier
+      read as one sheet), which is richer than the two the doc specifies. The
+      nebula landed in 0.3, so the debris is the last layer outstanding — not a
+      fourth star tier
 - [x] **Background evolution per level** (§12.5). `BackdropNode`. Was: `backgroundColor` is
       hardcoded pure black. §12.5's own table ramps the void from `#07070F` to
       `#160304`, which is a few RGB points against black under a bloom layer —
@@ -809,12 +810,12 @@ is genuinely outstanding:
       currently pooled particle bursts tinted per piece, which reads well enough
       that this may not be worth doing
 - [ ] **Hyperspace jump on level clear**
-- [ ] **Attract mode** — §14.2's 5-slide cycle on a 12s timeout. **Unlikely.**
-      It is a coin-op convention: a cabinet nobody is standing at has to sell
-      itself to the room. An app someone chose to launch is already past that,
-      and a window that starts playing to itself is just odd. The title screen's
-      cycling haze covers the part that was actually worth having — a title
-      screen that is not inert
+- **Attract mode — not building it.** §14.2's 5-slide cycle is a coin-op
+      convention: a cabinet nobody is standing at has to sell itself to the
+      room. An app someone chose to launch is already past that, and a window
+      that starts playing to itself is just odd. The title screen does the job
+      instead — a haze cycling through the palette and a raider crossing every
+      25–35 seconds — which is the part that was actually worth having
 
 ### Shipping (§20 Phase 9)
 
