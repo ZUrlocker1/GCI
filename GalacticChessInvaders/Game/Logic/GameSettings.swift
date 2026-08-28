@@ -64,6 +64,19 @@ final class GameSettings {
 
     static let shipSpeedRange: ClosedRange<CGFloat> = 0.75...1.25
 
+    /// The audio sliders run past the shipped mix rather than stopping at it.
+    ///
+    /// Music plays at `0.75 x this` and effects are capped at 0.68, so there is
+    /// real headroom above the level the game ships with — and a slider pinned
+    /// to its own maximum can only ever be turned down. Somebody who wants more
+    /// music should not have to reach it by quietening everything else.
+    ///
+    /// The shipped level is unchanged; it now sits at 75% of the scale, where
+    /// the notch marks it. 4/3 is what puts it there, and it lands neatly: at
+    /// the top of the slider the music reaches exactly 1.0, which is also the
+    /// most `AVAudioPlayer.volume` will take.
+    static let audioMax: Float = 4.0 / 3.0
+
     // MARK: - What a preset means
 
     /// §8.5's three, or five for a first run.
