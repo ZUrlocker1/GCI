@@ -109,7 +109,10 @@ final class SpaceshipState {
         isInvincible = false
         invincibilityRemaining = 0
         // §7.2: the stack does not carry between waves. Earned again or not at
-        // all — otherwise a run that promoted early would coast on it.
-        laserCap = Self.baseLaserCap
+        // all — otherwise a run that promoted early would coast on it. Cadet
+        // inverts exactly that, because coasting is the point: every stack is
+        // still earned from a green scout, it just is not confiscated at the
+        // level break.
+        if !GameSettings.shared.keepsPowerUps { laserCap = Self.baseLaserCap }
     }
 }

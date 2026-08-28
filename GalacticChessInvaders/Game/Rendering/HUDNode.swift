@@ -46,13 +46,18 @@ final class HUDNode: SKNode {
             ship.name = "lifeShip\(i)"; addChild(ship); lifeShips.append(ship)
         }
 
-        // Info button
-        let btn = SKShapeNode(rect: CGRect(x: 820, y: 7, width: 70, height: 22), cornerRadius: 3)
-        btn.fillColor = HUDNode.cyan.withAlphaComponent(0.12)
-        btn.strokeColor = HUDNode.cyan; btn.lineWidth = 1; btn.name = "infoButton"; addChild(btn)
-        let btnLbl = SKLabelNode()
-        place(btnLbl, "? INFO", HUDNode.cyan, 8, 855, 18, align: .center)
-        btnLbl.verticalAlignmentMode = .center; btnLbl.name = "infoButton"
+        // Navigation lives in the top right corner and nowhere else — the same
+        // corner a panel's BACK returns to, so the control that gets you in and
+        // the control that gets you out are in one place.
+        for (name, text, x) in [("settingsButton", "* SET", CGFloat(742)),
+                                ("infoButton",    "? INFO", CGFloat(820))] {
+            let btn = SKShapeNode(rect: CGRect(x: x, y: 7, width: 70, height: 22), cornerRadius: 3)
+            btn.fillColor = HUDNode.cyan.withAlphaComponent(0.12)
+            btn.strokeColor = HUDNode.cyan; btn.lineWidth = 1; btn.name = name; addChild(btn)
+            let lbl = SKLabelNode()
+            place(lbl, text, HUDNode.cyan, 8, x + 35, 18, align: .center)
+            lbl.verticalAlignmentMode = .center; lbl.name = name
+        }
 
         // Bottom separator
         let sep = SKShapeNode()

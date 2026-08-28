@@ -5,7 +5,7 @@ struct ContentView: View {
     // Closed by default. The panel ships — a tester who wants to look behind
     // the scenes, or send a log back, can open it with `L` — but nobody should
     // meet the game for the first time next to a wall of green text.
-    @State private var showSidebar = false
+    @State private var showSidebar = GameSettings.shared.logPanelAtStart
 
     var body: some View {
         HStack(spacing: 0) {

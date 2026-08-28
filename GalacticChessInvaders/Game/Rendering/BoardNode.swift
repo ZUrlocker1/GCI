@@ -2,10 +2,13 @@
 // The 8×8 playfield's coordinate space, plus selection and legal-move feedback.
 // Owns the square ↔ point mapping used for click hit-testing.
 //
-// Deliberately draws no grid, squares or coordinate labels (§20 Phase 2.1:
-// "coordinate mapping, no visible grid"). The black fleet sweeps horizontally
-// between squares like Space Invaders, so a drawn grid would constantly
-// disagree with where the pieces actually are.
+// §20 Phase 2.1 asked for "coordinate mapping, no visible grid": the fleet
+// sweeps horizontally between squares like Space Invaders, so a lattice would
+// have constantly disagreed with where the pieces actually were. That stopped
+// being true once the sweep was capped below one file, and the grid, the
+// deployment bands and the a-h/1-8 labels are all drawn now — but all three are
+// on the player's Board Grid slider, and the top of its range is the only place
+// the labels appear.
 //
 // Node origin is the bottom-left corner of a1, so local coordinates run
 // 0…boardSize on both axes with rank 1 at the bottom.
@@ -75,9 +78,21 @@ final class BoardNode: SKNode {
     /// remaining offset against. Set false to go back to open space.
     static let showsGrid = true
 
+    /// Kept so the settings screen can dim the lattice without a rebuild.
+    private var gridNode: SKShapeNode?
+    private var zoneNodes: [SKShapeNode] = []
+    private var coordinateNodes: [SKLabelNode] = []
+
+    /// Coordinates are the last thing to arrive, and only at the very top of the
+    /// slider. They are a chess player's aid rather than part of the arcade
+    /// look, so they stay fully invisible across the whole ordinary range —
+    /// nothing at all at the 50% default — and fade in over the final tenth.
+    private static let coordinateThreshold: CGFloat = 0.9
+
     override init() {
         super.init()
         if Self.showsGrid { buildGrid() }
+        applyDisplaySettings()
         buildSelection()
         markers.zPosition = 2
         addChild(markers)
@@ -104,10 +119,9 @@ final class BoardNode: SKNode {
             lines.addLine(to: CGPoint(x: Self.boardSize, y: offset))
         }
         let grid = SKShapeNode(path: lines)
-        grid.strokeColor = Self.cyan.withAlphaComponent(0.182)
-        grid.lineWidth = 1
         grid.zPosition = -1
         addChild(grid)
+        gridNode = grid
 
         // The deployment zones §12.3 already allows: a touch more light at the
         // two ends, so the board reads as having a near side and a far side.
@@ -116,10 +130,58 @@ final class BoardNode: SKNode {
                                                 width: Self.boardSize,
                                                 height: Self.squareSize * 2))
             zone.strokeColor = .clear
-            zone.fillColor = Self.cyan.withAlphaComponent(0.0728)
             zone.zPosition = -2
             addChild(zone)
+            zoneNodes.append(zone)
         }
+
+        buildCoordinates()
+    }
+
+    /// Files below the board and ranks to its left, both outside the playfield
+    /// so they never sit under a piece. There is 58pt between the board's
+    /// bottom edge and the ship's lane, and the left margin holds the power-up
+    /// alley at x=112, so both labels clear their neighbours.
+    private func buildCoordinates() {
+        for index in 0..<8 {
+            let file = label(String(UnicodeScalar(97 + index)!), align: .center)
+            file.position = CGPoint(x: (CGFloat(index) + 0.5) * Self.squareSize, y: -16)
+            addChild(file)
+            coordinateNodes.append(file)
+
+            let rank = label("\(index + 1)", align: .right)
+            rank.verticalAlignmentMode = .center
+            rank.position = CGPoint(x: -12, y: (CGFloat(index) + 0.5) * Self.squareSize)
+            addChild(rank)
+            coordinateNodes.append(rank)
+        }
+    }
+
+    private func label(_ text: String, align: SKLabelHorizontalAlignmentMode) -> SKLabelNode {
+        let node = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        node.text = text
+        node.fontSize = 8
+        node.fontColor = Self.cyan
+        node.horizontalAlignmentMode = align
+        node.zPosition = -1
+        return node
+    }
+
+    /// Applies the player's Display settings to the lattice and the deployment
+    /// bands. The slider drives alpha and line width together — "more grid" is
+    /// one idea, not two — and the shipped look sits at its midpoint, so 50%
+    /// reproduces exactly what the game drew before the setting existed.
+    func applyDisplaySettings() {
+        let settings = GameSettings.shared
+        let amount = min(max(settings.boardGrid, 0), 1)
+        gridNode?.strokeColor = Self.cyan.withAlphaComponent(0.364 * amount)
+        gridNode?.lineWidth = 0.75 + 0.5 * amount
+        for zone in zoneNodes {
+            zone.fillColor = Self.cyan.withAlphaComponent(settings.homeZones ? 0.0728 : 0)
+        }
+        let threshold = Self.coordinateThreshold
+        let reveal = max(0, (amount - threshold) / (1 - threshold))
+        for node in coordinateNodes { node.alpha = reveal * 0.7 }
     }
 
     // MARK: - Square ↔ point mapping

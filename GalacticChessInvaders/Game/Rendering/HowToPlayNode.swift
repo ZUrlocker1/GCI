@@ -46,18 +46,22 @@ final class HowToPlayNode: SKNode {
         addChild(bg)
     }
 
-    // MARK: - Back button — lower-left of the screen (§10)
+    // MARK: - Back button
+
+    /// Exactly where the HUD's INFO button was a moment ago — same corner, same
+    /// box, same type size. The control that opens the panel and the control
+    /// that closes it are the same shape in the same place.
+    static let navRect = CGRect(x: 820, y: 671, width: 70, height: 22)
 
     private func buildBackButton(w: CGFloat, h: CGFloat) {
-        let by: CGFloat = 26
-        let btn = SKShapeNode(rect: CGRect(x: Self.lx, y: by, width: 102, height: 26), cornerRadius: 3)
+        let btn = SKShapeNode(rect: Self.navRect, cornerRadius: 3)
         btn.fillColor   = Self.cyan.withAlphaComponent(0.18)
         btn.strokeColor = Self.cyan; btn.lineWidth = 1; btn.name = "backButton"
         addChild(btn)
 
-        let lbl = label("• BACK", 10, Self.cyan, .center)
+        let lbl = label("• BACK", 8, Self.cyan, .center)
         lbl.verticalAlignmentMode = .center
-        lbl.position = CGPoint(x: Self.lx + 51, y: by + 13)
+        lbl.position = CGPoint(x: Self.navRect.midX, y: Self.navRect.midY)
         lbl.name = "backButton"
         addChild(lbl)
     }
@@ -185,10 +189,10 @@ final class HowToPlayNode: SKNode {
     private func buildFooter(w: CGFloat) {
         addChild(hline(x: 40, y: 70, w: w - 80))
 
-        // BACK now occupies the lower-left, so the hint sits to its right.
-        let hint = label("PRESS ANY KEY TO RESUME", 10, Self.cyan.withAlphaComponent(0.65), .left)
+        // BACK has moved to the top right, so the footer starts at the margin.
+        let hint = label("PRESS ANY KEY TO RESUME GAME", 10, Self.cyan.withAlphaComponent(0.65), .left)
         hint.verticalAlignmentMode = .center
-        hint.position = CGPoint(x: Self.lx + 122, y: 39)
+        hint.position = CGPoint(x: Self.lx, y: 39)
         addChild(hint)
 
         // Lower right, mirroring the left margin, and matched to the resume
