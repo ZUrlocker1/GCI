@@ -53,6 +53,20 @@ enum MusicLibrary {
         }
     }
 
+    /// Backups, if a wave's track turns out not to fit. Each matches its slot's
+    /// mode and tempo band, so a swap does not break the alternation or the
+    /// climb. All are in `~/Downloads/GCI Zudio Songs` and need the same
+    /// 80k/32kHz re-encode.
+    ///
+    ///   L1      Dora               135 C Ionian, intense — the only other slow major
+    ///   L6      Rattert-Z-Machine  140 C Lydian, peppy — the other brightest mode
+    ///   L7      Blank-Knall        138 B Phrygian, focused — darker, less exotic
+    ///   L10     Outer-Koln         154 E Mixolydian, peppy — fast and bright
+    ///   L3/L8   Neu-Leipzig        140 A Mixolydian, focused — the sixth green flag
+    ///
+    /// L1 and L10 have almost no room: nothing else is under 134 or over 150.
+    /// L5's cleanest like-for-like is Weit-Z-Maschine, 140 E Dorian.
+
     /// Picks from a pool, avoiding `previous` when there is anything else to
     /// choose. Returns the fallback for an empty pool, so a typo in the table
     /// costs a wrong track rather than silence.
