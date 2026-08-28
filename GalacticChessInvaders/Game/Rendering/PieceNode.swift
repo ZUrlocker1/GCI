@@ -745,6 +745,9 @@ final class PieceNode: SKSpriteNode {
         // no damage. With a 2-shot cap that also stalls the fire rate, which
         // reads as shots randomly not counting.
         physicsBody = nil
+        // Nothing may hold this up. The removal is the last thing this node
+        // does, and a piece that stays paused through it stays on the board.
+        isPaused = false
         // The charge cues are children with actions of their own, and they were
         // outliving the teardown that removes the flicker and the vent. A piece
         // caught mid-telegraph took its glow and its tick down with it only
