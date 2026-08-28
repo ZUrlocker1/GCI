@@ -244,6 +244,9 @@ class GameScene: SKScene {
     /// Hidden Auto Mode: White auto-moves on a short beat so a whole game plays
     /// out without waiting on the countdown, but slowly enough to follow.
     /// Awarded for checkmating Black (§Scoring), before the level multiplier.
+    /// Auto Chess runs the chess at speed, not just without you. That is the
+    /// whole of what `A` always did, and the setting is now the same thing.
+    private static let autoBeatDuration: TimeInterval = 1.0
     private static let checkmateBonus = 300
     private static let endBannerName = "endBanner"
     private static let gutterNoticeName = "gutterNotice"
@@ -929,6 +932,13 @@ class GameScene: SKScene {
         GameSettings.shared.autoChess = on
         autoModeLabel?.isHidden = !on
         DiagnosticsLog.shared.log(.auto, on ? "ON" : "OFF")
+
+        // Retime a beat already in flight, so the switch takes effect now
+        // rather than at the end of the current turn.
+        guard turnTimer.isRunning, !isEndingGame else { return }
+        turnTimer.start(level: levels.parameters,
+                        inCheck: board.turn == .white && board.isCheck,
+                        override: on ? Self.autoBeatDuration : nil)
     }
 
     /// Straight into a fresh game, skipping the title screen — the Y answer to
@@ -1318,7 +1328,8 @@ class GameScene: SKScene {
         refreshKingForcefield()
         whiteHasMovedThisBeat = false
         let inCheck = board.turn == .white && board.isCheck
-        turnTimer.start(level: levels.parameters, inCheck: inCheck)
+        turnTimer.start(level: levels.parameters, inCheck: inCheck,
+                        override: isAutoMode ? Self.autoBeatDuration : nil)
         turnTimerNode?.refresh(from: turnTimer)
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
@@ -3686,13 +3697,13 @@ class GameScene: SKScene {
             }
             // The countdown is the player's own clock, so it appears only while
             // White may still move: not while Black is thinking, and not after
-            // White has already moved this beat. The countdown stays up in
-            // Auto Chess — it now runs at the level's own beat, so it reads
-            // fine and tells the player when the engine will move for them.
+            // White has already moved this beat.
+            // The Auto Chess beat is far too short to read, so the slot shows
+            // AUTO CHESS instead of a countdown flickering on and off.
             let awaitingWhite = isAwaitingWhiteMove
-            turnTimerNode?.isHidden = !awaitingWhite
+            turnTimerNode?.isHidden = isAutoMode || !awaitingWhite
             autoModeLabel?.isHidden = !isAutoMode
-            if awaitingWhite {
+            if awaitingWhite, !isAutoMode {
                 tickTimerWarning()
                 turnTimerNode?.refresh(from: turnTimer)
             } else {
