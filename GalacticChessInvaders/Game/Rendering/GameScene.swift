@@ -619,6 +619,7 @@ class GameScene: SKScene {
         titleOverlay?.removeFromParent()
         titleOverlay = nil
         hideBoard()
+        backgroundColor = backdropNode.applyTitle()
 
         let overlay = TitleOverlayNode()
         overlay.position = CGPoint(x: size.width / 2, y: size.height / 2)

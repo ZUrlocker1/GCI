@@ -154,9 +154,9 @@ final class BackdropNode: SKNode {
     /// launch, crimson if the run reached Blitz — which varied by how the player
     /// got there and so was nobody's decision. This is one look, always.
     ///
-    /// Hue, brightness and size run on three different periods (54s, 26s, 34s)
-    /// so they never line up and the loop has no seam to notice. All of it is
-    /// `SKAction`s on the one sprite, so the cost is the same as standing still.
+    /// The colour arc runs 36s and the size breathes on 22s, so the two never
+    /// line up and the loop has no seam to notice. All of it is `SKAction`s on
+    /// the one sprite, so the cost is the same as standing still.
     @discardableResult
     func applyTitle() -> SKColor {
         guard GameSettings.shared.nebula else {
@@ -170,25 +170,28 @@ final class BackdropNode: SKNode {
         blob.position = CGPoint(x: sceneSize.width * 0.44, y: sceneSize.height * 0.44)
 
         // Cyan first, since that is the title's own colour, then out through the
-        // palette and back. Nine seconds a step: slow enough that no single
-        // moment reads as a change, long enough round that it never repeats
-        // while anyone is looking at it.
+        // palette and back. Each colour rises from nothing, holds, and returns
+        // to nothing before the next one starts — so the sky is empty between
+        // them and no two colours are ever on screen together. Six seconds an
+        // arc, 36 for the round.
         let palette: [UInt32] = [0x2FC7D8, 0x2E5AC8, 0x6A3AC0, 0xB43A86, 0xC08A3A, 0x35A87E]
-        let hues = palette.map { SKAction.colorize(with: Self.rgb($0),
-                                                   colorBlendFactor: 1, duration: 9) }
+        var arc: [SKAction] = []
+        for hex in palette {
+            // Recoloured while invisible, so the change itself is never seen.
+            arc.append(.colorize(with: Self.rgb(hex), colorBlendFactor: 1, duration: 0))
+            arc.append(.fadeAlpha(to: 0.15, duration: 2).withTimingMode(.easeInEaseOut))
+            arc.append(.wait(forDuration: 1))
+            arc.append(.fadeAlpha(to: 0, duration: 2).withTimingMode(.easeInEaseOut))
+            arc.append(.wait(forDuration: 1))
+        }
+        blob.alpha = 0
         blob.color = Self.rgb(palette[0])
-        blob.run(.repeatForever(.sequence(hues)), withKey: Self.cycleKey)
-
-        blob.alpha = 0.09
-        blob.run(.repeatForever(.sequence([
-            .fadeAlpha(to: 0.15, duration: 13).withTimingMode(.easeInEaseOut),
-            .fadeAlpha(to: 0.07, duration: 13).withTimingMode(.easeInEaseOut),
-        ])), withKey: Self.cycleKey + "Alpha")
+        blob.run(.repeatForever(.sequence(arc)), withKey: Self.cycleKey)
 
         blob.setScale(1)
         blob.run(.repeatForever(.sequence([
-            .scale(to: 1.14, duration: 17).withTimingMode(.easeInEaseOut),
-            .scale(to: 1.00, duration: 17).withTimingMode(.easeInEaseOut),
+            .scale(to: 1.14, duration: 11).withTimingMode(.easeInEaseOut),
+            .scale(to: 1.00, duration: 11).withTimingMode(.easeInEaseOut),
         ])), withKey: Self.cycleKey + "Scale")
 
         return Self.rgb(0x03050A)
@@ -200,7 +203,7 @@ final class BackdropNode: SKNode {
     func apply(level: Int) -> SKColor {
         // The title's cycle is keyed so this can stop it without touching the
         // drift, which runs unkeyed and belongs to every screen.
-        for key in [Self.cycleKey, Self.cycleKey + "Alpha", Self.cycleKey + "Scale"] {
+        for key in [Self.cycleKey, Self.cycleKey + "Scale"] {
             blob.removeAction(forKey: key)
         }
         blob.setScale(1)
