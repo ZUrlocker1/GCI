@@ -164,7 +164,7 @@ final class SettingsNode: SKNode {
                    selected: settings.difficulty == .cadet ? 0 : 1) { index in
             self.settings.difficulty = index == 0 ? .cadet : .pilot
         }
-        explain("EASIER GAMEPLAY. SAME TEN LEVELS.", x: x, y: 488)
+        explain("SELECT CADET FOR AN EASIER ON RAMP.", x: x, y: 488)
 
         segmentRow("CHESS", x: x, w: w, y: 456,
                    options: ["YOU PLAY", "AUTO"],
