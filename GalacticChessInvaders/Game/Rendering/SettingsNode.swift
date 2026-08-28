@@ -44,6 +44,7 @@ final class SettingsNode: SKNode {
         /// what it did by lighting up in its new state. `parts` are the nodes
         /// that travel together for that push.
         var parts: [SKNode] = []
+        var sound: SoundKey = .uiSettingsBlip
         /// Point is in this node's coordinates. Sliders read its x; everything
         /// else ignores it.
         let apply: (CGPoint) -> Void
@@ -77,7 +78,7 @@ final class SettingsNode: SKNode {
         guard let hit = hits.first(where: { $0.rect.contains(point) }) else { return false }
         dragging = hit.isSlider ? hit : nil
         hit.apply(point)
-        AudioManager.shared.play(.uiSettingsBlip)
+        AudioManager.shared.play(hit.sound)
         guard !hit.parts.isEmpty else {
             rebuild()
             onChange?()
@@ -383,6 +384,8 @@ final class SettingsNode: SKNode {
 
     private func buttonRow(_ text: String, _ action: String, x: CGFloat, w: CGFloat,
                            y: CGFloat, tint: SKColor, run: @escaping () -> Void) {
+        // Both buttons here change something outside the panel, so they get the
+        // plain bip rather than the blip every control on the screen makes.
         rowLabel(text, x: x, y: y)
 
         let bw = CGFloat(action.count) * 8 + 24, h: CGFloat = 22
@@ -399,7 +402,8 @@ final class SettingsNode: SKNode {
         lbl.position = CGPoint(x: rect.midX, y: rect.midY)
         content.addChild(lbl)
 
-        hits.append(Hit(rect: rect, isSlider: false, parts: [box, lbl]) { _ in run() })
+        hits.append(Hit(rect: rect, isSlider: false, parts: [box, lbl],
+                        sound: .uiConfirm) { _ in run() })
     }
 
     // MARK: - Primitives
