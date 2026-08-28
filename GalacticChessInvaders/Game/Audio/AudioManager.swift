@@ -137,12 +137,19 @@ final class AudioManager {
     /// Brings the running track into line with the settings — after a slider
     /// move, a switch, or a restore. Safe to call when nothing is playing.
     func applyMusicSettings() {
-        musicPlayer?.volume = Self.musicVolume * GameSettings.shared.musicVolume
+        musicPlayer?.volume = musicTarget
         if isMusicMuted {
             musicPlayer?.pause()
         } else if !pausedByGame {
             musicPlayer?.play()
         }
+    }
+
+    /// What the music should be playing at: the mix position scaled by the
+    /// player's own setting. Computed in one place because four paths set it —
+    /// starting a track, resuming, a settings change, and undoing a fade.
+    private var musicTarget: Float {
+        Self.musicVolume * GameSettings.shared.musicVolume
     }
 
     /// The track currently loaded, so a pool can avoid repeating it.
@@ -177,7 +184,14 @@ final class AudioManager {
         // the level track to land on top of the open panel.
         fadeGeneration += 1
         let token = fadeGeneration
-        guard track != currentTrack else { return }
+        guard track != currentTrack else {
+            // Already playing it — but a hand-over cancelled a line above may
+            // have left this player mid-fade to zero, and nothing else would
+            // ever bring it back. Closing a panel starts a 1.2s fade out;
+            // reopening inside that window landed here and went silent.
+            musicPlayer?.setVolume(musicTarget, fadeDuration: 0.3)
+            return
+        }
         guard let player = musicPlayer else {
             playMusic(track, startAt: startAt, fadeIn: fadeIn); return
         }
@@ -252,8 +266,7 @@ final class AudioManager {
         guard !isMusicMuted, let player = musicPlayer else { return }
         player.volume = 0
         player.play()
-        player.setVolume(Self.musicVolume * GameSettings.shared.musicVolume,
-                         fadeDuration: 0.3)
+        player.setVolume(musicTarget, fadeDuration: 0.3)
     }
 
     func stopMusic() {
