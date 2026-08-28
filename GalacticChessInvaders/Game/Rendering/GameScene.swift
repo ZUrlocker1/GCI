@@ -797,7 +797,11 @@ class GameScene: SKScene {
     private func applyLiveSettings() {
         applyGlowSetting()
         boardNode?.applyDisplaySettings()
-        backgroundColor = backdropNode.apply(level: levels.level)
+        // Whichever sky is up: the title's cycle and a wave's static look are
+        // different enough that reapplying the wrong one would stop the cycle.
+        backgroundColor = stateMachine.currentState is TitleState
+            ? backdropNode.applyTitle()
+            : backdropNode.apply(level: levels.level)
         AudioManager.shared.applyMusicSettings()
         // The update loop drives this too, but it does not run while a panel
         // holds the scene paused — so switching Auto Chess on from Settings

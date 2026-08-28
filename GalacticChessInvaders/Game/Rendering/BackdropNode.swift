@@ -145,10 +145,65 @@ final class BackdropNode: SKNode {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    private static let cycleKey = "titleCycle"
+
+    /// The title screen's own sky: a very light haze that wanders through the
+    /// game's palette instead of sitting still.
+    ///
+    /// It used to show whatever the last wave had left behind — black on a first
+    /// launch, crimson if the run reached Blitz — which varied by how the player
+    /// got there and so was nobody's decision. This is one look, always.
+    ///
+    /// Hue, brightness and size run on three different periods (54s, 26s, 34s)
+    /// so they never line up and the loop has no seam to notice. All of it is
+    /// `SKAction`s on the one sprite, so the cost is the same as standing still.
+    @discardableResult
+    func applyTitle() -> SKColor {
+        guard GameSettings.shared.nebula else {
+            blob.removeAction(forKey: Self.cycleKey)
+            blob.alpha = 0
+            return .black
+        }
+        blob.zRotation = 0
+        blob.colorBlendFactor = 1
+        blob.size = CGSize(width: sceneSize.width * 2.0, height: sceneSize.height * 1.1)
+        blob.position = CGPoint(x: sceneSize.width * 0.44, y: sceneSize.height * 0.44)
+
+        // Cyan first, since that is the title's own colour, then out through the
+        // palette and back. Nine seconds a step: slow enough that no single
+        // moment reads as a change, long enough round that it never repeats
+        // while anyone is looking at it.
+        let palette: [UInt32] = [0x2FC7D8, 0x2E5AC8, 0x6A3AC0, 0xB43A86, 0xC08A3A, 0x35A87E]
+        let hues = palette.map { SKAction.colorize(with: Self.rgb($0),
+                                                   colorBlendFactor: 1, duration: 9) }
+        blob.color = Self.rgb(palette[0])
+        blob.run(.repeatForever(.sequence(hues)), withKey: Self.cycleKey)
+
+        blob.alpha = 0.09
+        blob.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0.15, duration: 13).withTimingMode(.easeInEaseOut),
+            .fadeAlpha(to: 0.07, duration: 13).withTimingMode(.easeInEaseOut),
+        ])), withKey: Self.cycleKey + "Alpha")
+
+        blob.setScale(1)
+        blob.run(.repeatForever(.sequence([
+            .scale(to: 1.14, duration: 17).withTimingMode(.easeInEaseOut),
+            .scale(to: 1.00, duration: 17).withTimingMode(.easeInEaseOut),
+        ])), withKey: Self.cycleKey + "Scale")
+
+        return Self.rgb(0x03050A)
+    }
+
     /// Applies a wave's sky. Returns the void colour for the caller to set on
     /// the scene, since a node cannot set its own scene's background.
     @discardableResult
     func apply(level: Int) -> SKColor {
+        // The title's cycle is keyed so this can stop it without touching the
+        // drift, which runs unkeyed and belongs to every screen.
+        for key in [Self.cycleKey, Self.cycleKey + "Alpha", Self.cycleKey + "Scale"] {
+            blob.removeAction(forKey: key)
+        }
+        blob.setScale(1)
         let look = Self.look(forLevel: level)
         guard GameSettings.shared.nebula, let haze = look.haze else {
             blob.alpha = 0
