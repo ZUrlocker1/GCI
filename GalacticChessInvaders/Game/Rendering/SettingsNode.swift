@@ -224,23 +224,23 @@ final class SettingsNode: SKNode {
         }
         explain("SAME AS THE L KEY", x: x, y: 336)
 
-        heading("CONTROLS", Self.cyan, x: x, y: 315)
+        heading("CONTROLS", Self.cyan, x: x, y: 310)
         let range = GameSettings.shipSpeedRange
         let span = range.upperBound - range.lowerBound
-        sliderRow("SHIP SPEED", x: x, w: w, y: 287,
+        sliderRow("SHIP SPEED", x: x, w: w, y: 282,
                   fraction: (settings.shipSpeedScale - range.lowerBound) / span,
                   readout: percent(settings.shipSpeedScale), dimmed: false,
                   defaultMark: 0.5) { fraction in
             self.settings.shipSpeedScale = range.lowerBound + fraction * span
         }
-        explain("DEFAULT IS PLAYTESTED", x: x, y: 262)
+        explain("DEFAULT IS PLAYTESTED", x: x, y: 257)
 
-        heading("DATA", Self.magenta, x: x, y: 209)
-        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 181, tint: Self.magenta) {
+        heading("DATA", Self.magenta, x: x, y: 204)
+        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 176, tint: Self.magenta) {
             ScoreManager.shared.clearHighScores()
         }
-        explain("BACK TO ORIGINAL SCORES", x: x, y: 159)
-        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 131, tint: Self.cyan) {
+        explain("BACK TO ORIGINAL SCORES", x: x, y: 154)
+        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 126, tint: Self.cyan) {
             self.settings.restoreDefaults()
         }
     }

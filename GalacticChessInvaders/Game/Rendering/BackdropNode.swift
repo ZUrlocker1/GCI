@@ -128,17 +128,17 @@ final class BackdropNode: SKNode {
         blob.alpha = 0
         addChild(blob)
 
-        // A slow wander, so the sky is not a static gradient. 26pt was
-        // imperceptible on a blob wider than the screen; this travels further
-        // and takes longer, and the vertical leg is a different period from the
-        // horizontal one so the path never repeats a straight line.
+        // A slow wander over every screen, so no sky is a static gradient. The
+        // two legs run on different periods, so the path never repeats a
+        // straight line. 44pt was still barely motion on a blob wider than the
+        // screen; 76 reads without ever looking like something is happening.
         blob.run(.repeatForever(.sequence([
-            .moveBy(x: 44, y: 0, duration: 26).withTimingMode(.easeInEaseOut),
-            .moveBy(x: -44, y: 0, duration: 26).withTimingMode(.easeInEaseOut),
+            .moveBy(x: 76, y: 0, duration: 23).withTimingMode(.easeInEaseOut),
+            .moveBy(x: -76, y: 0, duration: 23).withTimingMode(.easeInEaseOut),
         ])))
         blob.run(.repeatForever(.sequence([
-            .moveBy(x: 0, y: 18, duration: 37).withTimingMode(.easeInEaseOut),
-            .moveBy(x: 0, y: -18, duration: 37).withTimingMode(.easeInEaseOut),
+            .moveBy(x: 0, y: 36, duration: 31).withTimingMode(.easeInEaseOut),
+            .moveBy(x: 0, y: -36, duration: 31).withTimingMode(.easeInEaseOut),
         ])))
     }
 
@@ -154,7 +154,7 @@ final class BackdropNode: SKNode {
     /// launch, crimson if the run reached Blitz — which varied by how the player
     /// got there and so was nobody's decision. This is one look, always.
     ///
-    /// The colour arc runs 36s and the size breathes on 22s, so the two never
+    /// The colour arc runs 72s and the size breathes on 22s, so the two never
     /// line up and the loop has no seam to notice. All of it is `SKAction`s on
     /// the one sprite, so the cost is the same as standing still.
     @discardableResult
@@ -172,20 +172,33 @@ final class BackdropNode: SKNode {
         // Cyan first, since that is the title's own colour, then out through the
         // palette and back. Each colour rises from nothing, holds, and returns
         // to nothing before the next one starts — so the sky is empty between
-        // them and no two colours are ever on screen together. Six seconds an
-        // arc, 36 for the round.
-        let palette: [UInt32] = [0x2FC7D8, 0x2E5AC8, 0x6A3AC0, 0xB43A86, 0xC08A3A, 0x35A87E]
+        // them and no two colours are ever on screen together. Twelve seconds an
+        // arc, 72 for the round.
+        // Each colour also arrives somewhere new. The blob is dark between arcs,
+        // so it can be *moved* rather than drifted there — no two consecutive
+        // stops share a side of the screen, and none is the middle.
+        let stops: [(UInt32, CGPoint)] = [
+            (0x2FC7D8, CGPoint(x: 0.28, y: 0.62)),
+            (0x2E5AC8, CGPoint(x: 0.70, y: 0.34)),
+            (0x6A3AC0, CGPoint(x: 0.44, y: 0.76)),
+            (0xB43A86, CGPoint(x: 0.76, y: 0.60)),
+            (0xC08A3A, CGPoint(x: 0.24, y: 0.28)),
+            (0x35A87E, CGPoint(x: 0.58, y: 0.18)),
+        ]
         var arc: [SKAction] = []
-        for hex in palette {
-            // Recoloured while invisible, so the change itself is never seen.
+        for (hex, at) in stops {
+            // Recoloured and repositioned while invisible, so neither change is
+            // ever seen happening.
             arc.append(.colorize(with: Self.rgb(hex), colorBlendFactor: 1, duration: 0))
-            arc.append(.fadeAlpha(to: 0.15, duration: 2).withTimingMode(.easeInEaseOut))
-            arc.append(.wait(forDuration: 1))
-            arc.append(.fadeAlpha(to: 0, duration: 2).withTimingMode(.easeInEaseOut))
-            arc.append(.wait(forDuration: 1))
+            arc.append(.move(to: CGPoint(x: sceneSize.width * at.x,
+                                         y: sceneSize.height * at.y), duration: 0))
+            arc.append(.fadeAlpha(to: 0.15, duration: 4).withTimingMode(.easeInEaseOut))
+            arc.append(.wait(forDuration: 2))
+            arc.append(.fadeAlpha(to: 0, duration: 4).withTimingMode(.easeInEaseOut))
+            arc.append(.wait(forDuration: 2))
         }
         blob.alpha = 0
-        blob.color = Self.rgb(palette[0])
+        blob.color = Self.rgb(stops[0].0)
         blob.run(.repeatForever(.sequence(arc)), withKey: Self.cycleKey)
 
         blob.setScale(1)
