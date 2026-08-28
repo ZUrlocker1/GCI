@@ -23,6 +23,17 @@ enum MusicLibrary {
     /// is why the hand-over only has to fade the outgoing track.
     static let panelTrack = "GCI-intro"
 
+    /// Where the panel track starts, and how it arrives.
+    ///
+    /// An experiment: half the time GCI-intro opens partway in rather than at
+    /// the top. 0:57–1:12 is a quiet stretch, so it can fade up over a second
+    /// without a transient, and it sounds unlike the opening notes — which a
+    /// player who checks Settings four times in a run would otherwise hear four
+    /// times. The other half keeps the opening, so the track still has one.
+    static func panelEntry() -> (startAt: TimeInterval, fadeIn: TimeInterval) {
+        Bool.random() ? (.random(in: 57...72), 1.0) : (0, 0)
+    }
+
     /// How a wave's music takes over. Slower than the panel hand-over, with a
     /// beat of silence in the middle: a level start is a bigger seam than
     /// stepping into a menu, and cutting straight from one arcade track to

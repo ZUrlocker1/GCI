@@ -777,7 +777,9 @@ class GameScene: SKScene {
         // A panel is a step out of the game, so the game's music steps out with
         // it. Runs whatever the state, since the panels open from the title too
         // — where the title theme is already playing and this does nothing.
-        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack)
+        let entry = MusicLibrary.panelEntry()
+        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack,
+                                   startAt: entry.startAt, fadeIn: entry.fadeIn)
         DiagnosticsLog.shared.log(.info, "game paused")
     }
 
@@ -845,7 +847,9 @@ class GameScene: SKScene {
             ship?.direction = 0
             isPaused = true
         }
-        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack)
+        let entry = MusicLibrary.panelEntry()
+        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack,
+                                   startAt: entry.startAt, fadeIn: entry.fadeIn)
         DiagnosticsLog.shared.log(.info, "settings open")
     }
 

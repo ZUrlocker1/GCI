@@ -168,15 +168,23 @@ final class AudioManager {
     /// Timed with `asyncAfter`, not an `SKAction`: opening a panel pauses the
     /// scene, which stops actions for the whole tree.
     func fadeTo(track: String, over duration: TimeInterval = 0.5,
-                gap: TimeInterval = 0) {
-        guard track != currentTrack else { return }
-        guard let player = musicPlayer else { playMusic(track); return }
+                gap: TimeInterval = 0,
+                startAt: TimeInterval = 0, fadeIn: TimeInterval = 0) {
+        // Before the guard, not after. A hand-over already scheduled has to be
+        // cancelled even when this call decides it has nothing to do — closing
+        // a panel queues the level track 1.7s out, and reopening inside that
+        // window used to return early on "already playing GCI-intro" and leave
+        // the level track to land on top of the open panel.
         fadeGeneration += 1
         let token = fadeGeneration
+        guard track != currentTrack else { return }
+        guard let player = musicPlayer else {
+            playMusic(track, startAt: startAt, fadeIn: fadeIn); return
+        }
         player.setVolume(0, fadeDuration: duration)
         DispatchQueue.main.asyncAfter(deadline: .now() + duration + gap) { [weak self] in
             guard let self, self.fadeGeneration == token else { return }
-            self.playMusic(track)
+            self.playMusic(track, startAt: startAt, fadeIn: fadeIn)
         }
     }
 
@@ -189,7 +197,8 @@ final class AudioManager {
                over: duration, gap: gap)
     }
 
-    func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {
+    func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume,
+                   startAt: TimeInterval = 0, fadeIn: TimeInterval = 0) {
         guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a") else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
             return
@@ -203,13 +212,21 @@ final class AudioManager {
         // here whether or not a freeze ever happens.
         player.enableRate = true
         player.prepareToPlay()
+        // Set after preparing; before it the duration is not known and the
+        // seek is silently ignored.
+        if startAt > 0, startAt < player.duration { player.currentTime = startAt }
         // Loaded but left silent while muted, so unmuting picks up whatever
         // track the game has since switched to rather than the one playing when
         // the player hit `M`. Same for a pause: a hand-over scheduled before
         // the player hit Escape lands during it — a level change fades over
         // 1.7s and the banner is up for three — and used to start playing over
         // a paused game.
-        if !isMusicMuted && !pausedByGame { player.play() }
+        if !isMusicMuted && !pausedByGame {
+            let target = player.volume
+            if fadeIn > 0 { player.volume = 0 }
+            player.play()
+            if fadeIn > 0 { player.setVolume(target, fadeDuration: fadeIn) }
+        }
         musicPlayer = player
         currentTrack = trackName
         DiagnosticsLog.shared.log(.audio, "Music → \(trackName)")
