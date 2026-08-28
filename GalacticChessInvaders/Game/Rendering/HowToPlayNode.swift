@@ -97,11 +97,11 @@ final class HowToPlayNode: SKNode {
                   size: 12, maxW: Self.lw, x: x, y: 548)
 
         // — CONTROLS —
-        heading("CONTROLS", Self.cyan, x: x, y: 413)
-        chip("← →",   "Move your ship",                    x: x, y: 393)
-        chip("SPACE",  "Fire laser",                        x: x, y: 349)
-        chip("CLICK",  "Pick piece, then new square",        x: x, y: 305)
-        chip("ESC",    "Press Escape to pause",             x: x, y: 261)
+        heading("CONTROLS", Self.cyan, x: x, y: 408)
+        chip("← →",   "Move your ship",                    x: x, y: 388)
+        chip("SPACE",  "Fire laser",                        x: x, y: 344)
+        chip("CLICK",  "Pick piece, then new square",        x: x, y: 300)
+        chip("ESC",    "Press Escape to pause",             x: x, y: 256)
 
         // — HISTORY —
         heading("HISTORY", Self.magenta, x: x, y: 203)
