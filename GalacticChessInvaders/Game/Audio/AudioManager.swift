@@ -245,9 +245,8 @@ final class AudioManager {
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
         player.volume = volume * GameSettings.shared.musicVolume
-        // §13.2's Time Freeze slows the music to 0.5×. `rate` is ignored unless
-        // this is set *before* the player is prepared, so it has to be armed
-        // here whether or not a freeze ever happens.
+        // `rate` is ignored unless this is armed before the player is prepared,
+        // so it goes on whether or not a slow-motion effect ever fires.
         player.enableRate = true
         player.prepareToPlay()
         // Set after preparing; before it the duration is not known and the
@@ -305,8 +304,7 @@ final class AudioManager {
         musicPlayer?.volume = volume
     }
 
-    /// §13.2's Time Freeze: the music slows and deepens rather than a separate
-    /// sound announcing the effect. The one place `rate` is used deliberately.
+    /// §13.2's slow-motion cue. Shallow on purpose — see `slowMoMusicRate`.
     func setMusicRate(_ rate: Float) {
         musicPlayer?.rate = rate
     }
