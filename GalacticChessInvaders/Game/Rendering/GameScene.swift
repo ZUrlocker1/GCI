@@ -595,6 +595,15 @@ class GameScene: SKScene {
         bloomNode.addChild(overlay)
         titleOverlay = overlay
 
+        // The title screen has no HUD, so it carries the nav pair itself. The
+        // overlay is centred in the scene, so the container is offset back to
+        // the scene's origin and then up to where the HUD would have been —
+        // which puts SET and INFO in exactly the pixels they occupy in play.
+        let nav = HUDNode.makeNavButtons()
+        nav.position = CGPoint(x: -size.width / 2,
+                               y: size.height - HUDNode.height - size.height / 2)
+        overlay.addChild(nav)
+
     }
 
     func hideTitleScreen() {
@@ -644,7 +653,10 @@ class GameScene: SKScene {
         // INFO button, `I`, `?`, ⌘I, and the shortcut while paused — and only
         // the button used to make a sound, so the same action was audible or
         // silent depending on how it was reached.
-        AudioManager.shared.play(.uiButtonClick)
+        //
+        // The same note as opening Settings: both are "a panel arrived", and
+        // the kalimba is reserved for touching a control.
+        AudioManager.shared.play(.uiPanelOpen)
 
         // A level banner underneath shows through the panel's 0.97 ground and
         // is still counting down when the panel closes. End it rather than
@@ -690,7 +702,7 @@ class GameScene: SKScene {
 
     func showSettings() {
         guard settingsNode == nil, howToPlayNode == nil else { return }
-        AudioManager.shared.play(.uiButtonClick)
+        AudioManager.shared.play(.uiPanelOpen)
         endLevelAnnouncement()
         removeEndBanner()
 
