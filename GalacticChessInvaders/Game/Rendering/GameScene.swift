@@ -25,6 +25,10 @@ class GameScene: SKScene {
     private var titleOverlay: TitleOverlayNode?
     private var boardNode: BoardNode?
     private var settingsNode: SettingsNode?
+    /// The diagnostics sidebar can be opened and closed by its own chevron,
+    /// beside the game rather than in it — so an open Settings panel has to be
+    /// told, or its LOG PANEL switch sits there showing the old answer.
+    private var sidebarObserver: NSObjectProtocol?
     private var ship: SpaceshipNode?
     private var hudNode: HUDNode?
     private var howToPlayNode: HowToPlayNode?
@@ -313,6 +317,7 @@ class GameScene: SKScene {
         physicsWorld.contactDelegate = handler
         collisionHandler = handler
 
+        observeSidebar()
         setupBloomNode()
         setupPools()
         setupStarfield()
@@ -336,6 +341,14 @@ class GameScene: SKScene {
         scorePops = ScorePopPool(parent: bloomNode)
         explosions = ExplosionPool(parent: bloomNode)
         shatters = ShatterPool(parent: bloomNode)
+    }
+
+    private func observeSidebar() {
+        guard sidebarObserver == nil else { return }
+        sidebarObserver = NotificationCenter.default.addObserver(
+            forName: .gciSidebarChanged, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { [weak self] in self?.settingsNode?.refresh() }
+            }
     }
 
     private func setupBloomNode() {
