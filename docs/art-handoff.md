@@ -149,7 +149,11 @@ Clean transparent PNGs, 1× (high-res native), no glow baked in:
   - e.g. `chess-w-king`, `chess-b-queen`
 - Damage tiers: append `-d1` (chipped, ~32%) and `-d2` (critical, ~58%)
   - e.g. `chess-b-rook-d1`, `chess-b-rook-d2`  (full-HP is the base name, no suffix)
-- Ships: `ship-player`, `ship-scout`, `ship-escort`, `ship-flagship`
+- Ships: `ship-player`, `ship-scout`, `ship-camel` (+ two walk frames)
+- **Cut:** `ship-escort` and `ship-flagship`, along with the Galaxian raiders
+  they were drawn for. The orange and blue rows below are kept because the
+  palette still uses both — orange for UI chrome and explosions, blue for the
+  transporter beam — but nothing needs those two ships drawn
 - Bonus ships (Jeff Minter tributes, flyover after Level 1): `ship-llama`, `ship-camel`
 - 42 imagesets total (6 types × 2 sides × 3 damage tiers = 36 pieces + 4 ships + 2 bonus).
 
