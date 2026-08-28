@@ -43,7 +43,7 @@ struct LogTextView: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        context.coordinator.schedule(lines)
+        context.coordinator.sync(to: lines)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -57,38 +57,21 @@ struct LogTextView: NSViewRepresentable {
         /// though the log trims from the front once it hits its cap.
         private var lastRenderedID: UUID?
 
-        /// The log is append-only, so a sync never has to *rewrite* anything —
-        /// but it does have to ask whether the reader is at the bottom, and
-        /// `isScrolledToBottom` reads `textView.bounds`, which makes TextKit lay
-        /// out the whole document. On a log at its 2000-line cap that is not
-        /// cheap, and SwiftUI offers an update on every frame in which a line
-        /// was written — so during play it ran up to sixty times a second, at a
-        /// cost that grew as the log filled.
+        /// Appends only what is new. The log is append-only, so a sync never
+        /// has to rewrite anything — it finds its place by the identity of the
+        /// last line it wrote and adds whatever came after.
         ///
-        /// Ten times a second instead. Nothing is dropped: the newest snapshot
-        /// is held and flushed on the next tick, so the appended text is
-        /// identical and only the measuring is rarer.
-        private static let interval: CFTimeInterval = 0.1
-        private var latest: [LogLine] = []
-        private var lastFlush: CFTimeInterval = 0
-        private var flushScheduled = false
-
-        func schedule(_ lines: [LogLine]) {
-            latest = lines
-            let now = CACurrentMediaTime()
-            let due = lastFlush + Self.interval
-            guard now < due else { return sync(to: latest) }
-            guard !flushScheduled else { return }
-            flushScheduled = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + (due - now)) { [weak self] in
-                guard let self else { return }
-                self.flushScheduled = false
-                self.sync(to: self.latest)
-            }
-        }
-
+        /// This used to sit behind a 10Hz throttle, on the reasoning that
+        /// `isScrolledToBottom` makes TextKit lay out the whole document and
+        /// SwiftUI could offer an update every frame. The throttle held state —
+        /// a `flushScheduled` flag and a deadline — that only reset when the
+        /// view was rebuilt, and it stopped the panel updating until you
+        /// collapsed and reopened it. Silently freezing the tool you diagnose
+        /// with is the worst possible place for that, and the CPU problem it
+        /// was written for turned out to be the node leak, fixed elsewhere.
+        /// `updateNSView` fires when a line is appended, which in play is a few
+        /// times a second, not sixty.
         func sync(to lines: [LogLine]) {
-            lastFlush = CACurrentMediaTime()
             guard let textView, let storage = textView.textStorage else { return }
 
             let newLines: [LogLine]

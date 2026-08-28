@@ -92,5 +92,10 @@ final class DiagnosticsLog {
         if lines.count > maxLines { lines.removeFirst(Self.trimChunk) }
     }
 
-    func clear() { lines.removeAll() }
+    /// Clears the count with the lines. `X` is a clean slate, and a warning
+    /// about a run that no longer exists is worse than no warning.
+    func clear() {
+        lines.removeAll()
+        errorCount = 0
+    }
 }
