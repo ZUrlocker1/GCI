@@ -73,7 +73,7 @@ final class SettingsNode: SKNode {
         guard let hit = hits.first(where: { $0.rect.contains(point) }) else { return false }
         dragging = hit.isSlider ? hit : nil
         hit.apply(point)
-        AudioManager.shared.play(.uiButtonClick)
+        AudioManager.shared.play(.uiSettingsBlip)
         rebuild()
         onChange?()
         return true
@@ -95,7 +95,7 @@ final class SettingsNode: SKNode {
         // reads the level at play time rather than at preload.
         guard dragging != nil else { return }
         dragging = nil
-        AudioManager.shared.play(.uiButtonClick)
+        AudioManager.shared.play(.uiSettingsBlip)
     }
 
     // MARK: - Layout
