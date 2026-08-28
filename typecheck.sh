@@ -54,6 +54,29 @@ if [ -d "$SPRITES" ]; then
   fi
 fi
 
+# Same trap one layer over: a missing sound does not render a grey X, it simply
+# does not play. Only keys the code actually calls `play`/`stop` on are checked —
+# `SoundKey` deliberately names sounds for features that are not built, and those
+# have no file yet by design. Written after deleting a file that two keys shared,
+# which left the illegal-move cue silent and nothing said so.
+python3 - <<'SOUNDCHECK' || exit 1
+import os, re, pathlib, sys
+root = pathlib.Path("GalacticChessInvaders")
+keys = pathlib.Path(root, "Audio/SoundKey.swift").read_text()
+paths = dict(re.findall(r'case \.(\w+):\s*return "([^"]+\.caf)"', keys))
+played = set()
+for f in root.rglob("*.swift"):
+    if f.name in ("SoundKey.swift",) or "Tests" in f.parts: continue
+    played |= set(re.findall(r'\.(?:play|stop)\(\.(\w+)\)', f.read_text()))
+base = root / "Resources/sfx"
+missing = sorted(k for k in played if k in paths and not (base / paths[k]).is_file())
+if missing:
+    print("✗ Sounds played in code but not bundled in Resources/sfx:")
+    for k in missing: print(f"  {k} -> {paths[k]}")
+    print("  (a missing sound simply does not play, and logs nothing)")
+    sys.exit(1)
+SOUNDCHECK
+
 # swift-plugin-server (used to expand @Observable) is flaky in this environment
 # and used to be treated as cosmetic noise — filtered out on the assumption that
 # the rest of the diagnostics were still trustworthy. They are not: verified by
