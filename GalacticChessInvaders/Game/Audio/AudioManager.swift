@@ -195,7 +195,6 @@ final class AudioManager {
             return
         }
         musicPlayer?.stop()
-        pausedByGame = false
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
         player.volume = volume * GameSettings.shared.musicVolume
@@ -206,22 +205,38 @@ final class AudioManager {
         player.prepareToPlay()
         // Loaded but left silent while muted, so unmuting picks up whatever
         // track the game has since switched to rather than the one playing when
-        // the player hit `M`.
-        if !isMusicMuted { player.play() }
+        // the player hit `M`. Same for a pause: a hand-over scheduled before
+        // the player hit Escape lands during it — a level change fades over
+        // 1.7s and the banner is up for three — and used to start playing over
+        // a paused game.
+        if !isMusicMuted && !pausedByGame { player.play() }
         musicPlayer = player
         currentTrack = trackName
         DiagnosticsLog.shared.log(.audio, "Music → \(trackName)")
     }
 
+    /// A third of a second, not a cut. Fast enough for the reason people pause
+    /// mid-game — a phone call — and short of the click a hard stop makes
+    /// mid-bar.
     func pauseMusic() {
         pausedByGame = true
-        musicPlayer?.pause()
+        guard let player = musicPlayer else { return }
+        player.setVolume(0, fadeDuration: 0.3)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            // Still paused? A quick unpause inside the fade must not silence
+            // the music it has already brought back.
+            guard self?.pausedByGame == true else { return }
+            player.pause()
+        }
     }
 
     func resumeMusic() {
         pausedByGame = false
-        guard !isMusicMuted else { return }
-        musicPlayer?.play()
+        guard !isMusicMuted, let player = musicPlayer else { return }
+        player.volume = 0
+        player.play()
+        player.setVolume(Self.musicVolume * GameSettings.shared.musicVolume,
+                         fadeDuration: 0.3)
     }
 
     func stopMusic() {
