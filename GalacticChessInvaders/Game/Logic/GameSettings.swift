@@ -13,6 +13,16 @@
 import Foundation
 import CoreGraphics
 
+extension Bundle {
+    /// The two version numbers, straight from the Info.plist — which now
+    /// substitutes them from `project.yml`'s `MARKETING_VERSION` and
+    /// `CURRENT_PROJECT_VERSION` rather than repeating them. They had already
+    /// drifted apart when it did: the plist said 0.1.0 against project.yml's
+    /// 0.1, so the app reported a version nothing else in the repo agreed with.
+    var appVersion: String { infoDictionary?["CFBundleShortVersionString"] as? String ?? "?" }
+    var appBuild: String { infoDictionary?["CFBundleVersion"] as? String ?? "?" }
+}
+
 @MainActor
 final class GameSettings {
 

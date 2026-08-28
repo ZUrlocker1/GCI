@@ -32,7 +32,7 @@ final class ScoreManager {
     private let versionKey = "GCI_HighScoresVersion"
 
     private init() {
-        let built = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let built = Bundle.main.appVersion
         if UserDefaults.standard.string(forKey: versionKey) != built {
             UserDefaults.standard.removeObject(forKey: highScoreKey)
             UserDefaults.standard.set(built, forKey: versionKey)
