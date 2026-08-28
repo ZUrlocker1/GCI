@@ -51,6 +51,10 @@ final class DiagnosticsLog {
     static let shared = DiagnosticsLog()
 
     var lines: [LogLine] = []
+    /// Errors logged this run. The scene raises a gutter flag off this, because
+    /// most people playing — testers included — do not have the panel open, and
+    /// a fault nobody notices is a fault nobody reports.
+    private(set) var errorCount = 0
     var fps: Double = 60.0
     var nodeCount: Int = 0
     var isEnabled: Bool = {
@@ -78,6 +82,7 @@ final class DiagnosticsLog {
     func log(_ category: LogCategory, _ message: @autoclosure () -> String) {
         guard isEnabled else { return }
         if category == .input && !logInput { return }
+        if category == .error { errorCount += 1 }
         lines.append(LogLine(category: category, message: message()))
         // Trimmed in chunks, not one at a time. `removeFirst()` on an Array
         // shifts every remaining element, so at the cap each new line moved two
