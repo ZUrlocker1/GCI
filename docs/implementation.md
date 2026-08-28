@@ -772,26 +772,27 @@ Much of this phase landed early — score pops, banner animations, the high scor
 table, the game over and level clear screens, per-piece destruction sounds. What
 is genuinely outstanding:
 
-- [ ] **Wireframe debris.** §12.4 asks for four parallax layers:
-      dense stars, mid stars, nebula wisps, debris. Three *star* tiers are built
-      (46 / 26 / 12 sprites at 20 / 58 / 140 px/s, opposing drift so they do not
-      read as one sheet), which is richer than the two the doc specifies. The
-      nebula landed in 0.3, so the debris is the last layer outstanding — not a
-      fourth star tier
-- [x] **Background evolution per level** (§12.5). `BackdropNode`. Was: `backgroundColor` is
-      hardcoded pure black. §12.5's own table ramps the void from `#07070F` to
-      `#160304`, which is a few RGB points against black under a bloom layer —
-      almost certainly invisible. The haze is what should carry it: one stretched
-      radial-gradient sprite, tinted per level, at low alpha, outside `bloomNode`
-      so it does not smear. One draw call, no shader, per §12.4's performance
-      rule. Built: one procedurally drawn texture, one additive sprite, static
-      colour and alpha per wave, and a 38s lateral drift. Blitz also runs the
-      starfield 1.35x — multiplied into the slow-motion scale rather than
-      replacing it, or a Nuke on Level 10 would leave the sky slow for the run.
+- **Wireframe debris — not building it.** §12.4's fourth parallax layer. The
+      background has enough in it now: three star tiers, a per-level haze and a
+      cycling title sky. A layer of geometry drifting in front of the board
+      would compete with the pieces, which are the thing that has to be read.
+      §12.4 is settled at three star tiers plus the nebula
+- [x] **Background evolution per level** (§12.5) — `BackdropNode`, shipped 0.3.
+      One procedurally drawn radial texture, one additive sprite behind the
+      starfield and outside `bloomNode` so it does not smear. Colour, alpha,
+      size and rotation are static properties set once per wave, plus a drift on
+      two periods; no shader and no `CIFilter`, per §12.4's performance rule.
 
-      Keyed to each level's mechanic rather than ramped cold-to-hot, because
-      that is how everything else here works — a linear red ramp says "later",
-      this says *which* wave you are on.
+      §12.5's own void table is unusable as written — `#07070F` to `#160304` is
+      a few RGB points against black under bloom — so the void stays near black
+      and the haze carries the change, since it has shape and edges. Keyed to
+      each level's mechanic rather than ramped cold-to-hot: a linear red ramp
+      says "later", this says *which* wave you are on.
+
+      The title screen has its own sky, cycling the palette over 72s with a
+      raider crossing every 25–35s. Blitz runs the starfield 1.35x, multiplied
+      into the slow-motion scale rather than replacing it — otherwise a Nuke on
+      Level 10 left the sky slow for the rest of the run.
 
 | Level | Void | Haze | Why this colour |
 |---|---|---|---|
