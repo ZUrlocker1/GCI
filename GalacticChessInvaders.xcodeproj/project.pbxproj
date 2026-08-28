@@ -23,13 +23,16 @@
 		1840BB4464E1128BE071D44C /* TitleScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DB4E6155700677F3736099 /* TitleScene.swift */; };
 		1A62E271F6892409D17B06A4 /* ship-camel-b.png in Resources */ = {isa = PBXBuildFile; fileRef = C9811D7E64799129FF1929B9 /* ship-camel-b.png */; };
 		1AAB40E8E2E3C6E0A09E39EA /* LevelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3958B7024DAADC15E5C557B9 /* LevelManager.swift */; };
+		1F8FC8763F4783CAACA3AA58 /* Bochum-Level.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 7F0CB51AFAE13D480BE23C31 /* Bochum-Level.m4a */; };
 		1FBE4ACA89D5247C2820022A /* chess-b-bishop.png in Resources */ = {isa = PBXBuildFile; fileRef = 89C03C76F77C2116A0D5D2BB /* chess-b-bishop.png */; };
 		219A018777664526318593BD /* LevelBannerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C700B2F09ADAB666A66E141 /* LevelBannerNode.swift */; };
 		24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */; };
 		251070EF8C182A0192C1AC5F /* RaiderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4C7B6130F1ECEECE00289 /* RaiderNode.swift */; };
+		253ACA6FD2491409DCCCB0B8 /* Leipzig-1999.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 6285CF5C055E05DC5DF49661 /* Leipzig-1999.m4a */; };
 		2D6AEAFFDB4E3817A7AA8A3F /* HowToPlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */; };
 		3203C80A87E53941D3CA57FE /* chess-w-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 9AB88E2F8252175EF285AF23 /* chess-w-rook-d2.png */; };
 		346FAE43588F07BD3A9E0EE8 /* chess-w-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F7658142CFF640B25888ADBB /* chess-w-knight-d2.png */; };
+		34AD541D2F64A6C3EA248AFD /* BlitzSchnork.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */; };
 		362A63B60EAE25EE61172DB1 /* ExplosionPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815CA288511D02127E0E884F /* ExplosionPool.swift */; };
 		368610872B731D709369E6BC /* Chess.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11C903C797D394A807E396 /* Chess.swift */; };
 		3A13D4F27754EBE3F1990D3E /* FleetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386C3750928FB14BC1D27D55 /* FleetController.swift */; };
@@ -39,8 +42,10 @@
 		452008C69273C0B918DFAA99 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7548E55F1B1E37D9A6AA88 /* GameState.swift */; };
 		456435234471D2982DBDDA74 /* GCITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E88C786A6B62EF1391252D /* GCITests.swift */; };
 		46AAE105A315B67E0A9A7C86 /* GalacticChessInvadersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77F960CE5B7791CFFB374A6A /* GalacticChessInvadersApp.swift */; };
+		46AF7880E03B247DCAFA8FD4 /* ZeigSchnork-Zero.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 27003B2989AF08E5D07E9F05 /* ZeigSchnork-Zero.m4a */; };
 		496150C3B2737728E85A0830 /* chess-w-king.png in Resources */ = {isa = PBXBuildFile; fileRef = 8339E5F18F16FA9DBF8CC7E2 /* chess-w-king.png */; };
 		4AAEA0F579F05B5F2CA173E8 /* chess-w-bishop.png in Resources */ = {isa = PBXBuildFile; fileRef = 358C1653386A6A77FA844C99 /* chess-w-bishop.png */; };
+		4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */; };
 		501B3D6BAA54B7D6543315E0 /* chess-b-pawn-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */; };
 		51DBACEE06DE99EE2BCD7260 /* SettingsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */; };
 		56547221A27CECF071477604 /* chess-b-queen-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */; };
@@ -50,6 +55,9 @@
 		605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB7404F3713FE581B43A87 /* ContentView.swift */; };
 		61169CA3823DC981272E489B /* ship-player.png in Resources */ = {isa = PBXBuildFile; fileRef = DFEC1D27CBD2B19429587528 /* ship-player.png */; };
 		6395169375D2CD8541C11AFA /* BackdropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */; };
+		6A84246D039FB0BB24C3CCD5 /* WelleZ-Machine.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 31141BE721EAB7CAD042DF96 /* WelleZ-Machine.m4a */; };
+		6F3D3C759D73312D2148C8AF /* KraftSchmaltz.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F886717DAFB12317A398DA80 /* KraftSchmaltz.m4a */; };
+		7263E9829B8933355232018D /* BierWunderwaffe.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 750B509390CDAEFCB4EFA024 /* BierWunderwaffe.m4a */; };
 		761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */; };
 		7705CF0A074223E6B67350F7 /* sfx in Resources */ = {isa = PBXBuildFile; fileRef = 998968842203016A0E563C6A /* sfx */; };
 		7A28A7F7E08CDA7442C26B99 /* chess-b-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */; };
@@ -60,10 +68,12 @@
 		8045F16B75DCA226FEFC2848 /* ProjectileState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0C0E6B6868C3ACDC346F91 /* ProjectileState.swift */; };
 		82FBE8F0FE17EC1EED7ECC03 /* GameOverNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */; };
 		85830BC31A121E884D7C827C /* GameStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */; };
+		87A704F32866D6D7CDFE29A7 /* Leise-Dunkels.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 89B3000A0C60845A2545F718 /* Leise-Dunkels.m4a */; };
 		87FF43D18AB562A891F9F2EB /* ChessEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00359D531409FD8FEF80590 /* ChessEngine.swift */; };
 		8916FC9528C763093B5D18BE /* LaserPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C9EB476F38A1115CA12AE8 /* LaserPool.swift */; };
 		89F9459783A37520E9B6A7D3 /* DiagnosticsLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C108816F834B07B96432B59 /* DiagnosticsLog.swift */; };
 		8CE5A8CA064C0186187B8A00 /* chess-b-pawn.png in Resources */ = {isa = PBXBuildFile; fileRef = DBF33ADCAAD8AE9F65CD5E50 /* chess-b-pawn.png */; };
+		91A01B88B5A0D417E138050B /* Frankfurt-Overdrive.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 5368B7B77BF8CA5E965DD5F5 /* Frankfurt-Overdrive.m4a */; };
 		92F5117575286012F40FFBAC /* SoundKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFA8FE0D63A1CAAA9CBA031E /* SoundKey.swift */; };
 		92FC2C3D2532B922C24C54FE /* CollisionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */; };
 		97361A240335FEBD8B2AFA78 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */; };
@@ -138,11 +148,13 @@
 		21E7C6E4E5697A906A277064 /* chess-b-king.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king.png"; sourceTree = "<group>"; };
 		2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetFiring.swift; sourceTree = "<group>"; };
 		266106237B707A5FFEC1D5FC /* GCI-intro.m4a */ = {isa = PBXFileReference; path = "GCI-intro.m4a"; sourceTree = "<group>"; };
+		27003B2989AF08E5D07E9F05 /* ZeigSchnork-Zero.m4a */ = {isa = PBXFileReference; path = "ZeigSchnork-Zero.m4a"; sourceTree = "<group>"; };
 		2B2151BC597FBC6006588FF8 /* ship-scout.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-scout.png"; sourceTree = "<group>"; };
 		2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-queen-d2.png"; sourceTree = "<group>"; };
 		2C700B2F09ADAB666A66E141 /* LevelBannerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBannerNode.swift; sourceTree = "<group>"; };
 		2CAF566BD8F26FECE2DB1C25 /* TurnTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnTimer.swift; sourceTree = "<group>"; };
 		2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-rook-d2.png"; sourceTree = "<group>"; };
+		31141BE721EAB7CAD042DF96 /* WelleZ-Machine.m4a */ = {isa = PBXFileReference; path = "WelleZ-Machine.m4a"; sourceTree = "<group>"; };
 		321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreManager.swift; sourceTree = "<group>"; };
 		3420846073BE18C53447E8B2 /* ship-camel-c.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel-c.png"; sourceTree = "<group>"; };
 		358C1653386A6A77FA844C99 /* chess-w-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop.png"; sourceTree = "<group>"; };
@@ -163,24 +175,29 @@
 		4B58B64ABA847AF8604BB2BF /* Regeneration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Regeneration.swift; sourceTree = "<group>"; };
 		5308FEB0B1858AC43F451354 /* LaserNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaserNode.swift; sourceTree = "<group>"; };
 		533060B476CEB068D8FE3931 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
+		5368B7B77BF8CA5E965DD5F5 /* Frankfurt-Overdrive.m4a */ = {isa = PBXFileReference; path = "Frankfurt-Overdrive.m4a"; sourceTree = "<group>"; };
 		5830D14669A091B96610D580 /* RaiderController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaiderController.swift; sourceTree = "<group>"; };
 		5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-queen-d1.png"; sourceTree = "<group>"; };
 		5E03F189843B523D7688AFA1 /* chess-w-pawn-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-pawn-d2.png"; sourceTree = "<group>"; };
 		5FA8B7A8AB84F18A8F1496EB /* chess-w-knight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-knight.png"; sourceTree = "<group>"; };
+		6285CF5C055E05DC5DF49661 /* Leipzig-1999.m4a */ = {isa = PBXFileReference; path = "Leipzig-1999.m4a"; sourceTree = "<group>"; };
 		6804169215469385E2B6893E /* chess-w-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop-d1.png"; sourceTree = "<group>"; };
 		69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToPlayNode.swift; sourceTree = "<group>"; };
 		6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-pawn-d2.png"; sourceTree = "<group>"; };
 		6E7E3382582F0A404A28305F /* chess-b-king-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king-d1.png"; sourceTree = "<group>"; };
 		7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsCategory.swift; sourceTree = "<group>"; };
 		741746F275F1126EB8D73A8C /* CheckPathNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckPathNode.swift; sourceTree = "<group>"; };
+		750B509390CDAEFCB4EFA024 /* BierWunderwaffe.m4a */ = {isa = PBXFileReference; path = BierWunderwaffe.m4a; sourceTree = "<group>"; };
 		77F960CE5B7791CFFB374A6A /* GalacticChessInvadersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalacticChessInvadersApp.swift; sourceTree = "<group>"; };
 		797AE4C04EB793676DEFC8C0 /* chess-w-pawn-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-pawn-d1.png"; sourceTree = "<group>"; };
 		7C0C0E6B6868C3ACDC346F91 /* ProjectileState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectileState.swift; sourceTree = "<group>"; };
+		7F0CB51AFAE13D480BE23C31 /* Bochum-Level.m4a */ = {isa = PBXFileReference; path = "Bochum-Level.m4a"; sourceTree = "<group>"; };
 		7F23F101018F26837A222949 /* SpaceshipState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceshipState.swift; sourceTree = "<group>"; };
 		815CA288511D02127E0E884F /* ExplosionPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplosionPool.swift; sourceTree = "<group>"; };
 		8339E5F18F16FA9DBF8CC7E2 /* chess-w-king.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-king.png"; sourceTree = "<group>"; };
 		83910C58D45F81C5E632B8BD /* chess-w-queen.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-queen.png"; sourceTree = "<group>"; };
 		87D61821669CACEBC196A65C /* CollisionResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollisionResolver.swift; sourceTree = "<group>"; };
+		89B3000A0C60845A2545F718 /* Leise-Dunkels.m4a */ = {isa = PBXFileReference; path = "Leise-Dunkels.m4a"; sourceTree = "<group>"; };
 		89C03C76F77C2116A0D5D2BB /* chess-b-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop.png"; sourceTree = "<group>"; };
 		8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollisionHandler.swift; sourceTree = "<group>"; };
 		8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
@@ -191,10 +208,12 @@
 		9A14B880553E1506AF871A55 /* FleetRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetRules.swift; sourceTree = "<group>"; };
 		9AB88E2F8252175EF285AF23 /* chess-w-rook-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-rook-d2.png"; sourceTree = "<group>"; };
 		9C108816F834B07B96432B59 /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
+		9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */ = {isa = PBXFileReference; path = BlitzSchnork.m4a; sourceTree = "<group>"; };
 		9E4CEB8824CBC0835DD19E03 /* chess-w-king-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-king-d1.png"; sourceTree = "<group>"; };
 		9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCIBoard.swift; sourceTree = "<group>"; };
 		A00359D531409FD8FEF80590 /* ChessEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessEngine.swift; sourceTree = "<group>"; };
 		A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PressStart2P-Regular.ttf"; sourceTree = "<group>"; };
+		A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */ = {isa = PBXFileReference; path = SchnorkPunkt.m4a; sourceTree = "<group>"; };
 		A56497B49CFE839D85ABCC3A /* HUDNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDNode.swift; sourceTree = "<group>"; };
 		ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverScene.swift; sourceTree = "<group>"; };
 		B1C4ECE6D9D8E3925073ACFE /* chess-w-king-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-king-d2.png"; sourceTree = "<group>"; };
@@ -227,6 +246,7 @@
 		F648508E30268B3A5E5EDBB4 /* chess-b-bishop-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d2.png"; sourceTree = "<group>"; };
 		F7658142CFF640B25888ADBB /* chess-w-knight-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-knight-d2.png"; sourceTree = "<group>"; };
 		F86607BAC135182D9E5F8BD4 /* PieceNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieceNode.swift; sourceTree = "<group>"; };
+		F886717DAFB12317A398DA80 /* KraftSchmaltz.m4a */ = {isa = PBXFileReference; path = KraftSchmaltz.m4a; sourceTree = "<group>"; };
 		F8CB7404F3713FE581B43A87 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F9BCEF5A958D912F3D3834BC /* GameAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAction.swift; sourceTree = "<group>"; };
 		FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStatusNode.swift; sourceTree = "<group>"; };
@@ -355,8 +375,18 @@
 			isa = PBXGroup;
 			children = (
 				D6E00200878F5A414C7AA097 /* AppIcon.icns */,
+				750B509390CDAEFCB4EFA024 /* BierWunderwaffe.m4a */,
+				9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */,
+				7F0CB51AFAE13D480BE23C31 /* Bochum-Level.m4a */,
+				5368B7B77BF8CA5E965DD5F5 /* Frankfurt-Overdrive.m4a */,
 				266106237B707A5FFEC1D5FC /* GCI-intro.m4a */,
+				F886717DAFB12317A398DA80 /* KraftSchmaltz.m4a */,
+				6285CF5C055E05DC5DF49661 /* Leipzig-1999.m4a */,
+				89B3000A0C60845A2545F718 /* Leise-Dunkels.m4a */,
 				A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */,
+				A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */,
+				31141BE721EAB7CAD042DF96 /* WelleZ-Machine.m4a */,
+				27003B2989AF08E5D07E9F05 /* ZeigSchnork-Zero.m4a */,
 				1F94F04B5CC0E27D8292565C /* Sprites */,
 			);
 			path = Resources;
@@ -544,8 +574,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				08915064D62400123724FB00 /* AppIcon.icns in Resources */,
+				7263E9829B8933355232018D /* BierWunderwaffe.m4a in Resources */,
+				34AD541D2F64A6C3EA248AFD /* BlitzSchnork.m4a in Resources */,
+				1F8FC8763F4783CAACA3AA58 /* Bochum-Level.m4a in Resources */,
+				91A01B88B5A0D417E138050B /* Frankfurt-Overdrive.m4a in Resources */,
 				7B1B293D3EF00772467603BC /* GCI-intro.m4a in Resources */,
+				6F3D3C759D73312D2148C8AF /* KraftSchmaltz.m4a in Resources */,
+				253ACA6FD2491409DCCCB0B8 /* Leipzig-1999.m4a in Resources */,
+				87A704F32866D6D7CDFE29A7 /* Leise-Dunkels.m4a in Resources */,
 				D3641D21830DBEB3CE620C6B /* PressStart2P-Regular.ttf in Resources */,
+				4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */,
+				6A84246D039FB0BB24C3CCD5 /* WelleZ-Machine.m4a in Resources */,
+				46AF7880E03B247DCAFA8FD4 /* ZeigSchnork-Zero.m4a in Resources */,
 				AD625EB17A39A9FE68462D86 /* chess-b-bishop-d1.png in Resources */,
 				B67633A0D0D31669ED91AEDA /* chess-b-bishop-d2.png in Resources */,
 				1FBE4ACA89D5247C2820022A /* chess-b-bishop.png in Resources */,

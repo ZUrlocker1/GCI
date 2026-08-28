@@ -26,16 +26,30 @@ enum MusicLibrary {
     /// The title screen and the attract-free menu behind it.
     static var titlePool: [String] { ["GCI-intro"] }
 
-    /// A wave's pool. Bands rather than one track per level: ten distinct
-    /// tracks is a lot of bundle for a game whose waves last a couple of
-    /// minutes, and the escalation reads better in steps than in ten shades.
+    /// One track per wave, ordered so the music escalates with the game.
+    ///
+    /// Tempo climbs 125 to 156 BPM, with a deliberate dip at Wide Orbit — that
+    /// level widens the sweep but is no harder than the one before it, so it
+    /// gets the brightest mode in the set and a slower beat, as a breath before
+    /// Crossfire. The modes alternate major-feeling and minor-feeling and never
+    /// run three the same way, so no stretch of the game sounds like one long
+    /// piece. Crossfire's harmonic minor is the most unsettled thing here, and
+    /// Blitz gets the fastest track and the darkest mode.
+    ///
+    /// Written by Zudio in its Motorik Arcade style, re-encoded to 80k/32kHz to
+    /// match GCI-intro — 128k/44.1k would have put 28MB of music in a 7MB app.
     static func pool(forLevel level: Int) -> [String] {
         switch max(1, level) {
-        case 1, 2:   return ["GCI-intro"]
-        case 3, 4:   return ["GCI-intro"]
-        case 5, 6:   return ["GCI-intro"]
-        case 7, 8:   return ["GCI-intro"]
-        default:     return ["GCI-intro"]   // 9, 10
+        case 1:  return ["Leise-Dunkels"]        // 125 E Mixolydian, relaxed
+        case 2:  return ["WelleZ-Machine"]       // 134 E Aeolian, intense
+        case 3:  return ["BlitzSchnork"]         // 138 C Mixolydian, peppy
+        case 4:  return ["ZeigSchnork-Zero"]     // 139 B Dorian, focused
+        case 5:  return ["Frankfurt-Overdrive"]  // 140 A Dorian, intense
+        case 6:  return ["KraftSchmaltz"]        // 137 A Lydian, peppy — the breath
+        case 7:  return ["BierWunderwaffe"]      // 140 G HarmonicMinor, intense
+        case 8:  return ["SchnorkPunkt"]         // 147 B Mixolydian, focused
+        case 9:  return ["Leipzig-1999"]         // 147 B Aeolian, focused
+        default: return ["Bochum-Level"]         // 156 C Phrygian — Blitz
         }
     }
 

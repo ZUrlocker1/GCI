@@ -134,8 +134,12 @@ fi
 # a missing font makes every SKLabelNode fall back to Helvetica — the game still
 # runs, it just stops looking like itself.
 RES=GalacticChessInvaders/Resources
-for track in $(grep -rhoE 'playMusic\("[^"]+"' --include="*.swift" GalacticChessInvaders \
-                 | sed 's/.*("//;s/"//'); do
+# Tracks are named in MusicLibrary's tables as well as in playMusic calls, and
+# the tables are where the typos will be.
+for track in $(
+    { grep -rhoE 'playMusic\("[^"]+"' --include="*.swift" GalacticChessInvaders | sed 's/.*("//;s/"//'
+      grep -hoE '"[A-Za-z0-9][A-Za-z0-9 .-]*"' GalacticChessInvaders/Game/Audio/MusicLibrary.swift | tr -d '"'
+    } | sort -u); do
   [ -f "$RES/$track.m4a" ] || { echo "✗ Music referenced but not bundled: $track.m4a"; exit 1; }
 done
 for font in $(grep -rhoE '"[A-Za-z0-9]+-Regular"' --include="*.swift" GalacticChessInvaders \
