@@ -34,6 +34,9 @@ class GameScene: SKScene {
     /// beside the game rather than in it — so an open Settings panel has to be
     /// told, or its LOG PANEL switch sits there showing the old answer.
     private var sidebarObserver: NSObjectProtocol?
+    /// One raider drifting across the title screen, purely as decoration.
+    private var titleRaider: RaiderNode?
+    private static let titleRaiderKey = "titleRaider"
     private var ship: SpaceshipNode?
     private var hudNode: HUDNode?
     private var howToPlayNode: HowToPlayNode?
@@ -620,6 +623,7 @@ class GameScene: SKScene {
         titleOverlay = nil
         hideBoard()
         backgroundColor = backdropNode.applyTitle()
+        startTitleRaiders()
 
         let overlay = TitleOverlayNode()
         overlay.position = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -637,9 +641,67 @@ class GameScene: SKScene {
 
     }
 
+    /// A raider wanders past the title every 25–35 seconds.
+    ///
+    /// Its own node rather than `RaiderController`, which owns rosters, kills,
+    /// scoring and a firing clock — none of which exist here. This one carries
+    /// no power-up that can be collected, never fires, and has its physics
+    /// category cleared so nothing can interact with it even if something
+    /// arrived on screen alongside it.
+    private func startTitleRaiders() {
+        guard titleRaider == nil else { return }
+        let scout = RaiderNode()
+        scout.zPosition = -1        // behind the title type, in front of the sky
+        bloomNode.addChild(scout)
+        titleRaider = scout
+
+        // Randomised in the action itself rather than up front, so successive
+        // crossings differ instead of repeating one schedule forever.
+        run(.repeatForever(.sequence([
+            .wait(forDuration: 30, withRange: 10),
+            .run { [weak self] in self?.launchTitleRaider() },
+        ])), withKey: Self.titleRaiderKey)
+    }
+
+    private func launchTitleRaider() {
+        guard let scout = titleRaider, !scout.isCrossing,
+              stateMachine.currentState is TitleState else { return }
+        let carrier = PowerUp.allCases.randomElement() ?? .rapidFire
+        let margin = scout.size.width
+        let leftToRight = Bool.random()
+        // Well below the title block and well above the footer, so it crosses
+        // open sky rather than the words.
+        let lane = size.height * CGFloat.random(in: 0.22...0.34)
+        let bounds = (lane - 40)...(lane + 40)
+
+        scout.onExit = { [weak self] in
+            AudioManager.shared.stop(.scoutEnterLoop)
+            _ = self
+        }
+        scout.cross(fromX: leftToRight ? -margin : size.width + margin,
+                    toX: leftToRight ? size.width + margin : -margin,
+                    y: lane, firing: false, powerUp: carrier,
+                    flight: RaiderRules.flight(for: carrier, headroom: 40),
+                    bounds: bounds)
+        // Decoration, not a target: nothing on this screen may collide with it.
+        scout.physicsBody?.categoryBitMask = PhysicsCategory.none
+        // A quarter volume. It is atmosphere behind a menu, not a warning.
+        AudioManager.shared.play(.scoutEnterLoop, scale: 0.25)
+        if carrier == .nuke { AudioManager.shared.play(.camelHonk, scale: 0.25) }
+    }
+
+    private func stopTitleRaiders() {
+        removeAction(forKey: Self.titleRaiderKey)
+        titleRaider?.stop()
+        titleRaider?.removeFromParent()
+        titleRaider = nil
+        AudioManager.shared.stop(.scoutEnterLoop)
+    }
+
     func hideTitleScreen() {
         titleOverlay?.removeFromParent()
         titleOverlay = nil
+        stopTitleRaiders()
     }
 
     func showHUD() {
