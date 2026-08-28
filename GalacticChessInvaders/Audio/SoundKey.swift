@@ -85,7 +85,7 @@ enum SoundKey: String, CaseIterable {
     case mechanicBannerTier1    // phaserUp7.ogg             (kenney-digital)
     case mechanicBannerTier2    // DSGNBram Cinematic Horn Braam -32.wav (gdc-bundle)
     case mechanicBannerTier3    // Transition Braam Slow Dark Creepy.wav (gdc-bundle)
-    case uiButtonClick          // Button Arp Twinkle.wav    (gdc-bundle)
+    case uiButtonClick          // UIMisc_Kalimba 3 Up.wav   (gdc-bundle)
     case uiSciFiPing            // Interface Sci-Fi Ping Down.wav (gdc-bundle)
     case ambientSpaceLoop       // Roomtone Space Ship Interior Muted.wav (gdc-bundle) — loop
 
@@ -181,7 +181,7 @@ extension SoundKey {
         case .mechanicBannerTier1:      return "kenney-digital/phaserUp7.caf"
         case .mechanicBannerTier2:      return "gdc-bundle/DSGNBram____Cinematic Horn Braam, Epic, Cinematic, Dark, Instrument, Huge-32.caf"
         case .mechanicBannerTier3:      return "gdc-bundle/Transition Braam Slow Dark Creepy.caf"
-        case .uiButtonClick:            return "gdc-bundle/Button Arp Twinkle.caf"
+        case .uiButtonClick:            return "gdc-bundle/UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.caf"
         case .uiSciFiPing:              return "gdc-bundle/Interface Sci-Fi Ping Down.caf"
         case .ambientSpaceLoop:         return "gdc-bundle/Roomtone Space Ship Interior Muted.caf"
         // Minter ships
@@ -247,9 +247,16 @@ extension SoundKey {
         // The king's own weapon should cut over ordinary fleet fire.
         case .kingLaserFire:                        return 1.0
         case .crossfireLaserFire:                   return 1.0
-        // 30% down from the default. UI clicks are the one family the player
-        // triggers deliberately and hears in isolation, with no gunfire under
-        // them, so the default balance read as a shout.
+        // A kalimba note, not the arp twinkle this used to be. The arp rang for
+        // 1.29 seconds of audible tail — fine once on a menu, but the settings
+        // screen is a dozen clicks in a row and they piled up on each other.
+        // Measured across every UI-ish file in the library the kalimba is the
+        // shortest at 0.34s audible and the quietest at 0.056 RMS; the digital
+        // blips that came close on length ran four times louder.
+        //
+        // Still 30% under the default balance: UI clicks are the one family the
+        // player triggers deliberately and hears in isolation, with no gunfire
+        // underneath, so the default read as a shout.
         case .uiButtonClick:                        return 0.40
         default:                                    return 0.8
         }

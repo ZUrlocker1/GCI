@@ -88,7 +88,15 @@ final class SettingsNode: SKNode {
         onChange?()
     }
 
-    func endDrag() { dragging = nil }
+    func endDrag() {
+        // Dragging is silent while it runs — a click per pixel would be
+        // unbearable — but landing plays one note. On the two volume sliders
+        // that note is the only way to hear what you just set, since `play`
+        // reads the level at play time rather than at preload.
+        guard dragging != nil else { return }
+        dragging = nil
+        AudioManager.shared.play(.uiButtonClick)
+    }
 
     // MARK: - Layout
 
@@ -132,14 +140,16 @@ final class SettingsNode: SKNode {
             self.settings.musicOn = $0
         }
         sliderRow("VOLUME", x: x, w: w, y: 480, fraction: CGFloat(settings.musicVolume),
-                  readout: percent(CGFloat(settings.musicVolume)), dimmed: !settings.musicOn) {
+                  readout: percent(CGFloat(settings.musicVolume)), dimmed: !settings.musicOn,
+                  defaultMark: 1.0) {
             self.settings.musicVolume = Float($0)
         }
         toggleRow("SOUND FX", x: x, w: w, y: 444, value: settings.soundOn) {
             self.settings.soundOn = $0
         }
         sliderRow("VOLUME", x: x, w: w, y: 412, fraction: CGFloat(settings.soundVolume),
-                  readout: percent(CGFloat(settings.soundVolume)), dimmed: !settings.soundOn) {
+                  readout: percent(CGFloat(settings.soundVolume)), dimmed: !settings.soundOn,
+                  defaultMark: 1.0) {
             self.settings.soundVolume = Float($0)
         }
 
@@ -169,7 +179,7 @@ final class SettingsNode: SKNode {
         explain("TURN OFF ON A SLOWER MAC", x: x, y: 490)
 
         sliderRow("BOARD GRID", x: x, w: w, y: 460, fraction: settings.boardGrid,
-                  readout: percent(settings.boardGrid), dimmed: false) {
+                  readout: percent(settings.boardGrid), dimmed: false, defaultMark: 0.5) {
             self.settings.boardGrid = $0
         }
         explain("AT 0% THE BOARD IS OPEN SPACE", x: x, y: 438)
@@ -186,7 +196,8 @@ final class SettingsNode: SKNode {
         let span = range.upperBound - range.lowerBound
         sliderRow("SHIP SPEED", x: x, w: w, y: 292,
                   fraction: (settings.shipSpeedScale - range.lowerBound) / span,
-                  readout: percent(settings.shipSpeedScale), dimmed: false) { fraction in
+                  readout: percent(settings.shipSpeedScale), dimmed: false,
+                  defaultMark: 0.5) { fraction in
             self.settings.shipSpeedScale = range.lowerBound + fraction * span
         }
         explain("DEFAULT IS PLAYTESTED", x: x, y: 270)
@@ -293,8 +304,12 @@ final class SettingsNode: SKNode {
         }
     }
 
+    /// `defaultMark` is where this slider shipped, as a fraction of the bar. A
+    /// tick under the track means the player can always find their way back to
+    /// the tuned value by eye, without a reset button or a remembered number.
     private func sliderRow(_ text: String, x: CGFloat, w: CGFloat, y: CGFloat,
                            fraction: CGFloat, readout: String, dimmed: Bool,
+                           defaultMark: CGFloat,
                            set: @escaping (CGFloat) -> Void) {
         rowLabel(text, x: x, y: y, dimmed: dimmed)
 
@@ -317,6 +332,14 @@ final class SettingsNode: SKNode {
             fill.strokeColor = .clear
             content.addChild(fill)
         }
+
+        // Below the track rather than on it, so it reads as a scale mark and
+        // never has to fight the knob for the same pixels.
+        let notch = SKShapeNode(rect: CGRect(x: barX + barW * defaultMark - 0.5, y: y - 13,
+                                             width: 1, height: 5))
+        notch.fillColor   = Self.cyan.withAlphaComponent(dimmed ? 0.16 : 0.45)
+        notch.strokeColor = .clear
+        content.addChild(notch)
 
         let knob = SKShapeNode(rect: CGRect(x: barX + barW * value - 4, y: y - 8,
                                             width: 8, height: 16))
