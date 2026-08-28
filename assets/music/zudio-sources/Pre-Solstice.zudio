@@ -1,0 +1,75 @@
+=== Zudio Song Analysis Log ===
+Title:          Pre Solstice
+Generated:      2026-08-28 14:30:20
+Zudio Version:  2.4 (129)
+Seed:           16687740488049923462
+Style:          Kosmic
+Key:            E  Dorian
+Tempo:          88 BPM
+Bars:           92
+Mood:           Dream
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 48         (44 bars)
+  bridgeAlt  Bars  49– 52         (4 bars)
+  B          Bars  53– 88         (36 bars)
+  outro      Bars  89– 92         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=1  type=power
+  Bars   5– 26         root=1  type=power
+  Bars  27– 48         root=b7  type=sus2
+  Bars  49– 52         root=1  type=minor
+  Bars  53– 70         root=1  type=minor
+  Bars  71– 88         root=b7  type=minor
+  Bars  89– 92         root=1  type=sus2
+
+--- Note Counts Per Track ---
+  Lead 1       43 notes
+  Pads         76 notes
+  Rhythm       85 notes
+  Texture      89 notes
+  Bass         69 notes
+  Drums        1139 notes
+  Lead Synth   43 notes
+
+--- Generation Log ---
+  SONG             Pre Solstice
+  Style            Kosmic Drift – 88 bpm
+  Form             A - B + bridge
+  Chords           E Dorian Modal Drift
+  KOS-RTHM-007     TD pitch drift
+  KOS-LEAD-002     Eno floating tones
+  KOS-LEAD-004     Echo melody
+  KOS-LD2-000      No lead 2
+  KOS-PADS-003     Steve Roach unsync layers
+  KOS-PADS-008     bIII colour chord layer
+  KOS-TEXT-001     Orbital looping motif
+  KOS-BASS-004     Moroder Drift
+  KOS-DRUM-007     Loping groove
+  Instruments      L1:8080 Pd:89 Ry:11096 Tx:86 Bs:34 Dr:0 LS:90
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar cold start
+  Bar 005    Section A    44 bars
+  Bar 013    Rhythm       is back
+  Bar 013    Bass         pattern evolving
+  Bar 019    Texture      steps back
+  Bar 024    Drum fill    3 beat crescendo roll
+  Bar 027    Drum fill    3 beat crescendo roll
+  Bar 041    Drums        switching to ride
+  Bar 043    Drums        back on hi-hat
+  Bar 044    Texture      steps back
+  Bar 049    Bridge       Solo breath
+  Bar 053    Form         Enter B section
+  Bar 053    Bass         pattern evolving
+  Bar 053    Texture      octave lift
+  Bar 057    Drums        switching to ride
+  Bar 061    Drums        back on hi-hat
+  Bar 066    Texture      steps back
+  Bar 076    Drum fill    3 beat crescendo roll
+  Bar 077    Rhythm       steps back
+  Bar 078    Drum fill    3 beat crescendo roll
+  Bar 089    Outro        4 bar dissolve
+
