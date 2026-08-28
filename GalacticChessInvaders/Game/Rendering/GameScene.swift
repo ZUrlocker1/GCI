@@ -3998,17 +3998,21 @@ class GameScene: SKScene {
             // advanced a single frame, which is an ancestor problem rather than
             // anything about the piece: something above it is paused, or has a
             // speed of zero. Walking up names the culprit outright.
-            var frozenBy = "none", speed = 1.0
+            // The whole chain, not the first paused link. Reporting only the
+            // first is ambiguous: SpriteKit will not run a node whose ancestor
+            // is paused, so "the piece is paused" and "something above it is"
+            // look identical from the node. Last time that took inferring from
+            // whether lasers were still firing in the same second of log.
+            var chain: [String] = [], speed = 1.0
             var ancestor: SKNode? = node
             while let n = ancestor {
-                if n.isPaused, frozenBy == "none" { frozenBy = n.name ?? "\(type(of: n))" }
+                chain.append("\(n.name ?? "\(type(of: n))")\(n.isPaused ? "(P)" : "")")
                 speed *= Double(n.speed)
                 ancestor = n.parent
             }
             DiagnosticsLog.shared.log(.error, "ghost \(node.piece.type) \(node.square) "
                 + "\(parked) a\(Int(node.alpha * 100)) board:\(onBoard) "
-                + "parent:\(node.parent?.name ?? "\(type(of: node.parent))") "
-                + "pausedBy:\(frozenBy) speed:\(String(format: "%.2f", speed))")
+                + "speed:\(String(format: "%.2f", speed)) \(chain.joined(separator: "<"))")
         }
         ghostFirstSeen = ghostFirstSeen.filter { stillHere.contains($0.key) }
     }
