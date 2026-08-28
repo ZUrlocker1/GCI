@@ -24,6 +24,8 @@ clock and comes apart as you play it.
 
 **Watch a 90-second demo:** [Galactic Chess Invaders](https://www.youtube.com/watch?v=yVaNIPDnGa0) on YouTube
 
+[![Level 10, Blitz — the fleet at full strength against a three-second clock](docs/GCI%20blitz.jpg)](https://www.youtube.com/watch?v=yVaNIPDnGa0)
+
 [Download for macOS](https://github.com/ZUrlocker1/GCI/releases/download/v0.1/GCI-0.1.dmg)
 
 Current release: `0.1` (build 1). Universal binary — runs natively on both Apple Silicon and Intel
