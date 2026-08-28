@@ -91,7 +91,7 @@ final class BackdropNode: SKNode {
             // saturated grass green, which on black at this size read as sickly
             // rather than as armour; blue in the mix cools it and lifts it.
             return Look(void: rgb(0x0A0C08), haze: Haze(
-                color: rgb(0x62CBAE), alpha: 0.13,
+                color: rgb(0x8ADCC4), alpha: 0.10,
                 center: CGPoint(x: 0.58, y: 0.60), scale: CGSize(width: 1.7, height: 0.9),
                 rotation: 0))
         case 9:   // KING ACTIVATED — the light comes from where he sits
@@ -103,7 +103,7 @@ final class BackdropNode: SKNode {
             // Faded. A pure hot red at 0.24 competed with the magenta pieces
             // it sits behind, which are the thing that has to be read.
             return Look(void: rgb(0x140306), haze: Haze(
-                color: rgb(0xB8394A), alpha: 0.15,
+                color: rgb(0xC4606C), alpha: 0.11,
                 center: CGPoint(x: 0.55, y: 0.46), scale: CGSize(width: 2.2, height: 1.4),
                 rotation: 0))
         }
