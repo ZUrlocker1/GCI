@@ -105,6 +105,10 @@ final class SettingsNode: SKNode {
         onChange?()
     }
 
+    /// Redraw from the stored settings. Needed when something outside the
+    /// panel changes one — the sidebar's own chevron is the case that exists.
+    func refresh() { rebuild() }
+
     func endDrag() {
         // Dragging is silent while it runs — a click per pixel would be
         // unbearable — but landing plays one note. On the two volume sliders
