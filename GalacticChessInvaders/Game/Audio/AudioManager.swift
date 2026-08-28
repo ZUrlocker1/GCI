@@ -145,6 +145,18 @@ final class AudioManager {
         }
     }
 
+    /// The track currently loaded, so a pool can avoid repeating it.
+    private(set) var currentTrack: String?
+
+    /// Starts a track from `pool`, avoiding whatever is playing. A pool of one
+    /// that is already playing is left alone rather than restarted — otherwise
+    /// every level break would cut the music back to bar one.
+    func playMusic(from pool: [String]) {
+        let next = MusicLibrary.choose(from: pool, avoiding: currentTrack)
+        guard next != currentTrack || musicPlayer == nil else { return }
+        playMusic(next)
+    }
+
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume) {
         guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a") else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
@@ -165,6 +177,7 @@ final class AudioManager {
         // the player hit `M`.
         if !isMusicMuted { player.play() }
         musicPlayer = player
+        currentTrack = trackName
         DiagnosticsLog.shared.log(.audio, "Music → \(trackName)")
     }
 
@@ -183,6 +196,7 @@ final class AudioManager {
         pausedByGame = false
         musicPlayer?.stop()
         musicPlayer = nil
+        currentTrack = nil
     }
 
     func setMusicVolume(_ volume: Float) {
