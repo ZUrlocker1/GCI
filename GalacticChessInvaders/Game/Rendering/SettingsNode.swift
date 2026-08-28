@@ -40,10 +40,10 @@ final class SettingsNode: SKNode {
     private struct Hit {
         let rect: CGRect
         let isSlider: Bool
-        /// Buttons get a press flash; a toggle or a segment already shows what
-        /// it did by lighting up in its new state.
-        var isButton = false
-        var sound: SoundKey = .uiSettingsBlip
+        /// Buttons push in when clicked; a toggle or a segment already shows
+        /// what it did by lighting up in its new state. `parts` are the nodes
+        /// that travel together for that push.
+        var parts: [SKNode] = []
         /// Point is in this node's coordinates. Sliders read its x; everything
         /// else ignores it.
         let apply: (CGPoint) -> Void
@@ -77,22 +77,22 @@ final class SettingsNode: SKNode {
         guard let hit = hits.first(where: { $0.rect.contains(point) }) else { return false }
         dragging = hit.isSlider ? hit : nil
         hit.apply(point)
-        AudioManager.shared.play(hit.sound)
-        if hit.isButton { flashPress(hit.rect) }
-        rebuild()
-        onChange?()
+        AudioManager.shared.play(.uiSettingsBlip)
+        guard !hit.parts.isEmpty else {
+            rebuild()
+            onChange?()
+            return true
+        }
+        // Two points down and back, then the redraw. Deferred because `rebuild`
+        // empties `content` on the very click that asks for the push, and timed
+        // rather than animated because the settings panel runs with the scene
+        // paused, where SKActions do not advance at all.
+        for part in hit.parts { part.position.y -= 2 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
+            self?.rebuild()
+            self?.onChange?()
+        }
         return true
-    }
-
-    /// Parented to this node rather than to `content`, which `rebuild` empties
-    /// on the very click that asks for the flash.
-    private func flashPress(_ rect: CGRect) {
-        let flash = SKShapeNode(rect: rect, cornerRadius: 2)
-        flash.fillColor = Self.cyan.withAlphaComponent(0.55)
-        flash.strokeColor = .clear
-        flash.zPosition = 5
-        addChild(flash)
-        flash.run(.sequence([.fadeOut(withDuration: 0.22), .removeFromParent()]))
     }
 
     /// Sliders keep tracking while the button is down, including past the ends
@@ -220,13 +220,11 @@ final class SettingsNode: SKNode {
         explain("DEFAULT IS PLAYTESTED", x: x, y: 267)
 
         heading("DATA", Self.magenta, x: x, y: 214)
-        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 186, tint: Self.magenta,
-                  sound: .uiDestructive) {
+        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 186, tint: Self.magenta) {
             ScoreManager.shared.clearHighScores()
         }
         explain("BACK TO ORIGINAL SCORES", x: x, y: 164)
-        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 136, tint: Self.cyan,
-                  sound: .uiDestructive) {
+        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 136, tint: Self.cyan) {
             self.settings.restoreDefaults()
         }
     }
@@ -384,8 +382,7 @@ final class SettingsNode: SKNode {
     }
 
     private func buttonRow(_ text: String, _ action: String, x: CGFloat, w: CGFloat,
-                           y: CGFloat, tint: SKColor, sound: SoundKey = .uiSettingsBlip,
-                           run: @escaping () -> Void) {
+                           y: CGFloat, tint: SKColor, run: @escaping () -> Void) {
         rowLabel(text, x: x, y: y)
 
         let bw = CGFloat(action.count) * 8 + 24, h: CGFloat = 22
@@ -402,8 +399,7 @@ final class SettingsNode: SKNode {
         lbl.position = CGPoint(x: rect.midX, y: rect.midY)
         content.addChild(lbl)
 
-        hits.append(Hit(rect: rect, isSlider: false, isButton: true,
-                        sound: sound) { _ in run() })
+        hits.append(Hit(rect: rect, isSlider: false, parts: [box, lbl]) { _ in run() })
     }
 
     // MARK: - Primitives
