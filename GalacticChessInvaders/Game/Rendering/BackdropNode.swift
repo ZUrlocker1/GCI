@@ -14,9 +14,8 @@
 //
 // Performance, against §12.4's rule that the background may not cost a shader:
 // one procedurally drawn texture, shared by at most two sprites, so at most two
-// draw calls. Colour and alpha are static properties set once per level. The
-// drift is a single `SKAction` on a node that is not the starfield. Nothing here
-// runs per frame.
+// draw calls. Colour and alpha are static properties set once per level, and the
+// drift is two `SKAction`s on one node. Nothing here runs per frame.
 
 import SpriteKit
 
@@ -74,9 +73,13 @@ final class BackdropNode: SKNode {
                 center: CGPoint(x: 0.5, y: 0.45), scale: CGSize(width: 2.1, height: 0.8),
                 rotation: 0))
         case 7:   // CROSSFIRE — the grain lies along the bishops' own diagonals
+            // A broad swathe, not a stripe: at 0.30 it read as a drawn band
+            // with edges. Held off the centre in both axes, because a diagonal
+            // through the middle of a square screen is the most symmetric thing
+            // it could possibly be.
             return Look(void: rgb(0x0D0412), haze: Haze(
-                color: rgb(0xC02A78), alpha: 0.18,
-                center: CGPoint(x: 0.5, y: 0.5), scale: CGSize(width: 2.4, height: 0.30),
+                color: rgb(0xC02A78), alpha: 0.15,
+                center: CGPoint(x: 0.37, y: 0.58), scale: CGSize(width: 2.6, height: 1.05),
                 rotation: .pi / 5))
         case 8:   // ARMORED PAWNS — the armour's own green, deliberately off the ramp
             return Look(void: rgb(0x0A0C08), haze: Haze(
@@ -115,11 +118,17 @@ final class BackdropNode: SKNode {
         blob.alpha = 0
         addChild(blob)
 
-        // A slow lateral wander, so the sky is not a static gradient. Long
-        // enough that it never reads as motion during a wave.
+        // A slow wander, so the sky is not a static gradient. 26pt was
+        // imperceptible on a blob wider than the screen; this travels further
+        // and takes longer, and the vertical leg is a different period from the
+        // horizontal one so the path never repeats a straight line.
         blob.run(.repeatForever(.sequence([
-            .moveBy(x: 26, y: 0, duration: 19).withTimingMode(.easeInEaseOut),
-            .moveBy(x: -26, y: 0, duration: 19).withTimingMode(.easeInEaseOut),
+            .moveBy(x: 44, y: 0, duration: 26).withTimingMode(.easeInEaseOut),
+            .moveBy(x: -44, y: 0, duration: 26).withTimingMode(.easeInEaseOut),
+        ])))
+        blob.run(.repeatForever(.sequence([
+            .moveBy(x: 0, y: 18, duration: 37).withTimingMode(.easeInEaseOut),
+            .moveBy(x: 0, y: -18, duration: 37).withTimingMode(.easeInEaseOut),
         ])))
     }
 
@@ -159,10 +168,15 @@ final class BackdropNode: SKNode {
             // blob has a wide, weak skirt rather than a defined edge.
             let gradient = CGGradient(
                 colorsSpace: space,
+                // Four stops, not three, and the midpoint pulled in and down:
+                // the core stays small and the skirt runs most of the radius,
+                // so the blob has no edge to find. Three stops left a visible
+                // shoulder where the falloff changed slope.
                 colors: [SKColor.white.withAlphaComponent(1).cgColor,
-                         SKColor.white.withAlphaComponent(0.34).cgColor,
+                         SKColor.white.withAlphaComponent(0.42).cgColor,
+                         SKColor.white.withAlphaComponent(0.11).cgColor,
                          SKColor.white.withAlphaComponent(0).cgColor] as CFArray,
-                locations: [0, 0.42, 1])
+                locations: [0, 0.28, 0.62, 1])
         else { return SKTexture() }
 
         let mid = CGPoint(x: diameter / 2, y: diameter / 2)
