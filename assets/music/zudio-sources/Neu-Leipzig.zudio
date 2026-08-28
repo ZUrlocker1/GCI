@@ -1,0 +1,71 @@
+=== Zudio Song Analysis Log ===
+Title:          Neu Leipzig
+Generated:      2026-08-28 13:05:10
+Zudio Version:  2.4 (129)
+Seed:           5059900872081004995
+Style:          Motorik
+Tempo Override: 140
+Key:            A  Mixolydian
+Tempo:          140 BPM
+Bars:           84
+Mood:           Free
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 80         (78 bars)
+  outro      Bars  81– 84         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=5  type=minor
+  Bars   3– 21         root=5  type=minor
+  Bars  22– 40         root=5  type=minor
+  Bars  41– 59         root=4  type=sus2
+  Bars  60– 80         root=b7  type=power
+  Bars  81– 84         root=1  type=dom7
+
+--- Note Counts Per Track ---
+  Lead 1       171 notes
+  Pads         160 notes
+  Rhythm       184 notes
+  Texture      27 notes
+  Bass         336 notes
+  Drums        1235 notes
+
+--- Generation Log ---
+  SONG             Neu Leipzig
+  Style            Motorik Arcade – 140 bpm
+  Form             Steady A section
+  Chords           A Mixolydian Two chord I
+  MOT-DRUM-010     Machine Step
+  MOT-BASS-025     Electro Pump
+  MOT-PADS-007     Backbeat Stabs
+  MOT-LD1-015      Arcade Riff
+  MOT-LD2-000      No lead 2
+  MOT-RTHM-006     Harmonia arpeggio
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-003     Spatial sweep
+  Instruments      L1:83 Pd:94 Ry:8038 Tx:102 Bs:33 Dr:40
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar cold start
+  Bar 003    Section A    78 bars
+  Bar 007    Texture      steps back
+  Bar 009    Bass         pattern evolving
+  Bar 010    Drums        switching to ride
+  Bar 010    Lead 1       steps up
+  Bar 014    Drums        back on hi-hat
+  Bar 017    Rhythm       steps back
+  Bar 026    Drums        switching to ride
+  Bar 027    Texture      steps back
+  Bar 033    Drums        back on hi-hat
+  Bar 033    Rhythm       is back
+  Bar 034    Drums        crash + open hat
+  Bar 046    Texture      steps back
+  Bar 049    Rhythm       steps back
+  Bar 050    Drums        crash + open hat
+  Bar 065    Pads         is back
+  Bar 065    Rhythm       is back
+  Bar 066    Drums        crash + open hat
+  Bar 069    Texture      steps up
+  Bar 081    Outro        4 bar fade
+

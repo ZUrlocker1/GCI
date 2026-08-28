@@ -1,0 +1,76 @@
+=== Zudio Song Analysis Log ===
+Title:          Leipzig 1999
+Generated:      2026-08-28 13:04:43
+Zudio Version:  2.4 (129)
+Seed:           18375025801990237528
+Style:          Motorik
+Tempo Override: 147
+Key:            B  Aeolian
+Tempo:          147 BPM
+Bars:           100
+Mood:           Bright
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 68         (64 bars)
+  B          Bars  69– 96         (28 bars)
+  outro      Bars  97–100         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=4  type=sus2
+  Bars   5– 25         root=4  type=sus2
+  Bars  26– 46         root=4  type=min7
+  Bars  47– 68         root=b6  type=major
+  Bars  69– 77         root=b7  type=sus2
+  Bars  78– 86         root=5  type=min7
+  Bars  87– 96         root=4  type=sus2
+  Bars  97–100         root=1  type=major
+
+--- Note Counts Per Track ---
+  Lead 1       257 notes
+  Lead 2       60 notes
+  Pads         552 notes
+  Rhythm       379 notes
+  Texture      15 notes
+  Bass         1524 notes
+  Drums        2044 notes
+
+--- Generation Log ---
+  SONG             Leipzig 1999
+  Style            Motorik Arcade – 147 bpm
+  Form             Subtle A/B
+  Chords           B Aeolian Two chord I
+  MOT-DRUM-009     Four on the Floor
+  MOT-BASS-012     Moroder Chase
+  MOT-PADS-007     Backbeat Stabs
+  MOT-LD1-015      Arcade Riff
+  MOT-LD2-005      Descending line
+  MOT-RTHM-001     8th-note Stride
+  MOT-RTHM-002     Quarter stride
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-004     Shimmer hold
+  Instruments      L1:83 L2:30 Pd:50 Ry:34 Tx:94 Bs:34 Dr:40
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar lock in
+  Bar 005    Section A    64 bars
+  Bar 010    Lead 1       steps up
+  Bar 012    Texture      steps back
+  Bar 017    Lead 2       steps up
+  Bar 033    Lead 2       steps back
+  Bar 036    Drums        crash + open hat
+  Bar 038    Texture      steps up
+  Bar 039    Drums        back on hi-hat
+  Bar 045    Bass         pattern evolving
+  Bar 052    Lead 2       steps up
+  Bar 055    Texture      steps back
+  Bar 061    Drums        switching to ride
+  Bar 066    Drums        back on hi-hat
+  Bar 069    Form         Enter B section
+  Bar 069    Drums        crash + open hat
+  Bar 069    Bass         pattern evolving
+  Bar 069    Rhythm       pattern changes
+  Bar 076    Drums        crash + open hat
+  Bar 081    Pads         steps back
+  Bar 097    Outro        4 bar cold stop
+

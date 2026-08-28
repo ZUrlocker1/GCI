@@ -1,0 +1,78 @@
+=== Zudio Song Analysis Log ===
+Title:          Blank Knall
+Generated:      2026-08-28 13:00:54
+Zudio Version:  2.4 (129)
+Seed:           12956765484199284003
+Style:          Motorik
+Tempo Override: 138
+Key:            B  Phrygian
+Tempo:          138 BPM
+Bars:           104
+Mood:           Deep
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 52         (48 bars)
+  B          Bars  53–100         (48 bars)
+  outro      Bars 101–104         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=b7  type=minor
+  Bars   5– 20         root=b7  type=minor
+  Bars  21– 36         root=1  type=minor
+  Bars  37– 52         root=b7  type=minor
+  Bars  53– 68         root=b3  type=major
+  Bars  69– 84         root=b7  type=min7
+  Bars  85–100         root=b2  type=major
+  Bars 101–104         root=1  type=power
+
+--- Note Counts Per Track ---
+  Lead 1       265 notes
+  Lead 2       67 notes
+  Pads         76 notes
+  Rhythm       474 notes
+  Texture      17 notes
+  Bass         1563 notes
+  Drums        1835 notes
+
+--- Generation Log ---
+  SONG             Blank Knall
+  Style            Motorik Arcade – 138 bpm
+  Form             Subtle A/B
+  Chords           B Phrygian tonic I
+  MOT-DRUM-005     Albatross Grid
+  MOT-BASS-012     Moroder Chase
+  MOT-PADS-003     Pulsed
+  MOT-LD1-016      Machine Answer
+  MOT-LD2-005      Descending line
+  MOT-RTHM-001     8th-note Stride
+  MOT-RTHM-002     Quarter stride
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-004     Shimmer hold
+  Instruments      L1:81 L2:90 Pd:94 Ry:28 Tx:86 Bs:39 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar fade in
+  Bar 005    Section A    48 bars
+  Bar 009    Bass         pattern evolving
+  Bar 010    Lead 1       steps up
+  Bar 012    Drums        crash + open hat
+  Bar 014    Drums        back on hi-hat
+  Bar 014    Texture      steps up
+  Bar 021    Drums        switching to ride
+  Bar 021    Lead 2       steps up
+  Bar 028    Drums        crash + open hat
+  Bar 029    Drums        back on hi-hat
+  Bar 033    Rhythm       steps back
+  Bar 036    Texture      steps up
+  Bar 040    Pads         steps back
+  Bar 044    Drums        switching to ride
+  Bar 049    Rhythm       is back
+  Bar 053    Form         Enter B section
+  Bar 053    Bass         pattern evolving
+  Bar 053    Rhythm       pattern changes
+  Bar 057    Pads         is back
+  Bar 066    Texture      steps back
+  Bar 087    Texture      steps back
+  Bar 101    Outro        4 bar fade
+

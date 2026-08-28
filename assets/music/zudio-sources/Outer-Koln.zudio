@@ -1,0 +1,71 @@
+=== Zudio Song Analysis Log ===
+Title:          Outer Koln
+Generated:      2026-08-28 13:00:08
+Zudio Version:  2.4 (129)
+Seed:           13115875292378139736
+Style:          Motorik
+Key:            E  Mixolydian
+Tempo:          154 BPM
+Bars:           108
+Mood:           Free
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 50         (48 bars)
+  B          Bars  51–104         (54 bars)
+  outro      Bars 105–108         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=5  type=power
+  Bars   3– 26         root=5  type=power
+  Bars  27– 50         root=6  type=min7
+  Bars  51– 68         root=1  type=sus2
+  Bars  69– 86         root=1  type=dom7
+  Bars  87–104         root=b7  type=power
+  Bars 105–108         root=1  type=dom7
+
+--- Note Counts Per Track ---
+  Lead 1       352 notes
+  Lead 2       52 notes
+  Pads         86 notes
+  Rhythm       491 notes
+  Texture      19 notes
+  Bass         630 notes
+  Drums        1739 notes
+
+--- Generation Log ---
+  SONG             West Riemeck
+  Style            Motorik Arcade – 154 bpm
+  Form             Subtle A/B
+  Chords           E Mixolydian tonic I
+  MOT-DRUM-011     Light Four
+  MOT-BASS-024     Arcade Drive
+  MOT-PADS-003     Pulsed
+  MOT-LD1-017      Pentatonic Blitz
+  MOT-LD2-001      Counter-response
+  MOT-RTHM-001     8th-note Stride
+  MOT-RTHM-006     Harmonia arpeggio
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-007     Pedal drone
+  Instruments      L1:81 L2:90 Pd:94 Ry:28 Tx:86 Bs:39 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar cold start
+  Bar 003    Section A    48 bars
+  Bar 006    Texture      steps back
+  Bar 010    Drums        switching to ride
+  Bar 010    Lead 1       steps up
+  Bar 015    Drums        back on hi-hat
+  Bar 018    Drums        switching to ride
+  Bar 025    Bass         pattern evolving
+  Bar 027    Drums        back on hi-hat
+  Bar 027    Texture      steps up
+  Bar 051    Form         Enter B section
+  Bar 051    Drums        crash + open hat
+  Bar 051    Texture      steps up
+  Bar 051    Rhythm       pattern changes
+  Bar 053    Bass         pattern evolving
+  Bar 069    Texture      steps back
+  Bar 073    Lead 2       steps back
+  Bar 105    Outro        4 bar cold stop
+

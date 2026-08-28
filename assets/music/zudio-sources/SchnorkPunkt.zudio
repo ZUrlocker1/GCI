@@ -1,0 +1,76 @@
+=== Zudio Song Analysis Log ===
+Title:          SchnorkPunkt
+Generated:      2026-08-28 13:01:41
+Zudio Version:  2.4 (129)
+Seed:           3862227496824653750
+Style:          Motorik
+Key:            B  Mixolydian
+Tempo:          147 BPM
+Bars:           88
+Mood:           Dream
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 34         (32 bars)
+  B          Bars  35– 84         (50 bars)
+  outro      Bars  85– 88         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=5  type=power
+  Bars   3– 18         root=5  type=power
+  Bars  19– 34         root=4  type=major
+  Bars  35– 50         root=2  type=sus2
+  Bars  51– 66         root=2  type=minor
+  Bars  67– 84         root=4  type=major
+  Bars  85– 88         root=1  type=major
+
+--- Note Counts Per Track ---
+  Lead 1       224 notes
+  Pads         114 notes
+  Rhythm       187 notes
+  Texture      44 notes
+  Bass         1302 notes
+  Drums        1548 notes
+
+--- Generation Log ---
+  SONG             SchnorkPunkt
+  Style            Motorik Arcade – 147 bpm
+  Form             Subtle A/B
+  Chords           B Mixolydian Two chord I
+  MOT-DRUM-005     Albatross Grid
+  MOT-BASS-012     Moroder Chase
+  MOT-PADS-004     Stabs
+  MOT-LD1-019      Triad Climb
+  MOT-LD2-000      No lead 2
+  MOT-RTHM-002     Quarter stride
+  MOT-RTHM-006     Harmonia arpeggio
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-003     Spatial sweep
+  MOT-TEXT-006     High-tension touch
+  Instruments      L1:81 Pd:94 Ry:28 Tx:86 Bs:39 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar fade in
+  Bar 003    Section A    32 bars
+  Bar 009    Pads         steps back
+  Bar 010    Lead 1       steps up
+  Bar 013    Bass         pattern evolving
+  Bar 017    Rhythm       steps back
+  Bar 018    Drums        switching to ride
+  Bar 018    Texture      steps back
+  Bar 022    Drums        back on hi-hat
+  Bar 025    Pads         steps back
+  Bar 026    Drums        crash + open hat
+  Bar 027    Drums        back on hi-hat
+  Bar 033    Rhythm       steps back
+  Bar 035    Form         Enter B section
+  Bar 037    Bass         pattern evolving
+  Bar 042    Drums        crash + open hat
+  Bar 049    Rhythm       steps back
+  Bar 051    Drums        switching to ride
+  Bar 057    Pads         steps back
+  Bar 063    Texture      steps back
+  Bar 074    Drums        crash + open hat
+  Bar 082    Texture      steps up
+  Bar 085    Outro        4 bar cold stop
+

@@ -1,0 +1,68 @@
+=== Zudio Song Analysis Log ===
+Title:          Bochum Level
+Generated:      2026-08-28 13:02:36
+Zudio Version:  2.4 (129)
+Seed:           1693961792656713107
+Style:          Motorik
+Key:            C  Phrygian
+Tempo:          156 BPM
+Bars:           108
+Mood:           Free
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3–104         (102 bars)
+  outro      Bars 105–108         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=b2  type=major
+  Bars   3– 22         root=b2  type=major
+  Bars  23– 42         root=4  type=power
+  Bars  43– 62         root=b7  type=minor
+  Bars  63– 82         root=b6  type=major
+  Bars  83–104         root=4  type=minor
+  Bars 105–108         root=1  type=min7
+
+--- Note Counts Per Track ---
+  Lead 1       287 notes
+  Lead 2       52 notes
+  Rhythm       312 notes
+  Texture      28 notes
+  Bass         735 notes
+  Drums        1643 notes
+
+--- Generation Log ---
+  SONG             Bochum Level
+  Style            Motorik Arcade – 156 bpm
+  Form             Steady A section
+  Chords           C Phrygian tonic I
+  MOT-DRUM-011     Light Four
+  MOT-BASS-023     Acid Sweep
+  MOT-PADS-000     No pads
+  MOT-LD1-016      Machine Answer
+  MOT-LD2-001      Counter-response
+  MOT-RTHM-006     Harmonia arpeggio
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-004     Shimmer hold
+  MOT-TEXT-006     High-tension touch
+  Instruments      L1:13081 L2:86 Ry:4 Tx:99 Bs:12038 Dr:26
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar cold start
+  Bar 003    Section A    102 bars
+  Bar 010    Drums        switching to ride
+  Bar 010    Lead 1       steps up
+  Bar 015    Drums        back on hi-hat
+  Bar 018    Drums        switching to ride
+  Bar 019    Lead 2       steps back
+  Bar 019    Texture      steps back
+  Bar 021    Bass         pattern evolving
+  Bar 024    Drums        back on hi-hat
+  Bar 049    Rhythm       steps back
+  Bar 049    Texture      steps back
+  Bar 065    Texture      steps up
+  Bar 082    Drums        crash + open hat
+  Bar 094    Texture      steps back
+  Bar 097    Rhythm       steps back
+  Bar 105    Outro        4 bar dissolve
+
