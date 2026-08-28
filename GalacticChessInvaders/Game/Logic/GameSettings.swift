@@ -98,9 +98,21 @@ final class GameSettings {
     /// where a struggling player needs it most.
     var fleetSpeedScale: CGFloat { difficulty == .cadet ? 0.80 : 1.0 }
     var enemyShotScale: CGFloat  { difficulty == .cadet ? 0.85 : 1.0 }
-    /// Added to the level's beat. The clock is the single biggest lever for
-    /// someone still learning to do both halves at once.
-    var turnClockBonus: TimeInterval { difficulty == .cadet ? 1.0 : 0 }
+    /// Cadet's clock, as a floor rather than a bonus — every level gets the
+    /// same seven seconds to think, including Blitz, whose three-second clock
+    /// is the single hardest thing in the game.
+    ///
+    /// This is a far bigger lever than it looks. The beat does not only decide
+    /// how long the player has to move: the fleet descends on the chess beat,
+    /// Black's own moves land on it, and shots are counted per turn. So the
+    /// floor scales all three of those down together — at Blitz it means Black
+    /// acts 2.3x less often — while the player's ship, lasers and reflexes
+    /// carry on at full speed.
+    ///
+    /// Fleet speed and projectile speed stay separately scaled because they are
+    /// a different kind of difficulty: how fast a target slides and how fast a
+    /// shot arrives are reflex problems, and the clock does nothing about them.
+    var turnClockFloor: TimeInterval { difficulty == .cadet ? 7 : 0 }
 
     /// Cadet fires faster without touching the laser *cap*, which is what the
     /// green scout rewards. Rounds that clear the screen sooner free a
