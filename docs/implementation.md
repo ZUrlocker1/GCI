@@ -807,10 +807,10 @@ is genuinely outstanding:
 | 9 | `#100509` | amber, glowing from the top rank | KING ACTIVATED — the light comes from where he sits |
 | 10 | `#140306` | crimson, and the starfield accelerates | BLITZ |
 
-- [ ] **8-frame explosion sprite sheets per piece type.** Explosions are
-      currently pooled particle bursts tinted per piece, which reads well enough
-      that this may not be worth doing
-- [ ] **Hyperspace jump on level clear**
+- **8-frame explosion sprite sheets — not building them.** The pooled particle
+      bursts, tinted per piece, read well enough that sprite sheets would be
+      work for no visible gain
+- [ ] **Hyperspace jump on level clear.** Deferred, not cut
 - **Attract mode — not building it.** §14.2's 5-slide cycle is a coin-op
       convention: a cabinet nobody is standing at has to sell itself to the
       room. An app someone chose to launch is already past that, and a window
