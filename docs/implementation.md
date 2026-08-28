@@ -583,25 +583,32 @@ the harmonic minor rather than the fastest track: both tracks above 150 BPM are
 bright, and a cheerful finale would undercut a three-second clock worse than a
 slower menacing one.
 
-| Level | Track | BPM | Key | Mood | Zudio seed |
+| Level | Track | Style | BPM | Key | Mood |
 |---|---|---|---|---|---|
-| Title, Settings, Info | `GCI-intro` | — | — | — | predates the batch |
-| 1 | `Leise-Dunkels` | 125 | E Mixolydian | Bright | `7581705296869994468` |
-| 2 | `WelleZ-Machine` | 134 | E Aeolian | Deep | `15703864321671018647` |
-| 3 | `BlitzSchnork` | 138 | C Mixolydian | Bright | `5080191542901477286` |
-| 4 | `Rattert-Z-Machine` | 140 | C Lydian | Free | `3088922353799625094` |
-| 5 | `Frankfurt-Overdrive` | 140 | A Dorian | Bright | `5292438155419784098` |
-| 6 | `KraftSchmaltz` | 137 | A Lydian | Bright | `17095771227378806514` |
-| 7 | `Bochum-Level` | 156 | C Phrygian | Free | `1693961792656713107` |
-| 8 | `SchnorkPunkt` | 147 | B Mixolydian | Dream | `3862227496824653750` |
-| 9 | `Leipzig-1999` | 147 | B Aeolian | Bright | `18375025801990237528` |
-| 10 | `BierWunderwaffe` | 140 | G Harmonic Minor | Free | `15062382748039979195` |
+| Title, Settings, Info | `GCI-intro` *(Pre-Solstice)* | — | 88 | E Dorian | Dream |
+| 1 | `Leise-Dunkels` | relaxed | 125 | E Mixolydian | Bright |
+| 2 | `WelleZ-Machine` | intense | 134 | E Aeolian | Deep |
+| 3 | `BlitzSchnork` | peppy | 138 | C Mixolydian | Bright |
+| 4 | `Rattert-Z-Machine` | peppy | 140 | C Lydian | Free |
+| 5 | `Frankfurt-Overdrive` | intense | 140 | A Dorian | Bright |
+| 6 | `KraftSchmaltz` | peppy intense | 137 | A Lydian | Bright |
+| 7 | `Bochum-Level` | peppy | 156 | C Phrygian | Free |
+| 8 | `SchnorkPunkt` | focused | 147 | B Mixolydian | Dream |
+| 9 | `Leipzig-1999` | focused | 147 | B Aeolian | Bright |
+| 10 | `BierWunderwaffe` | intense | 140 | G Harmonic Minor | Free |
 
-The seeds regenerate the exact track in Zudio if a source is ever lost. The full
-`.zudio` logs — structure, chord plan, per-track note counts — are in
-`assets/music/zudio-sources/`, including five unused backups: `Dora`,
-`Blank-Knall`, `Outer-Koln`, `Neu-Leipzig` and `Weit-Z-Maschine`, each noted in
-`MusicLibrary` against the slot it would replace.
+Style is the word the composer attached to each export, and was one of the three
+inputs to the ordering alongside tempo and mode. Not to be confused with the
+`Style:` field inside a `.zudio` file, which is the generator's own: every level
+track is **Motorik Arcade**, and the intro is **Kosmic** — slower, dreamier, and
+the reason it sits under a menu rather than a wave.
+
+The full `.zudio` logs are in `assets/music/zudio-sources/` — structure, chord
+plan, per-track note counts, and the generator seed, which recreates a track
+exactly if a source is ever lost. Sixteen files, 64KB, including the intro's
+(`Pre-Solstice`) and five unused backups: `Dora`, `Blank-Knall`, `Outer-Koln`,
+`Neu-Leipzig` and `Weit-Z-Maschine`, each noted in `MusicLibrary` against the
+slot it would replace.
 
 ### Hand-overs
 
