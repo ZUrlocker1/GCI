@@ -87,6 +87,7 @@ enum SoundKey: String, CaseIterable {
     case mechanicBannerTier3    // Transition Braam Slow Dark Creepy.wav (gdc-bundle)
     case uiButtonClick          // UIMisc_Kalimba 3 Up.wav   (gdc-bundle)
     case uiSettingsBlip            // pepSound3.wav             (kenney-digital)
+    case uiConfirm                 // tone1.caf                 (kenney-digital)
     case uiSciFiPing            // Interface Sci-Fi Ping Down.wav (gdc-bundle)
     case ambientSpaceLoop       // Roomtone Space Ship Interior Muted.wav (gdc-bundle) — loop
 
@@ -184,6 +185,9 @@ extension SoundKey {
         case .mechanicBannerTier3:      return "gdc-bundle/Transition Braam Slow Dark Creepy.caf"
         case .uiButtonClick:            return "gdc-bundle/UIMisc_Kalimba 3 Up_CB Sounddesign_APPlicable Sounds.caf"
         case .uiSettingsBlip:              return "kenney-digital/pepSound3.caf"
+        // The countdown's tone, reused: a plain bip with no opinion about
+        // whether what just happened was good or bad.
+        case .uiConfirm:                   return "kenney-digital/tone1.caf"
         case .uiSciFiPing:              return "gdc-bundle/Interface Sci-Fi Ping Down.caf"
         case .ambientSpaceLoop:         return "gdc-bundle/Roomtone Space Ship Interior Muted.caf"
         // Minter ships
@@ -273,6 +277,9 @@ extension SoundKey {
         // peak rather than its average — it wants 0.061. It is the shortest of
         // the seven candidates at 0.39s audible.
         case .uiSettingsBlip:                          return 0.06
+        // 0.07 puts its loudest 50ms level with the settings blip, so RESET and
+        // RESTORE read as a different button rather than a louder one.
+        case .uiConfirm:                               return 0.07
         default:                                    return 0.8
         }
     }
