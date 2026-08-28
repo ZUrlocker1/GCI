@@ -187,13 +187,6 @@ final class HowToPlayNode: SKNode {
     // MARK: - Footer
 
     private func buildFooter(w: CGFloat) {
-        // Above the rule and level with the music credit opposite it, so the
-        // two pieces of small print read as one line across the panel.
-        let build = label("VERSION \(Bundle.main.appVersion)  BUILD \(Bundle.main.appBuild)",
-                          9, SKColor.white.withAlphaComponent(0.45), .left)
-        build.position = CGPoint(x: Self.lx, y: 88)
-        addChild(build)
-
         addChild(hline(x: 40, y: 70, w: w - 80))
 
         // BACK has moved to the top right, so the footer starts at the margin.

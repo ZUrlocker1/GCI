@@ -238,6 +238,14 @@ final class SettingsNode: SKNode {
     }
 
     private func buildFooter() {
+        // Above the rule, opposite SAVED AUTOMATICALLY. This is the screen
+        // someone opens to look the app over, so it is where the build number
+        // belongs.
+        let build = label("VERSION \(Bundle.main.appVersion)  BUILD \(Bundle.main.appBuild)",
+                          9, SKColor.white.withAlphaComponent(0.45), .left)
+        build.position = CGPoint(x: Self.lx, y: 88)
+        content.addChild(build)
+
         content.addChild(hline(x: 40, y: 70, w: Self.W - 80))
 
         // Top right, in the same box the HUD's SETTINGS button occupies.
