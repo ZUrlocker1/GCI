@@ -217,30 +217,30 @@ final class SettingsNode: SKNode {
         toggleRow("NEBULA", x: x, w: w, y: 408, value: settings.nebula) {
             self.settings.nebula = $0
         }
-        explain("COLOURED HAZE, FROM LEVEL 2", x: x, y: 386)
+        explain("COLORED HAZE BACKGROUND IN LATER LEVELS", x: x, y: 386)
 
         toggleRow("LOG PANEL", x: x, w: w, y: 358, value: settings.logPanel) {
             self.settings.logPanel = $0
         }
         explain("SAME AS THE L KEY", x: x, y: 336)
 
-        heading("CONTROLS", Self.cyan, x: x, y: 320)
+        heading("CONTROLS", Self.cyan, x: x, y: 315)
         let range = GameSettings.shipSpeedRange
         let span = range.upperBound - range.lowerBound
-        sliderRow("SHIP SPEED", x: x, w: w, y: 292,
+        sliderRow("SHIP SPEED", x: x, w: w, y: 287,
                   fraction: (settings.shipSpeedScale - range.lowerBound) / span,
                   readout: percent(settings.shipSpeedScale), dimmed: false,
                   defaultMark: 0.5) { fraction in
             self.settings.shipSpeedScale = range.lowerBound + fraction * span
         }
-        explain("DEFAULT IS PLAYTESTED", x: x, y: 267)
+        explain("DEFAULT IS PLAYTESTED", x: x, y: 262)
 
-        heading("DATA", Self.magenta, x: x, y: 214)
-        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 186, tint: Self.magenta) {
+        heading("DATA", Self.magenta, x: x, y: 209)
+        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 181, tint: Self.magenta) {
             ScoreManager.shared.clearHighScores()
         }
-        explain("BACK TO ORIGINAL SCORES", x: x, y: 164)
-        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 136, tint: Self.cyan) {
+        explain("BACK TO ORIGINAL SCORES", x: x, y: 159)
+        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 131, tint: Self.cyan) {
             self.settings.restoreDefaults()
         }
     }
