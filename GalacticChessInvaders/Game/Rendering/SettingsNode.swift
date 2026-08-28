@@ -214,13 +214,15 @@ final class SettingsNode: SKNode {
         }
         explain("0% = OPEN SPACE, 100% = NAMED ROWS, COLS", x: x, y: 435)
 
-        toggleRow("HOME ZONE BANDS", x: x, w: w, y: 408, value: settings.homeZones) {
-            self.settings.homeZones = $0
+        toggleRow("NEBULA", x: x, w: w, y: 408, value: settings.nebula) {
+            self.settings.nebula = $0
         }
-        toggleRow("LOG PANEL", x: x, w: w, y: 376, value: settings.logPanel) {
+        explain("COLOURED HAZE, FROM LEVEL 2", x: x, y: 386)
+
+        toggleRow("LOG PANEL", x: x, w: w, y: 358, value: settings.logPanel) {
             self.settings.logPanel = $0
         }
-        explain("SAME AS THE L KEY", x: x, y: 354)
+        explain("SAME AS THE L KEY", x: x, y: 336)
 
         heading("CONTROLS", Self.cyan, x: x, y: 320)
         let range = GameSettings.shipSpeedRange

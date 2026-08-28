@@ -797,6 +797,7 @@ class GameScene: SKScene {
     private func applyLiveSettings() {
         applyGlowSetting()
         boardNode?.applyDisplaySettings()
+        backgroundColor = backdropNode.apply(level: levels.level)
         AudioManager.shared.applyMusicSettings()
         // The update loop drives this too, but it does not run while a panel
         // holds the scene paused — so switching Auto Chess on from Settings
@@ -1131,9 +1132,16 @@ class GameScene: SKScene {
     /// thing that hands them back — cutting the banner without this is exactly
     /// how the lasers ended up frozen once already.
     private func endLevelAnnouncement() {
-        guard isAnnouncingLevel else { return }
+        // Dismiss unconditionally. The banner node and the flag are cleared by
+        // two independent actions nominally ending together, and the banner is
+        // still on screen through its own 0.3s fade — so guarding the removal
+        // on the flag left a window where a panel could open over a visible
+        // banner. Only the hand-back below depends on having interrupted a live
+        // announcement.
+        let wasAnnouncing = isAnnouncingLevel
         dismissLevelBanner()
-        guard stateMachine.currentState is PlayingState else { return }
+        clearGutterNotice()
+        guard wasAnnouncing, stateMachine.currentState is PlayingState else { return }
         fleet?.setPaused(false)
         laserPool?.setPaused(false)
         beginBeat()
@@ -1230,10 +1238,7 @@ class GameScene: SKScene {
         bloomNode.position = .zero
         removeEndBanner()
         dismissLevelBanner()
-        for node in bloomNode.children where node.name == Self.gutterNoticeName {
-            node.removeAllActions()
-            node.removeFromParent()
-        }
+        clearGutterNotice()
         hasFiredWarningShot = false
         beatsThisLevel = 0
         isAnnouncingLevel = false
@@ -1594,6 +1599,14 @@ class GameScene: SKScene {
     private func clearCentredMessages() {
         removeEndBanner()
         dismissLevelBanner()
+    }
+
+    /// The one-line notice in the left gutter — SKIP LEVEL and its kind.
+    private func clearGutterNotice() {
+        for node in bloomNode.children where node.name == Self.gutterNoticeName {
+            node.removeAllActions()
+            node.removeFromParent()
+        }
     }
 
     private func removeEndBanner() {

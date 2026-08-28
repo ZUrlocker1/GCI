@@ -44,23 +44,28 @@ final class BackdropNode: SKNode {
                 blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
     }
 
-    /// The table from `docs/implementation.md`. Levels 1–2 are deliberately
-    /// untouched: the opening is the reference every later wave is read against,
-    /// and nothing has escalated yet.
+    /// The table from `docs/implementation.md`. Level 1 is deliberately
+    /// untouched — it is the reference every later wave is read against — and no
+    /// blob sits dead centre, which reads as staged rather than as weather.
     static func look(forLevel level: Int) -> Look {
         let black = SKColor.black
         switch max(1, level) {
-        case 1, 2:
+        case 1:   // The reference every later wave is read against
             return Look(void: black, haze: nil)
-        case 3:   // DOUBLE TROUBLE — the first hint that something is arriving
+        case 2:   // FIRE POWER — the faintest first hint, barely there
+            return Look(void: rgb(0x03040A), haze: Haze(
+                color: rgb(0x2E3A9E), alpha: 0.10,
+                center: CGPoint(x: 0.58, y: 0.12), scale: CGSize(width: 1.4, height: 0.45),
+                rotation: 0))
+        case 3:   // DOUBLE TROUBLE
             return Look(void: rgb(0x04050C), haze: Haze(
                 color: rgb(0x3A46B4), alpha: 0.16,
-                center: CGPoint(x: 0.5, y: 0.16), scale: CGSize(width: 1.5, height: 0.55),
+                center: CGPoint(x: 0.42, y: 0.18), scale: CGSize(width: 1.5, height: 0.55),
                 rotation: 0))
         case 4:   // RELENTLESS — the same, deeper
             return Look(void: rgb(0x06050E), haze: Haze(
                 color: rgb(0x4040C0), alpha: 0.20,
-                center: CGPoint(x: 0.5, y: 0.22), scale: CGSize(width: 1.5, height: 0.7),
+                center: CGPoint(x: 0.61, y: 0.24), scale: CGSize(width: 1.5, height: 0.7),
                 rotation: 0))
         case 5:   // TRIPLE THREAT
             return Look(void: rgb(0x08040F), haze: Haze(
@@ -70,7 +75,7 @@ final class BackdropNode: SKNode {
         case 6:   // WIDE ORBIT — the haze widens as the sweep does
             return Look(void: rgb(0x0A0410), haze: Haze(
                 color: rgb(0x7A2EC8), alpha: 0.20,
-                center: CGPoint(x: 0.5, y: 0.45), scale: CGSize(width: 2.1, height: 0.8),
+                center: CGPoint(x: 0.44, y: 0.47), scale: CGSize(width: 2.1, height: 0.8),
                 rotation: 0))
         case 7:   // CROSSFIRE — the grain lies along the bishops' own diagonals
             // A broad swathe, not a stripe: at 0.30 it read as a drawn band
@@ -87,19 +92,19 @@ final class BackdropNode: SKNode {
             // rather than as armour; blue in the mix cools it and lifts it.
             return Look(void: rgb(0x0A0C08), haze: Haze(
                 color: rgb(0x62CBAE), alpha: 0.13,
-                center: CGPoint(x: 0.5, y: 0.62), scale: CGSize(width: 1.7, height: 0.9),
+                center: CGPoint(x: 0.58, y: 0.60), scale: CGSize(width: 1.7, height: 0.9),
                 rotation: 0))
         case 9:   // KING ACTIVATED — the light comes from where he sits
             return Look(void: rgb(0x100509), haze: Haze(
                 color: rgb(0xD08828), alpha: 0.20,
-                center: CGPoint(x: 0.5, y: 0.94), scale: CGSize(width: 1.8, height: 0.7),
+                center: CGPoint(x: 0.46, y: 0.94), scale: CGSize(width: 1.8, height: 0.7),
                 rotation: 0))
         default:  // BLITZ
             // Faded. A pure hot red at 0.24 competed with the magenta pieces
             // it sits behind, which are the thing that has to be read.
             return Look(void: rgb(0x140306), haze: Haze(
                 color: rgb(0xB8394A), alpha: 0.15,
-                center: CGPoint(x: 0.5, y: 0.5), scale: CGSize(width: 2.2, height: 1.4),
+                center: CGPoint(x: 0.55, y: 0.46), scale: CGSize(width: 2.2, height: 1.4),
                 rotation: 0))
         }
     }
@@ -145,9 +150,9 @@ final class BackdropNode: SKNode {
     @discardableResult
     func apply(level: Int) -> SKColor {
         let look = Self.look(forLevel: level)
-        guard let haze = look.haze else {
+        guard GameSettings.shared.nebula, let haze = look.haze else {
             blob.alpha = 0
-            return look.void
+            return GameSettings.shared.nebula ? look.void : .black
         }
         blob.color = haze.color
         blob.colorBlendFactor = 1

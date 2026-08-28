@@ -176,8 +176,12 @@ final class BoardNode: SKNode {
         let amount = min(max(settings.boardGrid, 0), 1)
         gridNode?.strokeColor = Self.cyan.withAlphaComponent(0.364 * amount)
         gridNode?.lineWidth = 0.75 + 0.5 * amount
+        // The bands come in over the slider's first quarter and hold, so the
+        // very bottom of the range is genuinely empty space and anything above
+        // it has the near/far read the bands exist to give.
+        let bands = min(amount / 0.25, 1)
         for zone in zoneNodes {
-            zone.fillColor = Self.cyan.withAlphaComponent(settings.homeZones ? 0.0728 : 0)
+            zone.fillColor = Self.cyan.withAlphaComponent(0.0728 * bands)
         }
         let threshold = Self.coordinateThreshold
         let reveal = max(0, (amount - threshold) / (1 - threshold))
