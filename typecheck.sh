@@ -77,6 +77,65 @@ if missing:
     sys.exit(1)
 SOUNDCHECK
 
+# Advisory, not fatal. Two reports that between them cover the mistakes an asset
+# change actually makes: deleting a file that a second key was quietly relying
+# on, and leaving a file in the bundle that nothing loads.
+if [ "${1:-}" = "--assets" ]; then
+python3 - <<'ASSETAUDIT'
+import re, pathlib
+root = pathlib.Path("GalacticChessInvaders")
+keys = pathlib.Path(root, "Audio/SoundKey.swift").read_text()
+paths = dict(re.findall(r'case \.(\w+):\s*return "([^"]+\.caf)"', keys))
+
+shared = {}
+for key, f in paths.items(): shared.setdefault(f, []).append(key)
+shared = {f: k for f, k in shared.items() if len(k) > 1}
+if shared:
+    print("• Sound files backing more than one key — deleting one key does not")
+    print("  make the file unused:")
+    for f, k in sorted(shared.items()): print(f"    {f}\n      {', '.join(sorted(k))}")
+
+used = set(paths.values())
+orphans = sorted(str(f.relative_to(root / "Resources/sfx"))
+                 for f in (root / "Resources/sfx").rglob("*.caf")
+                 if str(f.relative_to(root / "Resources/sfx")) not in used)
+if orphans:
+    total = sum((root / "Resources/sfx" / o).stat().st_size for o in orphans)
+    print(f"• {len(orphans)} bundled sound(s) no SoundKey names, {total/1e6:.1f} MB:")
+    for o in orphans: print(f"    {o}")
+
+# Piece names are composed at runtime ("chess-\(colour)-\(type)\(damage)"),
+# so the literal search that guards *missing* art cannot also find *unused*
+# art — it would call every piece an orphan. The generated set is enumerated
+# instead, and anything matching neither that nor a literal is genuinely stray.
+generated = {f"chess-{c}-{t}{d}"
+             for c in ("w", "b")
+             for t in ("pawn", "knight", "bishop", "rook", "queen", "king")
+             for d in ("", "-d1", "-d2")}
+literals = set(re.findall(r'"((?:chess|ship)-[a-z0-9-]+)"', "".join(
+        f.read_text() for f in root.rglob("*.swift"))))
+sprites = root / "Resources/Sprites"
+stray = sorted(f.stem for f in sprites.glob("*.png")
+               if f.stem not in literals and f.stem not in generated)
+if stray:
+    print(f"• {len(stray)} bundled sprite(s) nothing names: {', '.join(stray)}")
+ASSETAUDIT
+fi
+
+# Music tracks and the font are referenced by bare string, with no enum to
+# anchor them. Both fail quietly: a missing track logs one line nobody reads, and
+# a missing font makes every SKLabelNode fall back to Helvetica — the game still
+# runs, it just stops looking like itself.
+RES=GalacticChessInvaders/Resources
+for track in $(grep -rhoE 'playMusic\("[^"]+"' --include="*.swift" GalacticChessInvaders \
+                 | sed 's/.*("//;s/"//'); do
+  [ -f "$RES/$track.m4a" ] || { echo "✗ Music referenced but not bundled: $track.m4a"; exit 1; }
+done
+for font in $(grep -rhoE '"[A-Za-z0-9]+-Regular"' --include="*.swift" GalacticChessInvaders \
+                | tr -d '"' | sort -u); do
+  [ -f "$RES/$font.ttf" ] || { echo "✗ Font referenced but not bundled: $font.ttf"; exit 1; }
+done
+
 # swift-plugin-server (used to expand @Observable) is flaky in this environment
 # and used to be treated as cosmetic noise — filtered out on the assumption that
 # the rest of the diagnostics were still trustworthy. They are not: verified by
