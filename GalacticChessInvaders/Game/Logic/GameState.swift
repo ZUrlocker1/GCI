@@ -29,7 +29,7 @@ class TitleState: GCIState {
     override func didEnter(from previousState: GKState?) {
         MainActor.assumeIsolated {
             gameScene?.showTitleScreen()
-            AudioManager.shared.playMusic("GCI-intro")
+            AudioManager.shared.playMusic(from: MusicLibrary.titlePool)
             DiagnosticsLog.shared.log(.startup, "Title screen")
         }
     }

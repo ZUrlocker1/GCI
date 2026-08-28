@@ -1047,7 +1047,7 @@ class GameScene: SKScene {
         hideBoard()
         removePausedOverlay()
         // GameOverState stopped the music; start it fresh rather than leaving silence.
-        AudioManager.shared.playMusic("GCI-intro")
+        AudioManager.shared.playMusic(from: MusicLibrary.titlePool)
         DiagnosticsLog.shared.log(.restart, "new game")
         stateMachine.enter(PlayingState.self)
     }
@@ -1097,6 +1097,7 @@ class GameScene: SKScene {
         // change lands behind the mechanic banner rather than mid-play.
         backgroundColor = backdropNode.apply(level: levels.level)
         starfieldRate = BackdropNode.starfieldSpeed(forLevel: levels.level)
+        AudioManager.shared.playMusic(from: MusicLibrary.pool(forLevel: levels.level))
         starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
 
         let node = BoardNode()
