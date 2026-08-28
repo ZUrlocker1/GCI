@@ -214,13 +214,17 @@ extension SoundKey {
         case .fleetHeartbeat:                       return 0.55
         case .criticalCrackleHigh, .criticalCrackleMid,
              .criticalCrackleLow, .criticalCrackleEerie: return 0.25
-        // Destruction is rare and should always read over the hit that caused
-        // it, so the whole family runs at full balance and the mixer's ceiling
-        // does the limiting. Measured effective RMS lands at 0.10-0.17 against
-        // a 0.10 hit and a 0.08 laser.
+        // Destruction should read over the hit that caused it, so this is the
+        // loudest single event in the game — but no longer the only family at
+        // full balance. It ran at 1.0 on the reasoning that destruction is
+        // rare, which stopped being true at Level 8: a Nuke takes three pieces
+        // and the gatling clears a rank. One explosion measured 0.9dB under the
+        // music, which is right; four measured 11dB over it, because nothing
+        // stopped them summing. `AudioManager` now caps the family's voices,
+        // and this trim is the other half.
         case .pawnDestroyed, .knightDestroyed, .bishopDestroyed,
              .rookDestroyed, .queenDestroyed, .kingDestroyed,
-             .playerShipDestroyed, .bombShockwave:  return 1.0
+             .playerShipDestroyed, .bombShockwave:  return 0.75
         // Every hit, fatal or not. Sits above the laser so it is never masked
         // by the shot that caused it, and below destruction.
         case .pieceHitLight, .invaderHitsPiece:     return 0.62
