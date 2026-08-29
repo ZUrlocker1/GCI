@@ -26,11 +26,20 @@ clock and comes apart as you play it.
 
 <a href="https://www.youtube.com/watch?v=yVaNIPDnGa0"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
 
-[Download for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-0.4.dmg)
+[Download for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-0.5.dmg)
 
-Current release: `0.4` (build 4). Universal binary — runs natively on both Apple Silicon and Intel
+Current release: `0.5` (build 5). Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
+
+**What's new in v0.5:**
+
+- **The soundtrack varies.** Once you reach Level 3, the title theme and the
+  first two waves each have a one-in-three chance of playing an alternate track
+  instead — so the music you hear most often is not always the same.
+- **A different sound each time you lose**, chosen from four.
+- **Quality of life** — the diagnostics log now names which track is playing and
+  which wave each line belongs to.
 
 **What's new in v0.4:**
 

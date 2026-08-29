@@ -236,7 +236,7 @@ struct PhysicsCategory {
 
 ## Where the project is
 
-**Shipping as v0.4.** Signed, notarized, distributed as a DMG. Ten levels play
+**Shipping as v0.5.** Signed, notarized, distributed as a DMG. Ten levels play
 end to end with every mechanic, all five power-ups, a settings screen, its own
 soundtrack and full arcade audio.
 
