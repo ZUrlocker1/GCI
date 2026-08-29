@@ -911,7 +911,7 @@ over 72s.
 ### Shipping (§20 Phase 9)
 
 Signing, notarization and direct distribution are done — `release-dmg.sh` wraps
-an Xcode-exported app, and 0.4 is out with an icon and a green test suite. What
+an Xcode-exported app, and 0.5 is out with an icon and a green test suite. What
 is left:
 
 - [ ] **Balance pass from outside playtesters.** §9's own criteria: is Level 1
