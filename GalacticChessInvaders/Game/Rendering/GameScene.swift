@@ -1783,7 +1783,8 @@ class GameScene: SKScene {
             AudioManager.shared.play(oneOf: SoundKey.gameOverPool)
             return
         }
-        AudioManager.shared.fadeTo(track: track, over: MusicLibrary.stingerFade)
+        AudioManager.shared.fadeTo(track: track, over: MusicLibrary.stingerFade,
+                                   loops: false)
         handBackToIntro(after: track)
     }
 
@@ -1792,9 +1793,13 @@ class GameScene: SKScene {
     /// out, the intro takes over — whichever variant is in force.
     private func handBackToIntro(after track: String) {
         // `fadeTo` fades the wave's track out first, so the stinger does not
-        // begin for another `stingerFade`.
+        // begin for another `stingerFade`. The hand-over then starts a beat
+        // before the end rather than exactly on it: the stinger carries its own
+        // fade-out, so the intro comes up underneath it instead of after a gap,
+        // and nothing has to land on the same millisecond the track finishes.
         let length = MusicLibrary.stingerFade
             + (AudioManager.shared.duration(ofTrack: track) ?? MusicLibrary.stingerFallbackLength)
+            - MusicLibrary.stingerHandBackLead
         DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in
             guard let self else { return }
             // Only if the run is still sitting on its ending. A new game or a

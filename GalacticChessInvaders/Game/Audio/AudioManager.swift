@@ -224,7 +224,8 @@ final class AudioManager {
     /// scene, which stops actions for the whole tree.
     func fadeTo(track: String, over duration: TimeInterval = 0.5,
                 gap: TimeInterval = 0,
-                startAt: TimeInterval = 0, fadeIn: TimeInterval = 0) {
+                startAt: TimeInterval = 0, fadeIn: TimeInterval = 0,
+                loops: Bool = true) {
         // Before the guard, not after. A hand-over already scheduled has to be
         // cancelled even when this call decides it has nothing to do — closing
         // a panel queues the level track 1.7s out, and reopening inside that
@@ -241,12 +242,12 @@ final class AudioManager {
             return
         }
         guard let player = musicPlayer else {
-            playMusic(track, startAt: startAt, fadeIn: fadeIn); return
+            playMusic(track, startAt: startAt, fadeIn: fadeIn, loops: loops); return
         }
         player.setVolume(0, fadeDuration: duration)
         DispatchQueue.main.asyncAfter(deadline: .now() + duration + gap) { [weak self] in
             guard let self, self.fadeGeneration == token else { return }
-            self.playMusic(track, startAt: startAt, fadeIn: fadeIn)
+            self.playMusic(track, startAt: startAt, fadeIn: fadeIn, loops: loops)
         }
     }
 
@@ -259,8 +260,14 @@ final class AudioManager {
                over: duration, gap: gap)
     }
 
+    /// `loops` is true for everything that plays under the game — a wave's
+    /// track, the title theme — and false for the one-shot pieces that see a
+    /// run out. An end-of-run stinger left to loop reached its own fade-out and
+    /// then started again from its opening bars, which reads as a new level
+    /// beginning on the game over screen.
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume,
-                   startAt: TimeInterval = 0, fadeIn: TimeInterval = 0) {
+                   startAt: TimeInterval = 0, fadeIn: TimeInterval = 0,
+                   loops: Bool = true) {
         guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a") else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
             return
@@ -272,7 +279,7 @@ final class AudioManager {
         fadeGeneration += 1
         musicPlayer?.stop()
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
-        player.numberOfLoops = -1
+        player.numberOfLoops = loops ? -1 : 0
         player.volume = volume * GameSettings.shared.musicVolume
         // `rate` is ignored unless this is armed before the player is prepared,
         // so it goes on whether or not a slow-motion effect ever fires.

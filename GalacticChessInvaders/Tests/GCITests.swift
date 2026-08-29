@@ -2553,6 +2553,24 @@ final class MusicVariantTests: XCTestCase {
         }
     }
 
+    /// A stinger is a one-shot. Left looping it reached its own fade-out and
+    /// started again from its opening bars, which on a game over screen reads
+    /// as a new level beginning.
+    func testTheHandBackComesBeforeTheStingerCouldRepeat() throws {
+        for track in MusicLibrary.runStingers + [MusicLibrary.winStinger,
+                                                 MusicLibrary.oddEndingStinger] {
+            let length = try XCTUnwrap(AudioManager.shared.duration(ofTrack: track))
+            let handBack = MusicLibrary.stingerFade + length - MusicLibrary.stingerHandBackLead
+            // Starts after the stinger does, and before it could loop.
+            XCTAssertGreaterThan(handBack, MusicLibrary.stingerFade, "\(track)")
+            XCTAssertLessThan(handBack, MusicLibrary.stingerFade + length, "\(track)")
+            // And with enough of the track left to fade under rather than cut.
+            XCTAssertGreaterThanOrEqual(MusicLibrary.stingerHandBackLead,
+                                        MusicLibrary.stingerFade,
+                                        "the hand-over is longer than the overlap it gets")
+        }
+    }
+
     /// Won or lost is the wrong axis: you lose every wave until the tenth, so
     /// what the ending sounds like follows from how far the player got.
     func testEndOfRunStingerFollowsHowFarThePlayerGot() {
