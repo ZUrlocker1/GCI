@@ -121,6 +121,11 @@ enum MusicLibrary {
     /// so the hand-over comes early rather than leaving a silence.
     static let stingerFallbackLength: TimeInterval = 22
 
+    /// How far before a stinger ends the intro starts coming back. The stinger
+    /// fades itself out over roughly this long, so the two overlap rather than
+    /// meeting at a seam.
+    static let stingerHandBackLead: TimeInterval = 1.5
+
     /// How a wave's music takes over. Slower than the panel hand-over, with a
     /// beat of silence in the middle: a level start is a bigger seam than
     /// stepping into a menu, and cutting straight from one arcade track to
