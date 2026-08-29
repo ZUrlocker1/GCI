@@ -45,14 +45,13 @@ final class AudioManager {
         }
         // Only the sounds the game currently triggers are bundled; the rest
         // arrive with the phases that use them, and a missing file is a no-op
-        // rather than an error. The count of absent files used to be reported
-        // here; every sound the game actually plays is now bundled, so it only
-        // ever counted files that are deliberately not there — a number that
-        // never changes is not worth a line on every launch.
+        // rather than an error. Neither the count of absent files nor the pool
+        // and loop counts are reported here any more: all three only change
+        // when `SoundKey` does, so they said the same thing on every launch
+        // while taking up the one line that says the audio came up at all.
         for key in SoundKey.allCases { preload(key) }
 
-        DiagnosticsLog.shared.log(.audio,
-            "SFX ready: \(sfxPools.count) pools, \(loopPlayers.count) loops")
+        DiagnosticsLog.shared.log(.audio, "SFX ready")
     }
 
     /// Returns false if the sound is not available to load.
