@@ -156,16 +156,36 @@ final class HowToPlayNode: SKNode {
         // created by" is 16 × 10 = 160pt and the word after it can be placed by
         // arithmetic rather than by measuring a node — with the em of space
         // between them counted rather than trusted to a trailing space.
+        // At the left margin rather than in this column: at body size the line
+        // is 480pt and the right column is 410. Below both columns it has the
+        // full panel to run in, and it lines up with the resume hint under it.
+        //
+        // Body size and full white, not 10pt at 60%. This is the one credit on
+        // the screen that names someone, and it was the quietest thing on it.
+        let cx = Self.lx
+        let em: CGFloat = 12
         let creditY: CGFloat = 88
-        let credit = label("Music created by", 10, SKColor.white.withAlphaComponent(0.6), .left)
-        credit.position = CGPoint(x: x, y: creditY)
+        let credit = label("All music created by ", em, .white, .left)
+        credit.position = CGPoint(x: cx, y: creditY)
         addChild(credit)
 
-        let linkX = x + 170
-        let linkW: CGFloat = 50          // "Zudio", 5 characters at 10pt
-        let link = label("Zudio", 10, Self.cyan.withAlphaComponent(0.9), .left)
+        // Press Start 2P advances exactly one em per character, so every
+        // position on this line is arithmetic: 21 characters, then the link,
+        // then the rest.
+        let linkX = cx + 21 * em
+        let linkW: CGFloat = 5 * em      // "Zudio"
+        let link = label("Zudio", em, Self.cyan.withAlphaComponent(0.9), .left)
         link.position = CGPoint(x: linkX, y: creditY)
         addChild(link)
+
+        // One line, not two: the HISTORY block above ends around y=104 and the
+        // footer rule is at 70, so there is room for one 12pt line here and not
+        // for two. 71 characters at 12pt is 852pt from the left margin, ending
+        // at 902 against a 910 margin — which is why the space before
+        // "available" is single rather than the double it was written with.
+        let tail = label(", royalty-free available on Mac, iPhone, iPad", em, .white, .left)
+        tail.position = CGPoint(x: linkX + linkW, y: creditY)
+        addChild(tail)
 
         let underline = SKShapeNode(rect: CGRect(x: linkX, y: creditY - 3, width: linkW, height: 0.9))
         underline.fillColor = Self.cyan.withAlphaComponent(0.9)
@@ -203,24 +223,27 @@ final class HowToPlayNode: SKNode {
         addChild(copyright)
     }
 
-    // MARK: - Scoring grid  (2 columns, 3 rows, 60 pt row height)
+    // MARK: - Scoring grid  (3 columns, 2 rows)
 
     private func scoringGrid(x: CGFloat, topY: CGFloat) {
+        // Reading order is descending value, so the row you look at first is
+        // the one worth most.
         let items: [(String, String)] = [
-            ("king", "500"), ("queen", "150"),
-            ("rook",  "75"), ("knight",  "50"),
-            ("bishop","50"), ("pawn",    "25"),
+            ("king", "500"), ("queen", "150"), ("rook", "75"),
+            ("knight", "50"), ("bishop", "50"), ("pawn", "25"),
         ]
-        let colW: CGFloat = 200
+        // Three across in a 410pt column. A cell is the icon plus three digits
+        // at 16pt — 110pt of ink — so 135 leaves 25pt of air between cells and
+        // the last one ends at 890, inside the 910pt margin.
+        let colW: CGFloat = 135
         // 44 rather than 60. The icons are 34pt tall, so this leaves 10pt
-        // between rows — enough to read as a grid, and it reclaims 48pt for the
-        // debug key line underneath.
+        // between rows — enough to read as a grid.
         let rowH: CGFloat = 44
         let iconH: CGFloat = 34
 
         for (i, (piece, pts)) in items.enumerated() {
-            let col = CGFloat(i % 2)
-            let row = CGFloat(i / 2)
+            let col = CGFloat(i % 3)
+            let row = CGFloat(i / 3)
             let px = x + col * colW
             let py = topY - row * rowH
 

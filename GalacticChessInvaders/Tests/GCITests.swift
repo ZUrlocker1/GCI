@@ -1019,6 +1019,62 @@ final class HowToPlayNodeTests: XCTestCase {
         return found
     }
 
+    /// The credit runs the full panel width at body size, so it has to clear
+    /// the HISTORY block above it and the footer rule below — measured, not
+    /// trusted to the em arithmetic that placed it.
+    func testMusicCreditFitsAndClearsItsNeighbours() throws {
+        let screen = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
+        let all = labels(in: screen)
+
+        let parts = all.filter {
+            ($0.text?.hasPrefix("All music created by") ?? false)
+                || $0.text == "Zudio"
+                || ($0.text?.hasPrefix(", royalty-free") ?? false)
+        }
+        XCTAssertEqual(parts.count, 3, "the credit is three labels on one line")
+
+        var line = CGRect.null
+        for part in parts {
+            XCTAssertEqual(part.fontSize, 12, "body size, like the rest of the screen")
+            line = line.union(part.calculateAccumulatedFrame())
+        }
+        XCTAssertGreaterThanOrEqual(line.minX, 40, "runs past the left margin")
+        XCTAssertLessThanOrEqual(line.maxX, 960 - 40, "runs past the right margin")
+        XCTAssertGreaterThan(line.minY, 70, "collides with the footer rule")
+
+        // Nothing else on the screen may sit on top of it.
+        for other in all where !parts.contains(other) {
+            XCTAssertFalse(line.intersects(other.calculateAccumulatedFrame()),
+                           "credit overlaps: \(other.text ?? "?")")
+        }
+
+        // Only the word that is a link is coloured like one; the sentence is
+        // plain white rather than the 60% grey it used to be.
+        let sentence = try XCTUnwrap(parts.first { $0.text?.hasPrefix("All music") == true })
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        sentence.fontColor?.usingColorSpace(.deviceRGB)?.getRed(&r, green: &g, blue: &b, alpha: &a)
+        XCTAssertEqual(a, 1, accuracy: 0.01, "the credit is full white, not dimmed")
+        XCTAssertEqual(r, 1, accuracy: 0.01)
+    }
+
+    /// Three across, two down, all of it inside the right column.
+    func testScoringGridIsThreeAcrossAndTwoDown() {
+        let screen = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
+        let pieces = screen.children.compactMap { $0 as? SKSpriteNode }
+            .filter { $0.size.height > 30 && $0.size.height < 40 }
+        XCTAssertEqual(pieces.count, 6)
+
+        let rows = Set(pieces.map { ($0.position.y * 10).rounded() })
+        let cols = Set(pieces.map { ($0.position.x * 10).rounded() })
+        XCTAssertEqual(rows.count, 2, "two rows")
+        XCTAssertEqual(cols.count, 3, "three columns")
+
+        for piece in pieces {
+            XCTAssertLessThanOrEqual(piece.calculateAccumulatedFrame().maxX, 960 - 40,
+                                     "a piece runs past the right margin")
+        }
+    }
+
     func testCopyrightSitsInTheLowerRightWithoutColliding() throws {
         let screen = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
         let all = labels(in: screen)

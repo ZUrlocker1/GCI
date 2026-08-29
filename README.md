@@ -34,14 +34,10 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 
 **What's new in v0.5:**
 
-- **Nine more tracks**, again from [Zudio](https://www.mzurlocker.com/zudio).
-  The music you hear most — the title theme and the first two waves — now has
-  alternates that turn up once you have played far enough to know the originals.
-- **Every run gets an ending.** Finishing all ten waves, going out on a draw and
-  losing deep in the run each sound different, and the music carries on through
-  the high score entry.
-- **A high score table worth beating.** The starting scores used to fall to any
-  first game. Now you have to earn a place on them.
+- **Nine more tracks**, again from [Zudio](https://www.mzurlocker.com/zudio),
+  including music for the end of a game.
+- **A built-in test harness** — 370 tests covering the chess rules, the fleet,
+  scoring and the audio, run from Xcode with `⌘U`.
 
 **What's new in v0.4:**
 
