@@ -98,6 +98,13 @@ final class AudioManager {
     /// ear cannot separate them, and the screen is carrying it anyway.
     private static let destructionVoiceCap = 3
 
+    /// Plays one of `pool` at random. For events that would wear out if they
+    /// always sounded the same — see `SoundKey.gameOverPool`.
+    func play(oneOf pool: [SoundKey], scale: Float = 1) {
+        guard let key = pool.randomElement() else { return }
+        play(key, scale: scale)
+    }
+
     func play(_ key: SoundKey, scale: Float = 1) {
         let settings = GameSettings.shared
         guard settings.soundOn else { return }

@@ -81,7 +81,16 @@ enum SoundKey: String, CaseIterable {
 
     // ── Game events ──────────────────────────────────────────────────────────
     case levelClear             // Interface Arp Reveal Down Long.wav (gdc-bundle)
-    case gameOver               // DSGNBass_Bass Drop & Downer Slow 10.wav (gdc-bundle)
+    // Four downers, chosen at random per death (§5). One fixed loss sting gets
+    // old fast in a game you lose often, and these differ enough in attack and
+    // weight to read as variation rather than as a glitch. All are the 344
+    // Audio "Bass Drops & Downers" packs, trimmed to 3.0s with a 0.8s fade and
+    // loudness-matched to −18 LUFS — the sources ran 3.7–8.0s and 13 dB apart,
+    // which would have made the random pick sound like a bug.
+    case gameOverDowner1        // Jump Start Drop 3        — punchiest attack
+    case gameOverDowner2        // Bass Drop & Downer Slow 10 — deepest, cleanest
+    case gameOverDowner3        // Bass Drop & Downer Slow 07 — softest, most air
+    case gameOverDowner4        // Bass Drop & Downer Medium 04 — mid weight
     case mechanicBannerTier1    // phaserUp7.ogg             (kenney-digital)
     case mechanicBannerTier2    // DSGNBram Cinematic Horn Braam -32.wav (gdc-bundle)
     case mechanicBannerTier3    // Transition Braam Slow Dark Creepy.wav (gdc-bundle)
@@ -179,7 +188,10 @@ extension SoundKey {
         case .pieceRegenerates:         return "kenney-sci-fi/forceField_000.caf"
         // Game events
         case .levelClear:               return "gdc-bundle/Interface Arp Reveal Down Long.caf"
-        case .gameOver:                 return "gdc-bundle/DSGNBass_Bass Drop & Downer Slow 10_344 Audio_Bass Drops & Downers.caf"
+        case .gameOverDowner1:          return "generated/gameover-downer-1.caf"
+        case .gameOverDowner2:          return "generated/gameover-downer-2.caf"
+        case .gameOverDowner3:          return "generated/gameover-downer-3.caf"
+        case .gameOverDowner4:          return "generated/gameover-downer-4.caf"
         case .mechanicBannerTier1:      return "kenney-digital/phaserUp7.caf"
         case .mechanicBannerTier2:      return "gdc-bundle/DSGNBram____Cinematic Horn Braam, Epic, Cinematic, Dark, Instrument, Huge-32.caf"
         case .mechanicBannerTier3:      return "gdc-bundle/Transition Braam Slow Dark Creepy.caf"
@@ -192,6 +204,11 @@ extension SoundKey {
         case .camelHonk:                return "generated/camel-honk.caf"
         }
     }
+
+    /// The loss stings, one picked at random per death.
+    static let gameOverPool: [SoundKey] = [
+        .gameOverDowner1, .gameOverDowner2, .gameOverDowner3, .gameOverDowner4
+    ]
 
     /// Sounds that should loop (pass numberOfLoops: -1 to AVAudioPlayer)
     var loops: Bool {

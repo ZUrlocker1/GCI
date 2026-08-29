@@ -1579,7 +1579,7 @@ class GameScene: SKScene {
         turnTimer.stop()
         clearSelection()
         settleFleetForReveal(against: loser)
-        AudioManager.shared.play(.gameOver)
+        AudioManager.shared.play(oneOf: SoundKey.gameOverPool)
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }
@@ -1627,7 +1627,7 @@ class GameScene: SKScene {
         clearSelection()
         ship?.direction = 0
         settleFleetForReveal(against: .white)
-        AudioManager.shared.play(.gameOver)
+        AudioManager.shared.play(oneOf: SoundKey.gameOverPool)
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }

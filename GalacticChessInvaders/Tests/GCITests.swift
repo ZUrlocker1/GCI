@@ -1179,7 +1179,7 @@ final class AudioAssetTests: XCTestCase {
     private let wiredKeys: [SoundKey] = [
         .pieceSelected, .whitePieceMoves, .blackPieceMoves, .pieceHitHeavy,
         .illegalMove, .checkAlarm, .pawnPromotion, .autoMoveTrigger,
-        .turnTimerWarning, .levelClear, .gameOver, .uiButtonClick,
+        .turnTimerWarning, .levelClear, .uiButtonClick,
     ]
 
     private var sfxRoot: URL? {
@@ -1204,6 +1204,25 @@ final class AudioAssetTests: XCTestCase {
             XCTAssertNoThrow(try AVAudioPlayer(contentsOf: url),
                              "\(key) exists but will not decode")
         }
+    }
+
+    /// A random pick only reads as variation if the options are interchangeable.
+    /// The four sources ran 3.7–8.0s and 13 dB apart, which would have sounded
+    /// like a bug rather than a choice, so they are trimmed and level-matched.
+    func testGameOverDownersAreInterchangeable() throws {
+        let root = try XCTUnwrap(sfxRoot)
+        XCTAssertEqual(Set(SoundKey.gameOverPool).count, 4, "four distinct downers")
+
+        var durations: [TimeInterval] = []
+        for key in SoundKey.gameOverPool {
+            let player = try AVAudioPlayer(contentsOf: root.appendingPathComponent(key.filename))
+            durations.append(player.duration)
+            XCTAssertEqual(player.format.sampleRate, 44100, "\(key)")
+            XCTAssertEqual(player.format.channelCount, 1, "\(key)")
+        }
+        let spread = (durations.max() ?? 0) - (durations.min() ?? 0)
+        XCTAssertLessThan(spread, 0.1, "one downer runs much longer than the others")
+        XCTAssertLessThan(durations.max() ?? 0, 3.5, "a loss sting should not outstay the overlay")
     }
 
     func testPreloadReportsNoErrors() {

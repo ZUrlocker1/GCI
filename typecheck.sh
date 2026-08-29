@@ -68,6 +68,11 @@ played = set()
 for f in root.rglob("*.swift"):
     if f.name in ("SoundKey.swift",) or "Tests" in f.parts: continue
     played |= set(re.findall(r'\.(?:play|stop)\(\.(\w+)\)', f.read_text()))
+# Keys reached through a pool rather than named at the call site — a
+# `play(oneOf:)` argument never matches the pattern above, so the four game
+# over downers would have gone unchecked exactly like the banner horns did.
+for pool in re.findall(r'static let \w*[Pp]ool: \[SoundKey\] = \[(.*?)\]', keys, re.S):
+    played |= set(re.findall(r'\.(\w+)', pool))
 base = root / "Resources/sfx"
 missing = sorted(k for k in played if k in paths and not (base / paths[k]).is_file())
 if missing:
