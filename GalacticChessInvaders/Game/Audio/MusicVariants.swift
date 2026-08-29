@@ -45,6 +45,7 @@ enum MusicVariants {
     /// variation alive across the games that follow it.
     static func reset() {
         isUnlocked = false
+        stingerCursor = 0
         intro = MusicLibrary.panelTrack
         levelTrack = MusicLibrary.fallback
     }
@@ -76,6 +77,35 @@ enum MusicVariants {
 
     // MARK: -
 
+    // MARK: - End of run
+
+    /// Round-robin rather than random: with four in the pool a random pick
+    /// repeats often enough to read as a bug rather than as variety.
+    private static var stingerCursor = 0
+
+    /// What should see the player out, or nil if this run has not earned a
+    /// piece of music and should get one of the loss stings instead.
+    ///
+    /// - `won`: the run is complete — its own track.
+    /// - `odd`: a draw or stalemate — its own track, because the ending is
+    ///   neither good nor bad and should not sound like either.
+    /// - otherwise: a rotation, provided the player got past the first wave or
+    ///   charted. Losing on Level 1 without troubling the table is the one
+    ///   ending that has not earned anything, and it keeps the downer.
+    static func endOfRunStinger(won: Bool, odd: Bool,
+                                level: Int, madeTheTable: Bool) -> String? {
+        if won { return MusicLibrary.winStinger }
+        if odd { return MusicLibrary.oddEndingStinger }
+        guard level > 1 || madeTheTable else { return nil }
+        guard !MusicLibrary.runStingers.isEmpty else { return nil }
+        let track = MusicLibrary.runStingers[stingerCursor % MusicLibrary.runStingers.count]
+        stingerCursor += 1
+        return track
+    }
+
+    /// `X` starts the rotation over with everything else.
+    static func resetStingerRotation() { stingerCursor = 0 }
+
     // MARK: - Reading the log back
 
     /// Names a track the way someone reading the log wants to see it —
@@ -98,6 +128,9 @@ enum MusicVariants {
                 }
             }
         }
+        if track == MusicLibrary.winStinger { return "Win \(track)" }
+        if track == MusicLibrary.oddEndingStinger { return "Draw \(track)" }
+        if MusicLibrary.runStingers.contains(track) { return "Sting \(track)" }
         return track
     }
 

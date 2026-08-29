@@ -1,0 +1,68 @@
+=== Zudio Song Analysis Log ===
+Title:          Formless Matter
+Generated:      2026-08-29 08:18:06
+Zudio Version:  2.4 (129)
+Seed:           14469355901445425262
+Style:          Kosmic
+Key:            F#  Dorian
+Tempo:          114 BPM
+Bars:           120
+Mood:           Dream
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 40         (36 bars)
+  B          Bars  41– 72         (32 bars)
+  A          Bars  73–116         (44 bars)
+  outro      Bars 117–120         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=1  type=minor
+  Bars   5– 40         root=1  type=minor
+  Bars  41– 56         root=1  type=power
+  Bars  57– 72         root=1  type=sus2
+  Bars  73–116         root=1  type=minor
+  Bars 117–120         root=1  type=minor
+
+--- Note Counts Per Track ---
+  Lead 1       53 notes
+  Lead 2       56 notes
+  Pads         558 notes
+  Rhythm       230 notes
+  Texture      13 notes
+  Bass         651 notes
+  Drums        938 notes
+  Lead Synth   53 notes
+
+--- Generation Log ---
+  SONG             Formless Matter
+  Style            Kosmic – 114 bpm
+  Form             A - B - A
+  Chords           F# Dorian Drone
+  KOS-RTHM-002     Stochastic JMJ melodic hook
+  KOS-LEAD-003     Pentatonic drift
+  KOS-LEAD-006     JMJ evolving phrase
+  KOS-PADS-007     Probabilistic gated chord pulse
+  KOS-PADS-008     bIII colour chord layer
+  KOS-TEXT-003     Spatial sweep chromatic
+  KOS-BASS-010     Stochastic Moroder pulse
+  KOS-DRUM-004     Electric Buddha groove
+  Instruments      L1:100 L2:70 Pd:12088 Ry:39 Tx:86 Bs:8038 Dr:32 LS:90
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar cold start
+  Bar 005    Section A    36 bars
+  Bar 005    Rhythm       steps back
+  Bar 021    Bass         pattern evolving
+  Bar 040    Drum fill    3 beat crescendo roll
+  Bar 041    Form         Enter B section
+  Bar 041    Texture      steps up
+  Bar 045    Bass         pattern evolving
+  Bar 057    Texture      steps up
+  Bar 073    Form         Return to A section
+  Bar 081    Texture      steps up
+  Bar 105    Rhythm       steps back
+  Bar 105    Texture      steps up
+  Bar 105    Bass         pattern evolving
+  Bar 117    Outro        4 bar fade
+

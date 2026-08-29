@@ -1,0 +1,66 @@
+=== Zudio Song Analysis Log ===
+Title:          Sud Dortmund
+Generated:      2026-08-29 08:23:19
+Zudio Version:  2.4 (129)
+Seed:           8018486586102389398
+Style:          Motorik
+Key:            E  Dorian
+Tempo:          139 BPM
+Bars:           120
+Mood:           Bright
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3–112         (110 bars)
+  outro      Bars 113–120         (8 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=2  type=minor
+  Bars   3–112         root=2  type=minor
+  Bars 113–120         root=1  type=min7
+
+--- Note Counts Per Track ---
+  Lead 1       59 notes
+  Lead 2       45 notes
+  Pads         472 notes
+  Rhythm       386 notes
+  Texture      12 notes
+  Bass         376 notes
+  Drums        2527 notes
+
+--- Generation Log ---
+  SONG             Sud Dortmund
+  Style            Motorik – 139 bpm
+  Form             Steady A section
+  Chords           E Dorian tonic I
+  MOT-DRUM-004     Mostly Motorik
+  MOT-BASS-003     Crawling Walk
+  MOT-PADS-006     Half-bar Breathe
+  MOT-LD1-003      Punch solo
+  MOT-LD2-006      Neu! harmony
+  MOT-RTHM-005     Chord Stab
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-007     Pedal drone
+  Instruments      L1:62 L2:39 Pd:94 Ry:34 Tx:102 Bs:39 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar cold start
+  Bar 002    Texture      steps back
+  Bar 003    Section A    110 bars
+  Bar 012    Lead 1       steps up
+  Bar 026    Drum fill    2 beat funk cross
+  Bar 036    Drum fill    2 beat double-time roll
+  Bar 041    Bass         pattern evolving
+  Bar 041    Drum fill    2 beat Bonham tom roll
+  Bar 042    Drum fill    2 beat funk cross
+  Bar 049    Drum fill    2 beat snare and toms
+  Bar 055    Texture      steps up
+  Bar 058    Lead 1       steps back
+  Bar 065    Drum fill    2 beat funk cross
+  Bar 080    Texture      steps up
+  Bar 091    Drum fill    2 beat Bonham tom roll
+  Bar 097    Texture      steps back
+  Bar 104    Drum fill    2 beat Bonham tom roll
+  Bar 107    Drum fill    2 beat Bonham tom roll
+  Bar 113    Outro        8 bar dissolve
+

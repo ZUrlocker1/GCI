@@ -97,6 +97,14 @@ final class AudioManager {
     /// ear cannot separate them, and the screen is carrying it anyway.
     private static let destructionVoiceCap = 3
 
+    /// How long a bundled track runs, without starting it. Used to hand the
+    /// end-of-run stinger back to the intro when it finishes.
+    func duration(ofTrack name: String) -> TimeInterval? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "m4a"),
+              let probe = try? AVAudioPlayer(contentsOf: url) else { return nil }
+        return probe.duration
+    }
+
     /// When the last sting played through `play(oneOf:)` finishes.
     private var stingEnds = Date.distantPast
 

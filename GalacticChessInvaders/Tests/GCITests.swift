@@ -2497,6 +2497,56 @@ final class MusicVariantTests: XCTestCase {
         }
     }
 
+    /// Won or lost is the wrong axis: you lose every wave until the tenth, so
+    /// what the ending sounds like follows from how far the player got.
+    func testEndOfRunStingerFollowsHowFarThePlayerGot() {
+        MusicVariants.resetStingerRotation()
+        XCTAssertEqual(MusicVariants.endOfRunStinger(won: true, odd: false, level: 10,
+                                                     madeTheTable: false),
+                       MusicLibrary.winStinger, "a completed run keeps its own track")
+        XCTAssertEqual(MusicVariants.endOfRunStinger(won: false, odd: true, level: 4,
+                                                     madeTheTable: false),
+                       MusicLibrary.oddEndingStinger, "a draw is neither good nor bad")
+
+        // The one ending that has earned nothing.
+        XCTAssertNil(MusicVariants.endOfRunStinger(won: false, odd: false, level: 1,
+                                                   madeTheTable: false))
+        // Level 1 still counts if the run charted.
+        XCTAssertNotNil(MusicVariants.endOfRunStinger(won: false, odd: false, level: 1,
+                                                      madeTheTable: true))
+        // And anything past the first wave counts either way.
+        XCTAssertNotNil(MusicVariants.endOfRunStinger(won: false, odd: false, level: 2,
+                                                      madeTheTable: false))
+    }
+
+    /// Round-robin, not random: four tracks picked at random repeat often
+    /// enough to read as a fault.
+    func testStingersRotateRatherThanRepeat() {
+        MusicVariants.resetStingerRotation()
+        let n = MusicLibrary.runStingers.count
+        var seen: [String] = []
+        for _ in 0..<(n * 2) {
+            seen.append(MusicVariants.endOfRunStinger(won: false, odd: false, level: 5,
+                                                      madeTheTable: false) ?? "")
+        }
+        XCTAssertEqual(Set(seen.prefix(n)).count, n, "one full turn hits every track")
+        XCTAssertEqual(Array(seen.prefix(n)), Array(seen.suffix(n)), "then it repeats in order")
+    }
+
+    /// Every stinger has to be bundled, distinct, and long enough to carry the
+    /// game over screen without the player noticing it is a loop of nothing.
+    func testEveryStingerIsBundledAndDistinct() throws {
+        var all = MusicLibrary.runStingers
+        all.append(contentsOf: [MusicLibrary.winStinger, MusicLibrary.oddEndingStinger])
+        XCTAssertEqual(Set(all).count, all.count, "no track does double duty")
+        for track in all {
+            let length = try XCTUnwrap(AudioManager.shared.duration(ofTrack: track),
+                                       "\(track).m4a is not bundled")
+            XCTAssertGreaterThan(length, 20, "\(track) is too short to cover the prompt")
+            XCTAssertLessThan(length, 35, "\(track) outstays the screen")
+        }
+    }
+
     /// The log has to answer "which song was that?" — so every track the game
     /// can start names itself, its slot, and whether it was the alternate.
     func testEveryTrackDescribesItselfForTheLog() {
