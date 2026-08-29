@@ -1258,8 +1258,13 @@ final class QuitPromptTests: XCTestCase {
         XCTAssertTrue(scene.stateMachine.currentState is PlayingState)
     }
 
-    /// Nothing to leave on the title screen.
-    func testQuitDoesNothingOnTheTitleScreen() throws {
+    /// There is no run to leave on the title screen, so Q is not the quit key
+    /// there: it falls through to the any-key-starts rule like every other key.
+    ///
+    /// Asserted by what happens rather than by the prompt's absence — if Q had
+    /// opened it, the keypress would have been swallowed and the game would not
+    /// have started.
+    func testQuitIsNotTheQuitKeyOnTheTitleScreen() throws {
         let scene = GameScene.shared
         let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
         view.presentScene(scene)
@@ -1267,8 +1272,8 @@ final class QuitPromptTests: XCTestCase {
             XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
         }
         try press(scene, "q")
-        try press(scene, "y")
-        XCTAssertTrue(scene.stateMachine.currentState is TitleState)
+        XCTAssertTrue(scene.stateMachine.currentState is PlayingState,
+                      "Q on the title should start a game, not open a prompt")
     }
 }
 
