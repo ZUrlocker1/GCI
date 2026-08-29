@@ -42,8 +42,16 @@ enum MusicLibrary {
         // Kosmic, like Pre-Solstice itself — B Dorian / 118 BPM against
         // E Dorian / 88, so it is the same room at a slightly brisker walk.
         "Pre-Solstice": "Zephyron",
-        // "Leise-Dunkels":  "…",   // L1
-        // "WelleZ-Machine": "…",   // L2
+        // L1. E Phrygian against E Mixolydian — same tonic, darker mode, and
+        // 149 BPM against 125, so the opening wave can arrive brisk instead of
+        // easy without becoming a different game.
+        "Leise-Dunkels": "GeistStrom-1999",
+        // L2. Motorik Noir: 119 BPM against 134, so the second wave can arrive
+        // slow and foreboding rather than urgent. The one alternate that is a
+        // change of character rather than of colour — Zudio calls it Bright,
+        // the D Dorian and the tempo do not agree, and the tension between
+        // them is the point.
+        "WelleZ-Machine": "Cycle-3-Midnight",
     ]
 
     /// How often the alternate wins, once unlocked.

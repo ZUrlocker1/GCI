@@ -1,0 +1,59 @@
+=== Zudio Song Analysis Log ===
+Title:          Cycle 3 Midnight
+Generated:      2026-08-29 12:13:09
+Zudio Version:  2.4 (129)
+Seed:           251211139931149944
+Style:          Motorik
+Key:            D  Dorian
+Tempo:          119 BPM
+Bars:           104
+Mood:           Bright
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 96         (92 bars)
+  outro      Bars  97–104         (8 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=5  type=minor
+  Bars   5– 96         root=5  type=minor
+  Bars  97–104         root=1  type=min7
+
+--- Note Counts Per Track ---
+  Lead 1       307 notes
+  Pads         120 notes
+  Rhythm       98 notes
+  Bass         400 notes
+  Drums        1697 notes
+
+--- Generation Log ---
+  SONG             Cycle 3 Midnight
+  Style            Motorik Noir – 119 bpm
+  Form             Steady A section
+  Chords           D Dorian Minor loop
+  MOT-DRUM-001     Motorik Apache beat
+  MOT-BASS-006     LA Woman Sustain
+  MOT-PADS-006     Half-bar Breathe
+  MOT-LD1-011      Melodic Spiral
+  MOT-LD2-000      No lead 2
+  MOT-RTHM-013     Levene Drop
+  MOT-TEX-000      No texture
+  Instruments      L1:11100 Pd:50 Ry:4 Bs:11038 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar lock in
+  Bar 005    Section A    92 bars
+  Bar 012    Drums        crash + open hat
+  Bar 012    Lead 1       steps up
+  Bar 013    Drums        back on hi-hat
+  Bar 022    Pads         steps back
+  Bar 028    Drums        switching to ride
+  Bar 035    Drums        back on hi-hat
+  Bar 037    Lead 1       steps back
+  Bar 041    Bass         pattern evolving
+  Bar 052    Drums        switching to ride
+  Bar 069    Lead 1       steps back
+  Bar 070    Pads         steps back
+  Bar 084    Drums        crash + open hat
+  Bar 097    Outro        8 bar cold stop
+
