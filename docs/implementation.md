@@ -1090,6 +1090,26 @@ Two rules that no script can enforce:
 - `ChessPerftTests` pins move generation against the standard reference
   positions. If those counts drift, the rules have regressed
 
+## The seeded high score table
+
+Ten slots, of which the title screen shows five:
+
+| | | | | | | | | | |
+|---|---|---|---|---|---|---|---|---|---|
+| ZACK 8000 | BEN 5000 | STEVE 3000 | WOZ 2000 | NOLAN 1000 | TOMO 950 | TORU 900 | DONA 850 | RUSSELL 800 | ALCORN 750 |
+
+- Calibrated against ten recorded games, median about 1000. The visible floor
+  turns away half of them, including runs that reached Levels 7 and 8 — getting
+  deep while shooting badly should not chart
+- The top is under the best recorded 10,953, so first place is reachable. A
+  perfect ten-wave run is worth about 39,000, so the table has room to turn over
+- **All ten slots are seeded, not the five on screen.** `isHighScore` is true
+  whenever a slot is free, so seeding only the visible five meant the first five
+  games of a new install were prompted for a name whatever they scored. 750 is
+  the real bar
+- Changing `MARKETING_VERSION` wipes the stored table on next launch, so a new
+  build always shows what a new player sees
+
 ## Known compromises
 
 Deliberate, and not worth fixing without a design conversation:

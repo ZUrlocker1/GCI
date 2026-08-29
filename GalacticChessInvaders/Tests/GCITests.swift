@@ -1864,12 +1864,13 @@ final class HighScoreTableTests: XCTestCase {
         ScoreManager.shared.resetForNewGame()
     }
 
-    /// `isHighScore` stays true while the table has free slots, so the scene must
-    /// gate on "already submitted" or the entry prompt reappears forever.
+    /// `isHighScore` stays true after the entry is added — it only asks whether
+    /// the current score would chart — so the scene must gate on "already
+    /// submitted" or the entry prompt reappears forever.
     func testIsHighScoreStaysTrueAfterSubmitting() {
         ScoreManager.shared.clearHighScores()
         ScoreManager.shared.resetForNewGame()
-        ScoreManager.shared.addPoints(75)
+        ScoreManager.shared.addPoints(5000)
         XCTAssertTrue(ScoreManager.shared.isHighScore)
         ScoreManager.shared.submitHighScore(initials: "ZACK")
         XCTAssertTrue(ScoreManager.shared.isHighScore,
@@ -1880,11 +1881,13 @@ final class HighScoreTableTests: XCTestCase {
     /// install, and a first-time player never sees an empty table.
     func testClearRestoresTheSeededTableAndWipesStorage() {
         ScoreManager.shared.resetForNewGame()
-        ScoreManager.shared.addPoints(500)
+        // Big enough to actually chart, or "the clear removed it" proves nothing.
+        ScoreManager.shared.addPoints(5000)
         ScoreManager.shared.submitHighScore(initials: "TEMP")
         ScoreManager.shared.clearHighScores()
         let table = ScoreManager.shared.topHighScores(limit: 20)
-        XCTAssertEqual(table.map(\.initials), ["ZACK", "BEN", "STEVE", "WOZ", "NOLAN"])
+        XCTAssertEqual(table.prefix(5).map(\.initials), ["ZACK", "BEN", "STEVE", "WOZ", "NOLAN"])
+        XCTAssertEqual(table.count, 10, "every slot is seeded, or free slots let any score chart")
         XCTAssertFalse(table.contains { $0.initials == "TEMP" }, "the played game is gone")
         XCTAssertNil(UserDefaults.standard.data(forKey: "GCI_HighScores"))
     }
@@ -1896,11 +1899,27 @@ final class HighScoreTableTests: XCTestCase {
             ScoreManager.shared.addPoints(score)
             ScoreManager.shared.submitHighScore(initials: name)
         }
-        // The seeded placeholders are still under these — deliberately tiny, so
-        // any real game displaces them rather than them squatting the top five.
+        // The seeds hold the middle of the table, so only scores that actually
+        // beat them appear — LOW's 100 does not chart at all.
         let top = ScoreManager.shared.topHighScores(limit: 5)
-        XCTAssertEqual(top.map(\.score), [9000, 3000, 100, 100, 90])
+        XCTAssertEqual(top.map(\.score), [9000, 8000, 5000, 3000, 3000])
         XCTAssertEqual(top.first?.initials, "ZACKURLO", "8 characters must survive")
+    }
+
+    /// The reason all ten slots are seeded rather than the five on screen: a
+    /// free slot makes any score a high score, so an unseeded tail handed the
+    /// first five games of a new install a name prompt whatever they scored.
+    func testABadGameIsNotOfferedTheTableOnAFreshInstall() {
+        ScoreManager.shared.clearHighScores()
+        for score in [50, 405, 600, 700] {
+            ScoreManager.shared.resetForNewGame()
+            ScoreManager.shared.addPoints(score)
+            XCTAssertFalse(ScoreManager.shared.isHighScore, "\(score) should not chart")
+        }
+        // And a run that earned it still does.
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(1200)
+        XCTAssertTrue(ScoreManager.shared.isHighScore)
     }
 
     func testFullTableOnlyAcceptsAGenuineBeat() {
