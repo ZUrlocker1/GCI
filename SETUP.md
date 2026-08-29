@@ -13,7 +13,8 @@ open GalacticChessInvaders.xcodeproj
 - Converts any audio source files to `.caf` if present
 - Generates `GalacticChessInvaders.xcodeproj` via xcodegen
 
-After opening in Xcode, SPM resolves ChessKit automatically on first build.
+There are no package dependencies to resolve — the chess model is part of
+the source. See THIRD-PARTY-NOTICES.md for what it adapts and from whom.
 Press ⌘R — you should see the title screen at 60fps.
 
 ## Requirements
