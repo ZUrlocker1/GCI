@@ -563,11 +563,19 @@ GCI. `Pre-Solstice` holds the title screen and both panels — Settings and How 
 Play — so it is what the game sounds like when you are not in it. The ten waves
 each have their own.
 
-Bundled as AAC at 80k/32kHz, re-encoded down from Zudio's 128k/44.1k export with
-the embedded cover art stripped: as exported this was 28MB of music in a 7MB
-app, and is 19.7MB across eleven tracks. `MusicLibrary` is the only table; adding
-or swapping means a filename there and an `.m4a` in `Resources/`, and
-`typecheck.sh` fails if the two disagree.
+Bundled as AAC at **64k/32kHz**, re-encoded from Zudio's 128k/44.1k exports with
+the embedded cover art stripped — 22.3MB across twenty tracks, against roughly
+50MB as exported.
+
+64k rather than 80k because the loss is confined to one octave. Measured against
+the source: below 10kHz the two are identical to within 0.2dB, at 10kHz 64k is
+3.1dB down and at 14kHz 12.4dB down, and overall error sits 14.1dB below signal
+against 80k's 15.6dB. Hi-hats and cymbal air are what 20% of the file size buys.
+
+Always re-encode **from the Zudio export**, never from a bundled track: lossy to
+lossy compounds. `MusicLibrary` is the only table; adding or swapping means a
+filename there and an `.m4a` in `Resources/`, and `typecheck.sh` fails if the two
+disagree — including when the file is on disk but not in the Xcode project.
 
 Chosen from 21 candidates on the Key, Tempo and Mood in each `.zudio` file
 rather than by ear. Tempo climbs 125 → 156 with a deliberate dip at Wide Orbit,
