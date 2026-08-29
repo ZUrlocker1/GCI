@@ -34,12 +34,14 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 
 **What's new in v0.5:**
 
-- **The soundtrack varies.** Once you reach Level 3, the title theme and the
-  first two waves each have a one-in-three chance of playing an alternate track
-  instead — so the music you hear most often is not always the same.
-- **A different sound each time you lose**, chosen from four.
-- **Quality of life** — the diagnostics log now names which track is playing and
-  which wave each line belongs to.
+- **Nine more tracks**, again from [Zudio](https://www.mzurlocker.com/zudio).
+  The music you hear most — the title theme and the first two waves — now has
+  alternates that turn up once you have played far enough to know the originals.
+- **Every run gets an ending.** Finishing all ten waves, going out on a draw and
+  losing deep in the run each sound different, and the music carries on through
+  the high score entry.
+- **A high score table worth beating.** The starting scores used to fall to any
+  first game. Now you have to earn a place on them.
 
 **What's new in v0.4:**
 
