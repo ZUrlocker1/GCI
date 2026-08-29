@@ -1,5 +1,9 @@
 # Third-party notices
 
+Galactic Chess Invaders is Copyright (c) 1983-2026 M. Zack Urlocker; see
+LICENSE. This file covers work by others, and nothing here limits the rights
+their licences grant.
+
 Galactic Chess Invaders has no runtime dependencies. This notice covers source
 and assets that were adapted or bundled into the project.
 
