@@ -57,7 +57,5 @@ SOFTWARE.
 - **Sound effects** — Kenney (`sfx/kenney-digital`, `sfx/kenney-sci-fi`).
   CC0 1.0 Universal, public domain dedication.
 - **Sound effects** — 344 Audio, from the GDC bundle (`sfx/gdc-bundle`).
-- **Music loop bundles** — Abstraction / Tallbeard Studios. CC0 1.0 Universal.
-  Present in `assets/` and not shipped in the app.
 - **Soundtrack and stingers** — generated with
   [Zudio](https://www.mzurlocker.com/zudio) and owned by this project's author.
