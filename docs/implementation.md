@@ -679,9 +679,11 @@ on Level 9 is a good run. What plays follows from how far the player got.
   to read as a fault
 - **It starts when the game ends, not when the menu appears**, so the reveal,
   the overlay and the name prompt sit under one continuous piece
-- **It plays through the name prompt**, which has no time limit. When the track
-  runs out the intro takes over — whichever variant is in force — so someone who
-  walks away mid-entry is not left in silence
+- **It plays through the name prompt**, which has no time limit. It is the one
+  piece of music that does not loop — left looping it reached its own fade-out
+  and started again, which on a game over screen reads as a new level beginning.
+  The intro comes up 1.5s before it ends, under its tail rather than after a
+  gap, so someone who walks away mid-entry is not left in silence
 - With **music off** the stinger would be silence, so the loss sting stands in
   as the full stop
 - `GameOverState` no longer stops the music. The ending decided what should be
@@ -694,8 +696,10 @@ on Level 9 is a good run. What plays follows from how far the player got.
   another sounds like a mistake; the gap is what makes it deliberate
 - **A panel opening** — 0.5s fade to `Pre-Solstice`, no gap, since that track opens
   on a fade of its own. Half the time it starts at 0:57–1:12 instead of the top,
-  fading up over a second: a quiet stretch that sounds nothing like the opening
-  notes, which somebody checking Settings four times a run would otherwise hear
+  fading up over a second — so somebody checking Settings four times a run does
+  not hear the same opening bars four times. The window is measured per track,
+  and the fade covers arriving mid-texture rather than arriving loud: neither
+  window is quiet, both sit within 0.2dB of their own track's average
   four times
 - **Pause** — 0.3s to silence. Fast enough for the reason people pause, and
   short of the click a hard stop makes mid-bar
@@ -859,19 +863,13 @@ each group by what it would cost to *not* have at ship.
 
 ### Audio leftovers (§20 Phase 5)
 
-The screen and the soundtrack both shipped — see Phase 5. What §5 still asks
-for and has not been built:
+The screen and the soundtrack both shipped — see Phase 5. Endings did too: six
+stingers chosen by how far the player got (**End of run**), and four bass
+downers for the one ending that has not earned music. What is left:
 
-- [x] **Game over riff** — four bass downers, one picked at random per death
-      (`SoundKey.gameOverPool`). Trimmed to 3.0s with a 0.8s fade and matched to
-      −18 LUFS; the sources ran 3.7–8.0s and 13 dB apart, which would have made
-      the random pick sound like a fault rather than a choice
-- [ ] **Win theme.** `GameOverState` stops the music, so YOU WIN — the end of a
-      full ten-wave run — lands in silence. The one ending with nothing behind it
-- [ ] **High score entry bed.** Same silence, immediately after
-- [ ] **Level clear fanfare.** `levelClear` currently plays a *descending* arp,
-      which is the shape of a deny cue. Music continues into the next wave, so
-      this is a wrong cue rather than a missing one
+- [ ] **Level clear fanfare.** `levelClear` plays a *descending* arp, which is
+      the shape of a deny cue. Music runs on into the next wave, so this is a
+      wrong cue rather than a missing one
 - [ ] **Music ducking** under priority SFX. `AudioManager.duckMusic` exists and
       nothing calls it
 
@@ -1047,7 +1045,7 @@ pop, shatter and raider is pooled, so gameplay allocates nothing.
 
 ## Tests
 
-`GalacticChessInvaders/Tests/GCITests.swift` — 348 XCTest cases covering the
+`GalacticChessInvaders/Tests/GCITests.swift` — 373 XCTest cases covering the
 chess model, fleet, raiders, power-ups, scoring, audio assets and layout
 geometry. **Run them with `⌘U` in Xcode**; the whole suite takes about a minute,
 most of it the perft.
