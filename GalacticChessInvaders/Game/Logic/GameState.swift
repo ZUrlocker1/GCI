@@ -102,8 +102,11 @@ class GameOverState: GCIState {
 
     override func didEnter(from previousState: GKState?) {
         MainActor.assumeIsolated {
+            // The music is not stopped here. The ending decided what should be
+            // playing two and a half seconds ago — a stinger, or silence behind
+            // a loss sting — and this used to cut whichever it was off the
+            // moment the menu appeared.
             gameScene?.showGameOverOverlay()
-            AudioManager.shared.stopMusic()
         }
     }
 

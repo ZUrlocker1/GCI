@@ -87,6 +87,40 @@ enum MusicLibrary {
         return (.random(in: entry.window), entry.fadeIn)
     }
 
+    // MARK: - End of run
+
+    /// What plays when a run ends: 23-30s pieces, already fading in and out, so
+    /// they can be dropped in whole. Music rather than a sound effect — they
+    /// need the Music volume, a cross-fade off the wave's track, and a hand-over
+    /// to the intro when they run out.
+    ///
+    /// Won or lost is the wrong axis. You lose every wave until the tenth, and
+    /// losing on Level 9 is a good run; what the ending should sound like
+    /// follows from how far the player got, not from which flag was set.
+
+    /// All ten waves cleared. The one ending the game has been building to, so
+    /// it keeps its own track — the brightest and fastest of the six.
+    static let winStinger = "Fahrt-Punkt-sting"
+
+    /// Draws and stalemates: an ending that is neither, and reads as odd rather
+    /// than as good or bad. The slowest and dreamiest of the six.
+    static let oddEndingStinger = "Formless-Matter-sting"
+
+    /// Everything else worth marking, in rotation so a run of games does not
+    /// repeat one.
+    static let runStingers = [
+        "Layer-Schaum-sting", "Rein-Zeig-sting",
+        "Sud-Dortmund-sting", "West-Wuppertal-sting",
+    ]
+
+    /// How the stinger takes over from the wave's track, and hands back to the
+    /// intro when it ends.
+    static let stingerFade: TimeInterval = 0.8
+
+    /// Stand-in if a stinger's length cannot be read — the shortest of the six,
+    /// so the hand-over comes early rather than leaving a silence.
+    static let stingerFallbackLength: TimeInterval = 22
+
     /// How a wave's music takes over. Slower than the panel hand-over, with a
     /// beat of silence in the middle: a level start is a bigger seam than
     /// stepping into a menu, and cutting straight from one arcade track to

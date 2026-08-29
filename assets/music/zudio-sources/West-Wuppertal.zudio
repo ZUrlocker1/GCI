@@ -1,0 +1,69 @@
+=== Zudio Song Analysis Log ===
+Title:          Layer Schaum
+Generated:      2026-08-29 08:21:29
+Zudio Version:  2.4 (129)
+Seed:           783144773484261809
+Style:          Motorik
+Key:            A  Aeolian
+Tempo:          140 BPM
+Bars:           88
+Mood:           Bright
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 80         (76 bars)
+  outro      Bars  81– 88         (8 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=1  type=minor
+  Bars   5– 23         root=1  type=minor
+  Bars  24– 42         root=b7  type=major
+  Bars  43– 61         root=b6  type=major
+  Bars  62– 80         root=5  type=minor
+  Bars  81– 88         root=1  type=major
+
+--- Note Counts Per Track ---
+  Lead 1       414 notes
+  Lead 2       40 notes
+  Pads         429 notes
+  Rhythm       191 notes
+  Texture      6 notes
+  Bass         324 notes
+  Drums        1458 notes
+
+--- Generation Log ---
+  SONG             Layer Schaum
+  Style            Motorik Arcade – 148 bpm
+  Form             Steady A section
+  Chords           A Aeolian Minor loop
+  MOT-DRUM-001     Motorik Apache beat
+  MOT-BASS-025     Electro Pump
+  MOT-PADS-007     Backbeat Stabs
+  MOT-LD1-018      Octave Bounce
+  MOT-LD2-010      Blip
+  MOT-RTHM-006     Harmonia arpeggio
+  MOT-TEXT-001     Cluster sparse
+  MOT-TEXT-004     Shimmer hold
+  Instruments      L1:81 L2:90 Pd:94 Ry:28 Tx:86 Bs:39 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar cold start
+  Bar 005    Section A    76 bars
+  Bar 006    Texture      steps back
+  Bar 009    Pads         steps back
+  Bar 010    Lead 1       steps up
+  Bar 012    Drums        switching to ride
+  Bar 018    Drums        back on hi-hat
+  Bar 021    Bass         pattern evolving
+  Bar 026    Texture      steps up
+  Bar 028    Drums        crash + open hat
+  Bar 030    Drums        back on hi-hat
+  Bar 036    Drums        switching to ride
+  Bar 041    Rhythm       steps back
+  Bar 043    Lead 2       steps back
+  Bar 044    Drums        crash + open hat
+  Bar 047    Texture      steps back
+  Bar 052    Drums        crash + open hat
+  Bar 073    Pads         steps back
+  Bar 081    Outro        8 bar dissolve
+

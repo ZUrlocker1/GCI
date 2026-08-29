@@ -646,6 +646,34 @@ track is still a novelty.
   `Alt L2 Cycle-3-Midnight`. Derived from the tables rather than from what was
   rolled, so it reads correctly whoever started the track
 
+### End of run
+
+Six 23-30s pieces, cut to fade in and out so they drop in whole. Music rather
+than sound effects: they need the Music volume, a cross-fade off the wave's
+track, and a hand-over when they finish.
+
+Won or lost is the wrong axis — you lose every wave until the tenth, and losing
+on Level 9 is a good run. What plays follows from how far the player got.
+
+| Ending | Track |
+|---|---|
+| All ten waves cleared | `Fahrt-Punkt-sting` — brightest and fastest of the six |
+| Draw or stalemate | `Formless-Matter-sting` — neither good nor bad, and sounds it |
+| Anything past Level 1, or a run that charted | rotation of four, round-robin |
+| Lost on Level 1 without charting | no stinger — one of the four loss stings |
+
+- **Round-robin, not random.** Four tracks picked at random repeat often enough
+  to read as a fault
+- **It starts when the game ends, not when the menu appears**, so the reveal,
+  the overlay and the name prompt sit under one continuous piece
+- **It plays through the name prompt**, which has no time limit. When the track
+  runs out the intro takes over — whichever variant is in force — so someone who
+  walks away mid-entry is not left in silence
+- With **music off** the stinger would be silence, so the loss sting stands in
+  as the full stop
+- `GameOverState` no longer stops the music. The ending decided what should be
+  playing two and a half seconds earlier, and that call used to cut it off
+
 ### Hand-overs
 
 - **Level start** — 1.2s fade, then 0.5s of silence. A level start is a bigger

@@ -1597,7 +1597,7 @@ class GameScene: SKScene {
         turnTimer.stop()
         clearSelection()
         settleFleetForReveal(against: loser)
-        AudioManager.shared.play(oneOf: SoundKey.gameOverPool)
+        playEndOfRunMusic(won: false)
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }
@@ -1645,7 +1645,7 @@ class GameScene: SKScene {
         clearSelection()
         ship?.direction = 0
         settleFleetForReveal(against: .white)
-        AudioManager.shared.play(oneOf: SoundKey.gameOverPool)
+        playEndOfRunMusic(won: false)
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }
@@ -1663,6 +1663,7 @@ class GameScene: SKScene {
         if levels.isFinalLevel {
             outcome = .runCompleted
             logWave("run complete — all \(LevelManager.finalLevel) waves cleared")
+            playEndOfRunMusic(won: true)
             stateMachine.enter(GameOverState.self)
             return
         }
@@ -1753,6 +1754,54 @@ class GameScene: SKScene {
         for node in bloomNode.children where node.name == Self.endBannerName {
             node.removeAllActions()
             node.removeFromParent()
+        }
+    }
+
+    /// Sees the run out: a stinger where one was earned, a loss sting where it
+    /// was not, and silence for neither.
+    ///
+    /// Runs at the moment the game ends rather than when the menu appears, so
+    /// the reveal, the overlay and the name prompt all sit under one continuous
+    /// piece instead of the wave's track stopping dead partway through.
+    private func playEndOfRunMusic(won: Bool) {
+        let odd: Bool
+        switch outcome {
+        case .stalemate, .drawnByRepetition, .drawnByMoveLimit: odd = true
+        default: odd = false
+        }
+        let earned = MusicVariants.endOfRunStinger(
+            won: won, odd: odd,
+            level: levels.level,
+            madeTheTable: ScoreManager.shared.isHighScore)
+
+        // With music off the stinger is silence, and the ending would have no
+        // punctuation at all — so the loss sting stands in as the full stop.
+        guard let track = earned, GameSettings.shared.musicOn else {
+            // Nothing earned: the wave's track stops here rather than running on
+            // under the menu, and the loss sting lands in the silence it leaves.
+            AudioManager.shared.stopMusic()
+            AudioManager.shared.play(oneOf: SoundKey.gameOverPool)
+            return
+        }
+        AudioManager.shared.fadeTo(track: track, over: MusicLibrary.stingerFade)
+        handBackToIntro(after: track)
+    }
+
+    /// A stinger is half a minute and the name prompt has no time limit, so
+    /// someone who walks away mid-entry would be left in silence. When it runs
+    /// out, the intro takes over — whichever variant is in force.
+    private func handBackToIntro(after track: String) {
+        // `fadeTo` fades the wave's track out first, so the stinger does not
+        // begin for another `stingerFade`.
+        let length = MusicLibrary.stingerFade
+            + (AudioManager.shared.duration(ofTrack: track) ?? MusicLibrary.stingerFallbackLength)
+        DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in
+            guard let self else { return }
+            // Only if the run is still sitting on its ending. A new game or a
+            // return to the title has its own music and must not be talked over.
+            guard self.stateMachine.currentState is GameOverState else { return }
+            AudioManager.shared.fadeTo(pool: MusicVariants.introPool,
+                                       over: MusicLibrary.stingerFade)
         }
     }
 

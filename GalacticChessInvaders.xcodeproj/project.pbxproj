@@ -11,6 +11,7 @@
 		031533BB438B7A4BC1CE82C9 /* HUDNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56497B49CFE839D85ABCC3A /* HUDNode.swift */; };
 		065CBD06B0637CD83CE4DD1E /* chess-b-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = B827AD2407AC5D571712932D /* chess-b-knight-d2.png */; };
 		068627FB6E47606E554C8AA8 /* chess-b-rook-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = F0BD4078DBA5A682106045F5 /* chess-b-rook-d1.png */; };
+		06C322902BECAF352FE14158 /* Fahrt-Punkt-sting.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 36D4FEAE47193BFA0B44A8DC /* Fahrt-Punkt-sting.m4a */; };
 		08915064D62400123724FB00 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = D6E00200878F5A414C7AA097 /* AppIcon.icns */; };
 		08F7F9C401F622B072EB4BD5 /* Pre-Solstice.m4a in Resources */ = {isa = PBXBuildFile; fileRef = BB5D188FC451BE3CBDC5363C /* Pre-Solstice.m4a */; };
 		091CA81733FCE104AD2D88E9 /* GameAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9BCEF5A958D912F3D3834BC /* GameAction.swift */; };
@@ -47,6 +48,7 @@
 		496150C3B2737728E85A0830 /* chess-w-king.png in Resources */ = {isa = PBXBuildFile; fileRef = 8339E5F18F16FA9DBF8CC7E2 /* chess-w-king.png */; };
 		4AAEA0F579F05B5F2CA173E8 /* chess-w-bishop.png in Resources */ = {isa = PBXBuildFile; fileRef = 358C1653386A6A77FA844C99 /* chess-w-bishop.png */; };
 		4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */; };
+		4D9FDDF800246C73DA056AEB /* West-Wuppertal-sting.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 27A6A0DF48C6A2177F212A2F /* West-Wuppertal-sting.m4a */; };
 		501B3D6BAA54B7D6543315E0 /* chess-b-pawn-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */; };
 		51DBACEE06DE99EE2BCD7260 /* SettingsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */; };
 		5598443F0BD7826369A84681 /* Cycle-3-Midnight.m4a in Resources */ = {isa = PBXBuildFile; fileRef = FE835419C31F9645E9B6ADE2 /* Cycle-3-Midnight.m4a */; };
@@ -54,12 +56,14 @@
 		5C00B24FA3687609673B10AC /* chess-b-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */; };
 		5E5F85935F04C28062E9F04F /* Regeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58B64ABA847AF8604BB2BF /* Regeneration.swift */; };
 		5E76F03CD7162A626D28F7BD /* CollisionResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D61821669CACEBC196A65C /* CollisionResolver.swift */; };
+		5F227CB8AFF1B79DA1B0C79D /* Rein-Zeig-sting.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F5E06C19010C943A0EFF48A3 /* Rein-Zeig-sting.m4a */; };
 		605CC1D290EA03C43460DC7D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB7404F3713FE581B43A87 /* ContentView.swift */; };
 		61169CA3823DC981272E489B /* ship-player.png in Resources */ = {isa = PBXBuildFile; fileRef = DFEC1D27CBD2B19429587528 /* ship-player.png */; };
 		6395169375D2CD8541C11AFA /* BackdropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */; };
 		6A84246D039FB0BB24C3CCD5 /* WelleZ-Machine.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 31141BE721EAB7CAD042DF96 /* WelleZ-Machine.m4a */; };
 		6F3D3C759D73312D2148C8AF /* KraftSchmaltz.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F886717DAFB12317A398DA80 /* KraftSchmaltz.m4a */; };
 		7263E9829B8933355232018D /* BierWunderwaffe.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 750B509390CDAEFCB4EFA024 /* BierWunderwaffe.m4a */; };
+		751183795ED1A080E3787203 /* Formless-Matter-sting.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 9F92DA281CC6465F1D1098FF /* Formless-Matter-sting.m4a */; };
 		761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */; };
 		7705CF0A074223E6B67350F7 /* sfx in Resources */ = {isa = PBXBuildFile; fileRef = 998968842203016A0E563C6A /* sfx */; };
 		7A28A7F7E08CDA7442C26B99 /* chess-b-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */; };
@@ -95,6 +99,7 @@
 		BF7CA3BE908F94E71CFFE90F /* chess-b-rook.png in Resources */ = {isa = PBXBuildFile; fileRef = 05591BA327EAD55AD0F69F70 /* chess-b-rook.png */; };
 		C362A3476F3961B1753410C1 /* ship-scout.png in Resources */ = {isa = PBXBuildFile; fileRef = 2B2151BC597FBC6006588FF8 /* ship-scout.png */; };
 		C5E4FCF629356AE45F9EBBD8 /* Zephyron.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 57D7420F97EF93D50B690259 /* Zephyron.m4a */; };
+		C8807659FF90B3546AC968BF /* Layer-Schaum-sting.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 39A993D65D1F310B5248F7A9 /* Layer-Schaum-sting.m4a */; };
 		C88BE784BCDFF9D800B631C4 /* BoardNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C108E7EAE6358A3CF47A3F77 /* BoardNode.swift */; };
 		C9A9C0363A0C8510549F4337 /* chess-b-king-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E7E3382582F0A404A28305F /* chess-b-king-d1.png */; };
 		CED029BF45680E976218AD47 /* chess-w-queen.png in Resources */ = {isa = PBXBuildFile; fileRef = 83910C58D45F81C5E632B8BD /* chess-w-queen.png */; };
@@ -115,6 +120,7 @@
 		EF4BE7455C8F7D6914EFAF95 /* Silhouette.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85CA9EDA2CA72A635DCD707 /* Silhouette.swift */; };
 		F53A8FD80E91731A2F3B94DF /* chess-b-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */; };
 		F85FF93C6997AF4868C1CBC3 /* TitleOverlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5479162403C3F6B963DA628 /* TitleOverlayNode.swift */; };
+		F87934AAE2A920C0DBCD2C03 /* Sud-Dortmund-sting.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 9332918A2EC43FBA84AC373C /* Sud-Dortmund-sting.m4a */; };
 		F9929020CEFD54511CD99A8E /* GCIBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */; };
 		F9CA99676598CF676A718B8D /* TurnTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAF566BD8F26FECE2DB1C25 /* TurnTimer.swift */; };
 		FAB43706A371DD88D34AB3D6 /* NeonPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41027B92E5E5C0CED577CDCC /* NeonPalette.swift */; };
@@ -152,6 +158,7 @@
 		210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop-d2.png"; sourceTree = "<group>"; };
 		21E7C6E4E5697A906A277064 /* chess-b-king.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king.png"; sourceTree = "<group>"; };
 		2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetFiring.swift; sourceTree = "<group>"; };
+		27A6A0DF48C6A2177F212A2F /* West-Wuppertal-sting.m4a */ = {isa = PBXFileReference; path = "West-Wuppertal-sting.m4a"; sourceTree = "<group>"; };
 		2B2151BC597FBC6006588FF8 /* ship-scout.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-scout.png"; sourceTree = "<group>"; };
 		2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-queen-d2.png"; sourceTree = "<group>"; };
 		2C700B2F09ADAB666A66E141 /* LevelBannerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBannerNode.swift; sourceTree = "<group>"; };
@@ -162,9 +169,11 @@
 		3420846073BE18C53447E8B2 /* ship-camel-c.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel-c.png"; sourceTree = "<group>"; };
 		358C1653386A6A77FA844C99 /* chess-w-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop.png"; sourceTree = "<group>"; };
 		360CD5A00CE701C3BACFB1BA /* Juice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Juice.swift; sourceTree = "<group>"; };
+		36D4FEAE47193BFA0B44A8DC /* Fahrt-Punkt-sting.m4a */ = {isa = PBXFileReference; path = "Fahrt-Punkt-sting.m4a"; sourceTree = "<group>"; };
 		386C3750928FB14BC1D27D55 /* FleetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetController.swift; sourceTree = "<group>"; };
 		3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverNode.swift; sourceTree = "<group>"; };
 		3958B7024DAADC15E5C557B9 /* LevelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelManager.swift; sourceTree = "<group>"; };
+		39A993D65D1F310B5248F7A9 /* Layer-Schaum-sting.m4a */ = {isa = PBXFileReference; path = "Layer-Schaum-sting.m4a"; sourceTree = "<group>"; };
 		3B7548E55F1B1E37D9A6AA88 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
 		41027B92E5E5C0CED577CDCC /* NeonPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeonPalette.swift; sourceTree = "<group>"; };
 		416A804FC2359078E164449E /* ChessFEN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessFEN.swift; sourceTree = "<group>"; };
@@ -205,6 +214,7 @@
 		89C03C76F77C2116A0D5D2BB /* chess-b-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop.png"; sourceTree = "<group>"; };
 		8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollisionHandler.swift; sourceTree = "<group>"; };
 		8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		9332918A2EC43FBA84AC373C /* Sud-Dortmund-sting.m4a */ = {isa = PBXFileReference; path = "Sud-Dortmund-sting.m4a"; sourceTree = "<group>"; };
 		95CE9C9E6605254BA0A685BC /* GameSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSettings.swift; sourceTree = "<group>"; };
 		96341566A1F2EF47B4EBC715 /* MusicLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicLibrary.swift; sourceTree = "<group>"; };
 		978A170453B8B07C0F41C526 /* chess-b-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d1.png"; sourceTree = "<group>"; };
@@ -215,6 +225,7 @@
 		9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */ = {isa = PBXFileReference; path = BlitzSchnork.m4a; sourceTree = "<group>"; };
 		9E4CEB8824CBC0835DD19E03 /* chess-w-king-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-king-d1.png"; sourceTree = "<group>"; };
 		9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCIBoard.swift; sourceTree = "<group>"; };
+		9F92DA281CC6465F1D1098FF /* Formless-Matter-sting.m4a */ = {isa = PBXFileReference; path = "Formless-Matter-sting.m4a"; sourceTree = "<group>"; };
 		A00359D531409FD8FEF80590 /* ChessEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessEngine.swift; sourceTree = "<group>"; };
 		A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PressStart2P-Regular.ttf"; sourceTree = "<group>"; };
 		A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */ = {isa = PBXFileReference; path = SchnorkPunkt.m4a; sourceTree = "<group>"; };
@@ -250,6 +261,7 @@
 		EF8136F818C7011E78335EF2 /* PowerUps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerUps.swift; sourceTree = "<group>"; };
 		F0BD4078DBA5A682106045F5 /* chess-b-rook-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-rook-d1.png"; sourceTree = "<group>"; };
 		F5CBD6F2CC804D886BB6FCB2 /* ChessRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessRules.swift; sourceTree = "<group>"; };
+		F5E06C19010C943A0EFF48A3 /* Rein-Zeig-sting.m4a */ = {isa = PBXFileReference; path = "Rein-Zeig-sting.m4a"; sourceTree = "<group>"; };
 		F648508E30268B3A5E5EDBB4 /* chess-b-bishop-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d2.png"; sourceTree = "<group>"; };
 		F7658142CFF640B25888ADBB /* chess-w-knight-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-knight-d2.png"; sourceTree = "<group>"; };
 		F86607BAC135182D9E5F8BD4 /* PieceNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieceNode.swift; sourceTree = "<group>"; };
@@ -387,16 +399,22 @@
 				9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */,
 				7F0CB51AFAE13D480BE23C31 /* Bochum-Level.m4a */,
 				FE835419C31F9645E9B6ADE2 /* Cycle-3-Midnight.m4a */,
+				36D4FEAE47193BFA0B44A8DC /* Fahrt-Punkt-sting.m4a */,
+				9F92DA281CC6465F1D1098FF /* Formless-Matter-sting.m4a */,
 				5368B7B77BF8CA5E965DD5F5 /* Frankfurt-Overdrive.m4a */,
 				0242D8F0256C0CAA23874208 /* GeistStrom-1999.m4a */,
 				F886717DAFB12317A398DA80 /* KraftSchmaltz.m4a */,
+				39A993D65D1F310B5248F7A9 /* Layer-Schaum-sting.m4a */,
 				6285CF5C055E05DC5DF49661 /* Leipzig-1999.m4a */,
 				89B3000A0C60845A2545F718 /* Leise-Dunkels.m4a */,
 				BB5D188FC451BE3CBDC5363C /* Pre-Solstice.m4a */,
 				A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */,
 				CA740CF88621E46EC7AC43DB /* Rattert-Z-Machine.m4a */,
+				F5E06C19010C943A0EFF48A3 /* Rein-Zeig-sting.m4a */,
 				A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */,
+				9332918A2EC43FBA84AC373C /* Sud-Dortmund-sting.m4a */,
 				31141BE721EAB7CAD042DF96 /* WelleZ-Machine.m4a */,
+				27A6A0DF48C6A2177F212A2F /* West-Wuppertal-sting.m4a */,
 				57D7420F97EF93D50B690259 /* Zephyron.m4a */,
 				1F94F04B5CC0E27D8292565C /* Sprites */,
 			);
@@ -502,21 +520,21 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_309580CC-78CB-45A2-94DE-66082646582D" /* .claude */ = {
+		"TEMP_3B1207FC-A512-42FD-9C4E-935EAE375571" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_52D1D2C2-B17A-4E58-AD16-1880428ACC6E" /* .claude */ = {
+		"TEMP_EEA99EBE-6C97-42DA-A596-7BAE914383B8" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_79E0549A-B9C2-499C-AD2E-4F568E264F4B" /* .claude */ = {
+		"TEMP_FD806C28-C3C9-4B5B-B3E0-0EA56A6451DB" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -611,16 +629,22 @@
 				34AD541D2F64A6C3EA248AFD /* BlitzSchnork.m4a in Resources */,
 				1F8FC8763F4783CAACA3AA58 /* Bochum-Level.m4a in Resources */,
 				5598443F0BD7826369A84681 /* Cycle-3-Midnight.m4a in Resources */,
+				06C322902BECAF352FE14158 /* Fahrt-Punkt-sting.m4a in Resources */,
+				751183795ED1A080E3787203 /* Formless-Matter-sting.m4a in Resources */,
 				91A01B88B5A0D417E138050B /* Frankfurt-Overdrive.m4a in Resources */,
 				BB7CCA026AE722A8EE38ACE7 /* GeistStrom-1999.m4a in Resources */,
 				6F3D3C759D73312D2148C8AF /* KraftSchmaltz.m4a in Resources */,
+				C8807659FF90B3546AC968BF /* Layer-Schaum-sting.m4a in Resources */,
 				253ACA6FD2491409DCCCB0B8 /* Leipzig-1999.m4a in Resources */,
 				87A704F32866D6D7CDFE29A7 /* Leise-Dunkels.m4a in Resources */,
 				08F7F9C401F622B072EB4BD5 /* Pre-Solstice.m4a in Resources */,
 				D3641D21830DBEB3CE620C6B /* PressStart2P-Regular.ttf in Resources */,
 				348F0B7DFA3E37B07AE5AB69 /* Rattert-Z-Machine.m4a in Resources */,
+				5F227CB8AFF1B79DA1B0C79D /* Rein-Zeig-sting.m4a in Resources */,
 				4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */,
+				F87934AAE2A920C0DBCD2C03 /* Sud-Dortmund-sting.m4a in Resources */,
 				6A84246D039FB0BB24C3CCD5 /* WelleZ-Machine.m4a in Resources */,
+				4D9FDDF800246C73DA056AEB /* West-Wuppertal-sting.m4a in Resources */,
 				C5E4FCF629356AE45F9EBBD8 /* Zephyron.m4a in Resources */,
 				AD625EB17A39A9FE68462D86 /* chess-b-bishop-d1.png in Resources */,
 				B67633A0D0D31669ED91AEDA /* chess-b-bishop-d2.png in Resources */,
