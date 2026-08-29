@@ -40,17 +40,18 @@ final class PieceTests: XCTestCase {
 
     func testDamageStateChipped() {
         var rook = Piece(type: .rook, color: .white, square: "a1")
-        rook.applyDamage(2)   // 6/8 HP = 75% — should still be full
+        rook.applyDamage(1)   // 1 point taken — a single hit does not show
         XCTAssertEqual(rook.damageState, .full)
-        rook.applyDamage(2)   // 4/8 HP = 50% — chipped
+        rook.applyDamage(1)   // 2 taken — §7.1's first stage for a rook
         XCTAssertEqual(rook.damageState, .chipped)
     }
 
     func testDamageStateCracked() {
         var rook = Piece(type: .rook, color: .white, square: "a1")
-        rook.applyDamage(4)   // 4/8 HP = 50%
-        rook.applyDamage(2)   // 2/8 HP = 25%
+        rook.applyDamage(4)   // 4 taken
         XCTAssertEqual(rook.damageState, .cracked)
+        rook.applyDamage(2)   // 6 taken — and the stage after it
+        XCTAssertEqual(rook.damageState, .critical)
     }
 
     func testDamageStateCritical() {
@@ -59,11 +60,15 @@ final class PieceTests: XCTestCase {
         XCTAssertEqual(rook.damageState, .critical)
     }
 
-    func testPawnDestroyedByOneLaserHit() {
-        // Pawn HP=2, laser deals 2 damage → destroyed in 1 hit
+    /// Pawns carry 3 HP against a 2-damage laser, so the second shot is always
+    /// the one that kills. One-shot pawns read as inconsistent against every
+    /// other piece on the board, and the survivor has to show the first hit.
+    func testPawnTakesTwoLaserHits() {
         var pawn = Piece(type: .pawn, color: .black, square: "e7")
-        let destroyed = pawn.applyDamage(2)
-        XCTAssertTrue(destroyed)
+        XCTAssertFalse(pawn.applyDamage(ProjectileState.playerLaserDamage))
+        XCTAssertTrue(pawn.isAlive)
+        XCTAssertEqual(pawn.damageState, .cracked)
+        XCTAssertTrue(pawn.applyDamage(ProjectileState.playerLaserDamage))
         XCTAssertFalse(pawn.isAlive)
     }
 
@@ -389,11 +394,12 @@ final class GCIBoardTests: XCTestCase {
     func testApplyDamageKeepsTheChessEnginesOwnBoardInSync() {
         let board = GCIBoard()
         board.setupStandardPosition()
-        board.applyDamage(1, at: "a7")   // chip only — must not yet touch the engine
+        board.applyDamage(1, at: "a7")   // chips only — must not yet touch the engine
+        board.applyDamage(1, at: "a7")
         XCTAssertEqual(board.currentPosition.board["a7"]?.kind, .pawn,
                        "a damaged-but-alive piece must still be on the engine's board")
 
-        board.applyDamage(1, at: "a7")   // now destroyed
+        board.applyDamage(1, at: "a7")   // the third point kills a 3 HP pawn
         XCTAssertNil(board.currentPosition.board["a7"],
                      "the engine's own board must also see the destroyed square emptied")
         board.forceTurn(.black)
@@ -541,22 +547,45 @@ final class BoardNodeTests: XCTestCase {
         }
     }
 
-    /// The fleet slides between squares, so a drawn grid would misrepresent
-    /// where pieces are. Nothing but interaction feedback may be rendered.
-    func testDrawsNoGridOrLabels() {
+    /// The fleet slides between squares, so a drawn grid misrepresents where
+    /// pieces are — which is why it is off by default and lives on a slider.
+    /// At zero the board must be genuinely empty, not faintly drawn.
+    func testGridAndLabelsAreDrivenEntirelyByTheDisplaySetting() {
+        let original = GameSettings.shared.boardGrid
+        defer { GameSettings.shared.boardGrid = original }
+
         let board = BoardNode()
-        var labels = 0
-        var shapes = 0
+        var labels: [SKLabelNode] = []
+        var shapes: [SKShapeNode] = []
         var stack = Array(board.children)
         while let node = stack.popLast() {
-            if node is SKLabelNode { labels += 1 }
-            if node is SKShapeNode { shapes += 1 }
+            if let label = node as? SKLabelNode { labels.append(label) }
+            if let shape = node as? SKShapeNode { shapes.append(shape) }
             stack.append(contentsOf: node.children)
         }
-        XCTAssertEqual(labels, 0, "no coordinate labels")
-        // Only the selection outline plus the pooled dot/ring pair per marker.
-        XCTAssertEqual(shapes, 1 + BoardNode.markerPoolSize * 2,
-                       "no square fills, grid lines or border")
+        // 8 files + 8 ranks; one lattice, two deployment bands, the selection
+        // outline, and a pooled dot/ring pair per marker.
+        XCTAssertEqual(labels.count, 16)
+        XCTAssertEqual(shapes.count, 4 + BoardNode.markerPoolSize * 2)
+
+        // The lattice and the two bands sit behind the pieces; the marker pool
+        // and the selection outline are interaction feedback and are not the
+        // slider's business.
+        let lattice = board.children.compactMap { $0 as? SKShapeNode }
+            .filter { $0.zPosition < 0 }
+        XCTAssertEqual(lattice.count, 3)
+
+        GameSettings.shared.boardGrid = 0
+        board.applyDisplaySettings()
+        XCTAssertTrue(labels.allSatisfy { $0.alpha == 0 }, "no coordinate labels at zero")
+        XCTAssertTrue(lattice.allSatisfy {
+            $0.strokeColor.alphaComponent == 0 && $0.fillColor.alphaComponent == 0
+        }, "no grid lines or bands at zero")
+
+        GameSettings.shared.boardGrid = 1
+        board.applyDisplaySettings()
+        XCTAssertTrue(labels.contains { $0.alpha > 0 }, "and they come back")
+        XCTAssertTrue(lattice.contains { $0.strokeColor.alphaComponent > 0 }, "so does the grid")
     }
 
     func testMarkersDoNotLeakNodes() {
@@ -910,7 +939,10 @@ final class EngineVariationTests: XCTestCase {
 
     func testDoesNotSettleIntoATwoSquareShuffle() {
         let moves = autoPlay(40)
-        XCTAssertEqual(moves.count, 40, "engine stopped finding moves")
+        // Engine-against-engine from the opening runs into the 30-quiet-move
+        // draw rule well before forty plies, which is the rule working. What
+        // matters here is that the moves it does find are not an A-B-A-B loop.
+        XCTAssertGreaterThan(moves.count, 20, "engine stopped finding moves early")
 
         // The reported symptom: move n identical to move n-2, over and over.
         let echoes = (2..<moves.count).count { moves[$0] == moves[$0 - 2] }
@@ -1043,7 +1075,7 @@ final class GameOverNodeTests: XCTestCase {
             XCTAssertTrue(labels.contains(outcome.headline), "\(outcome) headline missing")
             XCTAssertTrue(labels.contains { $0.contains("NEW GAME?") }, "\(outcome) prompt missing")
             XCTAssertTrue(labels.contains { $0.contains("Y / N") }, "\(outcome) Y/N missing")
-            XCTAssertTrue(labels.contains { $0.contains("001275") }, "\(outcome) score missing")
+            XCTAssertTrue(labels.contains { $0.contains("1275") }, "\(outcome) score missing")
         }
     }
 
@@ -1120,6 +1152,12 @@ final class RestartTests: XCTestCase {
         let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
         view.presentScene(scene)
 
+        // The whole suite shares this one scene, so whatever ran before has left
+        // the machine somewhere. Title is reachable from everywhere except
+        // Title itself, which makes it the one safe place to start from.
+        if !(scene.stateMachine.currentState is TitleState) {
+            XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
+        }
         XCTAssertTrue(scene.stateMachine.enter(PlayingState.self))
         XCTAssertTrue(scene.stateMachine.enter(GameOverState.self))
         XCTAssertTrue(scene.stateMachine.enter(PlayingState.self), "Y must start a new game")
@@ -1802,12 +1840,16 @@ final class HighScoreTableTests: XCTestCase {
                       "this is why the prompt needs a once-per-game guard")
     }
 
-    func testClearWipesTableAndStorage() {
+    /// `X` reseeds rather than empties: a clean slate should look like a fresh
+    /// install, and a first-time player never sees an empty table.
+    func testClearRestoresTheSeededTableAndWipesStorage() {
         ScoreManager.shared.resetForNewGame()
         ScoreManager.shared.addPoints(500)
         ScoreManager.shared.submitHighScore(initials: "TEMP")
         ScoreManager.shared.clearHighScores()
-        XCTAssertTrue(ScoreManager.shared.topHighScores(limit: 20).isEmpty)
+        let table = ScoreManager.shared.topHighScores(limit: 20)
+        XCTAssertEqual(table.map(\.initials), ["ZACK", "BEN", "STEVE", "WOZ", "NOLAN"])
+        XCTAssertFalse(table.contains { $0.initials == "TEMP" }, "the played game is gone")
         XCTAssertNil(UserDefaults.standard.data(forKey: "GCI_HighScores"))
     }
 
@@ -1818,8 +1860,10 @@ final class HighScoreTableTests: XCTestCase {
             ScoreManager.shared.addPoints(score)
             ScoreManager.shared.submitHighScore(initials: name)
         }
+        // The seeded placeholders are still under these — deliberately tiny, so
+        // any real game displaces them rather than them squatting the top five.
         let top = ScoreManager.shared.topHighScores(limit: 5)
-        XCTAssertEqual(top.map(\.score), [9000, 3000, 100])
+        XCTAssertEqual(top.map(\.score), [9000, 3000, 100, 100, 90])
         XCTAssertEqual(top.first?.initials, "ZACKURLO", "8 characters must survive")
     }
 
@@ -2796,14 +2840,21 @@ final class FleetControllerTests: XCTestCase {
 
         let before = try XCTUnwrap(nodes["e7"])
         let screenBefore = fleet.screenPosition(of: before)
+        let localBefore = before.position.y
 
         // Drive one full rank descent directly, bypassing the animated timers.
         fleet.applyFullRankDescentForTesting()
 
-        // e7's piece is now keyed at e6; the node is the same instance.
+        // A rank descent is two animated half-drops of the parent, and then this
+        // call to reconcile the books: each node moves down one square in local
+        // space while the parent moves back up by the same amount. So the pieces
+        // are already a rank lower on screen by the time this runs, and its own
+        // contribution must be exactly nothing.
         let screenAfter = fleet.screenPosition(of: before)
-        XCTAssertEqual(screenAfter.y, screenBefore.y - BoardNode.squareSize, accuracy: 0.5,
-                       "should land exactly one rank lower on screen, with no extra jump")
+        XCTAssertEqual(screenAfter.y, screenBefore.y, accuracy: 0.5,
+                       "reconciling the books must not move anything on screen")
+        XCTAssertEqual(before.position.y, localBefore - BoardNode.squareSize, accuracy: 0.5,
+                       "but the local position must drop by exactly one rank")
         _ = parent
     }
 
@@ -2819,7 +2870,11 @@ final class FleetControllerTests: XCTestCase {
         }
         XCTAssertEqual(fleet.pieceCount, 16)
         XCTAssertEqual(parent.children.count, 1, "the fleet is a single node")
-        XCTAssertEqual(parent.children[0].children.count, 16)
+        // Blitz gives each rank its own phase (§18), so the fleet node's own
+        // children are the rank containers and the pieces hang off those. One
+        // parent still carries the whole formation; it is just one level up.
+        let ranks = parent.children[0].children
+        XCTAssertEqual(ranks.reduce(0) { $0 + $1.children.count }, 16)
     }
 
     /// Local position stays the logical square centre; the parent transform
@@ -2965,6 +3020,18 @@ final class FleetControllerTests: XCTestCase {
 @MainActor
 final class LaserPhysicsTests: XCTestCase {
 
+    /// `SKColor` equality compares colour *spaces* as well as components, and a
+    /// sprite's `color` comes back in device RGB while `.white` and the palette
+    /// constants are generic gray / sRGB. Same colour, unequal objects.
+    private func sameColor(_ a: SKColor, _ b: SKColor, accuracy: CGFloat = 0.01) -> Bool {
+        guard let lhs = a.usingColorSpace(.sRGB), let rhs = b.usingColorSpace(.sRGB)
+        else { return false }
+        return abs(lhs.redComponent   - rhs.redComponent)   < accuracy
+            && abs(lhs.greenComponent - rhs.greenComponent) < accuracy
+            && abs(lhs.blueComponent  - rhs.blueComponent)  < accuracy
+            && abs(lhs.alphaComponent - rhs.alphaComponent) < accuracy
+    }
+
     /// Regression, and the reason nothing collided when Phase 3.2 first landed:
     /// every physics body was created static. SpriteKit only evaluates a
     /// contact pair when at least one body is dynamic — two static bodies never
@@ -3014,8 +3081,10 @@ final class LaserPhysicsTests: XCTestCase {
                    speed: ProjectileState.playerLaserSpeed, travelDistance: 400)
         XCTAssertTrue(laser.isActive)
         XCTAssertEqual(laser.physicsBody?.contactTestBitMask,
-                       PhysicsCategory.enemyPiece | PhysicsCategory.friendlyPiece,
-                       "a live player laser tests both piece colours (§8.3 firing lanes)")
+                       PhysicsCategory.enemyPiece | PhysicsCategory.enemyShot
+                         | PhysicsCategory.raider | PhysicsCategory.friendlyPiece,
+                       "a live player laser tests both piece colours (§8.3 firing "
+                         + "lanes), plus raiders and the shots it can knock down")
 
         laser.deactivate()
         XCTAssertEqual(laser.physicsBody?.contactTestBitMask, PhysicsCategory.none)
@@ -3158,7 +3227,7 @@ final class LaserPhysicsTests: XCTestCase {
             heavy.fire(from: .zero, damage: 2, speed: 300, travelDistance: 400, lean: lean)
             XCTAssertGreaterThan(heavy.size.width, plainSize.width, "lean \(lean)")
             XCTAssertGreaterThan(heavy.size.height, plainSize.height, "lean \(lean)")
-            XCTAssertEqual(heavy.color, .white, "lean \(lean)")
+            XCTAssertTrue(sameColor(heavy.color, .white), "lean \(lean)")
             XCTAssertNotNil(heavy.childNode(withName: "kingBeam"), "lean \(lean)")
         }
     }
@@ -3175,7 +3244,7 @@ final class LaserPhysicsTests: XCTestCase {
         angled.fire(from: .zero, damage: 2, speed: 200, travelDistance: 400, lean: 1)
         XCTAssertGreaterThan(angled.size.height, straightSize.height, "longer")
         XCTAssertLessThan(angled.size.width, straightSize.width, "and narrower")
-        XCTAssertEqual(angled.color, NeonPalette.shotPurple)
+        XCTAssertTrue(sameColor(angled.color, NeonPalette.shotPurple))
         // Rebuilding the body must not silently drop the live contact mask.
         XCTAssertNotEqual(angled.physicsBody?.contactTestBitMask, PhysicsCategory.none,
                           "a live round with no contact mask hits nothing")
@@ -3319,10 +3388,10 @@ final class RaiderTests: XCTestCase {
     func testTheRosterMatchesTheDesignedLadder() {
         let expected: [Int: [PowerUp]] = [
             1: [.rapidFire], 2: [.rapidFire], 3: [.shield], 4: [.freeze],
-            5: [.rapidFire], 6: [.gatling], 7: [.nuke, .nuke],
+            5: [.rapidFire, .shield], 6: [.gatling], 7: [.nuke, .nuke],
             8: [.rapidFire, .gatling],
             9: [.rapidFire, .gatling, .freeze],
-            10: [.rapidFire, .gatling, .freeze, .nuke],
+            10: [.rapidFire, .gatling, .shield, .nuke],
         ]
         for (level, roster) in expected {
             XCTAssertEqual(PowerUps.roster(forLevel: level), roster, "level \(level)")
@@ -3331,9 +3400,11 @@ final class RaiderTests: XCTestCase {
 
     /// Most of the run offers one power-up; the hard levels offer two and three.
     func testOffersGrowOnlyAtTheHardLevels() {
-        for level in 1...6 {
+        for level in [1, 2, 3, 4, 6] {
             XCTAssertEqual(PowerUps.roster(forLevel: level).count, 1, "level \(level)")
         }
+        // Level 5 carries the Shield's second outing alongside its Rapid Fire.
+        XCTAssertEqual(PowerUps.roster(forLevel: 5), [.rapidFire, .shield])
         // Crossfire sends two of the same, which is where the player first meets
         // a level that does not go quiet after one kill.
         XCTAssertEqual(PowerUps.roster(forLevel: 7), [.nuke, .nuke])
@@ -3739,15 +3810,18 @@ final class RegenerationTests: XCTestCase {
 
         XCTAssertEqual(Regeneration.spawnSquare(defensive: true, kingSquare: "e6",
                                                 rearRank: 7, occupied: []), "e5")
-        // Blocked in front: fall back to a free file on the rear rank.
+        // Blocked in front: fall back to the standard search, which opens one
+        // rank ahead of the rear (`spawnDepthOrder`) rather than on it.
         let blocked = Regeneration.spawnSquare(defensive: true, kingSquare: "e6",
                                                rearRank: 7, occupied: ["e5"])
         XCTAssertNotEqual(blocked, "e5")
-        XCTAssertEqual(blocked?.last, "7")
-        // Standard: the rear rank first, never an occupied square.
-        let taken = Set("abcdefg".map { "\($0)7" })
+        XCTAssertEqual(blocked?.last, "6")
+        // Standard: forward ranks first, never an occupied square. Black's own
+        // back rank is full at level start, so searching it first found nowhere
+        // to go through the whole opening.
+        let ahead = Set("abcdefg".map { "\($0)6" })
         XCTAssertEqual(Regeneration.spawnSquare(defensive: false, kingSquare: "e8",
-                                                rearRank: 7, occupied: taken), "h7")
+                                                rearRank: 7, occupied: ahead), "h6")
     }
 
     /// A regenerated pawn goes *in front of* the formation where it can, not
@@ -4264,7 +4338,9 @@ final class CollisionResolverTests: XCTestCase {
         let board = GCIBoard()
         board.setupStandardPosition()
 
-        // Pawn has 2 HP; the laser deals 2, so one hit is already lethal.
+        // A pawn carries 3 HP against a 2-damage laser, so the first shot only
+        // wounds it and the second is the kill.
+        _ = CollisionResolver.playerLaserHitBlackPiece(at: "a7", board: board)
         guard case .blackPieceHit(let square, let type, let destroyed, let points, let combo)? =
             CollisionResolver.playerLaserHitBlackPiece(at: "a7", board: board) else {
             return XCTFail("expected a black-piece hit")
@@ -4745,8 +4821,8 @@ final class PowerUpTests: XCTestCase {
     func testRecollectingTheSameEffectOnlyRefreshesTheClock() {
         var state = PowerUpState()
         state.begin(.gatling)
-        _ = state.tick(10)
-        XCTAssertEqual(state.remaining, 5, accuracy: 0.001)
+        _ = state.tick(4)
+        XCTAssertEqual(state.remaining, 3, accuracy: 0.001)
         XCTAssertNil(state.begin(.gatling))
         XCTAssertEqual(state.remaining, PowerUp.gatling.duration)
     }

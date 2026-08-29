@@ -246,7 +246,12 @@ enum PowerUps {
         case 1, 2: return [.rapidFire]
         case 3:    return [.shield]
         case 4:    return [.freeze]
-        case 5:    return [.rapidFire]
+        // The Shield's only other outing. It debuts alone on Level 3 and, before
+        // this, was never offered again: a player who missed that one camel met
+        // the mechanic once in a whole run. Level 5 is the last quiet wave, and
+        // pairing it with the Rapid Fire that was already here costs nothing —
+        // the level had a single offer and goes silent after one kill.
+        case 5:    return [.rapidFire, .shield]
         case 6:    return [.gatling]
         // Two camels. Crossfire is the hardest wave that had a single offer, so
         // one quick Nuke kill left the rest of it silent — and a second raider
@@ -255,7 +260,11 @@ enum PowerUps {
         case 7:    return [.nuke, .nuke]
         case 8:    return [.rapidFire, .gatling]
         case 9:    return [.rapidFire, .gatling, .freeze]
-        default:   return [.rapidFire, .gatling, .freeze, .nuke]
+        // Blitz trades Freeze for the Shield. Four offers is as crowded as the
+        // wave can read, and Freeze — already on 4 and 9 — is the weakest of the
+        // four here: it buys a pause in a level whose whole character is that it
+        // does not pause. A Shield is the one thing that survives a wall of fire.
+        default:   return [.rapidFire, .gatling, .shield, .nuke]
         }
     }
 
