@@ -131,7 +131,7 @@ final class HowToPlayNode: SKNode {
         // Deliberately plain, and last. The panel ships, so these are reachable
         // by anyone — but they are a way to look behind the game, not part of
         // playing it, and the layout should say so.
-        heading("DEBUG MODE", Self.cyan.withAlphaComponent(0.55), x: x, y: 145)
+        heading("DEBUG MODE", Self.cyan.withAlphaComponent(0.55), x: x, y: 155)
         // Two short lines rather than one long one — five key/label pairs on a
         // single row runs the width of the column and reads as a wall.
         //
@@ -143,7 +143,7 @@ final class HowToPlayNode: SKNode {
             // 10pt, not 11: at 11 the longer line is 440pt against a 410pt
             // column and runs off the panel.
             let keys = label(line, 10, SKColor.white.withAlphaComponent(0.6), .left)
-            keys.position = CGPoint(x: x, y: 127 - CGFloat(i) * 17)
+            keys.position = CGPoint(x: x, y: 137 - CGFloat(i) * 17)
             addChild(keys)
         }
 
@@ -164,7 +164,7 @@ final class HowToPlayNode: SKNode {
         // the screen that names someone, and it was the quietest thing on it.
         let cx = Self.lx
         let em: CGFloat = 12
-        let creditY: CGFloat = 88
+        let creditY: CGFloat = 83
         let credit = label("All music created by ", em, .white, .left)
         credit.position = CGPoint(x: cx, y: creditY)
         addChild(credit)
@@ -178,12 +178,10 @@ final class HowToPlayNode: SKNode {
         link.position = CGPoint(x: linkX, y: creditY)
         addChild(link)
 
-        // One line, not two: the HISTORY block above ends around y=104 and the
-        // footer rule is at 70, so there is room for one 12pt line here and not
-        // for two. 71 characters at 12pt is 852pt from the left margin, ending
-        // at 902 against a 910 margin — which is why the space before
-        // "available" is single rather than the double it was written with.
-        let tail = label(", royalty-free available on Mac, iPhone, iPad", em, .white, .left)
+        // One line: the HISTORY block above ends around y=104 and the footer
+        // rule is at 70, so there is room for one 12pt line here and not two.
+        // 58 characters at 12pt runs to x=746, well inside the 910 margin.
+        let tail = label(" available on Mac, iPhone, iPad.", em, .white, .left)
         tail.position = CGPoint(x: linkX + linkW, y: creditY)
         addChild(tail)
 
