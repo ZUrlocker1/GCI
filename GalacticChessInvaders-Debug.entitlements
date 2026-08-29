@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Debug and test runs only. The shipped app is sandboxed — see
+         GalacticChessInvaders.entitlements, which Release uses.
+
+         The sandbox is off here because CoreAudio's analytics client aborts
+         under it rather than degrading: "Process is sandboxed but
+         'com.apple.security.exception.mach-lookup.global-name' doesn't contain
+         'com.apple.audioanalyticsd'". Under XCTest the host app is launched by
+         the test runner and hits that on audio preload, so the whole suite dies
+         before a single assertion runs.
+
+         The alternative is a temporary-exception mach-lookup entitlement, which
+         would then be carried into the shipped build and reviewed there. Not
+         sandboxing a build that never leaves this machine is the smaller thing
+         to be wrong about. -->
+</dict>
+</plist>
