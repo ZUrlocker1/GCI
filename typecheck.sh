@@ -147,6 +147,14 @@ for track in $(
         | grep -hoE '"[A-Za-z0-9][A-Za-z0-9 .-]*"' | tr -d '"'
     } | sort -u); do
   [ -f "$RES/$track.m4a" ] || { echo "✗ Music referenced but not bundled: $track.m4a"; exit 1; }
+  # On disk is not the same as in the app. `sfx/` is a folder reference, so a
+  # new sound is picked up automatically, but the tracks sit at the Resources
+  # root as individual file references — a new one is invisible to the build
+  # until `xcodegen generate` runs. Two alternates shipped that way: present on
+  # disk, absent from the bundle, and every check here passed.
+  grep -q "$track.m4a" GalacticChessInvaders.xcodeproj/project.pbxproj || {
+    echo "✗ Music on disk but not in the project: $track.m4a"
+    echo "  (run: xcodegen generate)"; exit 1; }
 done
 for font in $(grep -rhoE '"[A-Za-z0-9]+-Regular"' --include="*.swift" GalacticChessInvaders \
                 | tr -d '"' | sort -u); do

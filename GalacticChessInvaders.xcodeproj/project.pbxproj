@@ -49,6 +49,7 @@
 		4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */; };
 		501B3D6BAA54B7D6543315E0 /* chess-b-pawn-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */; };
 		51DBACEE06DE99EE2BCD7260 /* SettingsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */; };
+		5598443F0BD7826369A84681 /* Cycle-3-Midnight.m4a in Resources */ = {isa = PBXBuildFile; fileRef = FE835419C31F9645E9B6ADE2 /* Cycle-3-Midnight.m4a */; };
 		56547221A27CECF071477604 /* chess-b-queen-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */; };
 		5C00B24FA3687609673B10AC /* chess-b-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */; };
 		5E5F85935F04C28062E9F04F /* Regeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58B64ABA847AF8604BB2BF /* Regeneration.swift */; };
@@ -89,6 +90,7 @@
 		B13EF8E180EE359E19DA52C3 /* Juice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CD5A00CE701C3BACFB1BA /* Juice.swift */; };
 		B67633A0D0D31669ED91AEDA /* chess-b-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F648508E30268B3A5E5EDBB4 /* chess-b-bishop-d2.png */; };
 		B885AB3887AD2C690E35831D /* PowerUps.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF8136F818C7011E78335EF2 /* PowerUps.swift */; };
+		BB7CCA026AE722A8EE38ACE7 /* GeistStrom-1999.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 0242D8F0256C0CAA23874208 /* GeistStrom-1999.m4a */; };
 		BF65DE6B34BC76D86E140734 /* StarfieldTiling.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */; };
 		BF7CA3BE908F94E71CFFE90F /* chess-b-rook.png in Resources */ = {isa = PBXBuildFile; fileRef = 05591BA327EAD55AD0F69F70 /* chess-b-rook.png */; };
 		C362A3476F3961B1753410C1 /* ship-scout.png in Resources */ = {isa = PBXBuildFile; fileRef = 2B2151BC597FBC6006588FF8 /* ship-scout.png */; };
@@ -136,6 +138,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0242D8F0256C0CAA23874208 /* GeistStrom-1999.m4a */ = {isa = PBXFileReference; path = "GeistStrom-1999.m4a"; sourceTree = "<group>"; };
 		05591BA327EAD55AD0F69F70 /* chess-b-rook.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-rook.png"; sourceTree = "<group>"; };
 		089693DE6C70095463C9E308 /* InputHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputHandler.swift; sourceTree = "<group>"; };
 		096490D7A6278EF53261317B /* ScorePopPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorePopPool.swift; sourceTree = "<group>"; };
@@ -254,6 +257,7 @@
 		F8CB7404F3713FE581B43A87 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F9BCEF5A958D912F3D3834BC /* GameAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAction.swift; sourceTree = "<group>"; };
 		FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStatusNode.swift; sourceTree = "<group>"; };
+		FE835419C31F9645E9B6ADE2 /* Cycle-3-Midnight.m4a */ = {isa = PBXFileReference; path = "Cycle-3-Midnight.m4a"; sourceTree = "<group>"; };
 		FF11C903C797D394A807E396 /* Chess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chess.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -382,7 +386,9 @@
 				750B509390CDAEFCB4EFA024 /* BierWunderwaffe.m4a */,
 				9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */,
 				7F0CB51AFAE13D480BE23C31 /* Bochum-Level.m4a */,
+				FE835419C31F9645E9B6ADE2 /* Cycle-3-Midnight.m4a */,
 				5368B7B77BF8CA5E965DD5F5 /* Frankfurt-Overdrive.m4a */,
+				0242D8F0256C0CAA23874208 /* GeistStrom-1999.m4a */,
 				F886717DAFB12317A398DA80 /* KraftSchmaltz.m4a */,
 				6285CF5C055E05DC5DF49661 /* Leipzig-1999.m4a */,
 				89B3000A0C60845A2545F718 /* Leise-Dunkels.m4a */,
@@ -496,21 +502,21 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_79735CAD-10E4-4EDF-8F07-D64A6D906DB6" /* .claude */ = {
+		"TEMP_32170F90-2D6C-416C-BE7D-60268A35964D" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_7D70CECC-2B26-4B34-8341-2DDEE35717B4" /* .claude */ = {
+		"TEMP_B958DB41-EC91-4DF4-9AF6-036EFE3FA640" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_8A4B89DD-97EB-45A0-9806-046F5A962033" /* .claude */ = {
+		"TEMP_FCB02CA7-B468-4281-953B-3DA404F6D5AB" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -604,7 +610,9 @@
 				7263E9829B8933355232018D /* BierWunderwaffe.m4a in Resources */,
 				34AD541D2F64A6C3EA248AFD /* BlitzSchnork.m4a in Resources */,
 				1F8FC8763F4783CAACA3AA58 /* Bochum-Level.m4a in Resources */,
+				5598443F0BD7826369A84681 /* Cycle-3-Midnight.m4a in Resources */,
 				91A01B88B5A0D417E138050B /* Frankfurt-Overdrive.m4a in Resources */,
+				BB7CCA026AE722A8EE38ACE7 /* GeistStrom-1999.m4a in Resources */,
 				6F3D3C759D73312D2148C8AF /* KraftSchmaltz.m4a in Resources */,
 				253ACA6FD2491409DCCCB0B8 /* Leipzig-1999.m4a in Resources */,
 				87A704F32866D6D7CDFE29A7 /* Leise-Dunkels.m4a in Resources */,
