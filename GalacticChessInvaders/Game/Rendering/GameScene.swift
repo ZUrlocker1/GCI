@@ -1809,7 +1809,7 @@ class GameScene: SKScene {
     private func scheduleAfterReveal(_ action: @escaping () -> Void) {
         revealRemaining = Self.gameEndRevealDelay
         pendingReveal = action
-        logWave("holding \(String(format: "%.1f", Self.gameEndRevealDelay))s before continuing")
+        logWave("holding")
     }
 
     /// Ticks the hold. Returns true while it is still running.

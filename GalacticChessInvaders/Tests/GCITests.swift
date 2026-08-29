@@ -2622,6 +2622,16 @@ final class MusicVariantTests: XCTestCase {
                 }
             }
         }
+        // Stingers name themselves — the file already ends in -sting — but the
+        // two that mark a particular ending say which.
+        XCTAssertEqual(MusicVariants.describe(MusicLibrary.winStinger),
+                       "Win \(MusicLibrary.winStinger)")
+        XCTAssertEqual(MusicVariants.describe(MusicLibrary.oddEndingStinger),
+                       "Draw \(MusicLibrary.oddEndingStinger)")
+        for track in MusicLibrary.runStingers {
+            XCTAssertEqual(MusicVariants.describe(track), track, "no redundant prefix")
+        }
+
         // An unknown track still reads as something rather than as nothing.
         XCTAssertEqual(MusicVariants.describe("Nonesuch"), "Nonesuch")
     }

@@ -144,7 +144,7 @@ final class ScoreManager {
             highScores = Array(highScores.prefix(maxHighScores))
         }
         saveHighScores()
-        DiagnosticsLog.shared.log(.score, "High score submitted: \(entry.initials) \(entry.score) L\(entry.level)")
+        DiagnosticsLog.shared.log(.score, "\(entry.initials) \(entry.score)")
     }
 
     /// Resets the table to its seeded placeholders, including what is persisted.

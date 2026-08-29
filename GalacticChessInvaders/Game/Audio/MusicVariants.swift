@@ -130,7 +130,9 @@ enum MusicVariants {
         }
         if track == MusicLibrary.winStinger { return "Win \(track)" }
         if track == MusicLibrary.oddEndingStinger { return "Draw \(track)" }
-        if MusicLibrary.runStingers.contains(track) { return "Sting \(track)" }
+        // No prefix: the filename already ends in -sting. Win and Draw keep
+        // theirs because those say which ending it is, which the name does not.
+        if MusicLibrary.runStingers.contains(track) { return track }
         return track
     }
 
