@@ -54,20 +54,29 @@ enum MusicLibrary {
     /// someone who has now heard the opening several times.
     static let alternateUnlockLevel = 3
 
-    /// Where the panel track starts, and how it arrives.
+    /// Where a panel-opening track may start, and how it gets there.
     ///
-    /// An experiment: half the time Pre-Solstice opens partway in rather than at
-    /// the top. 0:57–1:12 is a quiet stretch, so it can fade up over a second
-    /// without a transient, and it sounds unlike the opening notes — which a
-    /// player who checks Settings four times in a run would otherwise hear four
-    /// times. The other half keeps the opening, so the track still has one.
-    /// 0:57-1:12 is a quiet stretch *of this particular track*, which is why
-    /// the mid-track entry is only offered for it. An alternate has its own
-    /// structure, and fading up into whatever happens to be at 0:57 could land
-    /// on a transient. It starts at the top until a window is chosen for it.
+    /// An experiment that stuck: half the time the intro opens partway in
+    /// rather than at the top, so a player who checks Settings four times in a
+    /// run does not hear the same opening bars four times.
+    ///
+    /// The window is measured per track and the fade with it. Neither window is
+    /// especially quiet — both sit within 0.2dB of their own track's average —
+    /// so what the fade is really covering is arriving mid-texture. Zephyron
+    /// gets twice the fade because its window carries the hotter transients
+    /// (peaks to -6.4dB against Pre-Solstice's -13.0), and dropping into one of
+    /// those at full level reads as a glitch rather than as a cut.
+    private static let panelEntries:
+        [String: (window: ClosedRange<TimeInterval>, fadeIn: TimeInterval)] = [
+        "Pre-Solstice": (57...72,   1.0),
+        "Zephyron":     (100...110, 2.0),
+    ]
+
+    /// A track with no window always opens at the top, which is also the other
+    /// half of the coin toss for one that has a window.
     static func panelEntry(for track: String) -> (startAt: TimeInterval, fadeIn: TimeInterval) {
-        guard track == panelTrack else { return (0, 0) }
-        return Bool.random() ? (.random(in: 57...72), 1.0) : (0, 0)
+        guard let entry = panelEntries[track], Bool.random() else { return (0, 0) }
+        return (.random(in: entry.window), entry.fadeIn)
     }
 
     /// How a wave's music takes over. Slower than the panel hand-over, with a

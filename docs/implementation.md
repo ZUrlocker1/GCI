@@ -632,9 +632,13 @@ track is still a novelty.
 - **A wave's track is latched when the wave starts.** Closing a panel calls
   `restoreScreenMusic`, and a fresh roll there would swap the track underneath
   the player
-- The mid-track panel entry is **only offered for `Pre-Solstice`** — 0:57-1:12 is
-  a quiet stretch of that specific track. An alternate opens at the top until a
-  window has been chosen for it
+- Half the time a panel opens its track **partway in** rather than at the top,
+  so checking Settings four times in a run does not replay the same opening
+  bars four times. The window is per track: `Pre-Solstice` 0:57-1:12 on a 1.0s
+  fade, `Zephyron` 1:40-1:50 on 2.0s. Neither window is especially quiet — both
+  sit within 0.2 dB of their own track's average — so the fade is covering the
+  arrival mid-texture, and Zephyron needs twice as much because its window
+  carries the hotter transients. A track with no window always opens at the top
 - A track with no entry in the table simply never varies, so an incomplete set
   degrades to the shipped behaviour rather than to silence
 

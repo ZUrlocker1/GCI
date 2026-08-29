@@ -2441,15 +2441,33 @@ final class MusicVariantTests: XCTestCase {
         }
     }
 
-    /// The mid-track panel entry is measured against one specific track, so an
-    /// alternate must open at the top rather than at whatever is at 0:57.
-    func testOnlyTheOriginalIntroOpensPartwayIn() {
-        for _ in 0..<100 {
-            XCTAssertEqual(MusicLibrary.panelEntry(for: "Zephyron").startAt, 0)
+    /// Each intro variant has its own measured entry window, and a mid-track
+    /// start always arrives on a fade — landing at full level reads as a glitch.
+    func testPanelEntryStartsAtTheTopOrInsideItsOwnWindow() {
+        for track in [MusicLibrary.panelTrack, "Zephyron"] {
+            var sawTop = false, sawMid = false
+            for _ in 0..<300 {
+                let entry = MusicLibrary.panelEntry(for: track)
+                if entry.startAt == 0 {
+                    sawTop = true
+                    XCTAssertEqual(entry.fadeIn, 0, "\(track) opens dry at the top")
+                } else {
+                    sawMid = true
+                    XCTAssertGreaterThan(entry.fadeIn, 0, "\(track) must fade in mid-track")
+                }
+            }
+            XCTAssertTrue(sawTop, "\(track) should sometimes open at the top")
+            XCTAssertTrue(sawMid, "\(track) should sometimes open partway in")
         }
-        let starts = (0..<200).map { _ in MusicLibrary.panelEntry(for: MusicLibrary.panelTrack).startAt }
-        XCTAssertTrue(starts.contains { $0 > 0 }, "the original still opens partway in sometimes")
-        XCTAssertTrue(starts.contains { $0 == 0 }, "and sometimes at the top")
+    }
+
+    /// A track with no measured window must never be entered mid-way.
+    func testATrackWithoutAWindowAlwaysOpensAtTheTop() {
+        for _ in 0..<100 {
+            let entry = MusicLibrary.panelEntry(for: MusicLibrary.pool(forLevel: 5)[0])
+            XCTAssertEqual(entry.startAt, 0)
+            XCTAssertEqual(entry.fadeIn, 0)
+        }
     }
 }
 
