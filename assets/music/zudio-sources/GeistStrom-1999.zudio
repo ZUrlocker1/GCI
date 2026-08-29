@@ -1,0 +1,67 @@
+=== Zudio Song Analysis Log ===
+Title:          GeistStrom 1999
+Generated:      2026-08-29 12:11:31
+Zudio Version:  2.4 (129)
+Seed:           6092133710449171654
+Style:          Motorik
+Key:            E  Phrygian
+Tempo:          149 BPM
+Bars:           84
+Mood:           Free
+
+--- Structure ---
+  intro      Bars   1–  2         (2 bars)
+  A          Bars   3– 50         (48 bars)
+  B          Bars  51– 80         (30 bars)
+  outro      Bars  81– 84         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  2         root=b7  type=sus2
+  Bars   3– 26         root=b7  type=sus2
+  Bars  27– 50         root=4  type=minor
+  Bars  51– 60         root=b6  type=major
+  Bars  61– 70         root=1  type=min7
+  Bars  71– 80         root=4  type=minor
+  Bars  81– 84         root=1  type=minor
+
+--- Note Counts Per Track ---
+  Lead 1       98 notes
+  Lead 2       56 notes
+  Pads         44 notes
+  Rhythm       1018 notes
+  Bass         258 notes
+  Drums        1511 notes
+
+--- Generation Log ---
+  SONG             GeistStrom 1999
+  Style            Motorik Arcade – 149 bpm
+  Form             Subtle A/B
+  Chords           E Phrygian Minor loop
+  MOT-DRUM-005     Albatross Grid
+  MOT-BASS-001     Root Anchor
+  MOT-PADS-003     Pulsed
+  MOT-LD1-020      Synth Hook
+  MOT-LD2-001      Counter-response
+  MOT-RTHM-007     Chord Chug
+  MOT-TEX-000      No texture
+  Instruments      L1:87 L2:86 Pd:50 Ry:4 Bs:34 Dr:8
+
+--- Playback Annotations ---
+  Bar 001    Intro        2 bar fade in
+  Bar 003    Section A    48 bars
+  Bar 010    Drums        switching to ride
+  Bar 010    Lead 2       steps back
+  Bar 013    Lead 1       steps up
+  Bar 017    Drums        back on hi-hat
+  Bar 017    Bass         pattern evolving
+  Bar 026    Drums        crash + open hat
+  Bar 027    Drums        back on hi-hat
+  Bar 028    Pads         steps back
+  Bar 051    Form         Enter B section
+  Bar 053    Bass         pattern evolving
+  Bar 056    Pads         steps back
+  Bar 057    Rhythm       steps back
+  Bar 066    Drums        crash + open hat
+  Bar 074    Drums        switching to ride
+  Bar 081    Outro        4 bar dissolve
+

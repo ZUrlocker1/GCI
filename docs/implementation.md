@@ -612,11 +612,11 @@ The intro and the first two waves are heard on every single run, so each has one
 alternate. Levels 3-10 do not — a player reaches them rarely enough that the
 track is still a novelty.
 
-| Original | Alternate | |
-|---|---|---|
-| `Pre-Solstice` (title, Settings, Info) | `Zephyron` | Kosmic, B Dorian 118 against E Dorian 88 |
-| `Leise-Dunkels` (L1) | — | |
-| `WelleZ-Machine` (L2) | — | |
+| Original | Alternate | Style | What changes |
+|---|---|---|---|
+| `Pre-Solstice` (title, Settings, Info) | `Zephyron` | Kosmic | B Dorian 118 against E Dorian 88 — the same room at a brisker walk |
+| `Leise-Dunkels` (L1) | `GeistStrom-1999` | Motorik | E Phrygian against E Mixolydian: same tonic, darker mode, 149 against 125 |
+| `WelleZ-Machine` (L2) | `Cycle-3-Midnight` | Motorik Noir | 119 against 134 — slow and foreboding where the original is urgent |
 
 - **Locked until the player reaches Level 3** in the session. A first run should
   sound the way the game sounds; this is for someone who has heard the opening
