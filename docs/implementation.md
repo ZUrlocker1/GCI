@@ -11,7 +11,7 @@ notarized and shipping as a DMG.
 
 What a player would still notice: no level-clear fanfare or game-over riff of
 their own, and no hyperspace jump between waves. Everything else outstanding is
-production — a balance pass, an app icon, and running the test suite once.
+production — a balance pass and an Instruments run.
 
 The raiders are done and the rest of §6 is **cut** — no Escort, Flagship,
 Kamikaze or Llama. Gameplay is feature-complete; what is left is production.
@@ -133,7 +133,9 @@ Deviations
 
 ## Phase 2.1 — Playfield: Chess Functional ✅
 
-- [x] `BoardNode` — coordinate mapping, selection, legal-move markers, **no grid**
+- [x] `BoardNode` — coordinate mapping, selection, legal-move markers. The
+      lattice, deployment bands and coordinate labels are off by default and
+      come in together on the Display slider
 - [x] `PieceNode` — square-fitted, side-tinted, damage-state swaps
 - [x] `SpaceshipNode` — bottom-centre, delta-time arrow movement
 - [x] Click to select, click to move; castling and en passant animate correctly
@@ -442,13 +444,6 @@ Each one is a mistake that is easy to make again.
   Escape always pauses rather than first cancelling a chess selection — clicking
   another square already deselects
 
-### Not yet verified in the running app
-
-Confirmed by a trustworthy typecheck (macro-plugin flakiness ruled out first),
-standalone runtime harnesses for every pure Logic path, and geometry rendered to
-PNG where a shape was in question. There is no GUI automation for a native macOS
-app in this environment, so a firing/hit/lose/win playtest is the real next step.
-
 ## Phase 3.3 — Damage States & Juice ✅
 
 `Juice.swift` holds §24's table — shake tiers and decay, freeze lengths, pop
@@ -702,15 +697,11 @@ cannot prepare for, which is the opposite of what a rare reward should be.
   the roster is empty
 - Every power-up **debuts on a level of its own** and **every one comes round
   again** — a mechanic met once and never used is not worth building. Both are
-  pinned by tests, and the second one was only true once the tests were first
-  run: the Shield was offered on Level 3 and nowhere else for the whole run.
-  It picked up Level 5, and took Blitz's Time Freeze slot — four offers is as
-  crowded as that wave reads, and a pause is worth least on the one level whose
-  character is that it never pauses
-- Levels 7–10 send more than one. Level 7 sends the same carrier twice, which is
-  where the player first meets a wave that does not go quiet after one kill;
-  8–10 stack different ones, cheapest first, so Rapid Fire is banked before the
-  spray arrives
+  pinned by tests
+- Level 5 and Levels 7–10 send more than one. Level 7 sends the same carrier
+  twice, which is where the player first meets a wave that does not go quiet
+  after one kill; 5 and 8–10 stack different ones, cheapest first, so Rapid Fire
+  is banked before the spray arrives
 - The gap between crossings **tightens with the roster** — 22s / 15s / 12s for
   one, two and three-or-more offers — or a level advertising four power-ups would
   realistically hand over one
@@ -872,13 +863,11 @@ is genuinely outstanding:
 ### Shipping (§20 Phase 9)
 
 Signing, notarization and direct distribution are done — `release-dmg.sh` wraps
-an Xcode-exported app, and 0.2 is out. What is left:
+an Xcode-exported app, and 0.4 is out with an icon and a green test suite. What
+is left:
 
 - [ ] **Balance pass from outside playtesters.** §9's own criteria: is Level 1
       learnable in one attempt, Level 3 urgent, Level 5 overwhelming-but-fair
-- [ ] **App icon**, all sizes
-- [ ] **Run the XCTest suite.** It typechecks but has never been executed —
-      `⌘U` in Xcode is the single highest-value verification step left
 - [ ] **Instruments passes** — Allocations over 30 minutes for leaks, Time
       Profiler for the frame budget
 - [ ] **App Store**, if it ever goes there: screenshots and metadata. The
@@ -909,78 +898,32 @@ an Xcode-exported app, and 0.2 is out. What is left:
 
 ### Done
 
-Measured on an M4 (10 cores). Before: **38% CPU rising to 84% over a session**,
-FPS reported as swinging 75 → 19, node count **42,170**.
+The scene graph is flat across a session and the frame cost does not grow with
+time played. What holds that:
 
-- [x] **The pools are built once, not once per level.** `buildPlayfield` rebuilt
-      the laser, score-pop, explosion and shatter pools every level *and* every
-      `V` skip, while their nodes are parented to `bloomNode`, which is not
-      rebuilt — and `reset()` hides a pool's nodes without unparenting them. Each
-      call orphaned **488 nodes, 40 of them carrying physics bodies**, into the
-      scene graph for the rest of the run. `V` wraps from 10 back to 1, so a
-      testing session that walks the ladder repeatedly reaches 84 calls easily,
-      which is exactly the 42,170 observed. This was the whole of "CPU climbs the
-      longer you play"
-- [x] **`didMove(to:)` is guarded against running twice.** The scene is a
-      singleton and `presentScene` is called from `makeNSView`, so anything that
-      makes SwiftUI rebuild the representable — a window rebuild, a move to
-      another display — presents the same scene again and SpriteKit calls
-      `didMove` again. Nothing in `setupScene` was idempotent: it built a second
-      `bloomNode`, meaning **a second full-screen CIBloom pass every frame**, a
-      second starfield and a second set of pools, and left the first of each
-      parented and costing frames
-- [x] **The FPS readout is an average, not a sample.** It took one frame every
-      250ms, which reads 75 off a short frame and 19 off a long one while the
-      other fourteen were fine — the reason a smooth-feeling game reported wild
-      swings. It averages every frame in the window now
-- [x] **`bloomNode.shouldRasterize` is off.** §18.9 asked for it, written before
-      there was anything moving inside the node. Rasterizing caches an effect
-      node's output and invalidates it whenever the subtree changes — and every
-      moving thing in the game is a child of this one, so the cache was
-      invalidated every frame and never once read. The `CIFilter` forces an
-      offscreen pass either way; rasterizing only added a retained buffer and the
-      bookkeeping to discard it. Visually identical, since rasterization is
-      purely a caching strategy
-- [x] **Log messages are `@autoclosure`.** Every call site interpolates a string
-      and there are eighty of them, the hot ones firing on every shot and every
-      hit. As a plain `String` parameter that interpolation ran *before* the
-      call, so a release build — where logging is compiled off — paid to build
-      and immediately discard tens of strings a second
-- [x] **The log trims in chunks of 200, not one line at a time.**
-      `removeFirst()` on an Array shifts every remaining element, so once the log
-      hit its 2000-line cap each new line moved two thousand of them. That cost
-      appears only after the log fills, which is precisely the shape of "CPU
-      climbs for the first few minutes and then settles"
-- [x] **The diagnostics log flushes at 10Hz instead of per frame.** The text view
-      is append-only, but it called `isScrolledToBottom`, which reads
-      `textView.bounds` and makes TextKit lay out the whole document — at the
-      2000-line cap, up to sixty times a second, at a cost that grew as the log
-      filled. Identical text, six times fewer forced layouts
+- **Pools are built once with the scene, not per level.** `reset()` hides a
+  pool's nodes without unparenting them, so rebuilding one orphaned 488 nodes —
+  40 with physics bodies — into the graph for the rest of the run
+- **`didMove(to:)` is guarded against running twice.** The scene is a singleton
+  and SwiftUI can present it again on a window rebuild; nothing in `setupScene`
+  was idempotent, and a second `bloomNode` means a second full-screen CIBloom
+  pass every frame
+- **`bloomNode.shouldRasterize` is off.** Every moving thing in the game is a
+  child of it, so the cache was invalidated every frame and never read
+- **Log messages are `@autoclosure`**, and the log trims in chunks of 200 rather
+  than one line at a time — `removeFirst()` shifts the whole array
+- **The FPS readout averages every frame in its window** instead of sampling one
 
-**Result.** Node count stays under 900 across a session — flat, so the leak is
-gone. CPU went from **38% rising to 84%** to **55% or less even on Level 10**,
-with FPS 45–63 and no visual change from dropping rasterization.
+| | current |
+|---|---|
+| CPU | ≤55% on Level 10 |
+| nodes | <900, flat |
+| FPS | 45–63 |
 
-| | before | after |
-|---|---|---|
-| CPU | 38% → 84% | ≤55% |
-| nodes | 42,170 | <900 |
-| FPS (averaged) | reported 75 → 19 | 45–63 |
-
-That is measured on a **Debug** build with the diagnostics sidebar open, which is
-the worst case and not what ships.
-
-Two caveats on any further measurement, because both make a Debug build on a
-laptop look worse than the thing that ships:
-
-- **It is a Debug build.** Swift at `-Onone` is several times slower than `-O`
-  on anything compute-heavy, and the whole diagnostics layer — the log, the
-  sidebar, the node-count tree walk, the hitbox audit — is `#if DEBUG` and does
-  not exist in Release. Switching the scheme's Run configuration to Release is
-  free and is the only number that means anything for shipping
-- **A laptop downclocks under sustained load.** The same work takes a larger
-  share of a slower core, so a percentage that drifts upward over ten minutes is
-  not necessarily more work
+Measured on an M4 (10 cores), Debug, with the diagnostics sidebar open — the
+worst case, and slower than what ships: Swift at `-Onone` is several times
+slower than `-O`, and a laptop downclocks under sustained load, so a percentage
+that drifts upward over ten minutes is not necessarily more work.
 
 ### Considered and not needed
 
@@ -1022,15 +965,9 @@ most of it the perft.
   (~11M nodes) and must match the published counts exactly. Any change to move
   generation goes through it. The rest pin decisions that are otherwise silent
   when broken — the §7.1 damage table, the raider ladder, gutter layout
-- **They first ran on 2026-08-28**, long after they were written: `⌘U` failed at
-  code signing until Debug stopped inheriting the hardened runtime and the App
-  Sandbox. Debug now uses `GalacticChessInvaders-Debug.entitlements` (no
-  sandbox — CoreAudio's analytics client aborts under it rather than degrading);
-  Release is unchanged and still sandboxed, hardened and signed
-- Of the 29 failures that first run, 28 were tests describing a game that had
-  since changed on purpose. One was real: `FleetController.release` reported
-  every genuine member as a non-member, because it still compared against the
-  fleet node after each rank gained its own container
+- **Debug is not sandboxed** — `GalacticChessInvaders-Debug.entitlements`.
+  CoreAudio's analytics client aborts under the sandbox rather than degrading,
+  which kills the whole run at launch. Release is sandboxed, hardened and signed
 - The suite shares one `GameScene.shared`, so a test that drives the state
   machine must put it in a known state first
 
@@ -1045,7 +982,7 @@ What can raise it:
 
 | Error | Meaning |
 |---|---|
-| `ghost <piece> <square> …` | A destroyed piece still on the board a second later — with its alpha, its board state and its full ancestor chain, which is what identified the Time Freeze `isPaused` leak |
+| `ghost <piece> <square> …` | A destroyed piece still on the board a second later. Reports its alpha, board state and full ancestor chain, so the line names what is holding it |
 | `<color> <piece> <square> had no hitbox` | A piece that cannot be shot. Repaired on the spot, and reported anyway |
 | `Legal-move markers exhausted` | More destinations than the pool holds — some would silently not draw |
 | `Music not found: <track>.m4a` | A `MusicLibrary` entry with no file behind it |
@@ -1057,14 +994,10 @@ at startup or on first use.
 
 ## Changing assets
 
-Every asset failure in this project has been silent. A missing texture draws a
-grey X and logs nothing; a missing sound simply does not play; a missing font
-falls back to Helvetica and the game still runs. Three have actually happened:
-four power-up sounds that were never copied into `Resources/`, camel walk frames
-written to the atlas but not the bundle, and an illegal-move cue deleted along
-with a file two keys were sharing.
-
-`typecheck.sh` runs the first four of these on every invocation, and fails:
+Every asset failure here is silent: a missing texture draws a grey X and logs
+nothing, a missing sound does not play, a missing font falls back to Helvetica
+and the game still runs. So `typecheck.sh` checks for them on every invocation,
+and fails:
 
 | Check | Catches |
 |---|---|
@@ -1079,9 +1012,8 @@ Only sounds the code actually calls `play`/`stop` on are required, because
 `./typecheck.sh --assets` adds two advisory reports, which are the ones to run
 *before* adding or removing anything:
 
-- **Files backing more than one key.** This is the trap that produced the
-  illegal-move regression: a file added for one cue turned out to already be
-  serving another, so deleting "the one I added" silenced something else
+- **Files backing more than one key.** A file added for one cue may already be
+  serving another, so deleting "the one I added" silences something else
 - **Bundled files nothing names**, with their total size — dead weight in the
   DMG, and the other direction of the same mistake
 
@@ -1097,43 +1029,27 @@ Two rules that no script can enforce:
 - `typecheck.sh` runs two passes (sources, tests) at Swift 6 strict concurrency,
   and fails if a source on disk is missing from `project.pbxproj`. **New files
   need `xcodegen generate`** or Xcode won't see them
-- `-typecheck` does **not** catch sending-risks-data-race errors (SIL stage only).
-  A real build is the authority
-- `ChessPerftTests` pins move generation against the standard reference positions.
-  If those counts drift, the rules have regressed
-- The XCTest suite has never been *run* as tests; every assertion in it was first
-  executed as a standalone harness. `⌘U` in Xcode is untried
-- Nothing has been visually or audibly verified here
+- `-typecheck` does **not** catch sending-risks-data-race errors (SIL stage
+  only). A real build is the authority
 - **`typecheck.sh`'s `-typecheck` mode can silently miss real errors** when
   `swift-plugin-server` fails to expand `@Observable` (`DiagnosticsLog`,
-  `ScoreManager`) — observed to suppress unrelated diagnostics for the rest of
-  the module, so a genuinely broken reference reported "no errors" three runs
-  in a row. `typecheck.sh` now detects the plugin failure and fails the whole
-  run rather than filtering it out; a clean run is only trustworthy when it
-  actually says so. A real build remains the authority regardless
-- **Anything that moves a piece must tell `ChessEngine`.** `forcePlace` once
-  updated the rendering-facing `pieces` dictionary and not the engine's own
-  `position`, so after any descent the engine believed every descended piece
-  was still where it started, and later moved whatever had since taken that
-  square. `forceRelocate(from:to:)` closes it
+  `ScoreManager`): it suppresses unrelated diagnostics for the rest of the
+  module, so a genuinely broken reference reports "no errors". The script
+  detects the plugin failure and fails the whole run rather than filtering it
+  out — a clean run is only trustworthy when it says so
+- `ChessPerftTests` pins move generation against the standard reference
+  positions. If those counts drift, the rules have regressed
 
-## Full-codebase review
+## Known compromises
 
-A read of every source file. What came out of it:
+Deliberate, and not worth fixing without a design conversation:
 
-- [x] `NeonPalette` — the cyan/magenta/orange constants had been copy-pasted
-      into 8 files. Now one shared enum. Orange was two *deliberately* distinct
-      shades, kept as `orange` and `alertOrange`
-- [x] Stale header comments in `ChessRules`, `ChessFEN` and `Chess` claiming
-      castling, en passant and draw tracking were absent. All three exist
-- [x] Duplicated FEN helper in the tests, and a dead
-      `AudioManager.setVolume(_:for:)`, both removed
-- [ ] `GameOverNode` / `HighScoreEntryNode` / `HowToPlayNode` each have their
-      own `label(...)`. They look identical and are not; left alone
-- [ ] `GameState.swift` imports SpriteKit and calls into `GameScene`, the one
-      Logic-layer file that breaks the architecture rule. `GameScene` also
-      writes `DiagnosticsLog.fps`/`.nodeCount`, which is Rendering writing into
-      Logic. Both pre-date the rule and need a design conversation, not a patch
-- Confirmed dead but kept as accurate phase markers: `LaserNode`'s Phase-1 stub,
+- `GameOverNode`, `HighScoreEntryNode` and `HowToPlayNode` each have their own
+  `label(...)`. They look identical and are not
+- `GameState.swift` imports SpriteKit and calls into `GameScene` — the one
+  Logic-layer file that breaks the architecture rule. `GameScene` also writes
+  `DiagnosticsLog.fps`/`.nodeCount`, which is Rendering writing into Logic. Both
+  pre-date the rule
+- Dead but kept as accurate phase markers: `LaserNode`'s Phase-1 stub,
   `SpaceshipNode`'s shield API, `GameAction.confirmRestart` / `.returnToMenu`,
   and the `SoundKey` cases with no asset yet

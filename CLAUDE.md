@@ -243,7 +243,7 @@ soundtrack and full arcade audio.
 Read `docs/implementation.md` for the current state — it is kept accurate and
 this file is not a substitute for it. Its **Roadmap** section is what remains:
 a level-clear fanfare and game-over riff, music ducking, the hyperspace jump, a
-balance pass, an app icon, and running the test suite once.
+balance pass, and an Instruments run.
 
 Deliberately not building: Escorts, the Flagship, Kamikaze and Llama raiders
 (§6), attract mode (§14.2), wireframe debris (§12.4) and 8-frame explosion
