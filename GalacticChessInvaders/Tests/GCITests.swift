@@ -2345,6 +2345,115 @@ final class ReviewFixTests: XCTestCase {
 // MARK: - Audio mix
 
 @MainActor
+final class MusicVariantTests: XCTestCase {
+
+    // `setUp`/`tearDown` are nonisolated overrides; the variant state is
+    // main-actor, and every test in this class already runs there.
+    override func setUp() {
+        super.setUp()
+        MainActor.assumeIsolated { MusicVariants.reset() }
+    }
+
+    override func tearDown() {
+        MainActor.assumeIsolated { MusicVariants.reset() }
+        super.tearDown()
+    }
+
+    /// Every alternate must be a real bundled track, and must not be the track
+    /// it stands in for.
+    func testEveryAlternateIsBundledAndDistinct() throws {
+        let bundle = Bundle(for: type(of: self))
+        for (original, alternate) in MusicLibrary.alternates {
+            XCTAssertNotEqual(original, alternate)
+            for track in [original, alternate] {
+                XCTAssertNotNil(Bundle.main.url(forResource: track, withExtension: "m4a")
+                                ?? bundle.url(forResource: track, withExtension: "m4a"),
+                                "\(track).m4a is not bundled")
+            }
+        }
+    }
+
+    /// Only the intro and the first two waves vary — the levels a player passes
+    /// through on every single run.
+    func testOnlyTheFrequentlyHeardTracksHaveAlternates() {
+        let varying = Set(MusicLibrary.alternates.keys)
+        XCTAssertTrue(varying.contains(MusicLibrary.panelTrack), "the intro varies")
+        for level in 3...LevelManager.finalLevel {
+            for track in MusicLibrary.pool(forLevel: level) {
+                XCTAssertFalse(varying.contains(track),
+                               "level \(level) should not vary: \(track)")
+            }
+        }
+    }
+
+    /// Nothing varies until the player has reached Level 3 this session.
+    func testLockedUntilLevelThree() {
+        for _ in 0..<200 {
+            MusicVariants.rollIntro()
+            XCTAssertEqual(MusicVariants.introTrack, MusicLibrary.panelTrack)
+            XCTAssertEqual(MusicVariants.beginLevel(1), MusicLibrary.pool(forLevel: 1))
+            XCTAssertEqual(MusicVariants.beginLevel(2), MusicLibrary.pool(forLevel: 2))
+        }
+    }
+
+    /// Reaching Level 3 arms it, and the roll lands either side often enough
+    /// over 400 tries that a stuck result would be caught.
+    func testReachingLevelThreeUnlocksBothOutcomes() throws {
+        try XCTSkipIf(MusicLibrary.alternates[MusicLibrary.panelTrack] == nil)
+        _ = MusicVariants.beginLevel(3)
+        var seen: Set<String> = []
+        for _ in 0..<400 {
+            MusicVariants.rollIntro()
+            seen.insert(MusicVariants.introTrack)
+        }
+        XCTAssertEqual(seen.count, 2, "both the original and the alternate should appear")
+    }
+
+    /// The reason the intro latches: the title screen and the panels read the
+    /// same stored value, so they cannot disagree within a run.
+    func testIntroIsFixedBetweenRollsSoPanelsAgree() {
+        _ = MusicVariants.beginLevel(3)
+        MusicVariants.rollIntro()
+        let onTitle = MusicVariants.introTrack
+        for _ in 0..<50 {
+            XCTAssertEqual(MusicVariants.introTrack, onTitle, "a panel must not re-roll")
+            XCTAssertEqual(MusicVariants.introPool, [onTitle])
+        }
+    }
+
+    /// Same reasoning one layer down: closing a panel hands back the wave's
+    /// own track rather than rolling again mid-level.
+    func testLevelTrackIsFixedForTheWave() {
+        _ = MusicVariants.beginLevel(3)
+        let playing = MusicVariants.beginLevel(1)
+        for _ in 0..<50 {
+            XCTAssertEqual(MusicVariants.currentLevelPool, playing)
+        }
+    }
+
+    /// `X` is a clean slate: Level 3 has to be reached again.
+    func testResetRelocksTheAlternates() {
+        _ = MusicVariants.beginLevel(3)
+        MusicVariants.reset()
+        for _ in 0..<200 {
+            MusicVariants.rollIntro()
+            XCTAssertEqual(MusicVariants.introTrack, MusicLibrary.panelTrack)
+        }
+    }
+
+    /// The mid-track panel entry is measured against one specific track, so an
+    /// alternate must open at the top rather than at whatever is at 0:57.
+    func testOnlyTheOriginalIntroOpensPartwayIn() {
+        for _ in 0..<100 {
+            XCTAssertEqual(MusicLibrary.panelEntry(for: "Zephyron").startAt, 0)
+        }
+        let starts = (0..<200).map { _ in MusicLibrary.panelEntry(for: MusicLibrary.panelTrack).startAt }
+        XCTAssertTrue(starts.contains { $0 > 0 }, "the original still opens partway in sometimes")
+        XCTAssertTrue(starts.contains { $0 == 0 }, "and sometimes at the top")
+    }
+}
+
+@MainActor
 final class AudioMixTests: XCTestCase {
 
     /// Effects used to default to 0.8 and 1.0 against music at 0.75, so they sat

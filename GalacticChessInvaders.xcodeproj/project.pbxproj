@@ -12,6 +12,7 @@
 		065CBD06B0637CD83CE4DD1E /* chess-b-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = B827AD2407AC5D571712932D /* chess-b-knight-d2.png */; };
 		068627FB6E47606E554C8AA8 /* chess-b-rook-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = F0BD4078DBA5A682106045F5 /* chess-b-rook-d1.png */; };
 		08915064D62400123724FB00 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = D6E00200878F5A414C7AA097 /* AppIcon.icns */; };
+		08F7F9C401F622B072EB4BD5 /* Pre-Solstice.m4a in Resources */ = {isa = PBXBuildFile; fileRef = BB5D188FC451BE3CBDC5363C /* Pre-Solstice.m4a */; };
 		091CA81733FCE104AD2D88E9 /* GameAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9BCEF5A958D912F3D3834BC /* GameAction.swift */; };
 		0C19590DD3546C1C22EBA23A /* chess-b-pawn-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = E959C91FFB1F35EA1BFAE1C7 /* chess-b-pawn-d1.png */; };
 		1048F2F37E2A61053EF3DA84 /* chess-b-queen.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DD23AB303F49EBE6977A6D4 /* chess-b-queen.png */; };
@@ -62,7 +63,6 @@
 		7705CF0A074223E6B67350F7 /* sfx in Resources */ = {isa = PBXBuildFile; fileRef = 998968842203016A0E563C6A /* sfx */; };
 		7A28A7F7E08CDA7442C26B99 /* chess-b-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */; };
 		7A5879E8C562F46FFC5D86DB /* chess-w-knight-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 203E4D81EC6732AFCAE19ACF /* chess-w-knight-d1.png */; };
-		7B1B293D3EF00772467603BC /* GCI-intro.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 266106237B707A5FFEC1D5FC /* GCI-intro.m4a */; };
 		7B642189B3FC586C84C9A534 /* InputHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089693DE6C70095463C9E308 /* InputHandler.swift */; };
 		7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86607BAC135182D9E5F8BD4 /* PieceNode.swift */; };
 		8045F16B75DCA226FEFC2848 /* ProjectileState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0C0E6B6868C3ACDC346F91 /* ProjectileState.swift */; };
@@ -80,6 +80,7 @@
 		97705FE9DD4E31AE447668AD /* MusicLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96341566A1F2EF47B4EBC715 /* MusicLibrary.swift */; };
 		9D8A372DBBCA9B9102C4264A /* chess-w-rook-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E035ABF8A545D83002E5689 /* chess-w-rook-d1.png */; };
 		9F1596A7F6BC01E4F501C8D7 /* chess-w-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = B1C4ECE6D9D8E3925073ACFE /* chess-w-king-d2.png */; };
+		A2784D2036C624089B6F8ED0 /* MusicVariants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B881B3211D393C65EE95DC56 /* MusicVariants.swift */; };
 		A48C365E31A834FAD4782D2B /* ship-camel-c.png in Resources */ = {isa = PBXBuildFile; fileRef = 3420846073BE18C53447E8B2 /* ship-camel-c.png */; };
 		A5723D032739FA8C59CB6091 /* CheckPathNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741746F275F1126EB8D73A8C /* CheckPathNode.swift */; };
 		AA89831E81221FDF8F2C6AD8 /* RaiderRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D52D7B60FB53896B80DB403D /* RaiderRules.swift */; };
@@ -91,6 +92,7 @@
 		BF65DE6B34BC76D86E140734 /* StarfieldTiling.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */; };
 		BF7CA3BE908F94E71CFFE90F /* chess-b-rook.png in Resources */ = {isa = PBXBuildFile; fileRef = 05591BA327EAD55AD0F69F70 /* chess-b-rook.png */; };
 		C362A3476F3961B1753410C1 /* ship-scout.png in Resources */ = {isa = PBXBuildFile; fileRef = 2B2151BC597FBC6006588FF8 /* ship-scout.png */; };
+		C5E4FCF629356AE45F9EBBD8 /* Zephyron.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 57D7420F97EF93D50B690259 /* Zephyron.m4a */; };
 		C88BE784BCDFF9D800B631C4 /* BoardNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C108E7EAE6358A3CF47A3F77 /* BoardNode.swift */; };
 		C9A9C0363A0C8510549F4337 /* chess-b-king-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E7E3382582F0A404A28305F /* chess-b-king-d1.png */; };
 		CED029BF45680E976218AD47 /* chess-w-queen.png in Resources */ = {isa = PBXBuildFile; fileRef = 83910C58D45F81C5E632B8BD /* chess-w-queen.png */; };
@@ -147,7 +149,6 @@
 		210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop-d2.png"; sourceTree = "<group>"; };
 		21E7C6E4E5697A906A277064 /* chess-b-king.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king.png"; sourceTree = "<group>"; };
 		2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetFiring.swift; sourceTree = "<group>"; };
-		266106237B707A5FFEC1D5FC /* GCI-intro.m4a */ = {isa = PBXFileReference; path = "GCI-intro.m4a"; sourceTree = "<group>"; };
 		2B2151BC597FBC6006588FF8 /* ship-scout.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-scout.png"; sourceTree = "<group>"; };
 		2C3D8F71E32179DA6F078007 /* chess-b-queen-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-queen-d2.png"; sourceTree = "<group>"; };
 		2C700B2F09ADAB666A66E141 /* LevelBannerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBannerNode.swift; sourceTree = "<group>"; };
@@ -175,6 +176,7 @@
 		5308FEB0B1858AC43F451354 /* LaserNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaserNode.swift; sourceTree = "<group>"; };
 		533060B476CEB068D8FE3931 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
 		5368B7B77BF8CA5E965DD5F5 /* Frankfurt-Overdrive.m4a */ = {isa = PBXFileReference; path = "Frankfurt-Overdrive.m4a"; sourceTree = "<group>"; };
+		57D7420F97EF93D50B690259 /* Zephyron.m4a */ = {isa = PBXFileReference; path = Zephyron.m4a; sourceTree = "<group>"; };
 		5830D14669A091B96610D580 /* RaiderController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaiderController.swift; sourceTree = "<group>"; };
 		5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-queen-d1.png"; sourceTree = "<group>"; };
 		5E03F189843B523D7688AFA1 /* chess-w-pawn-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-pawn-d2.png"; sourceTree = "<group>"; };
@@ -217,6 +219,8 @@
 		ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverScene.swift; sourceTree = "<group>"; };
 		B1C4ECE6D9D8E3925073ACFE /* chess-w-king-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-king-d2.png"; sourceTree = "<group>"; };
 		B827AD2407AC5D571712932D /* chess-b-knight-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-knight-d2.png"; sourceTree = "<group>"; };
+		B881B3211D393C65EE95DC56 /* MusicVariants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicVariants.swift; sourceTree = "<group>"; };
+		BB5D188FC451BE3CBDC5363C /* Pre-Solstice.m4a */ = {isa = PBXFileReference; path = "Pre-Solstice.m4a"; sourceTree = "<group>"; };
 		C108E7EAE6358A3CF47A3F77 /* BoardNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardNode.swift; sourceTree = "<group>"; };
 		C6065939A740086FDEF2B63B /* chess-w-queen-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-queen-d1.png"; sourceTree = "<group>"; };
 		C6C2B5784E5BF76690D58C93 /* GalacticChessInvaders.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GalacticChessInvaders.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -379,14 +383,15 @@
 				9E178D8808D5689C00DEF065 /* BlitzSchnork.m4a */,
 				7F0CB51AFAE13D480BE23C31 /* Bochum-Level.m4a */,
 				5368B7B77BF8CA5E965DD5F5 /* Frankfurt-Overdrive.m4a */,
-				266106237B707A5FFEC1D5FC /* GCI-intro.m4a */,
 				F886717DAFB12317A398DA80 /* KraftSchmaltz.m4a */,
 				6285CF5C055E05DC5DF49661 /* Leipzig-1999.m4a */,
 				89B3000A0C60845A2545F718 /* Leise-Dunkels.m4a */,
+				BB5D188FC451BE3CBDC5363C /* Pre-Solstice.m4a */,
 				A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */,
 				CA740CF88621E46EC7AC43DB /* Rattert-Z-Machine.m4a */,
 				A3DD93A971AAE0B192CBC07A /* SchnorkPunkt.m4a */,
 				31141BE721EAB7CAD042DF96 /* WelleZ-Machine.m4a */,
+				57D7420F97EF93D50B690259 /* Zephyron.m4a */,
 				1F94F04B5CC0E27D8292565C /* Sprites */,
 			);
 			path = Resources;
@@ -397,6 +402,7 @@
 			children = (
 				533060B476CEB068D8FE3931 /* AudioManager.swift */,
 				96341566A1F2EF47B4EBC715 /* MusicLibrary.swift */,
+				B881B3211D393C65EE95DC56 /* MusicVariants.swift */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -490,6 +496,27 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		"TEMP_79735CAD-10E4-4EDF-8F07-D64A6D906DB6" /* .claude */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = .claude;
+			sourceTree = "<group>";
+		};
+		"TEMP_7D70CECC-2B26-4B34-8341-2DDEE35717B4" /* .claude */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = .claude;
+			sourceTree = "<group>";
+		};
+		"TEMP_8A4B89DD-97EB-45A0-9806-046F5A962033" /* .claude */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = .claude;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -578,14 +605,15 @@
 				34AD541D2F64A6C3EA248AFD /* BlitzSchnork.m4a in Resources */,
 				1F8FC8763F4783CAACA3AA58 /* Bochum-Level.m4a in Resources */,
 				91A01B88B5A0D417E138050B /* Frankfurt-Overdrive.m4a in Resources */,
-				7B1B293D3EF00772467603BC /* GCI-intro.m4a in Resources */,
 				6F3D3C759D73312D2148C8AF /* KraftSchmaltz.m4a in Resources */,
 				253ACA6FD2491409DCCCB0B8 /* Leipzig-1999.m4a in Resources */,
 				87A704F32866D6D7CDFE29A7 /* Leise-Dunkels.m4a in Resources */,
+				08F7F9C401F622B072EB4BD5 /* Pre-Solstice.m4a in Resources */,
 				D3641D21830DBEB3CE620C6B /* PressStart2P-Regular.ttf in Resources */,
 				348F0B7DFA3E37B07AE5AB69 /* Rattert-Z-Machine.m4a in Resources */,
 				4AE29C9C6CFFEE8C1D234E34 /* SchnorkPunkt.m4a in Resources */,
 				6A84246D039FB0BB24C3CCD5 /* WelleZ-Machine.m4a in Resources */,
+				C5E4FCF629356AE45F9EBBD8 /* Zephyron.m4a in Resources */,
 				AD625EB17A39A9FE68462D86 /* chess-b-bishop-d1.png in Resources */,
 				B67633A0D0D31669ED91AEDA /* chess-b-bishop-d2.png in Resources */,
 				1FBE4ACA89D5247C2820022A /* chess-b-bishop.png in Resources */,
@@ -682,6 +710,7 @@
 				1AAB40E8E2E3C6E0A09E39EA /* LevelManager.swift in Sources */,
 				DE340400464B4B709FE0F477 /* LogTextView.swift in Sources */,
 				97705FE9DD4E31AE447668AD /* MusicLibrary.swift in Sources */,
+				A2784D2036C624089B6F8ED0 /* MusicVariants.swift in Sources */,
 				FAB43706A371DD88D34AB3D6 /* NeonPalette.swift in Sources */,
 				761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */,
 				10EC7FDA96FB9D9DF9ED8846 /* Piece.swift in Sources */,

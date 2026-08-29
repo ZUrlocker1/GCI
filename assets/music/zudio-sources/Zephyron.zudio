@@ -1,0 +1,73 @@
+=== Zudio Song Analysis Log ===
+Title:          Zephyron
+Generated:      2026-08-29 12:01:24
+Zudio Version:  2.4 (129)
+Seed:           15263677245825996791
+Style:          Kosmic
+Key:            B  Dorian
+Tempo:          118 BPM
+Bars:           124
+Mood:           Deep
+
+--- Structure ---
+  intro      Bars   1–  4         (4 bars)
+  A          Bars   5– 48         (44 bars)
+  preRamp    Bars  49– 56         (8 bars)
+  bridgeMelody Bars  57– 64         (8 bars)
+  postRamp   Bars  65– 72         (8 bars)
+  B          Bars  73–120         (48 bars)
+  outro      Bars 121–124         (4 bars)
+
+--- Chord Plan ---
+  Bars   1–  4         root=1  type=sus2
+  Bars   5– 48         root=1  type=sus2
+  Bars  49– 56         root=1  type=minor
+  Bars  57– 64         root=1  type=minor
+  Bars  65– 72         root=1  type=minor
+  Bars  73– 96         root=1  type=minor
+  Bars  97–120         root=1  type=minor
+  Bars 121–124         root=1  type=minor
+
+--- Note Counts Per Track ---
+  Lead 1       85 notes
+  Lead 2       54 notes
+  Pads         503 notes
+  Rhythm       286 notes
+  Texture      127 notes
+  Bass         141 notes
+  Drums        908 notes
+  Lead Synth   85 notes
+
+--- Generation Log ---
+  SONG             Zephyron
+  Style            Kosmic – 118 bpm
+  Form             A - B + bridge
+  Chords           B Dorian Two chord pendulum
+  KOS-RTHM-004     Electric Buddha groove
+  KOS-LEAD-002     Eno floating tones
+  KOS-LEAD-004     Echo melody
+  KOS-PADS-002     Vangelis swell
+  KOS-TEXT-001     Orbital looping motif
+  KOS-BASS-004     Moroder Drift
+  KOS-DRUM-004     Electric Buddha groove
+  Instruments      L1:76 L2:98 Pd:91 Ry:11096 Tx:96 Bs:81 Dr:0
+
+--- Playback Annotations ---
+  Bar 001    Intro        4 bar fade in
+  Bar 005    Section A    44 bars
+  Bar 005    Rhythm       steps back
+  Bar 016    Lead 1       steps back
+  Bar 048    Drum fill    3 beat crescendo roll
+  Bar 049    Form         Transition
+  Bar 055    Lead 2       steps back
+  Bar 057    Form         Melodic bridge
+  Bar 057    Rhythm       steps back
+  Bar 065    Form         Returning to A section
+  Bar 066    Texture      steps back
+  Bar 072    Drum fill    3 beat tom cascade
+  Bar 073    Form         Enter B section
+  Bar 073    Texture      octave lift
+  Bar 092    Texture      steps back
+  Bar 109    Rhythm       steps back
+  Bar 121    Outro        4 bar cold stop
+

@@ -29,7 +29,10 @@ class TitleState: GCIState {
     override func didEnter(from previousState: GKState?) {
         MainActor.assumeIsolated {
             gameScene?.showTitleScreen()
-            AudioManager.shared.playMusic(from: MusicLibrary.titlePool)
+            // The one place the intro variant is decided. Everything inside the
+            // run that follows — Settings, Info — reads what this settles on.
+            MusicVariants.rollIntro()
+            AudioManager.shared.playMusic(from: MusicVariants.introPool)
             DiagnosticsLog.shared.log(.startup, "Title screen")
         }
     }

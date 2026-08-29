@@ -206,7 +206,7 @@ final class AudioManager {
         // Before the guard, not after. A hand-over already scheduled has to be
         // cancelled even when this call decides it has nothing to do — closing
         // a panel queues the level track 1.7s out, and reopening inside that
-        // window used to return early on "already playing GCI-intro" and leave
+        // window used to return early on "already playing the intro" and leave
         // the level track to land on top of the open panel.
         fadeGeneration += 1
         let token = fadeGeneration
@@ -245,7 +245,7 @@ final class AudioManager {
         }
         // Cancels anything a fade has queued. Without this a hand-over
         // scheduled 1.7s out survived the trip back to the title — X during a
-        // level change stopped the music, started GCI-intro, and then let the
+        // level change stopped the music, started the intro, and then let the
         // queued level track land on the title screen.
         fadeGeneration += 1
         musicPlayer?.stop()
