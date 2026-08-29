@@ -38,18 +38,25 @@ targets:
         # distribute it — "No Team Found in Archive".
         DEVELOPMENT_TEAM: K66MA9TR8Z
         CODE_SIGN_ENTITLEMENTS: GalacticChessInvaders.entitlements
-        ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Manual
       configs:
         # Ad-hoc locally, so a debug build never waits on a certificate.
+        #
+        # The hardened runtime is deliberately NOT here. It blocks library
+        # injection, which is how XCTest loads its bundle into the host app —
+        # with it on, every test run failed to build. It was at `base` while
+        # fixing a distribution error, which quietly broke ⌘U for a suite that
+        # had never been run, so nothing noticed.
         Debug:
           CODE_SIGN_IDENTITY: "-"
           CODE_SIGNING_REQUIRED: NO
-        # Developer ID for anything that leaves this machine. Notarization
-        # requires the hardened runtime, which is why it is on above.
+          ENABLE_HARDENED_RUNTIME: NO
+        # Developer ID for anything that leaves this machine, and the hardened
+        # runtime with it: notarization requires it.
         Release:
           CODE_SIGN_IDENTITY: "Developer ID Application"
           CODE_SIGNING_REQUIRED: YES
+          ENABLE_HARDENED_RUNTIME: YES
 
   GCITests:
     type: bundle.unit-test
@@ -67,7 +74,14 @@ targets:
         # rather than on the app.
         DEVELOPMENT_TEAM: K66MA9TR8Z
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: "Apple Development"
+      configs:
+        # Match the host: a test bundle demanding a real identity cannot load
+        # into an ad-hoc signed app.
+        Debug:
+          CODE_SIGN_IDENTITY: "-"
+          CODE_SIGNING_REQUIRED: NO
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Development"
     dependencies:
       - target: GalacticChessInvaders
 
