@@ -54,6 +54,11 @@ existed; they are a checklist, not a running order.
 - [x] HUD — score, level, lives, INFO chip *(pulled forward from 2.1)*
 - [x] App icon
 - [x] `I` / `⌘I` / `?` open How To Play; any key dismisses; opening pauses play
+- [x] `Q` asks "QUIT GAME? Y / N" and leaves the run for the title screen.
+      Works from play, either panel and the game over screen; not from the title,
+      where there is nothing to leave, and not during name entry, where a Q
+      belongs in the initials. Anything that is not a Y goes back untouched.
+      Command-Q remains the system's Quit and closes the app
 - [x] Window close quits; `X` restarts and clears the log (works from play, pause
       or How To Play). It deliberately leaves the high score table alone
 - [x] `CFBundleIdentifier` / `CFBundleExecutable` in Info.plist — without them the

@@ -101,7 +101,9 @@ final class HowToPlayNode: SKNode {
         chip("← →",   "Move your ship",                    x: x, y: 388)
         chip("SPACE",  "Fire laser",                        x: x, y: 344)
         chip("CLICK",  "Pick piece, then new square",        x: x, y: 300)
-        chip("ESC",    "Press Escape to pause",             x: x, y: 256)
+        // Two keys on one row: a fifth chip would run into the HISTORY heading
+        // below, and 25 characters at 12pt still clears the column.
+        chip("ESC",    "Escape pauses  ·  Q quits",          x: x, y: 256)
 
         // — HISTORY —
         heading("HISTORY", Self.magenta, x: x, y: 203)

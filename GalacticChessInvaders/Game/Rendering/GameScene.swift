@@ -2304,6 +2304,83 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - Quit
+
+    private var quitPrompt: SKNode?
+    /// Whether the scene was already held when the prompt went up. Settings and
+    /// How To Play pause it themselves, so answering "no" from inside one has to
+    /// leave it paused rather than resuming a game the player is not looking at.
+    private var quitPromptWasPaused = false
+
+    /// `Q` from anywhere in a run.
+    ///
+    /// Drawn without a single `SKAction`. It has to be readable over Settings
+    /// and How To Play, both of which pause the scene, and a paused node's
+    /// actions never advance — which is exactly how a level banner once ended up
+    /// sitting invisibly at alpha 0 behind an open panel.
+    private func showQuitPrompt() {
+        guard quitPrompt == nil else { return }
+        // Whatever was being announced is not the question any more.
+        clearCentredMessages()
+        endLevelAnnouncement()
+
+        let node = SKNode()
+        node.zPosition = 40          // over every panel, including name entry at 26
+
+        let dim = SKShapeNode(rect: CGRect(origin: .zero, size: size))
+        dim.fillColor = SKColor.black.withAlphaComponent(0.74)
+        dim.strokeColor = .clear
+        node.addChild(dim)
+
+        let question = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        question.text = "QUIT GAME?"
+        question.fontSize = 30
+        question.fontColor = NeonPalette.magenta
+        question.horizontalAlignmentMode = .center
+        question.verticalAlignmentMode = .center
+        question.position = CGPoint(x: size.width / 2, y: size.height / 2 + 24)
+        node.addChild(question)
+
+        let answer = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        answer.text = "Y / N"
+        answer.fontSize = 18
+        answer.fontColor = NeonPalette.cyan
+        answer.horizontalAlignmentMode = .center
+        answer.verticalAlignmentMode = .center
+        answer.position = CGPoint(x: size.width / 2, y: size.height / 2 - 26)
+        node.addChild(answer)
+
+        addChild(node)
+        quitPrompt = node
+
+        quitPromptWasPaused = isPaused
+        turnTimer.pause()
+        ship?.direction = 0
+        isPaused = true
+        DiagnosticsLog.shared.log(.info, "quit?")
+    }
+
+    /// Anything that is not a Y puts the player back exactly where they were —
+    /// the prompt sits on top of the screen underneath rather than replacing it,
+    /// so there is no state to rebuild.
+    private func dismissQuitPrompt(quitting: Bool) {
+        quitPrompt?.removeFromParent()
+        quitPrompt = nil
+
+        if quitting {
+            DiagnosticsLog.shared.log(.restart, "quit")
+            // `resetToTitle` clears the panels and unpauses on its way out.
+            resetToTitle()
+            return
+        }
+
+        isPaused = quitPromptWasPaused
+        if !isPaused, stateMachine.currentState is PlayingState {
+            turnTimer.resume()
+            lastUpdateTime = 0
+        }
+    }
+
     // MARK: - Game Over
 
     func showGameOverOverlay() {
@@ -4123,6 +4200,39 @@ class GameScene: SKScene {
     // MARK: - Input Forwarding (macOS)
 
     override func keyDown(with event: NSEvent) {
+        let key = event.charactersIgnoringModifiers?.lowercased()
+
+        // The prompt owns the keyboard while it is up: Y leaves, anything else
+        // goes back. Ahead of everything, including X.
+        if quitPrompt != nil {
+            dismissQuitPrompt(quitting: key == "y")
+            return
+        }
+
+        // Two different quits, and they should stay different. Command-Q closes
+        // the application, the way it does in every other Mac app; a bare Q
+        // leaves the run and goes back to the title.
+        //
+        // The menu bar normally takes Command-Q before a key event ever reaches
+        // a view, so this branch is a backstop — but it is also where the split
+        // is written down, so nobody later "fixes" the guard below by removing
+        // it and quietly turns the system shortcut into a game prompt.
+        if key == "q", event.modifierFlags.contains(.command) {
+            NSApp.terminate(nil)
+            return
+        }
+
+        // Q asks, from play, from either panel, from the game over screen.
+        //
+        // Not from the title, where there is no game to leave, and not during
+        // name entry, where a Q belongs in the player's initials.
+        if key == "q",
+           highScoreEntry == nil,
+           !(stateMachine.currentState is TitleState) {
+            showQuitPrompt()
+            return
+        }
+
         // X: hard restart — from How To Play, Pause, or straight out of play.
         // It also puts the high score table back to ZACK/BEN/STEVE/WOZ/NOLAN,
         // which is the whole point of a clean slate: the title screen it drops
