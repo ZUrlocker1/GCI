@@ -1,6 +1,21 @@
 #!/usr/bin/env python3
 """Generate GCI app icon candidates.
 
+Option A is what ships. To rebuild it:
+
+    python3 tools/make_icon.py icon_options/v2
+    python3 -c "from PIL import Image; \
+        Image.open('icon_options/v2/a-neon-king-1024.png').convert('RGBA') \
+        .save('GalacticChessInvaders/Resources/AppIcon.icns')"
+
+Pillow writes the .icns, not iconutil, which fails on this machine even for an
+iconset that already has a working .icns beside it. The entry set Pillow
+produces — 16@2x, 32@2x, and 128/256/512 at 1x and 2x — is the same set the
+icon it replaced contained.
+
+icon_options/ is gitignored: this script is the source of truth, and the only
+generated file the repo keeps is the .icns itself.
+
 Everything is drawn in a 1024-unit design space at 4x supersample and reduced
 with LANCZOS, because the icon this replaces was stair-stepped: it had been
 traced from a low-resolution source, and the steps are plainly visible at 512.
