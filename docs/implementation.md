@@ -20,23 +20,23 @@ Full detail in **[Roadmap — what is left](#roadmap--what-is-left)** near the e
 of this file. §20's phase numbers were a plan written before any of this
 existed; they are a checklist, not a running order.
 
-| Phase | Title | |
-|---|---|---|
-| 0 | Skeleton — app runs, title screen, music | ✅ |
-| 1 | Chess logic | ✅ |
-| 2.1 | Playfield: chess functional | ✅ |
-| 2.2 | Playfield: Recharged visual treatment | ✅ |
-| 3.1 | Arcade layer: fleet movement | ✅ |
-| 3.2 | Arcade layer: shooting & collision | ✅ |
-| 3.3 | Arcade layer: damage states & juice | ✅ |
-| 4 | Basic sound effects | 🟡 |
-| 5 | Background music + settings | ✅ |
-| 6.1 | Raiders: scout & basic escort | ✅ — Scout built, Escort cut |
-| 6.2 | Raiders: flagship, variants, special scouts | ✅ — special scouts built, Flagship and variants cut |
-| 7.1 | Level escalation: chess AI | ✅ — built with the level ladder |
-| 7.2 | Level escalation: arcade mechanics | ✅ |
-| 8 | Visual polish | 🟡 — score pops, banners, high scores, end screens done |
-| 9 | Mac hardening & release | 🟡 — signed, notarized, shipping as a DMG |
+| Phase | Title                                       | Status                                                 |
+|-------|---------------------------------------------|--------------------------------------------------------|
+| 0     | Skeleton — app runs, title screen, music    | ✅                                                      |
+| 1     | Chess logic                                 | ✅                                                      |
+| 2.1   | Playfield: chess functional                 | ✅                                                      |
+| 2.2   | Playfield: Recharged visual treatment       | ✅                                                      |
+| 3.1   | Arcade layer: fleet movement                | ✅                                                      |
+| 3.2   | Arcade layer: shooting & collision          | ✅                                                      |
+| 3.3   | Arcade layer: damage states & juice         | ✅                                                      |
+| 4     | Basic sound effects                         | 🟡                                                      |
+| 5     | Background music + settings                 | ✅                                                      |
+| 6.1   | Raiders: scout & basic escort               | ✅ — Scout built, Escort cut                            |
+| 6.2   | Raiders: flagship, variants, special scouts | ✅ — special scouts built, Flagship and variants cut    |
+| 7.1   | Level escalation: chess AI                  | ✅ — built with the level ladder                        |
+| 7.2   | Level escalation: arcade mechanics          | ✅                                                      |
+| 8     | Visual polish                               | 🟡 — score pops, banners, high scores, end screens done |
+| 9     | Mac hardening & release                     | 🟡 — signed, notarized, shipping as a DMG               |
 
 ---
 
@@ -291,18 +291,18 @@ Built during 3.2 and now the game's whole shape. Level 10 is the last wave —
 clearing it wins the run (`LevelManager.finalLevel`), where §10.1's "no ceiling"
 left the game with no ending at all.
 
-| L | Banner | Mechanic |
-|---|---|---|
-| 1 | — | Passive. One slow king warning shot at Critical (§10.1) |
-| 2 | FIRE POWER | Pawns fire back |
-| 3 | DOUBLE TROUBLE | Black moves twice |
-| 4 | RELENTLESS | Fire speed +30% |
-| 5 | TRIPLE THREAT | Black moves three times |
-| 6 | WIDE ORBIT | Sweep widens to 1.5 squares |
-| 7 | CROSSFIRE | Bishops fire diagonals on their own cadence |
-| 8 | ARMORED PAWNS | Half of every regenerated pawn arrives immune to lasers for three White moves |
-| 9 | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece |
-| 10 | BLITZ! | ranks sweep out of phase with each other (`FleetRules.rankPhaseLag`), plus: 3s clock, three marching ranks, a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th — **and Crossfire and Armored Pawns both back** |
+| L  | Banner         | Mechanic                                                                                                                                                                                                                                        |
+|----|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1  | —              | Passive. One slow king warning shot at Critical (§10.1)                                                                                                                                                                                         |
+| 2  | FIRE POWER     | Pawns fire back                                                                                                                                                                                                                                 |
+| 3  | DOUBLE TROUBLE | Black moves twice                                                                                                                                                                                                                               |
+| 4  | RELENTLESS     | Fire speed +30%                                                                                                                                                                                                                                 |
+| 5  | TRIPLE THREAT  | Black moves three times                                                                                                                                                                                                                         |
+| 6  | WIDE ORBIT     | Sweep widens to 1.5 squares                                                                                                                                                                                                                     |
+| 7  | CROSSFIRE      | Bishops fire diagonals on their own cadence                                                                                                                                                                                                     |
+| 8  | ARMORED PAWNS  | Half of every regenerated pawn arrives immune to lasers for three White moves                                                                                                                                                                   |
+| 9  | KING ACTIVATED | King forcefield (+50% hits) and its own heavy weapon, fired straight down or leaning 9°–31° at a white piece                                                                                                                                    |
+| 10 | BLITZ!         | ranks sweep out of phase with each other (`FleetRules.rankPhaseLag`), plus: 3s clock, three marching ranks, a sweep that widens 0.1 square every 4th lap with the march quickening 6% every 6th — **and Crossfire and Armored Pawns both back** |
 
 Escalations persist except where a level's identity depends on not persisting.
 Levels 7–9 each own a mechanic outright and hand it back, and Blitz takes them
@@ -578,19 +578,19 @@ the harmonic minor rather than the fastest track: both tracks above 150 BPM are
 bright, and a cheerful finale would undercut a three-second clock worse than a
 slower menacing one.
 
-| Level | Track | Style | BPM | Key | Mood |
-|---|---|---|---|---|---|
-| Title, Settings, Info | `GCI-intro` *(Pre-Solstice)* | Kosmic Drift | 88 | E Dorian | Dream |
-| 1 | `Leise-Dunkels` | relaxed | 125 | E Mixolydian | Bright |
-| 2 | `WelleZ-Machine` | intense | 134 | E Aeolian | Deep |
-| 3 | `BlitzSchnork` | peppy | 138 | C Mixolydian | Bright |
-| 4 | `Rattert-Z-Machine` | peppy | 140 | C Lydian | Free |
-| 5 | `Frankfurt-Overdrive` | intense | 140 | A Dorian | Bright |
-| 6 | `KraftSchmaltz` | peppy intense | 137 | A Lydian | Bright |
-| 7 | `Bochum-Level` | peppy | 156 | C Phrygian | Free |
-| 8 | `SchnorkPunkt` | focused | 147 | B Mixolydian | Dream |
-| 9 | `Leipzig-1999` | focused | 147 | B Aeolian | Bright |
-| 10 | `BierWunderwaffe` | intense | 140 | G Harmonic Minor | Free |
+| Level                 | Track                        | Style         | BPM | Key              | Mood   |
+|-----------------------|------------------------------|---------------|-----|------------------|--------|
+| Title, Settings, Info | `GCI-intro` *(Pre-Solstice)* | Kosmic Drift  | 88  | E Dorian         | Dream  |
+| 1                     | `Leise-Dunkels`              | relaxed       | 125 | E Mixolydian     | Bright |
+| 2                     | `WelleZ-Machine`             | intense       | 134 | E Aeolian        | Deep   |
+| 3                     | `BlitzSchnork`               | peppy         | 138 | C Mixolydian     | Bright |
+| 4                     | `Rattert-Z-Machine`          | peppy         | 140 | C Lydian         | Free   |
+| 5                     | `Frankfurt-Overdrive`        | intense       | 140 | A Dorian         | Bright |
+| 6                     | `KraftSchmaltz`              | peppy intense | 137 | A Lydian         | Bright |
+| 7                     | `Bochum-Level`               | peppy         | 156 | C Phrygian       | Free   |
+| 8                     | `SchnorkPunkt`               | focused       | 147 | B Mixolydian     | Dream  |
+| 9                     | `Leipzig-1999`               | focused       | 147 | B Aeolian        | Bright |
+| 10                    | `BierWunderwaffe`            | intense       | 140 | G Harmonic Minor | Free   |
 
 Style is the word the composer attached to each export, and was one of the three
 inputs to the ordering alongside tempo and mode. Not to be confused with the
@@ -678,18 +678,18 @@ A fixed table of which raider each level sends. Every level has one answer, the
 same answer every run — a raider whose identity is a surprise is one the player
 cannot prepare for, which is the opposite of what a rare reward should be.
 
-| Lv | Name | Scouts, in order | Power-ups, in order |
-|---|---|---|---|
-| 1 | — | green | RAPID FIRE |
-| 2 | FIRE POWER | green | RAPID FIRE |
-| 3 | DOUBLE TROUBLE | repair | SHIELD UP |
-| 4 | RELENTLESS | ice | TIME FREEZE |
-| 5 | TRIPLE THREAT | green → repair | RAPID FIRE → SHIELD UP |
-| 6 | WIDE ORBIT | spread | SPREAD FIRE |
-| 7 | CROSSFIRE | camel → camel | NUKE → NUKE |
-| 8 | ARMORED PAWNS | green → spread | RAPID FIRE → SPREAD FIRE |
-| 9 | KING ACTIVATED | green → spread → ice | RAPID FIRE → SPREAD FIRE → TIME FREEZE |
-| 10 | BLITZ! | green → spread → repair → camel | RAPID FIRE → SPREAD FIRE → SHIELD UP → NUKE |
+| Lv | Name           | Scouts, in order                | Power-ups, in order                         |
+|----|----------------|---------------------------------|---------------------------------------------|
+| 1  | —              | green                           | RAPID FIRE                                  |
+| 2  | FIRE POWER     | green                           | RAPID FIRE                                  |
+| 3  | DOUBLE TROUBLE | repair                          | SHIELD UP                                   |
+| 4  | RELENTLESS     | ice                             | TIME FREEZE                                 |
+| 5  | TRIPLE THREAT  | green → repair                  | RAPID FIRE → SHIELD UP                      |
+| 6  | WIDE ORBIT     | spread                          | SPREAD FIRE                                 |
+| 7  | CROSSFIRE      | camel → camel                   | NUKE → NUKE                                 |
+| 8  | ARMORED PAWNS  | green → spread                  | RAPID FIRE → SPREAD FIRE                    |
+| 9  | KING ACTIVATED | green → spread → ice            | RAPID FIRE → SPREAD FIRE → TIME FREEZE      |
+| 10 | BLITZ!         | green → spread → repair → camel | RAPID FIRE → SPREAD FIRE → SHIELD UP → NUKE |
 
 - **One kind at a time, and it keeps coming back until it is shot down.** Only a
   kill advances the roster; missing costs nothing but time. So how many raiders a
@@ -708,13 +708,13 @@ cannot prepare for, which is the opposite of what a rare reward should be.
 
 ### The carriers
 
-| Scout | Speed | Closing rate | Crossing | Flight | Enters |
-|---|---|---|---|---|---|
-| green | 205 px/s (0.93×) | 89 px/s | 5.1s | dead level | above the board |
-| repair | 220 px/s | 74 px/s | 4.8s | long eased glide, 55–95% of its headroom | above the board |
-| ice | 132 px/s (0.6×) | 162 px/s | 8.0s | tight weave, ±46–60pt over 0.75–1.05s | rank 4–5 |
-| spread | 220 px/s | 74 px/s | 4.8s | wide weave, ±74–104pt over 1.9–2.6s | rank 5–6 |
-| camel | 176 px/s (0.8×) | 118 px/s | 6.0s | one dive and climb, 70–95% deep | above the board |
+| Scout  | Speed            | Closing rate | Crossing | Flight                                   | Enters          |
+|--------|------------------|--------------|----------|------------------------------------------|-----------------|
+| green  | 205 px/s (0.93×) | 89 px/s      | 5.1s     | dead level                               | above the board |
+| repair | 220 px/s         | 74 px/s      | 4.8s     | long eased glide, 55–95% of its headroom | above the board |
+| ice    | 132 px/s (0.6×)  | 162 px/s     | 8.0s     | tight weave, ±46–60pt over 0.75–1.05s    | rank 4–5        |
+| spread | 220 px/s         | 74 px/s      | 4.8s     | wide weave, ±74–104pt over 1.9–2.6s      | rank 5–6        |
+| camel  | 176 px/s (0.8×)  | 118 px/s     | 6.0s     | one dive and climb, 70–95% deep          | above the board |
 
 All 1 HP. §13.2 gives the Bomb Scout two "like the Flagship"; on a target that
 small, fast and briefly on screen a survivable hit reads as a miss, not as a
@@ -815,50 +815,45 @@ table, the game over and level clear screens, per-piece destruction sounds. What
 is genuinely outstanding:
 
 - **Wireframe debris — not building it.** §12.4's fourth parallax layer. The
-      background has enough in it now: three star tiers, a per-level haze and a
-      cycling title sky. A layer of geometry drifting in front of the board
-      would compete with the pieces, which are the thing that has to be read.
-      §12.4 is settled at three star tiers plus the nebula
+  background has enough in it now: three star tiers, a per-level haze and a
+  cycling title sky. A layer of geometry drifting in front of the board would
+  compete with the pieces, which are the thing that has to be read. §12.4 is
+  settled at three star tiers plus the nebula
 - [x] **Background evolution per level** (§12.5) — `BackdropNode`, shipped 0.3.
-      One procedurally drawn radial texture, one additive sprite behind the
-      starfield and outside `bloomNode` so it does not smear. Colour, alpha,
-      size and rotation are static properties set once per wave, plus a drift on
-      two periods; no shader and no `CIFilter`, per §12.4's performance rule.
-
-      §12.5's own void table is unusable as written — `#07070F` to `#160304` is
-      a few RGB points against black under bloom — so the void stays near black
-      and the haze carries the change, since it has shape and edges. Keyed to
-      each level's mechanic rather than ramped cold-to-hot: a linear red ramp
-      says "later", this says *which* wave you are on.
-
-      The title screen has its own sky, cycling the palette over 72s with a
-      raider crossing every 25–35s. Blitz runs the starfield 1.35x, multiplied
-      into the slow-motion scale rather than replacing it — otherwise a Nuke on
-      Level 10 left the sky slow for the rest of the run.
-
-| Level | Void | Haze | Why this colour |
-|---|---|---|---|
-| 1 | `#000000` | none | The reference every later level is read against |
-| 2 | `#03040A` | indigo, very faint, low | FIRE POWER — the faintest first hint, barely there |
-| 3 | `#04050C` | indigo, low and wide | DOUBLE TROUBLE |
-| 4 | `#06050E` | indigo | RELENTLESS — the same, deeper |
-| 5 | `#08040F` | violet | TRIPLE THREAT |
-| 6 | `#0A0410` | violet, spread wider | WIDE ORBIT — the haze widens as the sweep does |
-| 7 | `#0D0412` | magenta, diagonal grain | CROSSFIRE — the grain lies along the bishops' own diagonals |
-| 8 | `#0A0C08` | aqua-green | ARMORED PAWNS — the armour's colour, lightened and cooled; its own saturated green read as sickly. Deliberately off the heat ramp |
-| 9 | `#100509` | amber, glowing from the top rank | KING ACTIVATED — the light comes from where he sits |
-| 10 | `#140306` | crimson, and the starfield accelerates | BLITZ |
-
+      One additive sprite behind the starfield and outside `bloomNode`, keyed to
+      each level's mechanic. Blitz also runs the starfield 1.35x, multiplied
+      into the slow-motion scale rather than replacing it. See **Nebula
+      palette** below
 - **8-frame explosion sprite sheets — not building them.** The pooled particle
-      bursts, tinted per piece, read well enough that sprite sheets would be
-      work for no visible gain
+  bursts, tinted per piece, read well enough that sprite sheets would be work
+  for no visible gain
 - [ ] **Hyperspace jump on level clear.** Deferred, not cut
 - **Attract mode — not building it.** §14.2's 5-slide cycle is a coin-op
-      convention: a cabinet nobody is standing at has to sell itself to the
-      room. An app someone chose to launch is already past that, and a window
-      that starts playing to itself is just odd. The title screen does the job
-      instead — a haze cycling through the palette and a raider crossing every
-      25–35 seconds — which is the part that was actually worth having
+  convention: a cabinet nobody is standing at has to sell itself to the room. An
+  app someone chose to launch is already past that, and a window that starts
+  playing to itself is just odd. The title screen does the job instead — a haze
+  cycling through the palette and a raider crossing every 25–35 seconds
+
+### Nebula palette (§12.5)
+
+The void stays near black and the haze carries the change — §12.5's own table
+(`#07070F` to `#160304`) is a few RGB points against black under bloom. Keyed to
+each level's mechanic rather than ramped cold-to-hot: a linear red ramp says
+"later", this says *which* wave you are on. The title screen cycles the palette
+over 72s.
+
+| Level | Void      | Haze                                   | Why this colour                                                                                                                   |
+|-------|-----------|----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| 1     | `#000000` | none                                   | The reference every later level is read against                                                                                   |
+| 2     | `#03040A` | indigo, very faint, low                | FIRE POWER — the faintest first hint, barely there                                                                                |
+| 3     | `#04050C` | indigo, low and wide                   | DOUBLE TROUBLE                                                                                                                    |
+| 4     | `#06050E` | indigo                                 | RELENTLESS — the same, deeper                                                                                                     |
+| 5     | `#08040F` | violet                                 | TRIPLE THREAT                                                                                                                     |
+| 6     | `#0A0410` | violet, spread wider                   | WIDE ORBIT — the haze widens as the sweep does                                                                                    |
+| 7     | `#0D0412` | magenta, diagonal grain                | CROSSFIRE — the grain lies along the bishops' own diagonals                                                                       |
+| 8     | `#0A0C08` | aqua-green                             | ARMORED PAWNS — the armour's colour, lightened and cooled; its own saturated green read as sickly. Deliberately off the heat ramp |
+| 9     | `#100509` | amber, glowing from the top rank       | KING ACTIVATED — the light comes from where he sits                                                                               |
+| 10    | `#140306` | crimson, and the starfield accelerates | BLITZ                                                                                                                             |
 
 ### Shipping (§20 Phase 9)
 
@@ -914,11 +909,13 @@ time played. What holds that:
   than one line at a time — `removeFirst()` shifts the whole array
 - **The FPS readout averages every frame in its window** instead of sampling one
 
-| | current |
-|---|---|
-| CPU | ≤55% on Level 10 |
-| nodes | <900, flat |
-| FPS | 45–63 |
+Where that leaves it:
+
+| Metric | Current          |
+|--------|------------------|
+| CPU    | ≤55% on Level 10 |
+| nodes  | <900, flat       |
+| FPS    | 45–63            |
 
 Measured on an M4 (10 cores), Debug, with the diagnostics sidebar open — the
 worst case, and slower than what ships: Swift at `-Onone` is several times
@@ -980,14 +977,14 @@ bottom-left corner, above the level banners. `X` clears both.
 
 What can raise it:
 
-| Error | Meaning |
-|---|---|
-| `ghost <piece> <square> …` | A destroyed piece still on the board a second later. Reports its alpha, board state and full ancestor chain, so the line names what is holding it |
-| `<color> <piece> <square> had no hitbox` | A piece that cannot be shot. Repaired on the spot, and reported anyway |
-| `Legal-move markers exhausted` | More destinations than the pool holds — some would silently not draw |
-| `Music not found: <track>.m4a` | A `MusicLibrary` entry with no file behind it |
-| `sfx bundle directory not found` | No sound effects at all will play |
-| `Font not found in bundle` | Press Start 2P missing; everything falls back to Helvetica |
+| Error                                    | Meaning                                                                                                                                           |
+|------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ghost <piece> <square> …`               | A destroyed piece still on the board a second later. Reports its alpha, board state and full ancestor chain, so the line names what is holding it |
+| `<color> <piece> <square> had no hitbox` | A piece that cannot be shot. Repaired on the spot, and reported anyway                                                                            |
+| `Legal-move markers exhausted`           | More destinations than the pool holds — some would silently not draw                                                                              |
+| `Music not found: <track>.m4a`           | A `MusicLibrary` entry with no file behind it                                                                                                     |
+| `sfx bundle directory not found`         | No sound effects at all will play                                                                                                                 |
+| `Font not found in bundle`               | Press Start 2P missing; everything falls back to Helvetica                                                                                        |
 
 The first two come from sweeps that run at 4Hz during play. The last four fire
 at startup or on first use.
@@ -999,12 +996,12 @@ nothing, a missing sound does not play, a missing font falls back to Helvetica
 and the game still runs. So `typecheck.sh` checks for them on every invocation,
 and fails:
 
-| Check | Catches |
-|---|---|
-| Sprites named in code exist | A texture that would draw a grey X |
-| Sounds the code *plays* exist | A cue that would go silent |
-| Music named in `playMusic` exists | A track that would not start |
-| Fonts named in code exist | Every label falling back to Helvetica |
+| Check                             | Catches                               |
+|-----------------------------------|---------------------------------------|
+| Sprites named in code exist       | A texture that would draw a grey X    |
+| Sounds the code *plays* exist     | A cue that would go silent            |
+| Music named in `playMusic` exists | A track that would not start          |
+| Fonts named in code exist         | Every label falling back to Helvetica |
 
 Only sounds the code actually calls `play`/`stop` on are required, because
 `SoundKey` deliberately names cues for features that were never built.
