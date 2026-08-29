@@ -273,7 +273,7 @@ final class AudioManager {
         }
         musicPlayer = player
         currentTrack = trackName
-        DiagnosticsLog.shared.log(.audio, "Music → \(trackName)")
+        DiagnosticsLog.shared.log(.music, MusicVariants.describe(trackName))
     }
 
     /// A third of a second, not a cut. Fast enough for the reason people pause
