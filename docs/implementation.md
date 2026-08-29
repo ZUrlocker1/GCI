@@ -781,10 +781,23 @@ each group by what it would cost to *not* have at ship.
 The screen and the soundtrack both shipped — see Phase 5. What §5 still asks
 for and has not been built:
 
-- [ ] **Level clear fanfare** (3–4s) and **game over riff**, standing in with
-      the `levelClear` / `gameOver` one-shots
+- [x] **Game over riff** — four bass downers, one picked at random per death
+      (`SoundKey.gameOverPool`). Trimmed to 3.0s with a 0.8s fade and matched to
+      −18 LUFS; the sources ran 3.7–8.0s and 13 dB apart, which would have made
+      the random pick sound like a fault rather than a choice
+- [ ] **Win theme.** `GameOverState` stops the music, so YOU WIN — the end of a
+      full ten-wave run — lands in silence. The one ending with nothing behind it
+- [ ] **High score entry bed.** Same silence, immediately after
+- [ ] **Level clear fanfare.** `levelClear` currently plays a *descending* arp,
+      which is the shape of a deny cue. Music continues into the next wave, so
+      this is a wrong cue rather than a missing one
 - [ ] **Music ducking** under priority SFX. `AudioManager.duckMusic` exists and
       nothing calls it
+
+**Level banners get no sound — not building it.** `mechanicBannerTier1/2/3`
+remain named and unbundled. A banner is a two-second fade in and straight back
+out, already carried by the hand-over from one wave's track to the next; a third
+theme in that gap would be introduced and removed before it registered.
 
 ### Cut from §6 and §7 — not building these
 
