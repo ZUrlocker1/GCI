@@ -641,6 +641,10 @@ track is still a novelty.
   carries the hotter transients. A track with no window always opens at the top
 - A track with no entry in the table simply never varies, so an incomplete set
   degrades to the shipped behaviour rather than to silence
+- Every start is logged under its own **`MUSIC`** category, naming the slot and
+  whether the alternate won — `Intro Pre-Solstice`, `L1 Leise-Dunkels`,
+  `Alt L2 Cycle-3-Midnight`. Derived from the tables rather than from what was
+  rolled, so it reads correctly whoever started the track
 
 ### Hand-overs
 
