@@ -47,12 +47,16 @@ final class GCIBoard {
     /// holds, so the king shows undamaged art until the bonus is spent and then
     /// erodes normally. That is exactly the read we want: the forcefield
     /// absorbs, then the king starts to break.
-    func applyKingForcefield() {
+    /// Returns the king's new HP, or nil if there was no black king to shield.
+    /// The caller logs it: this is a LEVEL line and every LEVEL line names its
+    /// wave, which the Logic layer has no way to know.
+    @discardableResult
+    func applyKingForcefield() -> Int? {
         guard var king = pieces.values.first(where: { $0.color == .black && $0.type == .king })
-        else { return }
+        else { return nil }
         king.hp = FleetRules.forcefieldHP(baseMaxHP: PieceType.king.maxHP)
         pieces[king.logicalSquare] = king
-        DiagnosticsLog.shared.log(.level, "king forcefield \(king.hp)HP")
+        return king.hp
     }
 
     /// True while the black king still has shield HP left over its normal max.

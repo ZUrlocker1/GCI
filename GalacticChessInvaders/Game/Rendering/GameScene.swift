@@ -1120,6 +1120,14 @@ class GameScene: SKScene {
     /// One line per level, in the same shape whether it is the first or the
     /// eleventh — the two used to differ, so "Level 1 started" and "Level 2 —
     /// beat 5s…" read as unrelated events.
+    /// A LEVEL line always says which wave it is about — scanning a log for
+    /// where a run went wrong means reading these in order, and half of them
+    /// used to be a bare "wave clear" that could have come from any of ten.
+    /// `@autoclosure` for the same reason `DiagnosticsLog.log` takes one.
+    private func logWave(_ message: @autoclosure () -> String) {
+        DiagnosticsLog.shared.log(.level, "\(levels.level) \(message())")
+    }
+
     func logLevel() {
         let p = levels.parameters
         DiagnosticsLog.shared.log(.level,
@@ -1143,7 +1151,9 @@ class GameScene: SKScene {
         // §10.1: at Level 9 the black king carries a forcefield worth 50%
         // more hits. Applied here so the extra HP is in place before any node
         // reads it.
-        if levels.parameters.kingActivated { board.applyKingForcefield() }
+        if levels.parameters.kingActivated, let hp = board.applyKingForcefield() {
+            logWave("king forcefield \(hp)HP")
+        }
 
         // §12.5's sky for this wave, applied as the board is built so the
         // change lands behind the mechanic banner rather than mid-play.
@@ -1298,7 +1308,7 @@ class GameScene: SKScene {
         // The title alone. The subtitle is on screen at the same moment in
         // 26-point type, so repeating it here only pushed the lines either side
         // of it off the top of the panel.
-        DiagnosticsLog.shared.log(.level, announcement.title)
+        logWave(announcement.title)
 
         // Keyed, so a second announcement replaces this timer instead of
         // running alongside it — otherwise the first one to elapse would clear
@@ -1608,7 +1618,7 @@ class GameScene: SKScene {
         ScoreManager.shared.addPoints(bonus, source: label)
         refreshHUD()
         AudioManager.shared.play(.levelClear)
-        DiagnosticsLog.shared.log(.level, "LEVEL CLEARED — \(label)")
+        logWave("cleared — \(label)")
 
         scheduleAfterReveal { [weak self] in
             guard let self, self.stateMachine.currentState is PlayingState else { return }
@@ -1648,8 +1658,7 @@ class GameScene: SKScene {
         clearCentredMessages()
         if levels.isFinalLevel {
             outcome = .runCompleted
-            DiagnosticsLog.shared.log(.level,
-                "RUN COMPLETE — all \(LevelManager.finalLevel) waves cleared")
+            logWave("run complete — all \(LevelManager.finalLevel) waves cleared")
             stateMachine.enter(GameOverState.self)
             return
         }
@@ -1661,7 +1670,7 @@ class GameScene: SKScene {
         addChild(overlay)
         gameOverNode = overlay
         isAwaitingWaveContinue = true
-        DiagnosticsLog.shared.log(.level, "wave clear")
+        logWave("wave clear")
     }
 
     /// The game ends on a chess fact, so the reveal should show the position the
@@ -1747,8 +1756,7 @@ class GameScene: SKScene {
     private func scheduleAfterReveal(_ action: @escaping () -> Void) {
         revealRemaining = Self.gameEndRevealDelay
         pendingReveal = action
-        DiagnosticsLog.shared.log(.level,
-            "holding \(String(format: "%.1f", Self.gameEndRevealDelay))s before continuing")
+        logWave("holding \(String(format: "%.1f", Self.gameEndRevealDelay))s before continuing")
     }
 
     /// Ticks the hold. Returns true while it is still running.
@@ -2210,7 +2218,7 @@ class GameScene: SKScene {
         // never be seen, and the hose would still be running on resume.
         isFireHeld = false
         cancelSlowMotion()
-        DiagnosticsLog.shared.log(.level, "PAUSED")
+        logWave("PAUSED")
     }
 
     func hidePausedOverlay() {
@@ -2261,7 +2269,7 @@ class GameScene: SKScene {
         overlay.zPosition = 25
         addChild(overlay)
         gameOverNode = overlay
-        DiagnosticsLog.shared.log(.level, "\(outcome.headline) — \(ScoreManager.shared.currentScore)")
+        logWave("\(outcome.headline) — \(ScoreManager.shared.currentScore)")
     }
 
     func hideGameOverOverlay() {
