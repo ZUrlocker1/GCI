@@ -36,7 +36,7 @@ enum MusicVariants {
     static func noteLevelStarted(_ level: Int) {
         guard !isUnlocked, level >= MusicLibrary.alternateUnlockLevel else { return }
         isUnlocked = true
-        DiagnosticsLog.shared.log(.audio, "alternates unlocked")
+        DiagnosticsLog.shared.log(.music, "alternates unlocked")
     }
 
     /// `X` is a clean slate, and that includes this: the player has to reach
@@ -76,12 +76,38 @@ enum MusicVariants {
 
     // MARK: -
 
+    // MARK: - Reading the log back
+
+    /// Names a track the way someone reading the log wants to see it —
+    /// `Intro Pre-Solstice`, `L1 Leise-Dunkels`, `Alt L2 Cycle-3-Midnight`.
+    ///
+    /// Derived from the tables rather than from what was rolled, so it stays
+    /// right whoever started the track. Lives here rather than in
+    /// `MusicLibrary` because it needs string literals that are not track
+    /// names, which that file's guard forbids.
+    static func describe(_ track: String) -> String {
+        if track == MusicLibrary.panelTrack { return "Intro \(track)" }
+        if MusicLibrary.alternates[MusicLibrary.panelTrack] == track {
+            return "Alt Intro \(track)"
+        }
+        for level in 1...LevelManager.finalLevel {
+            for original in MusicLibrary.pool(forLevel: level) {
+                if track == original { return "L\(level) \(track)" }
+                if MusicLibrary.alternates[original] == track {
+                    return "Alt L\(level) \(track)"
+                }
+            }
+        }
+        return track
+    }
+
     private static func pick(_ original: String) -> String {
         guard isUnlocked,
               let alternate = MusicLibrary.alternates[original],
               Double.random(in: 0..<1) < MusicLibrary.alternateChance
         else { return original }
-        DiagnosticsLog.shared.log(.audio, "alternate \(alternate)")
+        // Not logged here — the line that matters is the one AudioManager
+        // writes when the track actually starts, and it says "Alt" itself.
         return alternate
     }
 }

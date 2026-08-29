@@ -2461,6 +2461,29 @@ final class MusicVariantTests: XCTestCase {
         }
     }
 
+    /// The log has to answer "which song was that?" — so every track the game
+    /// can start names itself, its slot, and whether it was the alternate.
+    func testEveryTrackDescribesItselfForTheLog() {
+        XCTAssertEqual(MusicVariants.describe("Pre-Solstice"), "Intro Pre-Solstice")
+        XCTAssertEqual(MusicVariants.describe("Zephyron"), "Alt Intro Zephyron")
+        XCTAssertEqual(MusicVariants.describe("Leise-Dunkels"), "L1 Leise-Dunkels")
+        XCTAssertEqual(MusicVariants.describe("GeistStrom-1999"), "Alt L1 GeistStrom-1999")
+        XCTAssertEqual(MusicVariants.describe("WelleZ-Machine"), "L2 WelleZ-Machine")
+        XCTAssertEqual(MusicVariants.describe("Cycle-3-Midnight"), "Alt L2 Cycle-3-Midnight")
+
+        // Every wave's own track, and every alternate, is placed.
+        for level in 1...LevelManager.finalLevel {
+            for track in MusicLibrary.pool(forLevel: level) {
+                XCTAssertEqual(MusicVariants.describe(track), "L\(level) \(track)")
+                if let alt = MusicLibrary.alternates[track] {
+                    XCTAssertEqual(MusicVariants.describe(alt), "Alt L\(level) \(alt)")
+                }
+            }
+        }
+        // An unknown track still reads as something rather than as nothing.
+        XCTAssertEqual(MusicVariants.describe("Nonesuch"), "Nonesuch")
+    }
+
     /// A track with no measured window must never be entered mid-way.
     func testATrackWithoutAWindowAlwaysOpensAtTheTop() {
         for _ in 0..<100 {

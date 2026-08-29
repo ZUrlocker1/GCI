@@ -29,6 +29,10 @@ enum LogCategory: String {
     case level   = "LEVEL    "
     case input   = "INPUT    "
     case audio   = "AUDIO    "
+    /// Which track started, and why it is that one. Its own category rather
+    /// than more AUDIO lines: the soundtrack now varies by level and by a roll
+    /// of the dice, so "which song was that?" is a question the log gets asked.
+    case music   = "MUSIC    "
     case error   = "ERROR    "
     /// Standalone banner lines that read as the whole message, e.g. RESTART.
     case restart = "RESTART  "
