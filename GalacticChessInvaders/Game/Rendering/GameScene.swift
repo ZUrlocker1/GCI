@@ -267,6 +267,10 @@ class GameScene: SKScene {
     /// path takes ~1.5s to draw and pulse; the remainder is stillness so the
     /// player can take in what happened before a menu replaces it.
     private static let gameEndRevealDelay: TimeInterval = 2.5
+    /// Exposed so a test can pin the relationship between this hold and the
+    /// loss sting: the hold is the shorter of the two, which is the whole
+    /// reason the game over screen has to wait before adding a cue.
+    static var gameEndRevealDelayForTesting: TimeInterval { gameEndRevealDelay }
     /// Countdown for the end-of-game hold. Driven from `update` rather than an
     /// SKAction: an action on the scene can be cleared or stalled by unrelated
     /// scene work, and a plain deadline is both deterministic and testable.
@@ -2298,7 +2302,20 @@ class GameScene: SKScene {
         }
         addChild(entry)
         highScoreEntry = entry
-        AudioManager.shared.play(.pawnPromotion)
+
+        // Let the loss sting finish first. `asyncAfter` rather than an
+        // `SKAction`: an overlay can pause the scene, and a paused node's
+        // actions do not advance.
+        let wait = AudioManager.shared.stingRemaining
+        if wait > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+                // Not if the player has already typed their name and moved on.
+                guard self?.highScoreEntry != nil else { return }
+                AudioManager.shared.play(.pawnPromotion)
+            }
+        } else {
+            AudioManager.shared.play(.pawnPromotion)
+        }
         DiagnosticsLog.shared.log(.score, "high score — name?")
     }
 

@@ -1225,6 +1225,23 @@ final class AudioAssetTests: XCTestCase {
         XCTAssertLessThan(durations.max() ?? 0, 3.5, "a loss sting should not outstay the overlay")
     }
 
+    /// The end-of-game hold is shorter than the loss sting, so whatever the
+    /// game over screen wants to say has to wait its turn.
+    func testAStingReportsTimeRemainingSoOtherCuesCanWait() {
+        AudioManager.shared.preloadAll()
+        let wasOn = GameSettings.shared.soundOn
+        defer { GameSettings.shared.soundOn = wasOn }
+        GameSettings.shared.soundOn = true
+
+        AudioManager.shared.play(oneOf: SoundKey.gameOverPool)
+        let remaining = AudioManager.shared.stingRemaining
+        XCTAssertGreaterThan(remaining, 2.0, "a downer runs about three seconds")
+        XCTAssertLessThan(remaining, 3.5)
+        // The reveal hold is what the prompt waits behind, and it is shorter.
+        XCTAssertLessThan(GameScene.gameEndRevealDelayForTesting, remaining,
+                          "if the hold were longer, nothing would need to wait")
+    }
+
     func testPreloadReportsNoErrors() {
         DiagnosticsLog.shared.clear()
         AudioManager.shared.preloadAll()

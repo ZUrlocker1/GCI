@@ -97,11 +97,26 @@ final class AudioManager {
     /// ear cannot separate them, and the screen is carrying it anyway.
     private static let destructionVoiceCap = 3
 
+    /// When the last sting played through `play(oneOf:)` finishes.
+    private var stingEnds = Date.distantPast
+
+    /// How long that sting still has to run, or zero if none is sounding.
+    ///
+    /// The loss sting is three seconds and the end-of-game hold is two and a
+    /// half, so the high score prompt opened over its last half second and
+    /// talked across it. A caller with a cue of its own can wait this out.
+    var stingRemaining: TimeInterval { max(0, stingEnds.timeIntervalSinceNow) }
+
     /// Plays one of `pool` at random. For events that would wear out if they
     /// always sounded the same — see `SoundKey.gameOverPool`.
     func play(oneOf pool: [SoundKey], scale: Float = 1) {
         guard let key = pool.randomElement() else { return }
         play(key, scale: scale)
+        // Read off the player rather than hard-coded: these are trimmed assets
+        // and the number would rot the moment one is re-cut.
+        if GameSettings.shared.soundOn, let length = sfxPools[key]?.first?.duration {
+            stingEnds = Date().addingTimeInterval(length)
+        }
     }
 
     func play(_ key: SoundKey, scale: Float = 1) {
