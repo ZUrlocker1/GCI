@@ -183,7 +183,12 @@ final class FleetController {
     /// SpriteKit on the next `addChild`. Identity cannot go stale that way.
     @discardableResult
     func release(_ node: SKNode) -> Bool {
-        let wasMember = node.parent === fleetNode
+        // `contains`, not a comparison against `fleetNode`: since each rank
+        // gained its own container the members hang off those, so testing
+        // the fleet node itself reported every genuine member as a
+        // non-member. Harmless while the only caller discards the result,
+        // and a trap for the first one that does not.
+        let wasMember = contains(node)
         for (square, member) in members where member === node {
             members[square] = nil
         }

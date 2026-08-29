@@ -689,12 +689,12 @@ cannot prepare for, which is the opposite of what a rare reward should be.
 | 2 | FIRE POWER | green | RAPID FIRE |
 | 3 | DOUBLE TROUBLE | repair | SHIELD UP |
 | 4 | RELENTLESS | ice | TIME FREEZE |
-| 5 | TRIPLE THREAT | green | RAPID FIRE |
+| 5 | TRIPLE THREAT | green → repair | RAPID FIRE → SHIELD UP |
 | 6 | WIDE ORBIT | spread | SPREAD FIRE |
 | 7 | CROSSFIRE | camel → camel | NUKE → NUKE |
 | 8 | ARMORED PAWNS | green → spread | RAPID FIRE → SPREAD FIRE |
 | 9 | KING ACTIVATED | green → spread → ice | RAPID FIRE → SPREAD FIRE → TIME FREEZE |
-| 10 | BLITZ! | green → spread → ice → camel | RAPID FIRE → SPREAD FIRE → TIME FREEZE → NUKE |
+| 10 | BLITZ! | green → spread → repair → camel | RAPID FIRE → SPREAD FIRE → SHIELD UP → NUKE |
 
 - **One kind at a time, and it keeps coming back until it is shot down.** Only a
   kill advances the roster; missing costs nothing but time. So how many raiders a
@@ -702,7 +702,11 @@ cannot prepare for, which is the opposite of what a rare reward should be.
   the roster is empty
 - Every power-up **debuts on a level of its own** and **every one comes round
   again** — a mechanic met once and never used is not worth building. Both are
-  pinned by tests
+  pinned by tests, and the second one was only true once the tests were first
+  run: the Shield was offered on Level 3 and nowhere else for the whole run.
+  It picked up Level 5, and took Blitz's Time Freeze slot — four offers is as
+  crowded as that wave reads, and a pause is worth least on the one level whose
+  character is that it never pauses
 - Levels 7–10 send more than one. Level 7 sends the same carrier twice, which is
   where the player first meets a wave that does not go quiet after one kill;
   8–10 stack different ones, cheapest first, so Rapid Fire is banked before the
@@ -1006,6 +1010,50 @@ oversights, and so the next person does not re-derive them.
 texture in a single draw call; `Silhouette`'s flood fill is measured once per
 texture and cached; diagnostics publish at 4Hz; every laser, explosion, score
 pop, shatter and raider is pooled, so gameplay allocates nothing.
+
+## Tests
+
+`GalacticChessInvaders/Tests/GCITests.swift` — 348 XCTest cases covering the
+chess model, fleet, raiders, power-ups, scoring, audio assets and layout
+geometry. **Run them with `⌘U` in Xcode**; the whole suite takes about a minute,
+most of it the perft.
+
+- **Why.** `ChessPerftTests` walks the standard reference positions to depth 4
+  (~11M nodes) and must match the published counts exactly. Any change to move
+  generation goes through it. The rest pin decisions that are otherwise silent
+  when broken — the §7.1 damage table, the raider ladder, gutter layout
+- **They first ran on 2026-08-28**, long after they were written: `⌘U` failed at
+  code signing until Debug stopped inheriting the hardened runtime and the App
+  Sandbox. Debug now uses `GalacticChessInvaders-Debug.entitlements` (no
+  sandbox — CoreAudio's analytics client aborts under it rather than degrading);
+  Release is unchanged and still sandboxed, hardened and signed
+- Of the 29 failures that first run, 28 were tests describing a game that had
+  since changed on purpose. One was real: `FleetController.release` reported
+  every genuine member as a non-member, because it still compared against the
+  fleet node after each rank gained its own container
+- The suite shares one `GameScene.shared`, so a test that drives the state
+  machine must put it in a known state first
+
+## Errors are visible without the log
+
+Most people playing — testers included — do not have the log panel open, so a
+fault nobody notices is a fault nobody reports. Anything logged at `.error`
+bumps a counter, and the scene raises a magenta **`ERROR - SEE LOG`** flag in the
+bottom-left corner, above the level banners. `X` clears both.
+
+What can raise it:
+
+| Error | Meaning |
+|---|---|
+| `ghost <piece> <square> …` | A destroyed piece still on the board a second later — with its alpha, its board state and its full ancestor chain, which is what identified the Time Freeze `isPaused` leak |
+| `<color> <piece> <square> had no hitbox` | A piece that cannot be shot. Repaired on the spot, and reported anyway |
+| `Legal-move markers exhausted` | More destinations than the pool holds — some would silently not draw |
+| `Music not found: <track>.m4a` | A `MusicLibrary` entry with no file behind it |
+| `sfx bundle directory not found` | No sound effects at all will play |
+| `Font not found in bundle` | Press Start 2P missing; everything falls back to Helvetica |
+
+The first two come from sweeps that run at 4Hz during play. The last four fire
+at startup or on first use.
 
 ## Changing assets
 
