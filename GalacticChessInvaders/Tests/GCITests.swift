@@ -1183,6 +1183,96 @@ final class MateDetectionTests: XCTestCase {
 }
 
 @MainActor
+final class QuitPromptTests: XCTestCase {
+
+    private func press(_ scene: GameScene, _ chars: String,
+                       command: Bool = false) throws {
+        let event = try XCTUnwrap(NSEvent.keyEvent(
+            with: .keyDown, location: .zero,
+            modifierFlags: command ? [.command] : [], timestamp: 0,
+            windowNumber: 0, context: nil, characters: chars,
+            charactersIgnoringModifiers: chars, isARepeat: false, keyCode: 0))
+        scene.keyDown(with: event)
+    }
+
+    private func playing() throws -> GameScene {
+        let scene = GameScene.shared
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+        view.presentScene(scene)
+        if !(scene.stateMachine.currentState is TitleState) {
+            XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
+        }
+        XCTAssertTrue(scene.stateMachine.enter(PlayingState.self))
+        return scene
+    }
+
+    override func tearDown() async throws {
+        _ = GameScene.shared.stateMachine.enter(TitleState.self)
+    }
+
+    /// Y leaves the run; the state machine is the thing that proves it, since
+    /// the prompt draws over whatever was there rather than replacing it.
+    func testYesReturnsToTheTitle() throws {
+        let scene = try playing()
+        try press(scene, "q")
+        try press(scene, "y")
+        XCTAssertTrue(scene.stateMachine.currentState is TitleState)
+    }
+
+    func testUppercaseWorksForBoth() throws {
+        let scene = try playing()
+        try press(scene, "Q")
+        try press(scene, "Y")
+        XCTAssertTrue(scene.stateMachine.currentState is TitleState)
+    }
+
+    /// "Any other key" means any other key, not just N.
+    func testAnythingElseStaysInTheGame() throws {
+        for answer in ["n", "N", "j", " ", "5"] {
+            let scene = try playing()
+            try press(scene, "q")
+            try press(scene, answer)
+            XCTAssertTrue(scene.stateMachine.currentState is PlayingState,
+                          "\(answer) should have gone back to the game")
+        }
+    }
+
+    /// The prompt owns the keyboard while it is up: the keys that normally do
+    /// something must not, or answering it could also restart or open a panel.
+    func testThePromptSwallowsOtherHotKeys() throws {
+        let scene = try playing()
+        try press(scene, "q")
+        try press(scene, "x")     // normally a hard restart
+        XCTAssertTrue(scene.stateMachine.currentState is PlayingState,
+                      "X answered the prompt rather than restarting")
+    }
+
+    /// Command-Q is the system's Quit and must not be turned into a game
+    /// prompt — the two live side by side deliberately.
+    func testCommandQIsNotTheGamePrompt() throws {
+        let scene = try playing()
+        // Not pressed here: it would terminate the test host. The guard is what
+        // is being pinned, so a bare Q must still open the prompt afterwards.
+        try press(scene, "q")
+        try press(scene, "n")
+        XCTAssertTrue(scene.stateMachine.currentState is PlayingState)
+    }
+
+    /// Nothing to leave on the title screen.
+    func testQuitDoesNothingOnTheTitleScreen() throws {
+        let scene = GameScene.shared
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+        view.presentScene(scene)
+        if !(scene.stateMachine.currentState is TitleState) {
+            XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
+        }
+        try press(scene, "q")
+        try press(scene, "y")
+        XCTAssertTrue(scene.stateMachine.currentState is TitleState)
+    }
+}
+
+@MainActor
 final class RestartTests: XCTestCase {
 
     func testXRestartClearsTheLogAndLeavesRestartFirst() {
