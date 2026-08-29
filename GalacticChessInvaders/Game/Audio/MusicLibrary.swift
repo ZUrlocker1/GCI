@@ -153,7 +153,7 @@ enum MusicLibrary {
     /// last three waves fall 156 to 147 to 140 while getting darker, which is
     /// the trade this library forces.
     ///
-    /// Written by Zudio in its Motorik Arcade style, re-encoded to 80k/32kHz to
+    /// Written by Zudio in its Motorik Arcade style, re-encoded to 64k/32kHz to
     /// match Pre-Solstice — 128k/44.1k would have put 28MB of music in a 7MB app.
     static func pool(forLevel level: Int) -> [String] {
         switch max(1, level) {
@@ -173,7 +173,7 @@ enum MusicLibrary {
     /// Backups, if a wave's track turns out not to fit. Each matches its slot's
     /// mode and tempo band, so a swap does not break the alternation or the
     /// climb. All are in `~/Downloads/GCI Zudio Songs` and need the same
-    /// 80k/32kHz re-encode.
+    /// 64k/32kHz re-encode.
     ///
     ///   L1      Dora               135 C Ionian, intense — the only other slow major
     ///   L6      Rattert-Z-Machine  140 C Lydian, peppy — the other brightest mode
