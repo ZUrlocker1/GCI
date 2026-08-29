@@ -125,6 +125,14 @@ PYEOF
 echo ""
 echo "==> [3/4] Building drag-to-install DMG..."
 cp -R "${APP_SRC}" "${DMG_STAGING}/${APP_NAME}"
+# The MIT licence GCI's chess model is adapted under asks for its notice to
+# travel with the software, so the disk image carries it beside the app.
+NOTICES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/THIRD-PARTY-NOTICES.md"
+if [ -f "${NOTICES}" ]; then
+    cp "${NOTICES}" "${DMG_STAGING}/"
+else
+    echo "WARNING: THIRD-PARTY-NOTICES.md not found — DMG will ship without it."
+fi
 rm -f "${OUTPUT_DMG}"
 
 create-dmg \
@@ -135,6 +143,7 @@ create-dmg \
     --icon-size ${ICON_SIZE} \
     --icon "${APP_NAME}" 130 160 \
     --app-drop-link 430 160 \
+    --icon "THIRD-PARTY-NOTICES.md" 280 300 \
     --hide-extension "${APP_NAME}" \
     --no-internet-enable \
     "${OUTPUT_DMG}" \

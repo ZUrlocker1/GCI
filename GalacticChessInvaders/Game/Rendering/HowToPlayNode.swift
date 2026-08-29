@@ -181,8 +181,11 @@ final class HowToPlayNode: SKNode {
         // One line: the HISTORY block above ends around y=104 and the footer
         // rule is at 70, so there is room for one 12pt line here and not two.
         // 58 characters at 12pt runs to x=746, well inside the 910 margin.
-        let tail = label(" available on Mac, iPhone, iPad.", em, .white, .left)
-        tail.position = CGPoint(x: linkX + linkW, y: creditY)
+        // The em of space is counted, not written: a leading space in an
+        // SKLabelNode does not advance the first glyph, so "Zudio" and
+        // "available" ran together. Same lesson as the debug key columns above.
+        let tail = label("available on Mac, iPhone, iPad.", em, .white, .left)
+        tail.position = CGPoint(x: linkX + linkW + em, y: creditY)
         addChild(tail)
 
         let underline = SKShapeNode(rect: CGRect(x: linkX, y: creditY - 3, width: linkW, height: 0.9))

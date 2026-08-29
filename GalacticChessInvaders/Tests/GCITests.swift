@@ -1029,7 +1029,7 @@ final class HowToPlayNodeTests: XCTestCase {
         let parts = all.filter {
             ($0.text?.hasPrefix("All music created by") ?? false)
                 || $0.text == "Zudio"
-                || ($0.text?.hasPrefix(" available on") ?? false)
+                || ($0.text?.hasPrefix("available on") ?? false)
         }
         XCTAssertEqual(parts.count, 3, "the credit is three labels on one line")
 
