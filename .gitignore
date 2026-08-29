@@ -55,3 +55,8 @@ icon_options/
 
 # Reference listening, not ours to redistribute.
 Tempest 2000 OST/
+
+# Reference material, kept locally and deliberately out of the repo. These are
+# ~360MB of Abstraction / Tallbeard loop packs that nothing in the game uses;
+# they were tracked once and pushed, which is why the history is large.
+assets/music/music-loop-bundle-*/
