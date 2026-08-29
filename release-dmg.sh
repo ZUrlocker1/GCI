@@ -60,16 +60,14 @@ fi
 # Step 1: Check the app really is signed and notarized
 # ---------------------------------------------------------------------------
 echo ""
-echo "==> [1/4] Checking the app is signed and notarized..."
-if ! spctl --assess --type exec "${APP_SRC}" 2>/dev/null; then
+echo "==> [1/4] Checking create-dmg is available..."
+if ! command -v create-dmg &>/dev/null; then
     echo ""
-    echo "ERROR: macOS will not accept this app."
-    echo "It has not been through Distribute App > Direct Distribution, or"
-    echo "notarization has not finished. Fix that before making a DMG —"
-    echo "otherwise Ben gets a scary warning when he opens it."
+    echo "ERROR: create-dmg not found. Install it with:"
+    echo "  brew install create-dmg"
     exit 1
 fi
-echo "    Accepted by Gatekeeper."
+echo "    create-dmg found."
 
 # ---------------------------------------------------------------------------
 # Step 2: Background — black with a cyan arrow, so it looks like the game
@@ -83,8 +81,11 @@ DMG_BACKGROUND="${DMG_BACKGROUND}" python3 - <<'PYEOF'
 import struct, zlib, os
 
 W, H = 560, 340
-BG    = (8, 9, 14)        # the game's own near-black
-ARROW = (18, 224, 255)    # and its cyan
+# Light grey, not the game's near-black: Finder draws icon labels in black,
+# and on a dark background "GCI 05.app" and "Applications" were unreadable.
+# Same palette as Zudio's DMG, which had already learned this.
+BG    = (210, 210, 215)   # light grey
+ARROW = (90, 90, 95)      # dark grey
 
 SHAFT_X1, SHAFT_X2 = 195, 355
 SHAFT_Y1, SHAFT_Y2 = 162, 178
@@ -124,17 +125,10 @@ PYEOF
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> [3/4] Building drag-to-install DMG..."
+# The app and nothing else. LICENSE and THIRD-PARTY-NOTICES.md were staged
+# here for a while; two text files beside the drag target read as clutter, and
+# both are in the repo and the README where someone would look for them.
 cp -R "${APP_SRC}" "${DMG_STAGING}/${APP_NAME}"
-# The MIT licence GCI's chess model is adapted under asks for its notice to
-# travel with the software, so the disk image carries it beside the app.
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-for doc in THIRD-PARTY-NOTICES.md LICENSE; do
-    if [ -f "${REPO}/${doc}" ]; then
-        cp "${REPO}/${doc}" "${DMG_STAGING}/"
-    else
-        echo "WARNING: ${doc} not found — DMG will ship without it."
-    fi
-done
 rm -f "${OUTPUT_DMG}"
 
 create-dmg \
@@ -145,8 +139,6 @@ create-dmg \
     --icon-size ${ICON_SIZE} \
     --icon "${APP_NAME}" 130 160 \
     --app-drop-link 430 160 \
-    --icon "THIRD-PARTY-NOTICES.md" 200 300 \
-    --icon "LICENSE" 380 300 \
     --hide-extension "${APP_NAME}" \
     --no-internet-enable \
     "${OUTPUT_DMG}" \
@@ -169,5 +161,6 @@ echo " Before sending it to Ben:"
 echo "   1. Open the DMG — app on the left, Applications on the right"
 echo "   2. Drag it across and launch it"
 echo "   3. Version ${VERSION} (build ${BUILD})"
+echo "   4. spctl --assess --verbose=4 --type exec \"${APP_SRC}\""
 echo "============================================================"
 echo ""
