@@ -798,8 +798,8 @@ class GameScene: SKScene {
         // A panel is a step out of the game, so the game's music steps out with
         // it. Runs whatever the state, since the panels open from the title too
         // — where the title theme is already playing and this does nothing.
-        let entry = MusicLibrary.panelEntry()
-        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack,
+        let entry = MusicLibrary.panelEntry(for: MusicVariants.introTrack)
+        AudioManager.shared.fadeTo(track: MusicVariants.introTrack,
                                    startAt: entry.startAt, fadeIn: entry.fadeIn)
         errorFlag?.isHidden = true
         DiagnosticsLog.shared.log(.info, "game paused")
@@ -870,8 +870,8 @@ class GameScene: SKScene {
             ship?.direction = 0
             isPaused = true
         }
-        let entry = MusicLibrary.panelEntry()
-        AudioManager.shared.fadeTo(track: MusicLibrary.panelTrack,
+        let entry = MusicLibrary.panelEntry(for: MusicVariants.introTrack)
+        AudioManager.shared.fadeTo(track: MusicVariants.introTrack,
                                    startAt: entry.startAt, fadeIn: entry.fadeIn)
         errorFlag?.isHidden = true
         DiagnosticsLog.shared.log(.info, "settings open")
@@ -917,9 +917,11 @@ class GameScene: SKScene {
 
     /// Hands the music back to whatever screen the player is returning to.
     private func restoreScreenMusic() {
+        // Both latched, so closing a panel hands back exactly what was playing
+        // before it opened rather than rolling the dice a second time.
         AudioManager.shared.fadeTo(pool: stateMachine.currentState is TitleState
-            ? MusicLibrary.titlePool
-            : MusicLibrary.pool(forLevel: levels.level),
+            ? MusicVariants.introPool
+            : MusicVariants.currentLevelPool,
             over: MusicLibrary.levelFade, gap: MusicLibrary.levelGap)
     }
 
@@ -1095,7 +1097,9 @@ class GameScene: SKScene {
         hideBoard()
         removePausedOverlay()
         // GameOverState stopped the music; start it fresh rather than leaving silence.
-        AudioManager.shared.playMusic(from: MusicLibrary.titlePool)
+        // No roll: this skips the title screen, so it keeps the variant the
+        // last visit to the title settled on.
+        AudioManager.shared.playMusic(from: MusicVariants.introPool)
         DiagnosticsLog.shared.log(.restart, "new game")
         stateMachine.enter(PlayingState.self)
     }
@@ -1145,7 +1149,7 @@ class GameScene: SKScene {
         // change lands behind the mechanic banner rather than mid-play.
         backgroundColor = backdropNode.apply(level: levels.level)
         starfieldRate = BackdropNode.starfieldSpeed(forLevel: levels.level)
-        AudioManager.shared.fadeTo(pool: MusicLibrary.pool(forLevel: levels.level),
+        AudioManager.shared.fadeTo(pool: MusicVariants.beginLevel(levels.level),
                                    over: MusicLibrary.levelFade,
                                    gap: MusicLibrary.levelGap)
         starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
@@ -4053,6 +4057,9 @@ class GameScene: SKScene {
             || stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "x" {
             ScoreManager.shared.clearHighScores()
+            // A clean slate includes the soundtrack: the player has to reach
+            // Level 3 again before the alternates come back into play.
+            MusicVariants.reset()
             resetToTitle()
             return
         }

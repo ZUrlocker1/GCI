@@ -12,26 +12,62 @@
 
 import Foundation
 
+/// Tables only, and deliberately so: `typecheck.sh` treats **every string
+/// literal in this file** as a track name that must be bundled, which is what
+/// catches a typo in the tables below. A log message or any other incidental
+/// string here would be read as a missing track — which is why the stateful
+/// half of this lives in `MusicVariants.swift`.
 enum MusicLibrary {
 
     /// The track bundled since the beginning, and the fallback for every pool.
-    static let fallback = "GCI-intro"
+    /// Named for its Zudio source, like every other track here — it was
+    /// `GCI-intro` while it was the only one.
+    static let fallback = "Pre-Solstice"
 
     /// What plays over Settings and How To Play, at any point in a run. The
     /// panels are a step out of the game, and the title theme is what the game
     /// sounds like when you are not in it. It opens on a fade of its own, which
     /// is why the hand-over only has to fade the outgoing track.
-    static let panelTrack = "GCI-intro"
+    static let panelTrack = "Pre-Solstice"
+
+    /// The one alternate for each track heard often enough to wear out: the
+    /// intro (title, Settings, Info) and the first two waves, which every run
+    /// passes through. Levels 3-10 are not in here — a player reaches them
+    /// rarely enough that the track is still a novelty.
+    ///
+    /// Keyed by the original, so a track with no entry simply never varies and
+    /// an incomplete set degrades to the shipped behaviour rather than to
+    /// silence — the same rule the pools follow.
+    static let alternates: [String: String] = [
+        // Kosmic, like Pre-Solstice itself — B Dorian / 118 BPM against
+        // E Dorian / 88, so it is the same room at a slightly brisker walk.
+        "Pre-Solstice": "Zephyron",
+        // "Leise-Dunkels":  "…",   // L1
+        // "WelleZ-Machine": "…",   // L2
+    ]
+
+    /// How often the alternate wins, once unlocked.
+    static let alternateChance = 0.35
+
+    /// Nothing varies until the player has reached this level in the session.
+    /// A first run should sound the way the game sounds; the variation is for
+    /// someone who has now heard the opening several times.
+    static let alternateUnlockLevel = 3
 
     /// Where the panel track starts, and how it arrives.
     ///
-    /// An experiment: half the time GCI-intro opens partway in rather than at
+    /// An experiment: half the time Pre-Solstice opens partway in rather than at
     /// the top. 0:57–1:12 is a quiet stretch, so it can fade up over a second
     /// without a transient, and it sounds unlike the opening notes — which a
     /// player who checks Settings four times in a run would otherwise hear four
     /// times. The other half keeps the opening, so the track still has one.
-    static func panelEntry() -> (startAt: TimeInterval, fadeIn: TimeInterval) {
-        Bool.random() ? (.random(in: 57...72), 1.0) : (0, 0)
+    /// 0:57-1:12 is a quiet stretch *of this particular track*, which is why
+    /// the mid-track entry is only offered for it. An alternate has its own
+    /// structure, and fading up into whatever happens to be at 0:57 could land
+    /// on a transient. It starts at the top until a window is chosen for it.
+    static func panelEntry(for track: String) -> (startAt: TimeInterval, fadeIn: TimeInterval) {
+        guard track == panelTrack else { return (0, 0) }
+        return Bool.random() ? (.random(in: 57...72), 1.0) : (0, 0)
     }
 
     /// How a wave's music takes over. Slower than the panel hand-over, with a
@@ -43,7 +79,7 @@ enum MusicLibrary {
     static let levelGap: TimeInterval = 0.5
 
     /// The title screen and the attract-free menu behind it.
-    static var titlePool: [String] { ["GCI-intro"] }
+    static var titlePool: [String] { [panelTrack] }
 
     /// One track per wave, ordered so the music escalates with the game.
     ///
@@ -62,7 +98,7 @@ enum MusicLibrary {
     /// the trade this library forces.
     ///
     /// Written by Zudio in its Motorik Arcade style, re-encoded to 80k/32kHz to
-    /// match GCI-intro — 128k/44.1k would have put 28MB of music in a 7MB app.
+    /// match Pre-Solstice — 128k/44.1k would have put 28MB of music in a 7MB app.
     static func pool(forLevel level: Int) -> [String] {
         switch max(1, level) {
         case 1:  return ["Leise-Dunkels"]        // 125 E Mixolydian, relaxed
