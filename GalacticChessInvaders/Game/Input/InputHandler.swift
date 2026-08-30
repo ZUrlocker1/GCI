@@ -91,15 +91,24 @@ final class InputHandler {
 
     // MARK: - Key Mapping
 
+    /// The key-code mapping, for tests. A and D have been on and off this table
+    /// once already; pinning it is cheaper than finding out from a player.
+    func actionForTesting(keyCode: UInt16, isDown: Bool) -> GameAction? {
+        gameAction(for: keyCode, isDown: isDown)
+    }
+
     private func gameAction(for keyCode: UInt16, isDown: Bool) -> GameAction? {
         switch keyCode {
-        // Arrow keys only. §8.1 also lists A and D, but A is now the hidden
-        // Auto Mode toggle — and the scene intercepts hotkeys ahead of
-        // movement, so A could not have done both. D was dropped with it rather
-        // than leave the letter bindings lopsided.
-        case 123:       // ← arrow
+        // Arrows and A / D, as §8.1 asks: arrows for an external keyboard, the
+        // letters for a laptop where the left hand stays near the trackpad.
+        //
+        // A and D were dropped for a while because A was the Auto Mode toggle
+        // and the scene reads hotkeys ahead of movement, so the letter could
+        // not do both. Auto Mode now needs Command-T first, which gives the
+        // letters back.
+        case 123, 0:    // ← arrow, A
             return isDown ? .moveLeft : .stopMoving
-        case 124:       // → arrow
+        case 124, 2:    // → arrow, D
             return isDown ? .moveRight : .stopMoving
         case 49:        // Space
             return isDown ? .fireLaser : .stopFiring

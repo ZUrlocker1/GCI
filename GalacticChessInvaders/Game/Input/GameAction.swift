@@ -6,7 +6,9 @@
 import Foundation
 import CoreGraphics
 
-enum GameAction {
+/// `Equatable` so tests can assert what a key maps to. Every associated value
+/// is a `String`, so the conformance is synthesised.
+enum GameAction: Equatable {
     // Ship movement
     case moveLeft
     case moveRight

@@ -1183,6 +1183,25 @@ final class MateDetectionTests: XCTestCase {
 }
 
 @MainActor
+final class TestModeGateTests: XCTestCase {
+
+    /// A must reach the ship, not the Auto Mode toggle. It was taken off
+    /// movement duty precisely because the scene read it as a hotkey first, and
+    /// §8.1 asks for A / D alongside the arrows.
+    func testAAndDMoveTheShip() {
+        for (code, expected) in [(UInt16(0), GameAction.moveLeft),
+                                 (UInt16(2), GameAction.moveRight),
+                                 (UInt16(123), GameAction.moveLeft),
+                                 (UInt16(124), GameAction.moveRight)] {
+            XCTAssertEqual(InputHandler.shared.actionForTesting(keyCode: code, isDown: true),
+                           expected, "key code \(code)")
+            XCTAssertEqual(InputHandler.shared.actionForTesting(keyCode: code, isDown: false),
+                           .stopMoving, "key code \(code) release")
+        }
+    }
+}
+
+@MainActor
 final class QuitPromptTests: XCTestCase {
 
     private func press(_ scene: GameScene, _ chars: String,
