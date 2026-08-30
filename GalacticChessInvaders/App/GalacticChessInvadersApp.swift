@@ -5,6 +5,29 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
+    /// Strips the menus SwiftUI insists on and this game has no use for.
+    ///
+    /// There is no way to decline File, View or Window through `.commands` —
+    /// emptying their command groups leaves the menu behind with whatever
+    /// SwiftUI puts there regardless. Removing them from the built menu is the
+    /// only reliable way, and it has to happen after SwiftUI has built it.
+    ///
+    /// Matched by title, which is English-only. This app has no localisation,
+    /// and a menu that fails to disappear is a cosmetic problem rather than a
+    /// broken one.
+    ///
+    /// Window goes with the rest, and `⌘M` to minimise goes with it — a
+    /// deliberate trade for a single-window game that wants its menu bar to
+    /// read as short.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard let main = NSApp.mainMenu else { return }
+        for title in ["File", "View", "Window"] {
+            if let item = main.items.first(where: { $0.title == title }) {
+                main.removeItem(item)
+            }
+        }
+    }
+
     /// Command-Q mid-run asks first.
     ///
     /// `Q` on its own puts up "QUIT GAME? Y / N", and the modified version was
@@ -36,7 +59,9 @@ struct GalacticChessInvadersApp: App {
         // First line in the log, before anything else has a chance to write one.
         // The log is debug-only, so this is the one place the hidden test keys
         // are written down where someone will actually see them.
-        DiagnosticsLog.shared.log(.startup, "Test modes A, P, R, V")
+        // The log panel is a system-font text view, so the glyph renders here
+        // without the two-font dance the How To Play screen needs.
+        DiagnosticsLog.shared.log(.startup, "Test Mode ⌘T  A, P, R, V")
         registerBundledFonts()
         // Every SFX player is built and prepared here so gameplay never touches
         // the filesystem (§18: zero I/O during play).
@@ -67,16 +92,18 @@ struct GalacticChessInvadersApp: App {
     /// silently steal it from the game.
     @CommandsBuilder
     private var gameCommands: some Commands {
+        // Undo and Find go; the pasteboard group stays. The diagnostics panel is
+        // a real NSTextView and Command-C reaches it through Edit > Copy — take
+        // that menu item away and the shortcut stops working, which is how it
+        // broke once already.
         CommandGroup(replacing: .undoRedo) { }
-        CommandGroup(replacing: .pasteboard) { }
         CommandGroup(replacing: .textEditing) { }
-
-        CommandGroup(replacing: .newItem) {
-            Button("New Game") { MainActor.assumeIsolated { GameScene.shared.startNewGame() } }
-                .keyboardShortcut("n")
-        }
+        CommandGroup(replacing: .newItem) { }
 
         CommandMenu("Game") {
+            Button("New Game") { MainActor.assumeIsolated { GameScene.shared.startNewGame() } }
+                .keyboardShortcut("n")
+            Divider()
             Button("Settings…") { MainActor.assumeIsolated { GameScene.shared.showSettings() } }
                 .keyboardShortcut(",")
             Button("How To Play") { MainActor.assumeIsolated { GameScene.shared.showHowToPlay() } }
