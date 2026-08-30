@@ -29,7 +29,7 @@ existed; they are a checklist, not a running order.
 | 3.1   | Arcade layer: fleet movement                | ✅                                                      |
 | 3.2   | Arcade layer: shooting & collision          | ✅                                                      |
 | 3.3   | Arcade layer: damage states & juice         | ✅                                                      |
-| 4     | Basic sound effects                         | 🟡                                                      |
+| 4     | Basic sound effects                         | ✅                                                      |
 | 5     | Background music + settings                 | ✅                                                      |
 | 6.1   | Raiders: scout & basic escort               | ✅ — Scout built, Escort cut                            |
 | 6.2   | Raiders: flagship, variants, special scouts | ✅ — special scouts built, Flagship and variants cut    |
@@ -508,7 +508,7 @@ the board" is answerable and tested in one place.
 
 Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
 
-## Phase 4 — Sound Effects 🟡
+## Phase 4 — Sound Effects ✅
 
 - [x] `AudioManager` — pooled polyphonic playback, preloaded, zero gameplay I/O
 - [x] `SoundKey` — 120 events mapped; GDC filenames repaired (they were truncated
@@ -556,11 +556,14 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       side signal against its mid. Three carry real width and keep it — the nuke
       shockwave most of all, which is §13.2's "resonant wave that sweeps across
       the stereo field" delivered rather than a coincidence
-- [ ] **8 keys reference files that are not bundled**, all for features that were
-      never built (escorts, the flagship) or large GDC stems not yet trimmed
-      (`ambientSpaceLoop` 28MB, `mechanicBannerTier2/3`, `fleetRankDrop`).
-      Nothing the game plays is among them, and `typecheck.sh` now fails if that
-      stops being true
+**8 keys still name files that are not bundled, and that is the finished state
+rather than a gap.** They are for things the game does not do: escorts and the
+flagship, which are cut; the level banner stingers, which are a decision not to
+have (see the Roadmap); `ambientSpaceLoop`, a 28MB stem never worth trimming;
+and three crackle variants and `fleetRankDrop` that were never wired up. None of
+the eight is played by anything, and `typecheck.sh` fails if that stops being
+true — a sound the code calls for and cannot find would otherwise go silent
+without a word.
 
 ## Phase 5 — Music ✅
 
@@ -592,19 +595,19 @@ the harmonic minor rather than the fastest track: both tracks above 150 BPM are
 bright, and a cheerful finale would undercut a three-second clock worse than a
 slower menacing one.
 
-| Level                 | Track                        | Style         | BPM | Key              | Mood   |
-|-----------------------|------------------------------|---------------|-----|------------------|--------|
-| Title, Settings, Info | `Pre-Solstice`              | Kosmic Drift  | 88  | E Dorian         | Dream  |
-| 1                     | `Leise-Dunkels`              | relaxed       | 125 | E Mixolydian     | Bright |
-| 2                     | `WelleZ-Machine`             | intense       | 134 | E Aeolian        | Deep   |
-| 3                     | `BlitzSchnork`               | peppy         | 138 | C Mixolydian     | Bright |
-| 4                     | `Rattert-Z-Machine`          | peppy         | 140 | C Lydian         | Free   |
-| 5                     | `Frankfurt-Overdrive`        | intense       | 140 | A Dorian         | Bright |
-| 6                     | `KraftSchmaltz`              | peppy intense | 137 | A Lydian         | Bright |
-| 7                     | `Bochum-Level`               | peppy         | 156 | C Phrygian       | Free   |
-| 8                     | `SchnorkPunkt`               | focused       | 147 | B Mixolydian     | Dream  |
-| 9                     | `Leipzig-1999`               | focused       | 147 | B Aeolian        | Bright |
-| 10                    | `BierWunderwaffe`            | intense       | 140 | G Harmonic Minor | Free   |
+| Level                 | Track                 | Style         | BPM | Key              | Mood   |
+|-----------------------|-----------------------|---------------|-----|------------------|--------|
+| Title, Settings, Info | `Pre-Solstice`        | Kosmic Drift  | 88  | E Dorian         | Dream  |
+| 1                     | `Leise-Dunkels`       | relaxed       | 125 | E Mixolydian     | Bright |
+| 2                     | `WelleZ-Machine`      | intense       | 134 | E Aeolian        | Deep   |
+| 3                     | `BlitzSchnork`        | peppy         | 138 | C Mixolydian     | Bright |
+| 4                     | `Rattert-Z-Machine`   | peppy         | 140 | C Lydian         | Free   |
+| 5                     | `Frankfurt-Overdrive` | intense       | 140 | A Dorian         | Bright |
+| 6                     | `KraftSchmaltz`       | peppy intense | 137 | A Lydian         | Bright |
+| 7                     | `Bochum-Level`        | peppy         | 156 | C Phrygian       | Free   |
+| 8                     | `SchnorkPunkt`        | focused       | 147 | B Mixolydian     | Dream  |
+| 9                     | `Leipzig-1999`        | focused       | 147 | B Aeolian        | Bright |
+| 10                    | `BierWunderwaffe`     | intense       | 140 | G Harmonic Minor | Free   |
 
 Style is the word the composer attached to each export, and was one of the three
 inputs to the ordering alongside tempo and mode. Not to be confused with the
@@ -626,11 +629,11 @@ The intro and the first two waves are heard on every single run, so each has one
 alternate. Levels 3-10 do not — a player reaches them rarely enough that the
 track is still a novelty.
 
-| Original | Alternate | Style | What changes |
-|---|---|---|---|
-| `Pre-Solstice` (title, Settings, Info) | `Zephyron` | Kosmic | B Dorian 118 against E Dorian 88 — the same room at a brisker walk |
-| `Leise-Dunkels` (L1) | `GeistStrom-1999` | Motorik | E Phrygian against E Mixolydian: same tonic, darker mode, 149 against 125 |
-| `WelleZ-Machine` (L2) | `Cycle-3-Midnight` | Motorik Noir | 119 against 134 — slow and foreboding where the original is urgent |
+| Original                               | Alternate          | Style        | What changes                                                              |
+|----------------------------------------|--------------------|--------------|---------------------------------------------------------------------------|
+| `Pre-Solstice` (title, Settings, Info) | `Zephyron`         | Kosmic       | B Dorian 118 against E Dorian 88 — the same room at a brisker walk        |
+| `Leise-Dunkels` (L1)                   | `GeistStrom-1999`  | Motorik      | E Phrygian against E Mixolydian: same tonic, darker mode, 149 against 125 |
+| `WelleZ-Machine` (L2)                  | `Cycle-3-Midnight` | Motorik Noir | 119 against 134 — slow and foreboding where the original is urgent        |
 
 - **Locked until the player reaches Level 3** in the session. A first run should
   sound the way the game sounds; this is for someone who has heard the opening
@@ -660,7 +663,7 @@ track is still a novelty.
   `Alt L2 Cycle-3-Midnight`. Derived from the tables rather than from what was
   rolled, so it reads correctly whoever started the track
 
-### End of run
+### Game over music
 
 Six 23-30s pieces, cut to fade in and out so they drop in whole. Music rather
 than sound effects: they need the Music volume, a cross-fade off the wave's
@@ -669,12 +672,12 @@ track, and a hand-over when they finish.
 Won or lost is the wrong axis — you lose every wave until the tenth, and losing
 on Level 9 is a good run. What plays follows from how far the player got.
 
-| Ending | Track |
-|---|---|
-| All ten waves cleared | `Fahrt-Punkt-sting` — brightest and fastest of the six |
-| Draw or stalemate | `Formless-Matter-sting` — neither good nor bad, and sounds it |
-| Anything past Level 1, or a run that charted | rotation of four, round-robin |
-| Lost on Level 1 without charting | no stinger — one of the four loss stings |
+| Ending                                       | Track                                                         |
+|----------------------------------------------|---------------------------------------------------------------|
+| All ten waves cleared                        | `Fahrt-Punkt-sting` — brightest and fastest of the six        |
+| Draw or stalemate                            | `Formless-Matter-sting` — neither good nor bad, and sounds it |
+| Anything past Level 1, or a run that charted | rotation of four, round-robin                                 |
+| Lost on Level 1 without charting             | no stinger — one of the four loss stings                      |
 
 - **Round-robin, not random.** Four tracks picked at random repeat often enough
   to read as a fault
@@ -865,7 +868,7 @@ each group by what it would cost to *not* have at ship.
 ### Audio leftovers (§20 Phase 5)
 
 The screen and the soundtrack both shipped — see Phase 5. Endings did too: six
-stingers chosen by how far the player got (**End of run**), and four bass
+stingers chosen by how far the player got (**Game over music**), and four bass
 downers for the one ending that has not earned music. What is left:
 
 - [ ] **Level clear fanfare.** `levelClear` plays a *descending* arp, which is
@@ -1134,8 +1137,8 @@ Two rules that no script can enforce:
 
 Ten slots, of which the title screen shows five:
 
-| | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
+|           |          |            |          |            |          |          |          |             |            |
+|-----------|----------|------------|----------|------------|----------|----------|----------|-------------|------------|
 | ZACK 8000 | BEN 5000 | STEVE 3000 | WOZ 2000 | NOLAN 1000 | TOMO 950 | TORU 900 | DONA 850 | RUSSELL 800 | ALCORN 750 |
 
 - Calibrated against ten recorded games, median about 1000. The visible floor
