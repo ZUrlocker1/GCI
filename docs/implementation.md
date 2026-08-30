@@ -617,7 +617,10 @@ the source: below 10kHz the two are identical to within 0.2dB, at 10kHz 64k is
 against 80k's 15.6dB. Hi-hats and cymbal air are what 20% of the file size buys.
 
 Always re-encode **from the Zudio export**, never from a bundled track: lossy to
-lossy compounds. `MusicLibrary` is the only table; adding or swapping means a
+lossy compounds. `Pre-Solstice` is the one exception and stays at 80k — it is a
+hand-edited mix that opens on the synthesiser instead of the drums, and the only
+copy is that 80k file. Re-encoding it to match would be exactly the second
+generation this rule exists to avoid, for 488KB. `MusicLibrary` is the only table; adding or swapping means a
 filename there and an `.m4a` in `Resources/`, and `typecheck.sh` fails if the two
 disagree — including when the file is on disk but not in the Xcode project.
 
