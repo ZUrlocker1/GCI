@@ -39,7 +39,7 @@ attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
   discarding a game in progress.
 - **A / D steer the ship**, alongside the arrow keys.
 - **Test Mode is ⌘T**, with the same A, P, R and V options behind it.
-- Bug fixes.
+- Misc bug fixes, including a broken download link (whoops!)
 
 **What's new in v0.5:**
 
