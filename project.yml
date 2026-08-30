@@ -30,8 +30,8 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.zurlocker.GalacticChessInvaders
         INFOPLIST_FILE: GalacticChessInvaders/Info.plist
-        CURRENT_PROJECT_VERSION: "5"
-        MARKETING_VERSION: "0.5"
+        CURRENT_PROJECT_VERSION: "6"
+        MARKETING_VERSION: "0.6"
         SWIFT_STRICT_CONCURRENCY: complete
         # Signing, set up the way Zudio is. `DEVELOPMENT_TEAM` is the piece that
         # was missing: without it an archive carries no team and Xcode refuses to

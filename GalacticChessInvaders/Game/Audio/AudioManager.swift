@@ -107,6 +107,15 @@ final class AudioManager {
 
     /// When the last sting played through `play(oneOf:)` finishes.
     private var stingEnds = Date.distantPast
+    /// When the last destruction one-shot finishes.
+    private var destructionEnds = Date.distantPast
+
+    /// How long the explosion still has to run, or zero if none is sounding.
+    ///
+    /// The level clear cue used to fire in the same frame as the king's
+    /// destruction and lose to it by 9dB — audible in isolation, inaudible in
+    /// place. A caller with something to say after the bang can wait this out.
+    var destructionRemaining: TimeInterval { max(0, destructionEnds.timeIntervalSinceNow) }
 
     /// How long that sting still has to run, or zero if none is sounding.
     ///
@@ -152,6 +161,10 @@ final class AudioManager {
             player.volume = level
             player.currentTime = 0
             player.play()
+            if Self.destructionKeys.contains(key) {
+                destructionEnds = max(destructionEnds,
+                                      Date().addingTimeInterval(player.duration))
+            }
         }
     }
 
@@ -346,12 +359,4 @@ final class AudioManager {
     }
 
     /// Temporarily duck music during loud SFX, then restore.
-    func duckMusic(to volume: Float = 0.35, for duration: TimeInterval = 0.8) {
-        guard let player = musicPlayer else { return }
-        let original = player.volume
-        player.volume = volume
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-            player.volume = original
-        }
-    }
 }

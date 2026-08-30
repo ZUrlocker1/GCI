@@ -520,21 +520,21 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_3B1207FC-A512-42FD-9C4E-935EAE375571" /* .claude */ = {
+		"TEMP_256C119B-D1EE-4A27-BF88-6BEF6648D461" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_EEA99EBE-6C97-42DA-A596-7BAE914383B8" /* .claude */ = {
+		"TEMP_34F2444E-50F7-45DD-AB05-4C08CC9FE7CF" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_FD806C28-C3C9-4B5B-B3E0-0EA56A6451DB" /* .claude */ = {
+		"TEMP_CD9005BB-AA52-472E-94D5-2C979F529247" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -788,7 +788,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -797,7 +797,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.5;
+				MARKETING_VERSION = 0.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -814,7 +814,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -823,7 +823,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.5;
+				MARKETING_VERSION = 0.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;

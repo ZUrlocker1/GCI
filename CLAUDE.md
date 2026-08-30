@@ -236,12 +236,12 @@ struct PhysicsCategory {
 
 ## Where the project is
 
-**Shipping as v0.5, and development is complete.** Signed, notarized,
+**Shipping as v0.6, and development is complete.** Signed, notarized,
 distributed as a DMG. Ten levels play end to end with every mechanic, all five
 power-ups, a settings screen, its own soundtrack and full arcade audio.
 
-What is left is playtest adjustment — a balance pass and an Instruments run —
-and one loose end, a level-clear cue that falls where it should rise. Read
+What is left is playtest adjustment — a balance pass and an Instruments run.
+Read
 `docs/implementation.md` for the current state; it is kept accurate and this file
 is not a substitute for it.
 
