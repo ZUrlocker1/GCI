@@ -236,14 +236,14 @@ struct PhysicsCategory {
 
 ## Where the project is
 
-**Shipping as v0.5.** Signed, notarized, distributed as a DMG. Ten levels play
-end to end with every mechanic, all five power-ups, a settings screen, its own
-soundtrack and full arcade audio.
+**Shipping as v0.5, and development is complete.** Signed, notarized,
+distributed as a DMG. Ten levels play end to end with every mechanic, all five
+power-ups, a settings screen, its own soundtrack and full arcade audio.
 
-Read `docs/implementation.md` for the current state — it is kept accurate and
-this file is not a substitute for it. Its **Roadmap** section is what remains:
-a level-clear cue, music ducking, the hyperspace jump, a balance pass, and an
-Instruments run.
+What is left is playtest adjustment — a balance pass and an Instruments run —
+plus two deferred niceties: the hyperspace jump, and a level-clear cue that falls
+where it should rise. Read `docs/implementation.md` for the current state; it is
+kept accurate and this file is not a substitute for it.
 
 Deliberately not building: Escorts, the Flagship, Kamikaze and Llama raiders
 (§6), attract mode (§14.2), wireframe debris (§12.4) and 8-frame explosion

@@ -5,16 +5,17 @@ the design doc's. Deviations get one line each — reasoning lives in the code.
 
 ✅ done · 🟡 partial · ⬜ not started
 
-Ten levels play end to end, each with a mechanic of its own, with all five
-power-ups, a settings screen, its own soundtrack and full arcade audio. Signed,
-notarized and shipping as a DMG.
+**Development is complete.** Ten levels play end to end, each with a mechanic of
+its own, with all five power-ups, a settings screen, its own soundtrack and full
+arcade audio. Signed, notarized and shipping as a DMG.
 
-What a player would still notice: no level-clear fanfare or game-over riff of
-their own, and no hyperspace jump between waves. Everything else outstanding is
-production — a balance pass and an Instruments run.
+What is left is playtest adjustment: a balance pass from people who did not build
+it, and an Instruments run before the next release. Two small things are deferred
+rather than done — the hyperspace jump between waves, and a level-clear cue that
+falls where it should rise. Neither blocks anything.
 
 The raiders are done and the rest of §6 is **cut** — no Escort, Flagship,
-Kamikaze or Llama. Gameplay is feature-complete; what is left is production.
+Kamikaze or Llama.
 
 Full detail in **[Roadmap — what is left](#roadmap--what-is-left)** near the end
 of this file. §20's phase numbers were a plan written before any of this
