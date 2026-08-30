@@ -21,7 +21,16 @@ final class ScoreManager {
     private(set) var highScores: [HighScoreEntry] = []
 
     private let highScoreKey = "GCI_HighScores"
-    private let maxHighScores = 10
+    /// Five, which is what the title screen shows.
+    ///
+    /// §14.3 asks for ten stored and five displayed, and that is what this was.
+    /// The trouble is that `isHighScore` gates the name prompt on the tenth
+    /// place while the screen only ever renders the top five, so a run good
+    /// enough to be recorded but not to be seen was asked to sign and then
+    /// found itself nowhere — the game promising something it does not show.
+    /// Nothing ever read ranks 6-10: `topHighScores` is called with 5 by the
+    /// title screen and 1 by the HUD. One threshold instead of two.
+    private let maxHighScores = 5
 
     /// Bumping the app's version starts the table over.
     ///
@@ -53,25 +62,18 @@ final class ScoreManager {
     /// 10,953, so first place is reachable rather than a wall, and every entry
     /// sits well under the ~39,000 a perfect ten-wave run is worth.
     ///
-    /// All ten slots are filled, not just the five the title screen shows.
-    /// `isHighScore` is true whenever the table has a free slot, so seeding
-    /// only the visible five left five empty ones and the first five games of a
-    /// new install were prompted for a name whatever they scored — the thing
-    /// these numbers exist to prevent. The tail is never displayed; it is there
-    /// to close that door, and 750 is the real bar for being asked to sign.
+    /// Every slot filled. `isHighScore` is true whenever the table has a free
+    /// one, so a part-seeded table hands the first few games of a new install a
+    /// name prompt whatever they scored — the thing these numbers exist to
+    /// prevent. 1000 is the bar, and it is the same bar for being asked to sign
+    /// and for appearing on the title screen.
     private func seedDefaultScores() {
         highScores = [
-            HighScoreEntry(initials: "ZACK",    score: 8000, level: 6),
-            HighScoreEntry(initials: "BEN",     score: 5000, level: 6),
-            HighScoreEntry(initials: "STEVE",   score: 3000, level: 5),
-            HighScoreEntry(initials: "WOZ",     score: 2000, level: 4),
-            HighScoreEntry(initials: "NOLAN",   score: 1000, level: 3),
-            // Below the fold. Arcade forebears, in the spirit of the two above.
-            HighScoreEntry(initials: "TOMO",    score:  950, level: 3),
-            HighScoreEntry(initials: "TORU",    score:  900, level: 3),
-            HighScoreEntry(initials: "DONA",    score:  850, level: 2),
-            HighScoreEntry(initials: "RUSSELL", score:  800, level: 2),
-            HighScoreEntry(initials: "ALCORN",  score:  750, level: 2),
+            HighScoreEntry(initials: "ZACK",  score: 8000, level: 6),
+            HighScoreEntry(initials: "BEN",   score: 5000, level: 6),
+            HighScoreEntry(initials: "STEVE", score: 3000, level: 5),
+            HighScoreEntry(initials: "WOZ",   score: 2000, level: 4),
+            HighScoreEntry(initials: "NOLAN", score: 1000, level: 3),
         ]
     }
 
