@@ -156,6 +156,30 @@ for track in $(
     echo "✗ Music on disk but not in the project: $track.m4a"
     echo "  (run: xcodegen generate)"; exit 1; }
 done
+# The README's download link must name a DMG that is actually in the repo.
+# It has been wrong twice, both times because the version was bumped in the
+# README before the DMG landed — and a 404 on the download button is the one
+# broken thing every visitor sees.
+python3 - <<'LINKCHECK' || exit 1
+import pathlib, re, sys
+readme = pathlib.Path("README.md").read_text()
+m = re.search(r"raw/main/([A-Za-z0-9._-]+\.dmg)", readme)
+if not m:
+    print("✗ README has no download link"); sys.exit(1)
+named = m.group(1)
+if not pathlib.Path(named).is_file():
+    have = sorted(p.name for p in pathlib.Path(".").glob("*.dmg"))
+    print(f"✗ README links {named}, which is not in the repo.")
+    print(f"  present: {', '.join(have) if have else 'no DMG at all'}")
+    print("  The link and the version line move when the DMG lands, not when")
+    print("  MARKETING_VERSION changes.")
+    sys.exit(1)
+# And the version line should agree with the file it points at.
+ver = re.search(r"Current release: `([0-9.]+)`", readme)
+if ver and ver.group(1) not in named:
+    print(f"✗ README says {ver.group(1)} but links {named}"); sys.exit(1)
+LINKCHECK
+
 for font in $(grep -rhoE '"[A-Za-z0-9]+-Regular"' --include="*.swift" GalacticChessInvaders \
                 | tr -d '"' | sort -u); do
   [ -f "$RES/$font.ttf" ] || { echo "✗ Font referenced but not bundled: $font.ttf"; exit 1; }
