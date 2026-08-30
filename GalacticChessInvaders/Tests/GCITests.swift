@@ -1183,6 +1183,52 @@ final class MateDetectionTests: XCTestCase {
 }
 
 @MainActor
+final class ReturnToTitleTests: XCTestCase {
+
+    private func scene() -> GameScene {
+        let scene = GameScene.shared
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+        view.presentScene(scene)
+        return scene
+    }
+
+    override func tearDown() async throws {
+        let scene = GameScene.shared
+        if !(scene.stateMachine.currentState is TitleState) {
+            _ = scene.stateMachine.enter(TitleState.self)
+        }
+    }
+
+    /// From a run, the state machine does the work.
+    func testReturningFromAGameReachesTheTitle() {
+        let scene = self.scene()
+        if !(scene.stateMachine.currentState is TitleState) {
+            XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
+        }
+        XCTAssertTrue(scene.stateMachine.enter(PlayingState.self))
+        scene.resetToTitle()
+        XCTAssertTrue(scene.stateMachine.currentState is TitleState)
+        XCTAssertTrue(scene.hasTitleScreenForTesting, "no title screen drawn")
+    }
+
+    /// And from the title itself, where it cannot: `TitleState` permits only
+    /// `PlayingState` after it, so `enter` returns false and `didEnter` never
+    /// runs — while the teardown has already removed the title screen. That is
+    /// reachable from any panel opened on the title, by menu or by `X`.
+    func testReturningFromTheTitleRebuildsItRatherThanEmptying() {
+        let scene = self.scene()
+        if !(scene.stateMachine.currentState is TitleState) {
+            XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
+        }
+        XCTAssertFalse(scene.stateMachine.enter(TitleState.self),
+                       "the machine should refuse to re-enter — this is the trap")
+        scene.resetToTitle()
+        XCTAssertTrue(scene.stateMachine.currentState is TitleState)
+        XCTAssertTrue(scene.hasTitleScreenForTesting, "left an empty starfield")
+    }
+}
+
+@MainActor
 final class TestModeGateTests: XCTestCase {
 
     /// A must reach the ship, not the Auto Mode toggle. It was taken off

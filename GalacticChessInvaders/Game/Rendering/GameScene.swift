@@ -28,6 +28,11 @@ class GameScene: SKScene {
     /// would leave the sky at ordinary speed for the rest of the run.
     private var starfieldRate: CGFloat = 1
     private var titleOverlay: TitleOverlayNode?
+    /// Whether the title screen is actually on screen. For the test that pins
+    /// the return path: the failure it guards against left the state correct
+    /// and the screen empty, so asserting on the state alone would have missed
+    /// it entirely.
+    var hasTitleScreenForTesting: Bool { titleOverlay?.parent != nil }
     private var boardNode: BoardNode?
     private var settingsNode: SettingsNode?
     /// The diagnostics sidebar can be opened and closed by its own chevron,
@@ -938,6 +943,18 @@ class GameScene: SKScene {
             over: MusicLibrary.levelFade, gap: MusicLibrary.levelGap)
     }
 
+    /// Everything arriving at the title screen has to do, wherever it came
+    /// from. `TitleState.didEnter` calls this; so does `resetToTitle` when the
+    /// machine is already in `TitleState` and will not re-enter it.
+    func presentTitle() {
+        showTitleScreen()
+        // The one place the intro variant is decided. Everything inside the run
+        // that follows — Settings, Info — reads what this settles on.
+        MusicVariants.rollIntro()
+        AudioManager.shared.playMusic(from: MusicVariants.introPool)
+        DiagnosticsLog.shared.log(.startup, "Title screen")
+    }
+
     func resetToTitle() {
         howToPlayNode?.removeFromParent(); howToPlayNode = nil
         settingsNode?.removeFromParent(); settingsNode = nil
@@ -958,7 +975,17 @@ class GameScene: SKScene {
         reportedGhosts.removeAll()
         ghostFirstSeen.removeAll()
         DiagnosticsLog.shared.log(.restart, "")
-        stateMachine.enter(TitleState.self)
+
+        // `GKStateMachine` will not re-enter the state it is already in, and
+        // `TitleState` only permits `PlayingState` after it — so from a panel
+        // opened *on* the title screen this call returned false, `didEnter`
+        // never ran, and the teardown above had already taken the title screen
+        // and the music away. An empty starfield, which is what it looked like.
+        if stateMachine.currentState is TitleState {
+            presentTitle()
+        } else {
+            stateMachine.enter(TitleState.self)
+        }
     }
 
     /// Where the `P` test key is up to in `PowerUp.allCases`. Reset with the
