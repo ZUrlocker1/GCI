@@ -10,9 +10,8 @@ its own, with all five power-ups, a settings screen, its own soundtrack and full
 arcade audio. Signed, notarized and shipping as a DMG.
 
 What is left is playtest adjustment: a balance pass from people who did not build
-it, and an Instruments run before the next release. Two small things are deferred
-rather than done — the hyperspace jump between waves, and a level-clear cue that
-falls where it should rise. Neither blocks anything.
+it, and an Instruments run before the next release. One loose end, which blocks
+nothing — the level-clear cue falls where it should rise.
 
 The raiders are done and the rest of §6 is **cut** — no Escort, Flagship,
 Kamikaze or Llama.
@@ -21,23 +20,23 @@ Full detail in **[Roadmap — what is left](#roadmap--what-is-left)** near the e
 of this file. §20's phase numbers were a plan written before any of this
 existed; they are a checklist, not a running order.
 
-| Phase | Title                                       | Status                                                 |
-|-------|---------------------------------------------|--------------------------------------------------------|
-| 0     | Skeleton — app runs, title screen, music    | ✅                                                      |
-| 1     | Chess logic                                 | ✅                                                      |
-| 2.1   | Playfield: chess functional                 | ✅                                                      |
-| 2.2   | Playfield: Recharged visual treatment       | ✅                                                      |
-| 3.1   | Arcade layer: fleet movement                | ✅                                                      |
-| 3.2   | Arcade layer: shooting & collision          | ✅                                                      |
-| 3.3   | Arcade layer: damage states & juice         | ✅                                                      |
-| 4     | Basic sound effects                         | ✅                                                      |
-| 5     | Background music + settings                 | ✅                                                      |
-| 6.1   | Raiders: scout & basic escort               | ✅ — Scout built, Escort cut                            |
-| 6.2   | Raiders: flagship, variants, special scouts | ✅ — special scouts built, Flagship and variants cut    |
-| 7.1   | Level escalation: chess AI                  | ✅ — built with the level ladder                        |
-| 7.2   | Level escalation: arcade mechanics          | ✅                                                      |
-| 8     | Visual polish                               | 🟡 — score pops, banners, high scores, end screens done |
-| 9     | Mac hardening & release                     | 🟡 — signed, notarized, shipping as a DMG               |
+| Phase | Title                                       | Status                                              |
+|-------|---------------------------------------------|-----------------------------------------------------|
+| 0     | Skeleton — app runs, title screen, music    | ✅                                                   |
+| 1     | Chess logic                                 | ✅                                                   |
+| 2.1   | Playfield: chess functional                 | ✅                                                   |
+| 2.2   | Playfield: Recharged visual treatment       | ✅                                                   |
+| 3.1   | Arcade layer: fleet movement                | ✅                                                   |
+| 3.2   | Arcade layer: shooting & collision          | ✅                                                   |
+| 3.3   | Arcade layer: damage states & juice         | ✅                                                   |
+| 4     | Basic sound effects                         | ✅                                                   |
+| 5     | Background music + settings                 | ✅                                                   |
+| 6.1   | Raiders: scout & basic escort               | ✅ — Scout built, Escort cut                         |
+| 6.2   | Raiders: flagship, variants, special scouts | ✅ — special scouts built, Flagship and variants cut |
+| 7.1   | Level escalation: chess AI                  | ✅ — built with the level ladder                     |
+| 7.2   | Level escalation: arcade mechanics          | ✅                                                   |
+| 8     | Visual polish                               | ✅                                                   |
+| 9     | Mac hardening & release                     | 🟡 — signed, notarized, shipping as a DMG            |
 
 ---
 
@@ -559,14 +558,10 @@ Pass: destroying pieces feels satisfying, performance unchanged from 3.2.
       side signal against its mid. Three carry real width and keep it — the nuke
       shockwave most of all, which is §13.2's "resonant wave that sweeps across
       the stereo field" delivered rather than a coincidence
-**8 keys still name files that are not bundled, and that is the finished state
-rather than a gap.** They are for things the game does not do: escorts and the
-flagship, which are cut; the level banner stingers, which are a decision not to
-have (see the Roadmap); `ambientSpaceLoop`, a 28MB stem never worth trimming;
-and three crackle variants and `fleetRankDrop` that were never wired up. None of
-the eight is played by anything, and `typecheck.sh` fails if that stops being
-true — a sound the code calls for and cannot find would otherwise go silent
-without a word.
+**8 keys name files that are not bundled — the finished state, not a gap.** All
+are for things the game does not do: cut raiders, the banner stingers, a 28MB
+ambient stem, and variants never wired up. None is played by anything, and
+`typecheck.sh` fails if that changes.
 
 ## Phase 5 — Music ✅
 
@@ -880,58 +875,44 @@ downers for the one ending that has not earned music. What is left:
 - [ ] **Music ducking** under priority SFX. `AudioManager.duckMusic` exists and
       nothing calls it
 
-**Level banners get no sound — not building it.** `mechanicBannerTier1/2/3`
-remain named and unbundled. A banner is a two-second fade in and straight back
-out, already carried by the hand-over from one wave's track to the next; a third
-theme in that gap would be introduced and removed before it registered.
+**Level banners get no sound — not building it.** The hand-over from one wave's
+track to the next already fills that gap; a third theme would be introduced and
+removed before it registered.
 
 ### Cut from §6 and §7 — not building these
 
-Decided rather than deferred. The raider system has enough in it: five carriers,
-five power-ups, five flight paths and a roster that changes every level.
+Decided, not deferred. The raider system has enough in it: five carriers, five
+power-ups, five flight paths, a roster that changes every level.
 
-- **Galaxian Escort, Flagship, Kamikaze, Paired and Looping Escorts** (§6.1,
-  §6.3). The whole dive family, which would have needed a new motion model —
-  everything built crosses the screen horizontally. What they were for, a raider
-  that comes *at* the player rather than past them, the Bomb Scout's swoop
-  already does
-- **King Protection Mode** (§6.3) — raiders plugging an open lane to the black
-  king. The best unbuilt idea in the doc, and it goes with the dive family it was
-  written for
-- **The Llama** (§6.4). The Mutant Camel flies as the Nuke carrier, so the Minter
-  homage is paid; a second tribute ship on the score tally would be repeating a
-  joke that has already landed. `ship-llama` stays in the atlas
-- **Fleet rush** (§7.2) — one random piece jumping two ranks after each descent.
-  Cut long before the others, for its own reasons, recorded under deviations
-- `RaiderController`'s pool, cap, clock, roster and flight-path model would have
-  carried all of it. It is a seam that will not now be used, which is the right
-  outcome to record rather than quietly leave open
+| Cut                                                                 | Why                                                                                                          |
+|---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| Escort, Flagship, Kamikaze, Paired and Looping Escorts (§6.1, §6.3) | The dive family needs a motion model nothing else uses; the Bomb Scout's swoop already comes *at* the player |
+| King Protection Mode (§6.3)                                         | The best unbuilt idea in the doc, and it belongs to the dive family                                          |
+| The Llama (§6.4)                                                    | The Mutant Camel already pays the Minter homage; twice is repeating a joke                                   |
+| Fleet rush (§7.2)                                                   | Cut earlier and for its own reasons — see Deviations                                                         |
 
-### Visual polish (§20 Phase 8)
+`RaiderController`'s pool, cap, clock, roster and flight-path model would have
+carried all of it: a seam that will not now be used.
 
-Much of this phase landed early — score pops, banner animations, the high score
-table, the game over and level clear screens, per-piece destruction sounds. What
-is genuinely outstanding:
+### Visual polish (§20 Phase 8) ✅
 
-- **Wireframe debris — not building it.** §12.4's fourth parallax layer. The
-  background has enough in it now: three star tiers, a per-level haze and a
-  cycling title sky. A layer of geometry drifting in front of the board would
-  compete with the pieces, which are the thing that has to be read. §12.4 is
-  settled at three star tiers plus the nebula
+Score pops, banner animations, the high score table, the game over and level
+clear screens all landed early.
+
 - [x] **Background evolution per level** (§12.5) — `BackdropNode`, shipped 0.3.
       One additive sprite behind the starfield and outside `bloomNode`, keyed to
       each level's mechanic. Blitz also runs the starfield 1.35x, multiplied
       into the slow-motion scale rather than replacing it. See **Nebula
       palette** below
-- **8-frame explosion sprite sheets — not building them.** The pooled particle
-  bursts, tinted per piece, read well enough that sprite sheets would be work
-  for no visible gain
-- [ ] **Hyperspace jump on level clear.** Deferred, not cut
-- **Attract mode — not building it.** §14.2's 5-slide cycle is a coin-op
-  convention: a cabinet nobody is standing at has to sell itself to the room. An
-  app someone chose to launch is already past that, and a window that starts
-  playing to itself is just odd. The title screen does the job instead — a haze
-  cycling through the palette and a raider crossing every 25–35 seconds
+
+Not building, all decided rather than deferred:
+
+| Cut                            | Why                                                                                                                                         |
+|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| Wireframe debris (§12.4)       | Three star tiers and a per-level haze are enough; a fourth layer competes with the pieces                                                   |
+| 8-frame explosion sheets       | The pooled particle bursts read well enough                                                                                                 |
+| Hyperspace jump on level clear | The wave break already carries a banner, a bonus, the reveal hold and a track hand-over                                                     |
+| Attract mode (§14.2)           | A coin-op convention. An app someone launched is past needing to sell itself; the title screen's cycling haze and passing raider do the job |
 
 ### Nebula palette (§12.5)
 
