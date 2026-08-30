@@ -142,8 +142,10 @@ final class HowToPlayNode: SKNode {
         let testDim = Self.cyan.withAlphaComponent(0.55)
         let testEm: CGFloat = 18
         heading("TEST MODE", testDim, x: x, y: 155)
+        // 4pt above the pixel caps' baseline: the two fonts do not share one,
+        // and the system glyph sat low against them.
         addChild(commandGlyph(size: testEm, color: testDim,
-                              at: CGPoint(x: x + 11 * testEm, y: 155)))
+                              at: CGPoint(x: x + 11 * testEm, y: 155 + 4)))
         let testKey = label("T", testEm, testDim, .left)
         testKey.position = CGPoint(x: x + 12 * testEm, y: 155)
         addChild(testKey)
