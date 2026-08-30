@@ -60,6 +60,19 @@ existed; they are a checklist, not a running order.
       belongs in the initials — on the title it is an ordinary key and starts a
       game. Anything that is not a Y goes back untouched. Command-Q remains the
       system's Quit and closes the app
+- [x] **A standard Mac menu bar.** SwiftUI's defaults hand a game an Edit menu
+      of Undo, Cut, Copy and Paste, none of which does anything here; those
+      groups are replaced with nothing. A Game menu carries Settings (`⌘,`),
+      How To Play (`⌘I`) and Back to Title (`⌘⇧T`), and New Game takes `⌘N`.
+      Every shortcut is Command-modified — a menu key equivalent is consumed
+      before the key reaches the scene, so a bare letter would steal it
+- [x] **`⌘Q` asks before discarding a run.** `applicationShouldTerminate` puts
+      up the standard alert while a wave is being played, and quits without a
+      word from the title or the game over menu, where nothing is at stake
+- [x] **The frame delta is clamped to 0.2s.** SpriteKit stops calling `update`
+      while the window is occluded, so returning from a Command-Tab handed the
+      first frame however long the app had been away — straight into fleet
+      movement and the turn clock
 - [x] **`⌘T` arms the test keys**, and they do nothing until it does. `A`, `P`,
       `R` and `V` alter a running game — `V` skips a wave outright — and one of
       them had cost a shipped feature: `A` was the Auto Mode toggle, so §8.1's
@@ -575,6 +588,19 @@ GCI. `Pre-Solstice` holds the title screen and both panels — Settings and How 
 Play — so it is what the game sounds like when you are not in it. The ten waves
 each have their own.
 
+Endings have their own music too — six stingers chosen by how far the player got
+(**Game over music**), and four bass downers for the one ending that has not
+earned any. Two cues that were wrong rather than missing:
+
+- [x] **The level clear cue waits for the explosion.** It fired in the same
+      frame as the king's destruction and lost to it by 9dB — audible on its
+      own, inaudible in place. It now waits out whatever destruction sound is
+      still sounding, which is nothing at all for a checkmate win
+- [x] **Music ducking is gone rather than wired up.** `duckMusic` was never
+      called, and what it does — pull the music down under effects — is the
+      wrong direction for a game whose mix problem was explosions drowning the
+      track. That was fixed by capping the destruction family at three voices
+
 Bundled as AAC at **64k/32kHz**, re-encoded from Zudio's 128k/44.1k exports with
 the embedded cover art stripped — 22.3MB across twenty tracks, against roughly
 50MB as exported.
@@ -867,22 +893,6 @@ to carry it, which is now cut.
 
 Grouped by what it is rather than by §20's phase numbers, and ordered within
 each group by what it would cost to *not* have at ship.
-
-### Audio leftovers (§20 Phase 5)
-
-The screen and the soundtrack both shipped — see Phase 5. Endings did too: six
-stingers chosen by how far the player got (**Game over music**), and four bass
-downers for the one ending that has not earned music. What is left:
-
-- [ ] **Level clear fanfare.** `levelClear` plays a *descending* arp, which is
-      the shape of a deny cue. Music runs on into the next wave, so this is a
-      wrong cue rather than a missing one
-- [ ] **Music ducking** under priority SFX. `AudioManager.duckMusic` exists and
-      nothing calls it
-
-**Level banners get no sound — not building it.** The hand-over from one wave's
-track to the next already fills that gap; a third theme would be introduced and
-removed before it registered.
 
 ### Cut from §6 and §7 — not building these
 

@@ -266,6 +266,10 @@ class GameScene: SKScene {
     /// Time between detecting mate and showing the game-over screen. The mating
     /// path takes ~1.5s to draw and pulse; the remainder is stillness so the
     /// player can take in what happened before a menu replaces it.
+    /// The largest step the update loop will take, however long the app spent
+    /// in the background.
+    private static let maxFrameDelta: TimeInterval = 0.2
+
     private static let gameEndRevealDelay: TimeInterval = 2.5
     /// Exposed so a test can pin the relationship between this hold and the
     /// loss sting: the hold is the shorter of the two, which is the whole
@@ -1621,7 +1625,21 @@ class GameScene: SKScene {
 
         ScoreManager.shared.addPoints(bonus, source: label)
         refreshHUD()
-        AudioManager.shared.play(.levelClear)
+        // After the bang, not under it. Every route into this function except
+        // checkmate has just blown the king up, and the cue was firing in the
+        // same frame as that explosion and losing to it by 9dB. Zero wait when
+        // nothing is sounding, so a checkmate win still gets it immediately.
+        //
+        // `asyncAfter` rather than an `SKAction`: the reveal can pause the
+        // scene, and a paused node's actions do not advance.
+        let bang = AudioManager.shared.destructionRemaining
+        if bang > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + bang) {
+                AudioManager.shared.play(.levelClear)
+            }
+        } else {
+            AudioManager.shared.play(.levelClear)
+        }
         logWave("cleared — \(label)")
 
         scheduleAfterReveal { [weak self] in
@@ -3938,7 +3956,13 @@ class GameScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         stateMachine.update(deltaTime: currentTime)
 
-        let realDt = lastUpdateTime > 0 ? currentTime - lastUpdateTime : 0
+        // Clamped. SpriteKit stops calling this while the window is occluded, so
+        // coming back from a Command-Tab hands the first frame however many
+        // seconds were spent elsewhere — and that number goes straight into
+        // fleet movement and the turn clock. A fifth of a second is several
+        // frames of catch-up and no more.
+        let elapsed = lastUpdateTime > 0 ? currentTime - lastUpdateTime : 0
+        let realDt = min(elapsed, Self.maxFrameDelta)
         lastUpdateTime = currentTime
 
         // §13.2's Nuke runs in slow motion. The countdown burns *real* time —
