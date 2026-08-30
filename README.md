@@ -35,11 +35,11 @@ attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 **What's new in v0.6:**
 
-- **A / D steer the ship** again, alongside the arrow keys.
-- **A proper Mac menu bar**, and Command-Q now asks before throwing away a game
-  in progress.
-- The developer test keys are behind **Command-T** and do nothing until you ask
-  for them.
+- **Standard Mac menus** as well as the hotkeys, and ⌘Q now asks before
+  discarding a game in progress.
+- **A / D steer the ship**, alongside the arrow keys.
+- **Test Mode is ⌘T**, with the same A, P, R and V options behind it.
+- Bug fixes.
 
 **What's new in v0.5:**
 
