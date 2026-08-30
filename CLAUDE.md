@@ -156,7 +156,7 @@ GCI/
 
 ### Player Ship
 
-- Arrow keys / WASD: move. Space: fire.
+- Arrow keys or A / D: move. Space: fire.
 - Laser cap: 2 (normal), +1 per green Raider Scout shot down (stacks, hard cap 6),
   resets each level. Promotion grants a queen and nothing else — see
   `docs/implementation.md` §13 for why the arcade half of that reward moved

@@ -60,6 +60,11 @@ existed; they are a checklist, not a running order.
       belongs in the initials — on the title it is an ordinary key and starts a
       game. Anything that is not a Y goes back untouched. Command-Q remains the
       system's Quit and closes the app
+- [x] **`⌘T` arms the test keys**, and they do nothing until it does. `A`, `P`,
+      `R` and `V` alter a running game — `V` skips a wave outright — and one of
+      them had cost a shipped feature: `A` was the Auto Mode toggle, so §8.1's
+      A / D ship movement was dropped to make room. Behind the gate the letters
+      move the ship again. Off at launch, per session. `L` is not gated
 - [x] Window close quits; `X` restarts and clears the log (works from play, pause
       or How To Play). It deliberately leaves the high score table alone
 - [x] `CFBundleIdentifier` / `CFBundleExecutable` in Info.plist — without them the
@@ -1033,7 +1038,7 @@ pop, shatter and raider is pooled, so gameplay allocates nothing.
 
 ## Tests
 
-`GalacticChessInvaders/Tests/GCITests.swift` — 374 XCTest cases covering the
+`GalacticChessInvaders/Tests/GCITests.swift` — 375 XCTest cases covering the
 chess model, fleet, raiders, power-ups, scoring, audio assets and layout
 geometry. **Run them with `⌘U` in Xcode**; the whole suite takes about a minute,
 most of it the perft.

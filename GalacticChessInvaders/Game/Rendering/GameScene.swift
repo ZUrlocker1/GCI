@@ -2306,6 +2306,13 @@ class GameScene: SKScene {
 
     // MARK: - Quit
 
+    /// The A / P / R / V keys do nothing until this is on. Off at launch and
+    /// per session, deliberately: they alter a running game — `V` skips a wave
+    /// outright — and one of them cost a shipped feature. `A` was the Auto Mode
+    /// toggle, so §8.1's A / D ship movement had to be dropped to make room.
+    /// Behind a gate, the letters go back to moving the ship.
+    private var testMode = false
+
     private var quitPrompt: SKNode?
     /// Whether the scene was already held when the prompt went up. Settings and
     /// How To Play pause it themselves, so answering "no" from inside one has to
@@ -4209,6 +4216,15 @@ class GameScene: SKScene {
             return
         }
 
+        // Command-T arms the test keys. Command-modified so it cannot collide
+        // with anything the game reads, and per session so nobody leaves it on.
+        if key == "t", event.modifierFlags.contains(.command) {
+            testMode.toggle()
+            flashGutterNotice(testMode ? "TEST MODE ON" : "TEST MODE OFF")
+            DiagnosticsLog.shared.log(.info, "test mode \(testMode ? "on" : "off")")
+            return
+        }
+
         // Two different quits, and they should stay different. Command-Q closes
         // the application, the way it does in every other Mac app; a bare Q
         // leaves the run and goes back to the title.
@@ -4310,33 +4326,34 @@ class GameScene: SKScene {
             return
         }
 
-        // Hidden Auto Mode: A plays White automatically on a very short beat.
-        if stateMachine.currentState is PlayingState,
+        // Auto Mode: A plays White automatically on a very short beat. Behind
+        // the gate, so a bare A still moves the ship.
+        if testMode, stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "a" {
             toggleAutoMode()
             return
         }
 
-        // Hidden: P grants the next power-up outright, for testing.
+        // P grants the next power-up outright, for testing.
         //
         // This claims `P` from §5's pause binding, which is now Escape alone —
         // note the handler order, since this runs *ahead* of `InputHandler` and
         // would shadow the pause key silently if that binding were still there.
-        if stateMachine.currentState is PlayingState,
+        if testMode, stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "p" {
             grantNextPowerUp()
             return
         }
 
-        // Hidden: R sends the level's next raider in now, for testing.
-        if stateMachine.currentState is PlayingState,
+        // R sends the level's next raider in now, for testing.
+        if testMode, stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "r" {
             summonRaider()
             return
         }
 
-        // Hidden: V skips to the next level, mid-game, with no fanfare.
-        if stateMachine.currentState is PlayingState,
+        // V skips to the next level, mid-game, with no fanfare.
+        if testMode, stateMachine.currentState is PlayingState,
            event.charactersIgnoringModifiers?.lowercased() == "v" {
             skipLevel()
             return

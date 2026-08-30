@@ -98,7 +98,7 @@ final class HowToPlayNode: SKNode {
 
         // — CONTROLS —
         heading("CONTROLS", Self.cyan, x: x, y: 408)
-        chip("← →",   "Move your ship",                    x: x, y: 388)
+        chip("← →",   "Arrows or A / D move the ship",     x: x, y: 388)
         chip("SPACE",  "Fire laser",                        x: x, y: 344)
         chip("CLICK",  "Pick piece, then new square",        x: x, y: 300)
         // Two keys on one row: a fifth chip would run into the HISTORY heading
@@ -133,9 +133,12 @@ final class HowToPlayNode: SKNode {
         // Deliberately plain, and last. The panel ships, so these are reachable
         // by anyone — but they are a way to look behind the game, not part of
         // playing it, and the layout should say so.
-        heading("DEBUG MODE", Self.cyan.withAlphaComponent(0.55), x: x, y: 155)
+        // "CMD-T", not "⌘T": Press Start 2P has no U+2318, so the glyph would
+        // fall back to a system font and sit smooth among the pixel letters.
+        heading("TEST MODE  CMD-T", Self.cyan.withAlphaComponent(0.55), x: x, y: 155)
         // Two short lines rather than one long one — five key/label pairs on a
-        // single row runs the width of the column and reads as a wall.
+        // single row runs the width of the column and reads as a wall. A, P, R
+        // and V do nothing until Command-T arms them; L works either way.
         //
         // Press Start 2P advances exactly one em per character, so the padding
         // after "Log" is counted rather than eyeballed: it puts `A` and `V` on
