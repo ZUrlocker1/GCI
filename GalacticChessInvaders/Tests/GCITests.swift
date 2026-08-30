@@ -2037,8 +2037,8 @@ final class HighScoreTableTests: XCTestCase {
         ScoreManager.shared.submitHighScore(initials: "TEMP")
         ScoreManager.shared.clearHighScores()
         let table = ScoreManager.shared.topHighScores(limit: 20)
-        XCTAssertEqual(table.prefix(5).map(\.initials), ["ZACK", "BEN", "STEVE", "WOZ", "NOLAN"])
-        XCTAssertEqual(table.count, 10, "every slot is seeded, or free slots let any score chart")
+        XCTAssertEqual(table.map(\.initials), ["ZACK", "BEN", "STEVE", "WOZ", "NOLAN"])
+        XCTAssertEqual(table.count, 5, "every slot is seeded, or free slots let any score chart")
         XCTAssertFalse(table.contains { $0.initials == "TEMP" }, "the played game is gone")
         XCTAssertNil(UserDefaults.standard.data(forKey: "GCI_HighScores"))
     }
@@ -2062,7 +2062,7 @@ final class HighScoreTableTests: XCTestCase {
     /// first five games of a new install a name prompt whatever they scored.
     func testABadGameIsNotOfferedTheTableOnAFreshInstall() {
         ScoreManager.shared.clearHighScores()
-        for score in [50, 405, 600, 700] {
+        for score in [50, 405, 600, 700, 999] {
             ScoreManager.shared.resetForNewGame()
             ScoreManager.shared.addPoints(score)
             XCTAssertFalse(ScoreManager.shared.isHighScore, "\(score) should not chart")
@@ -2073,11 +2073,30 @@ final class HighScoreTableTests: XCTestCase {
         XCTAssertTrue(ScoreManager.shared.isHighScore)
     }
 
+    /// The table is exactly as deep as the title screen is tall, so being asked
+    /// to enter a name and appearing on screen are the same threshold. They were
+    /// not: the prompt gated on 10th place while only five were ever drawn, so a
+    /// run in between signed for a place it could not see.
+    func testBeingAskedToSignMeansAppearingOnScreen() {
+        ScoreManager.shared.clearHighScores()
+        let shown = ScoreManager.shared.topHighScores(limit: 5)
+        XCTAssertEqual(shown.count, 5, "the screen draws five")
+
+        let lowestShown = shown.last?.score ?? 0
+        ScoreManager.shared.resetForNewGame()
+        ScoreManager.shared.addPoints(lowestShown + 1)
+        XCTAssertTrue(ScoreManager.shared.isHighScore, "beats the last visible row")
+        ScoreManager.shared.submitHighScore(initials: "NEW")
+        XCTAssertTrue(ScoreManager.shared.topHighScores(limit: 5)
+                        .contains { $0.initials == "NEW" },
+                      "signed for a place that is not on the screen")
+    }
+
     func testFullTableOnlyAcceptsAGenuineBeat() {
         ScoreManager.shared.clearHighScores()
         for i in 0..<10 {
             ScoreManager.shared.resetForNewGame()
-            ScoreManager.shared.addPoints(1000 + i * 100)
+            ScoreManager.shared.addPoints(2000 + i * 100)
             ScoreManager.shared.submitHighScore(initials: "P\(i)")
         }
         ScoreManager.shared.resetForNewGame()

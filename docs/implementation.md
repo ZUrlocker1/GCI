@@ -442,6 +442,8 @@ Each one is a mistake that is easy to make again.
   That is the level. Pinned by its own test so it stays deliberate
 - Banner limits are 16/38 characters, measured against the real font, not
   §12.11's nominal 18/22
+- The high score table is five deep, not §14.3's ten. Only five are ever drawn,
+  and storing ten meant the name prompt fired for scores that would never appear
 - Pawns take two laser hits (HP 2 → 3); one-shot pawns skipped the damage art
 - Friendly fire on your own king deflects rather than killing it
 - Destruction uses the kenney `explosionCrunch` ladder, graduated by length, in
@@ -1049,7 +1051,7 @@ pop, shatter and raider is pooled, so gameplay allocates nothing.
 
 ## Tests
 
-`GalacticChessInvaders/Tests/GCITests.swift` — 373 XCTest cases covering the
+`GalacticChessInvaders/Tests/GCITests.swift` — 374 XCTest cases covering the
 chess model, fleet, raiders, power-ups, scoring, audio assets and layout
 geometry. **Run them with `⌘U` in Xcode**; the whole suite takes about a minute,
 most of it the perft.
@@ -1135,21 +1137,29 @@ Two rules that no script can enforce:
 
 ## The seeded high score table
 
-Ten slots, of which the title screen shows five:
+Five slots, which is what the title screen shows:
 
-|           |          |            |          |            |          |          |          |             |            |
-|-----------|----------|------------|----------|------------|----------|----------|----------|-------------|------------|
-| ZACK 8000 | BEN 5000 | STEVE 3000 | WOZ 2000 | NOLAN 1000 | TOMO 950 | TORU 900 | DONA 850 | RUSSELL 800 | ALCORN 750 |
+| Rank | Name  | Score | Level |
+|------|-------|-------|-------|
+| 1    | ZACK  | 8000  | 6     |
+| 2    | BEN   | 5000  | 6     |
+| 3    | STEVE | 3000  | 5     |
+| 4    | WOZ   | 2000  | 4     |
+| 5    | NOLAN | 1000  | 3     |
 
-- Calibrated against ten recorded games, median about 1000. The visible floor
-  turns away half of them, including runs that reached Levels 7 and 8 — getting
-  deep while shooting badly should not chart
+- Calibrated against ten recorded games, median about 1000. The floor turns away
+  half of them, including runs that reached Levels 7 and 8 — getting deep while
+  shooting badly should not chart
 - The top is under the best recorded 10,953, so first place is reachable. A
   perfect ten-wave run is worth about 39,000, so the table has room to turn over
-- **All ten slots are seeded, not the five on screen.** `isHighScore` is true
-  whenever a slot is free, so seeding only the visible five meant the first five
-  games of a new install were prompted for a name whatever they scored. 750 is
-  the real bar
+- **Every slot is seeded.** `isHighScore` is true whenever one is free, so a
+  part-seeded table hands the first few games of a new install a name prompt
+  whatever they scored
+- **Being asked to sign and appearing on screen are one threshold.** They were
+  two: §14.3 stores ten and shows five, and the prompt gated on tenth place, so
+  a run scoring between the two signed for a place it could never see. Nothing
+  read ranks 6-10 — `topHighScores` is called with 5 by the title screen and 1
+  by the HUD — so the depth only ever cost that promise
 - Changing `MARKETING_VERSION` wipes the stored table on next launch, so a new
   build always shows what a new player sees
 
