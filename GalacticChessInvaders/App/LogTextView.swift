@@ -22,8 +22,37 @@ struct LogTextView: NSViewRepresentable {
     /// eye-catching, and the label alone is enough to find in a wall of green.
     private static let errorColor = NSColor.systemRed
 
+    /// Carries ⌘C and ⌘A itself.
+    ///
+    /// Key equivalents are dispatched from the menu bar, so an Edit menu is
+    /// normally what makes copy work in a text view. This app does not have one
+    /// — a game with Cut, Paste and Delete in its menu bar reads as unfinished,
+    /// and the only text anywhere is this log. Handling the two shortcuts here
+    /// keeps the behaviour and loses the menu.
+    private final class CopyableTextView: NSTextView {
+        override func performKeyEquivalent(with event: NSEvent) -> Bool {
+            guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+                  let key = event.charactersIgnoringModifiers?.lowercased()
+            else { return super.performKeyEquivalent(with: event) }
+
+            switch key {
+            case "c":
+                // Nothing selected copies the whole log, which is what someone
+                // reaching for ⌘C in a diagnostics panel almost always wants.
+                if selectedRange().length == 0 { selectAll(nil) }
+                copy(nil)
+                return true
+            case "a":
+                selectAll(nil)
+                return true
+            default:
+                return super.performKeyEquivalent(with: event)
+            }
+        }
+    }
+
     func makeNSView(context: Context) -> NSScrollView {
-        let textView = NSTextView()
+        let textView = CopyableTextView()
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = true

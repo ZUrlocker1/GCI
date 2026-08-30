@@ -21,7 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// read as short.
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let main = NSApp.mainMenu else { return }
-        for title in ["File", "View", "Window"] {
+        // Edit goes too. It only ever existed so the log panel could copy, and
+        // that view carries ⌘C and ⌘A itself now — see `LogTextView`.
+        for title in ["File", "Edit", "View", "Window"] {
             if let item = main.items.first(where: { $0.title == title }) {
                 main.removeItem(item)
             }
@@ -92,12 +94,9 @@ struct GalacticChessInvadersApp: App {
     /// silently steal it from the game.
     @CommandsBuilder
     private var gameCommands: some Commands {
-        // Undo and Find go; the pasteboard group stays. The diagnostics panel is
-        // a real NSTextView and Command-C reaches it through Edit > Copy — take
-        // that menu item away and the shortcut stops working, which is how it
-        // broke once already.
         CommandGroup(replacing: .undoRedo) { }
         CommandGroup(replacing: .textEditing) { }
+        CommandGroup(replacing: .pasteboard) { }
         CommandGroup(replacing: .newItem) { }
 
         CommandMenu("Game") {

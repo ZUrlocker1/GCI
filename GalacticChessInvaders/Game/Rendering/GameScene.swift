@@ -775,6 +775,10 @@ class GameScene: SKScene {
 
     func showHowToPlay() {
         guard howToPlayNode == nil else { return }
+        // One panel at a time. The keyboard cannot reach here with Settings
+        // open — any key closes Settings first — but the menu can, and two
+        // full-screen panels drawn over each other are unreadable.
+        if settingsNode != nil { hideSettings() }
 
         // Here rather than at each entry point. There are five ways in — the
         // INFO button, `I`, `?`, ⌘I, and the shortcut while paused — and only
@@ -858,7 +862,8 @@ class GameScene: SKScene {
     // MARK: - Settings (§20 Phase 5)
 
     func showSettings() {
-        guard settingsNode == nil, howToPlayNode == nil else { return }
+        guard settingsNode == nil else { return }
+        if howToPlayNode != nil { hideHowToPlay() }
         AudioManager.shared.play(.uiSettingsBlip)
         endLevelAnnouncement()
         removeEndBanner()
