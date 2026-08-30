@@ -2637,10 +2637,38 @@ final class MusicVariantTests: XCTestCase {
         for (original, alternate) in MusicLibrary.alternates {
             XCTAssertNotEqual(original, alternate)
             for track in [original, alternate] {
-                XCTAssertNotNil(Bundle.main.url(forResource: track, withExtension: "m4a")
-                                ?? bundle.url(forResource: track, withExtension: "m4a"),
-                                "\(track).m4a is not bundled")
+                XCTAssertNotNil(
+                    Bundle.main.url(forResource: track, withExtension: "m4a",
+                                    subdirectory: AudioManager.musicDirectory)
+                        ?? bundle.url(forResource: track, withExtension: "m4a",
+                                      subdirectory: AudioManager.musicDirectory),
+                    "\(track).m4a is not bundled")
             }
+        }
+    }
+
+    /// Every track the game can name must resolve in the bundle — the ten
+    /// waves, the intro, the alternates and the stingers.
+    ///
+    /// The others check a slice each; this one checks the set, and it is what
+    /// makes moving the files into a `music/` folder reference a safe change
+    /// rather than a hopeful one. A track that fails to resolve logs an error
+    /// and plays silence.
+    func testEveryTrackTheGameCanNameIsBundled() throws {
+        var named = Set(MusicLibrary.runStingers)
+        named.insert(MusicLibrary.winStinger)
+        named.insert(MusicLibrary.oddEndingStinger)
+        named.insert(MusicLibrary.panelTrack)
+        named.insert(MusicLibrary.fallback)
+        named.formUnion(MusicLibrary.alternates.keys)
+        named.formUnion(MusicLibrary.alternates.values)
+        for level in 1...LevelManager.finalLevel {
+            named.formUnion(MusicLibrary.pool(forLevel: level))
+        }
+        XCTAssertGreaterThanOrEqual(named.count, 20, "the set should be the whole soundtrack")
+        for track in named.sorted() {
+            XCTAssertNotNil(AudioManager.shared.duration(ofTrack: track),
+                            "\(track).m4a does not resolve in the bundle")
         }
     }
 

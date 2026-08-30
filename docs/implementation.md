@@ -1054,7 +1054,7 @@ pop, shatter and raider is pooled, so gameplay allocates nothing.
 
 ## Tests
 
-`GalacticChessInvaders/Tests/GCITests.swift` — 377 XCTest cases covering the
+`GalacticChessInvaders/Tests/GCITests.swift` — 378 XCTest cases covering the
 chess model, fleet, raiders, power-ups, scoring, audio assets and layout
 geometry. **Run them with `⌘U` in Xcode**; the whole suite takes about a minute,
 most of it the perft.

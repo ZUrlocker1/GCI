@@ -53,7 +53,7 @@ GCI/
 │   └── gci-game-design.md           ← full design document
 ├── assets/
 │   ├── cut-sprites/                 ← artwork for things that were cut
-│   └── music/                       ← MIDI and audio files
+│   └── music/zudio-sources/         ← what each track was generated from
 ├── mockups/                         ← screen mockup JPGs
 └── GalacticChessInvaders/           ← Swift source root
     ├── App/

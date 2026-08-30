@@ -22,7 +22,12 @@ targets:
           # survive; SoundKey resolves paths like "sfx/kenney-digital/x.caf",
           # and Xcode's default resource handling would flatten them.
           - Resources/sfx/**
+          # Same again for the music, so the twenty tracks sit in one folder
+          # rather than loose beside the icon and the font.
+          - Resources/music/**
       - path: GalacticChessInvaders/Resources/sfx
+        type: folder
+      - path: GalacticChessInvaders/Resources/music
         type: folder
     settings:
       base:

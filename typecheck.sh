@@ -146,16 +146,19 @@ for track in $(
       grep -v '^[[:space:]]*//' GalacticChessInvaders/Game/Audio/MusicLibrary.swift \
         | grep -hoE '"[A-Za-z0-9][A-Za-z0-9 .-]*"' | tr -d '"'
     } | sort -u); do
-  [ -f "$RES/$track.m4a" ] || { echo "✗ Music referenced but not bundled: $track.m4a"; exit 1; }
-  # On disk is not the same as in the app. `sfx/` is a folder reference, so a
-  # new sound is picked up automatically, but the tracks sit at the Resources
-  # root as individual file references — a new one is invisible to the build
-  # until `xcodegen generate` runs. Two alternates shipped that way: present on
-  # disk, absent from the bundle, and every check here passed.
-  grep -q "$track.m4a" GalacticChessInvaders.xcodeproj/project.pbxproj || {
-    echo "✗ Music on disk but not in the project: $track.m4a"
-    echo "  (run: xcodegen generate)"; exit 1; }
+  [ -f "$RES/music/$track.m4a" ] || { echo "✗ Music referenced but not bundled: music/$track.m4a"; exit 1; }
 done
+
+# The music is a folder reference now, like sfx, so a new track is bundled the
+# moment it is on disk — which is why there is no per-file project check here
+# any more. Two alternates once shipped present on disk and absent from the
+# bundle, because each track was an individual file reference and nobody had
+# run xcodegen. What is worth checking is that the folder reference itself is
+# still in place; without it the tracks silently stop being bundled at all.
+grep -q "Resources/music" GalacticChessInvaders.xcodeproj/project.pbxproj || {
+  echo "✗ Resources/music is not in the Xcode project."
+  echo "  It should be a folder reference — see project.yml. (run: xcodegen generate)"
+  exit 1; }
 # The README's download link must name a DMG that is actually in the repo.
 # It has been wrong twice, both times because the version was bumped in the
 # README before the DMG landed — and a 404 on the download button is the one
