@@ -780,8 +780,8 @@ turn, so the board pulses together; a raider ignores that entirely.
   outline, which is right for pieces standing on squares; a ship passing in
   front of them has to occlude them or it reads as a decal
 - `RaiderController` is the architecture the rest of 6.x hangs off — pool, cap
-  and clock. §6.1's separate `Raiders.spriteatlas` is not built: the sprites are
-  already in `GCI.spriteatlas`, and a second atlas costs a texture binding for
+  and clock. §6.1's separate `Raiders.spriteatlas` is not built: the sprites sit
+  with the rest in `Resources/Sprites`, and a second atlas costs a texture binding for
   nothing
 
 Hidden `R` sends the next raider in on demand — see Phase 2.1's dev aids.

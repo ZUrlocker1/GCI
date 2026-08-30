@@ -37,7 +37,7 @@ xcodegen generate
 ## Manual font install (if setup.sh can't reach the network)
 
 1. Download **PressStart2P-Regular.ttf** from https://fonts.google.com/specimen/Press+Start+2P
-2. Place it at `assets/PressStart2P-Regular.ttf`
+2. Place it at `GalacticChessInvaders/Resources/PressStart2P-Regular.ttf`
 3. Run `xcodegen generate` to add it to the bundle
 
 The app registers the font programmatically at launch (`GalacticChessInvadersApp.swift`),

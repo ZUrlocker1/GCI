@@ -52,7 +52,7 @@ GCI/
 ├── docs/
 │   └── gci-game-design.md           ← full design document
 ├── assets/
-│   ├── GCI.spriteatlas/             ← all piece + ship sprites (neon vector PNGs)
+│   ├── cut-sprites/                 ← artwork for things that were cut
 │   └── music/                       ← MIDI and audio files
 ├── mockups/                         ← screen mockup JPGs
 └── GalacticChessInvaders/           ← Swift source root
@@ -114,7 +114,9 @@ GCI/
 - **Single SKEffectNode** parent for all bloom content. `shouldRasterize` is
   **off**: the subtree changes every frame, so the cache is invalidated before it
   is ever read and only costs a retained buffer
-- **Texture atlases** — use `GCI.spriteatlas` for all piece/ship sprites
+- **Sprites** are flat PNGs in `Resources/Sprites`, loaded by
+  `SKTexture(imageNamed:)`. There is no atlas: `GCI.spriteatlas` was never
+  bundled and its images were duplicates of these
 - **Delta-time movement** — all positions updated via `dt` parameter in `update(_:)`
 - **Never** mutate `node.position` in `update()` — use `SKAction` for all animation
 - **Default texture filtering** (linear, not `.nearest`) — sprites are smooth vector art, not pixel art
@@ -178,7 +180,8 @@ GCI/
 
 ## Sprite Atlas Reference
 
-All sprites in `assets/GCI.spriteatlas/`. Naming: `chess-[w/b]-[piece][-d1/-d2].png`
+All sprites in `GalacticChessInvaders/Resources/Sprites/`. Naming:
+`chess-[w/b]-[piece][-d1/-d2].png`
 
 | Piece | Full HP | Chipped | Cracked | Size (@2x) |
 |---|---|---|---|---|

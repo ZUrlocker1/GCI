@@ -38,7 +38,7 @@ fi
 # bundled compiles cleanly and fails at run time as SpriteKit's missing-texture
 # placeholder — a big grey X on screen, with nothing in the log. That is exactly
 # how the camel's two walk frames shipped broken: they were written into
-# assets/GCI.spriteatlas, and the app loads from Resources/Sprites.
+# Resources/Sprites, which is the only place sprites live.
 SPRITES=GalacticChessInvaders/Resources/Sprites
 if [ -d "$SPRITES" ]; then
   MISSING_ART=""
