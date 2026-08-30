@@ -24,6 +24,11 @@ final class AudioManager {
     /// rather than across 120 cases. The ceiling matters because a few keys are
     /// authored at 1.0 and would otherwise punch through the track.
     static let musicVolume: Float = 0.75
+    /// Bundled as a folder reference, like `sfx`, so the twenty tracks are not
+    /// loose in the bundle root beside the icon and the font. A folder
+    /// reference keeps the directory, so every lookup names it.
+    static let musicDirectory = "music"
+
     private static let sfxGain: Float = 0.82
     private static let sfxCeiling: Float = 0.68
 
@@ -100,7 +105,8 @@ final class AudioManager {
     /// How long a bundled track runs, without starting it. Used to hand the
     /// end-of-run stinger back to the intro when it finishes.
     func duration(ofTrack name: String) -> TimeInterval? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "m4a"),
+        guard let url = Bundle.main.url(forResource: name, withExtension: "m4a",
+                                        subdirectory: Self.musicDirectory),
               let probe = try? AVAudioPlayer(contentsOf: url) else { return nil }
         return probe.duration
     }
@@ -281,7 +287,8 @@ final class AudioManager {
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume,
                    startAt: TimeInterval = 0, fadeIn: TimeInterval = 0,
                    loops: Bool = true) {
-        guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a") else {
+        guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a",
+                                        subdirectory: Self.musicDirectory) else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")
             return
         }

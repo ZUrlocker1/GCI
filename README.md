@@ -45,7 +45,7 @@ attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 - **Nine more tracks**, again from [Zudio](https://www.mzurlocker.com/zudio),
   including music for the end of a game.
-- **A built-in test harness** — 377 tests covering the chess rules, the fleet,
+- **A built-in test harness** — 378 tests covering the chess rules, the fleet,
   scoring and the audio, run from Xcode with `⌘U`.
 
 **What's new in v0.4:**
