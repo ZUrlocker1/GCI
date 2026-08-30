@@ -58,7 +58,7 @@ fi
 
 # ── 4. Download Press Start 2P font ──────────────────────────────────────────
 step "Fetching Press Start 2P font (OFL license, ~50 KB)"
-FONT_DEST="assets/PressStart2P-Regular.ttf"
+FONT_DEST="GalacticChessInvaders/Resources/PressStart2P-Regular.ttf"
 FONT_URL="https://github.com/google/fonts/raw/main/ofl/pressstart2p/PressStart2P-Regular.ttf"
 if [[ -f "$FONT_DEST" ]]; then
     ok "Font already present: $FONT_DEST"
@@ -68,7 +68,7 @@ else
     else
         warn "Font download failed — the app will use system monospace as fallback."
         warn "Download manually from https://fonts.google.com/specimen/Press+Start+2P"
-        warn "and place PressStart2P-Regular.ttf in assets/"
+        warn "and place PressStart2P-Regular.ttf in GalacticChessInvaders/Resources/"
     fi
 fi
 

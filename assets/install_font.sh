@@ -4,7 +4,9 @@
 
 set -e
 FONT_URL="https://github.com/google/fonts/raw/main/ofl/pressstart2p/PressStart2P-Regular.ttf"
-DEST="assets/PressStart2P-Regular.ttf"
+# Resources, not assets: the app target bundles GalacticChessInvaders/, and a
+# font downloaded into assets/ would never reach the app.
+DEST="GalacticChessInvaders/Resources/PressStart2P-Regular.ttf"
 
 echo "Downloading Press Start 2P (OFL license)..."
 curl -L -o "$DEST" "$FONT_URL"
