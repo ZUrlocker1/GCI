@@ -60,12 +60,18 @@ existed; they are a checklist, not a running order.
       belongs in the initials — on the title it is an ordinary key and starts a
       game. Anything that is not a Y goes back untouched. Command-Q remains the
       system's Quit and closes the app
-- [x] **A standard Mac menu bar.** SwiftUI's defaults hand a game an Edit menu
-      of Undo, Cut, Copy and Paste, none of which does anything here; those
-      groups are replaced with nothing. A Game menu carries Settings (`⌘,`),
-      How To Play (`⌘I`) and Back to Title (`⌘⇧T`), and New Game takes `⌘N`.
-      Every shortcut is Command-modified — a menu key equivalent is consumed
-      before the key reaches the scene, so a bare letter would steal it
+- [x] **A menu bar with only what the game uses.** Galactic Chess Invaders,
+      Edit, Game, Help. File, View and Window are removed from the built menu in
+      `applicationDidFinishLaunching` — `.commands` cannot decline them, and
+      emptying their groups leaves the menu behind. `⌘W` and `⌘M` go with them,
+      the trade for a single-window game with a short menu bar
+- [x] **Edit stays for the log panel.** It is a real `NSTextView` and `⌘C`
+      reaches it through Edit > Copy; removing that group took the shortcut with
+      it. Undo and Find are gone, the pasteboard items are not
+- [x] **Game menu** — New Game (`⌘N`), Settings (`⌘,`), How To Play (`⌘I`),
+      Back to Title (`⌘⇧T`). Every shortcut is Command-modified: a menu key
+      equivalent is consumed before the key reaches the scene, so a bare letter
+      would steal it from the game
 - [x] **`⌘Q` asks before discarding a run.** `applicationShouldTerminate` puts
       up the standard alert while a wave is being played, and quits without a
       word from the title or the game over menu, where nothing is at stake

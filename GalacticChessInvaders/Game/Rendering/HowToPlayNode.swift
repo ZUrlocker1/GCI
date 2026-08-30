@@ -133,9 +133,20 @@ final class HowToPlayNode: SKNode {
         // Deliberately plain, and last. The panel ships, so these are reachable
         // by anyone — but they are a way to look behind the game, not part of
         // playing it, and the layout should say so.
-        // "CMD-T", not "⌘T": Press Start 2P has no U+2318, so the glyph would
-        // fall back to a system font and sit smooth among the pixel letters.
-        heading("TEST MODE  CMD-T", Self.cyan.withAlphaComponent(0.55), x: x, y: 155)
+        // "TEST MODE  ⌘T", drawn in two fonts. Press Start 2P has no U+2318, so
+        // the command glyph comes from the system font — smooth among the pixel
+        // caps, but the symbol everyone actually reads, which beats spelling it
+        // out. Placed by the same em arithmetic as everything else: the pixel
+        // font advances exactly one em per character, so "TEST MODE" plus two
+        // spaces puts the glyph at 11 ems and the T at 12.
+        let testDim = Self.cyan.withAlphaComponent(0.55)
+        let testEm: CGFloat = 18
+        heading("TEST MODE", testDim, x: x, y: 155)
+        addChild(commandGlyph(size: testEm, color: testDim,
+                              at: CGPoint(x: x + 11 * testEm, y: 155)))
+        let testKey = label("T", testEm, testDim, .left)
+        testKey.position = CGPoint(x: x + 12 * testEm, y: 155)
+        addChild(testKey)
         // Two short lines rather than one long one — five key/label pairs on a
         // single row runs the width of the column and reads as a wall. A, P, R
         // and V do nothing until Command-T arms them; L works either way.
@@ -268,6 +279,23 @@ final class HowToPlayNode: SKNode {
     }
 
     // MARK: - Primitive helpers
+
+    /// The ⌘ symbol, in whatever font the system has for it.
+    ///
+    /// Press Start 2P stops at Latin-1 and has no U+2318. Naming no font lets
+    /// CoreText substitute one that does. Scaled to 0.86 because a system face
+    /// carries far more ink inside the same point size than a pixel font does,
+    /// and at 1.0 the symbol towers over the capitals beside it.
+    private func commandGlyph(size: CGFloat, color: SKColor, at point: CGPoint) -> SKLabelNode {
+        let glyph = SKLabelNode(text: "⌘")
+        glyph.fontSize = size * 0.86
+        glyph.fontColor = color
+        glyph.horizontalAlignmentMode = .left
+        glyph.verticalAlignmentMode = .baseline
+        glyph.position = point
+        glyph.zPosition = -1
+        return glyph
+    }
 
     private func heading(_ text: String, _ color: SKColor, x: CGFloat, y: CGFloat) {
         let node = label(text, 18, color, .left)
