@@ -235,5 +235,5 @@ check them against the requirements.
 - [ ] Screenshots at a single accepted size
 - [ ] App Privacy questionnaire completed as "Data Not Collected"
 - [ ] Age rating questionnaire completed
-- [ ] Review notes pasted in
+- [ ] Review notes pasted in — **left blank on the 1.0 submission (12 Sep 2026).** Paste it on any resubmission
 - [ ] Sandbox entitlement — the Release build is sandboxed; confirm it still is
