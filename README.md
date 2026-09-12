@@ -123,6 +123,7 @@ this repository.
 - [implementation.md](docs/implementation.md) — what is actually built, phase by phase, against the
   design doc's plan. Includes every deviation from the spec and why it was taken, and the playtest
   fixes that shaped the game.
+- [change-log.md](docs/change-log.md) — every release, newest first.
 - [SETUP.md](SETUP.md) — building from a fresh clone.
 - [CLAUDE.md](CLAUDE.md) — architecture rules, layer separation and performance constraints. Written
   for Claude, useful for anyone reading the code.

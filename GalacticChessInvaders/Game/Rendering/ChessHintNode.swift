@@ -23,6 +23,9 @@ final class ChessHintNode: SKNode {
     /// Eleven characters — "PRESS SPACE" — at 9pt is about 99pt of monospace,
     /// the same width GameStatusNode already fits with "CHECKMATE" at 11.
     private static let promptSize: CGFloat = 9
+    /// Clear air between the hint block and the prompt, so the two read as
+    /// separate advice rather than one four-line paragraph.
+    private static let promptGap: CGFloat = 22
     private static let promptPulseKey = "firePrompt"
 
     /// Two names at most, however many pieces are lit — see the note above.
@@ -36,8 +39,25 @@ final class ChessHintNode: SKNode {
     private let firePromptTop    = SKLabelNode(fontNamed: ChessHintNode.font)
     private let firePromptBottom = SKLabelNode(fontNamed: ChessHintNode.font)
 
+    /// The control the player has not used yet. Both occupy the same slot
+    /// under the hint, and they never overlap in practice — the move prompt
+    /// only starts counting once the player has fired.
+    enum ControlPrompt: Equatable {
+        case fire
+        case move
+
+        var lines: (String, String) {
+            switch self {
+            // Twelve characters would be "PRESS ARROWS", wider than anything
+            // GameStatusNode fits in this gutter. Ten is safe.
+            case .fire: return ("PRESS SPACE", "TO FIRE!")
+            case .move: return ("USE ARROWS", "TO MOVE!")
+            }
+        }
+    }
+
     private var current: [PieceType]?
-    private var isPromptingFire = false
+    private var prompt: ControlPrompt?
 
     override init() {
         super.init()
@@ -65,14 +85,13 @@ final class ChessHintNode: SKNode {
             label.fontColor = NeonPalette.orange
             label.horizontalAlignmentMode = .center
             label.verticalAlignmentMode = .center
-            // Below the hint block, which grows upward from y = 0.
-            label.position = CGPoint(x: 0, y: -Self.lineStep * CGFloat(index + 1))
+            // Below the hint block, which grows upward from y = 0, with a
+            // little more air than one line step gives on its own.
+            label.position = CGPoint(x: 0,
+                                     y: -Self.promptGap - Self.lineStep * CGFloat(index))
             label.isHidden = true
             addChild(label)
         }
-        firePromptTop.text = "PRESS SPACE"
-        firePromptBottom.text = "TO FIRE!"
-
         setHintVisible(false)
     }
 
@@ -112,20 +131,22 @@ final class ChessHintNode: SKNode {
         setHintVisible(true)
     }
 
-    /// Shows "PRESS SPACE / TO FIRE!" under the hint. Orange, because it is not
-    /// chess advice — it is the half of the game the player has not touched.
-    func showFirePrompt(_ showing: Bool) {
-        guard showing != isPromptingFire else { return }
-        isPromptingFire = showing
-        firePromptTop.isHidden = !showing
-        firePromptBottom.isHidden = !showing
-        guard showing else {
+    /// Shows a control prompt under the hint, or nothing. Orange, because it
+    /// is not chess advice — it is the half of the game the player has not
+    /// touched.
+    func showPrompt(_ next: ControlPrompt?) {
+        guard next != prompt else { return }
+        prompt = next
+        firePromptTop.isHidden = next == nil
+        firePromptBottom.isHidden = next == nil
+        guard let next else {
             [firePromptTop, firePromptBottom].forEach {
                 $0.removeAction(forKey: Self.promptPulseKey)
                 $0.alpha = 1
             }
             return
         }
+        (firePromptTop.text, firePromptBottom.text) = next.lines
         for label in [firePromptTop, firePromptBottom] {
             label.alpha = 1
             label.run(.repeatForever(.sequence([

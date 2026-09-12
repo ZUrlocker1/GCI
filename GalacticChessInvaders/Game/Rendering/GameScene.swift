@@ -92,6 +92,16 @@ class GameScene: SKScene {
     /// arrive after someone has had a few turns to find it on their own.
     private var beatsWithoutFiring = 0
     private static let beatsBeforeFirePrompt = 3
+    /// True once the player has steered the ship at all this game.
+    private var hasMovedShipThisGame = false
+    /// The prompt last logged, so the log records each one appearing rather
+    /// than every frame it is up.
+    private var lastControlPrompt: ChessHintNode.ControlPrompt?
+    /// Playing seconds since the first shot. Seconds here, not beats: someone
+    /// who is firing is engaged with the arcade half and on its clock, not the
+    /// chess one.
+    private var secondsSinceFiring: TimeInterval = 0
+    private static let secondsBeforeMovePrompt: TimeInterval = 10
     private var autoModeLabel: SKLabelNode?
     private var fleet: FleetController?
     private var shipState: SpaceshipState?
@@ -634,8 +644,12 @@ class GameScene: SKScene {
             GameSettings.shared.logPanel.toggle()
             NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
 
-        case .moveLeft:   ship?.direction = -1
-        case .moveRight:  ship?.direction =  1
+        case .moveLeft:
+            ship?.direction = -1
+            noteShipMoved()
+        case .moveRight:
+            ship?.direction =  1
+            noteShipMoved()
         case .stopMoving: ship?.direction =  0
 
         case .fireLaser:
@@ -1505,7 +1519,10 @@ class GameScene: SKScene {
         // may still be the one who needs telling after a week away.
         hasFiredThisGame = false
         beatsWithoutFiring = 0
-        hintNode?.showFirePrompt(false)
+        hasMovedShipThisGame = false
+        secondsSinceFiring = 0
+        lastControlPrompt = nil
+        hintNode?.showPrompt(nil)
         // Reset, or a game that ended in check would swallow the next game's alarm.
         glowingKing?.setCheckGlow(false)
         glowingKing = nil
@@ -1608,7 +1625,7 @@ class GameScene: SKScene {
         // window clears the hints and nothing inside it can put them back.
         refreshHints()
         if !hasFiredThisGame { beatsWithoutFiring += 1 }
-        refreshFirePrompt()
+        refreshControlPrompt()
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
             DiagnosticsLog.shared.log(.white, "in check")
@@ -2466,19 +2483,37 @@ class GameScene: SKScene {
         refreshHints()
     }
 
-    /// Shows the fire prompt once someone has played a few beats without ever
-    /// pressing Space, and takes it down the instant they do.
-    private func refreshFirePrompt() {
-        let show = !hasFiredThisGame
-            && beatsWithoutFiring >= Self.beatsBeforeFirePrompt
-            && stateMachine.currentState is PlayingState
-            && howToPlayNode == nil
-            && settingsNode == nil
-            && !isEndingGame
-        hintNode?.showFirePrompt(show)
-        if show, beatsWithoutFiring == Self.beatsBeforeFirePrompt {
-            DiagnosticsLog.shared.log(.info, "fire prompt shown — no shots in 3 beats")
+    /// Names whichever control the player has not used yet: the trigger first,
+    /// then steering. One at a time, and never while a panel is up.
+    private func refreshControlPrompt() {
+        guard stateMachine.currentState is PlayingState,
+              howToPlayNode == nil, settingsNode == nil, !isEndingGame else {
+            hintNode?.showPrompt(nil)
+            return
         }
+
+        let next: ChessHintNode.ControlPrompt?
+        if !hasFiredThisGame {
+            next = beatsWithoutFiring >= Self.beatsBeforeFirePrompt ? .fire : nil
+        } else if !hasMovedShipThisGame {
+            next = secondsSinceFiring >= Self.secondsBeforeMovePrompt ? .move : nil
+        } else {
+            next = nil
+        }
+
+        if next != lastControlPrompt {
+            if let next {
+                DiagnosticsLog.shared.log(.info, "control prompt: \(next)")
+            }
+            lastControlPrompt = next
+        }
+        hintNode?.showPrompt(next)
+    }
+
+    private func noteShipMoved() {
+        guard !hasMovedShipThisGame else { return }
+        hasMovedShipThisGame = true
+        refreshControlPrompt()
     }
 
     private func clearHints() {
@@ -2756,7 +2791,8 @@ class GameScene: SKScene {
         shipState.laserFired()
         if !hasFiredThisGame {
             hasFiredThisGame = true
-            refreshFirePrompt()
+            secondsSinceFiring = 0
+            refreshControlPrompt()
         }
         laser.onDeactivate = { [weak shipState] in shipState?.laserResolved() }
         let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
@@ -4256,6 +4292,13 @@ class GameScene: SKScene {
             syncRespawnWarnings()
             syncPowerUpAlley()
             syncChessHints()
+            // The move prompt runs on playing time, so it is counted here
+            // rather than on the beat — the point is ten seconds of shooting
+            // while standing still, not two turns of it.
+            if hasFiredThisGame, !hasMovedShipThisGame {
+                secondsSinceFiring += dt
+                refreshControlPrompt()
+            }
             // §13's effect clock. Ticked before the systems it gates, so the
             // frame a freeze ends on is already a running frame.
             if let expired = powerUps.tick(dt) {
