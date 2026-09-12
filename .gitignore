@@ -7,6 +7,10 @@ DerivedData/
 *.dSYM.zip
 *.dSYM
 build/
+# Never commit an app bundle. Releases ship as a signed, notarized DMG at the
+# repo root (GCI-<version>.dmg); the .app is only ever the input to
+# release-dmg.sh and lives in ~/Downloads.
+*.app/
 
 # Swift Package Manager
 .build/
