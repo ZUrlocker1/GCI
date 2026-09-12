@@ -469,6 +469,37 @@ final class GCIBoardTests: XCTestCase {
     }
 }
 
+@MainActor
+final class ChessHintNodeTests: XCTestCase {
+
+    /// Two kinds then one used to leave the second line unhidden and moved on
+    /// top of the first, so "PAWN" was printed over by a stale "OR QUEEN".
+    func testShrinkingTheHintClearsTheOldLine() {
+        let node = ChessHintNode()
+        node.show([.pawn, .queen])
+        XCTAssertEqual(node.visibleHintLinesForTesting, ["PAWN", "OR QUEEN"])
+
+        node.show([.knight])
+        XCTAssertEqual(node.visibleHintLinesForTesting, ["KNIGHT"],
+                       "the second line must not survive into a one-kind hint")
+    }
+
+    func testHidingClearsEveryLine() {
+        let node = ChessHintNode()
+        node.show([.pawn, .rook])
+        node.show(nil)
+        XCTAssertTrue(node.visibleHintLinesForTesting.isEmpty)
+    }
+
+    /// At most two names however many pieces are lit — a third is a list to
+    /// read rather than a hint to act on.
+    func testAtMostTwoKindsAreNamed() {
+        let node = ChessHintNode()
+        node.show([.pawn, .knight, .queen])
+        XCTAssertEqual(node.visibleHintLinesForTesting, ["PAWN", "OR KNIGHT"])
+    }
+}
+
 final class ChessEngineTests: XCTestCase {
 
     func testEngineTakesAFreeQueen() throws {

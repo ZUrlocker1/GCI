@@ -92,7 +92,7 @@ final class ChessHintNode: SKNode {
             label.isHidden = true
             addChild(label)
         }
-        setHintVisible(false)
+        clearLabels()
     }
 
     @available(*, unavailable)
@@ -105,30 +105,42 @@ final class ChessHintNode: SKNode {
         guard kinds != current else { return }
         current = kinds
 
-        guard let kinds, !kinds.isEmpty else {
-            setHintVisible(false)
-            return
-        }
+        // Blank the whole block first, so every path through here starts from
+        // an empty message area. Hiding only the lines past the new count was
+        // not enough: the old code then unhid every label in one go, which
+        // brought a stale second line back, positioned on top of the first.
+        // "MOVE A / PAWN / OR QUEEN" followed by "MOVE A / PAWN" printed
+        // "OR QUEEN" over "PAWN".
+        clearLabels()
 
+        guard let kinds, !kinds.isEmpty else { return }
+
+        // Laid out from a fixed bottom upward, so a two-kind hint grows away
+        // from the power-up alley below rather than down into it.
         let lines = Self.lines(for: kinds)
-        for (index, label) in kindLabels.enumerated() {
-            guard index < lines.count else {
-                label.isHidden = true
-                continue
-            }
-            label.text = lines[index]
+        for (index, text) in lines.enumerated() {
+            let label = kindLabels[index]
+            label.text = text
+            label.position = CGPoint(x: 0,
+                                     y: CGFloat(lines.count - 1 - index) * Self.lineStep)
             label.isHidden = false
         }
-
-        // Laid out from a fixed bottom upward, so a three-kind hint grows away
-        // from the power-up alley below rather than down into it.
-        for index in lines.indices {
-            kindLabels[index].position =
-                CGPoint(x: 0, y: CGFloat(lines.count - 1 - index) * Self.lineStep)
-        }
         leadLabel.position = CGPoint(x: 0, y: CGFloat(lines.count) * Self.lineStep)
+        leadLabel.isHidden = false
+    }
 
-        setHintVisible(true)
+    private func clearLabels() {
+        leadLabel.isHidden = true
+        for label in kindLabels {
+            label.text = ""
+            label.isHidden = true
+        }
+    }
+
+    /// The hint lines currently on screen, top line first. Empty when no hint
+    /// is showing. Exposed so a test can pin the clearing above.
+    var visibleHintLinesForTesting: [String] {
+        kindLabels.filter { !$0.isHidden }.map { $0.text ?? "" }
     }
 
     /// Shows a control prompt under the hint, or nothing. Orange, because it
@@ -156,10 +168,6 @@ final class ChessHintNode: SKNode {
         }
     }
 
-    private func setHintVisible(_ visible: Bool) {
-        leadLabel.isHidden = !visible
-        kindLabels.forEach { $0.isHidden = !visible }
-    }
 
     /// "PAWN", or "PAWN" / "OR QUEEN". Anything past the second kind is
     /// dropped rather than crammed in.
