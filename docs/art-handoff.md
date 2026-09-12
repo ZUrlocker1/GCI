@@ -10,7 +10,7 @@
 
 Galactic Chess Invaders is a macOS arcade–chess hybrid. A real chess game plays out, but Black's
 
-pieces double as a *Space Invaders*-style fleet — sliding sideways, descending, and firing — while the
+pieces double as an arcade invader fleet — sliding sideways, descending, and firing — while the
 
 player simultaneously commands White's moves **and** a laser ship at the bottom of the screen. This
 

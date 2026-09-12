@@ -2,7 +2,7 @@
 
 Galactic Chess Invaders is an arcade–chess hybrid for macOS. A real game of chess plays out on
 screen — legal moves, real check and checkmate, a live engine playing Black — except Black's pieces
-are simultaneously a *Space Invaders* fleet, sweeping sideways, descending a rank at a time, and
+are simultaneously an arcade invader fleet, sweeping sideways, descending a rank at a time, and
 shooting at you.
 
 You play both halves at once. You command White's moves with the mouse, and a laser ship at the
@@ -26,12 +26,16 @@ clock and comes apart as you play it.
 
 <a href="https://www.youtube.com/watch?v=yVaNIPDnGa0"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
 
-[Download for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-0.6.dmg)
+[Download for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.0.dmg)
 
-Current release: `0.6` (build 6). Universal binary — runs natively on both Apple Silicon and Intel
+Current release: `1.0` (build 7). Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)). Third-party
 attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+**What's new in v1.0:**
+
+- Minor edits. First official release.
 
 **What's new in v0.6:**
 

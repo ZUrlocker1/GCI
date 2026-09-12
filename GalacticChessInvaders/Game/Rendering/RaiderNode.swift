@@ -1,5 +1,5 @@
 // RaiderNode.swift
-// A Raider Scout: §6's "Space Invaders mystery ship". Crosses the board, fires
+// A Raider Scout: §6's "arcade mystery ship". Crosses the board, fires
 // once on the way, exits the far side.
 //
 // Also the special scouts of §13.2, which are the same crossing wearing a

@@ -15,7 +15,7 @@ import Foundation
 
 enum RaiderRules {
 
-    // MARK: - Scout (§6, "Space Invaders mystery ship")
+    // MARK: - Scout (§6, "arcade mystery ship")
 
     /// Points per second across the board.
     ///

@@ -12,7 +12,7 @@
 
 Galactic Chess Invaders was first conceived and prototyped during **spring break 1983** by Zack Urlocker, then an undergraduate student, on an **Apple II**. The demo was written in Applesoft BASIC and compiled with **TASC — The Applesoft Compiler** for performance. Graphics were rendered using the **HRCG (High Res Character Generator)** with a dedicated chess font to animate the pieces in high-resolution mode. Startup music was produced through a simple Apple II synth routine; shot and hit sound effects were programmed directly in BASIC.
 
-The core concept — a functioning chess engine whose pieces simultaneously behave as a Space Invaders fleet, with the player controlling both a chess side and a shooting spaceship — was fully present in this original demo.
+The core concept — a functioning chess engine whose pieces simultaneously behave as an arcade invader fleet, with the player controlling both a chess side and a shooting spaceship — was fully present in this original demo.
 
 The original floppies were rediscovered **forty years later**, along with a working Apple II. The disks loaded and the demo ran.
 
@@ -66,7 +66,7 @@ The player controls the Black King, who carries a shotgun. The entire White army
 
 ## 1. Concept
 
-Galactic Chess Invaders (GCI) is an arcade-chess hybrid. A standard chess game plays out on-screen, but the black pieces also behave like Space Invaders: they slide left and right as a fleet, periodically descend, and fire projectiles at the player's pieces and spaceship. The player controls white's chess moves *and* a horizontally-moving spaceship at the bottom of the screen that can shoot up at any target — enemy pieces, invader projectiles, or even the player's own damaged white pieces.
+Galactic Chess Invaders (GCI) is an arcade-chess hybrid. A standard chess game plays out on-screen, but the black pieces also behave like an arcade invader fleet: they slide left and right as a fleet, periodically descend, and fire projectiles at the player's pieces and spaceship. The player controls white's chess moves *and* a horizontally-moving spaceship at the bottom of the screen that can shoot up at any target — enemy pieces, invader projectiles, or even the player's own damaged white pieces.
 
 The chess game is real but fast and shallow. Arcade reflex, not deep strategy, determines whether you survive.
 
@@ -185,7 +185,7 @@ This is not a player-skill assumption; it is an implementation and readability d
 
 ### 5.1 Formation Movement
 
-Black pieces maintain their starting chess positions *relative to each other* as they shift laterally, exactly like Space Invaders:
+Black pieces maintain their starting chess positions *relative to each other* as they shift laterally, exactly like a classic invader fleet:
 
 1. Shift right N pixels per frame until the rightmost piece reaches the right wall.
 2. Drop down one **visual half-rank**. This is animation only: black pieces remain on their current logical chess rank.
@@ -241,7 +241,7 @@ Periodically, independent arcade ships swoop across the board on attack runs. Th
 
 | Ship | Inspired by | Behavior | HP |
 |---|---|---|---|
-| **Raider Scout** | Space Invaders mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side. **First Scout of each level does not fire during its crossing** — the player sees the attack pattern before being shot at. Subsequent Scouts that level fire normally. The player's ship can always move and fire. | 1 |
+| **Raider Scout** | Arcade mystery ship | Flies straight across at mid-board height (rank 4–5), fires one shot straight down, exits the far side. **First Scout of each level does not fire during its crossing** — the player sees the attack pattern before being shot at. Subsequent Scouts that level fire normally. The player's ship can always move and fire. | 1 |
 | **Galaxian Escort** | Galaxian escort fighter | Peels off from the *back* of the black fleet formation (rear rank), dives in a curved arc toward the player's spaceship, then exits or loops back up | 1 |
 | **Galaxian Flagship** | Galaxian flagship | Dives in flanked by 2 Escorts (they die first); fires 2 shots on descent; worth most points | 2 (immune to first hit — flashes) |
 
@@ -446,7 +446,7 @@ Score multiplier starts at 1.0× and increases by 0.5× at the start of each new
 - The lives display in the HUD ticks up by one with a quick flash.
 - "1UP" appears briefly as a score pop-up at the ship's position.
 
-**Rationale:** 1,500 pts is achievable by an average player completing Level 1 with decent board clearing and a few Scout kills — it rewards early engagement without becoming farmable. Original *Space Invaders* (1978) used 1,500 pts as its free-life threshold; the homage is intentional.
+**Rationale:** 1,500 pts is achievable by an average player completing Level 1 with decent board clearing and a few Scout kills — it rewards early engagement without becoming farmable. A 1,500-point extra-life threshold is a convention of the 1978-era arcade shooters this game descends from.
 
 ---
 
@@ -991,7 +991,7 @@ When any piece (black or white) enters Critical HP (d2 + flicker state), a quiet
 
 #### Fleet Heartbeat
 
-A persistent two-beat bass pulse plays throughout every level, speeding up as black pieces are destroyed — directly adapted from the original *Space Invaders* (1978) heartbeat and one of arcade gaming's most effective psychological tools.
+A persistent two-beat bass pulse plays throughout every level, speeding up as black pieces are destroyed — a convention of the 1978-era arcade shooters, and one of arcade gaming's most effective psychological tools.
 
 **Sound design:** A low synthesized double-thump (thump-thump … pause) at approximately 60–80 Hz with a quick exponential decay. Not an 8-bit beep — closer to a deep electronic heartbeat: sub-bass body, short attack, no sustain. Generated once as a ~150ms `.caf` asset and triggered repeatedly by code; no pitch shifting, no rate manipulation.
 
@@ -3065,7 +3065,7 @@ When a chess piece moves (either player or auto-move), it leaves a brief neon gh
 
 ### 24.7 Fleet Heartbeat Pulse
 
-The black pieces pulse very slightly in brightness (±15% opacity) in sync with the Space Invaders heartbeat bass notes. As the heartbeat speeds up, so does the pulse. This ties the audio and visual rhythm together subconsciously.
+The black pieces pulse very slightly in brightness (±15% opacity) in sync with the heartbeat bass notes. As the heartbeat speeds up, so does the pulse. This ties the audio and visual rhythm together subconsciously.
 
 ### 24.8 King in Danger — Visual Pulse
 

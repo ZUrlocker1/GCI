@@ -1,5 +1,5 @@
 // FleetController.swift
-// Drives the black fleet's Space Invaders sweep and descent (§23.6).
+// Drives the black fleet's invader sweep and descent (§23.6).
 //
 // Every black piece node is a child of one `fleetNode`, so a single SKAction on
 // that parent moves the whole formation — 16 pieces at the cost of one (§18).

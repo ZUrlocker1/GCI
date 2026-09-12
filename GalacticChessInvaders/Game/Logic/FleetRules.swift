@@ -1,5 +1,5 @@
 // FleetRules.swift
-// Pure rules for the black fleet's Space Invaders movement (design doc §23.6).
+// Pure rules for the black fleet's invader movement (design doc §23.6).
 // No SpriteKit — the controller owns the animation, this owns the decisions.
 //
 // The central idea is that visual position and logical chess position are
@@ -74,7 +74,7 @@ enum FleetRules {
 
     /// Would the *next* beat descend? Used to telegraph the drop a beat ahead,
     /// so it arrives as an expected event rather than an unannounced lurch.
-    /// In Space Invaders you see the drop coming because the fleet nears a wall;
+    /// In the classic arcade form you see the drop coming because the fleet nears a wall;
     /// ours is paced by an invisible counter, so it has to be announced.
     static func descendsAfter(_ schedule: DescentSchedule) -> Bool {
         var lookahead = schedule

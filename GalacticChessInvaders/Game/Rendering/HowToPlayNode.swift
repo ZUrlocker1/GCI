@@ -93,7 +93,7 @@ final class HowToPlayNode: SKNode {
         let x = Self.lx
         // — THE TWIST —
         heading("THE TWIST", Self.cyan, x: x, y: 562)
-        multiline("A real chess game plays out — but Black's army is also a Space Invaders fleet. It slides sideways, drops down, and fires at you. You command White's moves and a laser ship at the bottom of the screen.",
+        multiline("A real chess game plays out — but Black's army is also an invader fleet. It slides sideways, drops down, and fires at you. You command White's moves and a laser ship at the bottom of the screen.",
                   size: 12, maxW: Self.lw, x: x, y: 548)
 
         // — CONTROLS —

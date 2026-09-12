@@ -3,7 +3,7 @@
 // Owns the square ↔ point mapping used for click hit-testing.
 //
 // §20 Phase 2.1 asked for "coordinate mapping, no visible grid": the fleet
-// sweeps horizontally between squares like Space Invaders, so a lattice would
+// sweeps horizontally between squares like an invader fleet, so a lattice would
 // have constantly disagreed with where the pieces actually were. That stopped
 // being true once the sweep was capped below one file, and the grid, the
 // deployment bands and the a-h/1-8 labels are all drawn now — but all three are

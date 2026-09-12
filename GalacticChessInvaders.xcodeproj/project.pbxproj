@@ -709,10 +709,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGNING_REQUIRED = YES;
 				CODE_SIGN_ENTITLEMENTS = GalacticChessInvaders.entitlements;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -721,7 +720,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.6;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -738,7 +737,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -747,7 +746,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.6;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
