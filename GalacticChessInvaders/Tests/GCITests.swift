@@ -1691,6 +1691,23 @@ private final class BeatSim {
 
 @MainActor
 final class BeatLifecycleTests: XCTestCase {
+    /// These assert Pilot's numbers — a 5s beat, power-ups that reset each wave
+    /// — so they pin the difficulty rather than inherit whatever ships as the
+    /// default. Cadet became that default in 1.1 and broke them, which is the
+    /// test's fault for depending on a product decision it is not about.
+    private var priorDifficulty: GameSettings.Difficulty!
+
+    override func setUp() {
+        super.setUp()
+        priorDifficulty = GameSettings.shared.difficulty
+        GameSettings.shared.difficulty = .pilot
+    }
+
+    override func tearDown() {
+        GameSettings.shared.difficulty = priorDifficulty
+        super.tearDown()
+    }
+
 
     func testCountdownOnlyShowsWhileWhiteCanMove() {
         let sim = BeatSim()
@@ -1903,6 +1920,23 @@ final class MateRevealTests: XCTestCase {
 
 @MainActor
 final class LevelProgressionTests: XCTestCase {
+    /// These assert Pilot's numbers — a 5s beat, power-ups that reset each wave
+    /// — so they pin the difficulty rather than inherit whatever ships as the
+    /// default. Cadet became that default in 1.1 and broke them, which is the
+    /// test's fault for depending on a product decision it is not about.
+    private var priorDifficulty: GameSettings.Difficulty!
+
+    override func setUp() {
+        super.setUp()
+        priorDifficulty = GameSettings.shared.difficulty
+        GameSettings.shared.difficulty = .pilot
+    }
+
+    override func tearDown() {
+        GameSettings.shared.difficulty = priorDifficulty
+        super.tearDown()
+    }
+
 
     func testAdvancingRaisesTheMultiplierAndTightensTheBeat() {
         let levels = LevelManager()
@@ -3909,6 +3943,23 @@ final class PawnAdvanceBiasTests: XCTestCase {
 
 @MainActor
 final class PromotionRewardTests: XCTestCase {
+    /// These assert Pilot's numbers — a 5s beat, power-ups that reset each wave
+    /// — so they pin the difficulty rather than inherit whatever ships as the
+    /// default. Cadet became that default in 1.1 and broke them, which is the
+    /// test's fault for depending on a product decision it is not about.
+    private var priorDifficulty: GameSettings.Difficulty!
+
+    override func setUp() {
+        super.setUp()
+        priorDifficulty = GameSettings.shared.difficulty
+        GameSettings.shared.difficulty = .pilot
+    }
+
+    override func tearDown() {
+        GameSettings.shared.difficulty = priorDifficulty
+        super.tearDown()
+    }
+
 
     /// +1 per green scout shot down, stacking, hard cap 6, and it does not
     /// carry between waves. Was §7.2's promotion reward until §13 moved it onto

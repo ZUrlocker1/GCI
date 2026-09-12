@@ -20,14 +20,24 @@ final class ChessHintNode: SKNode {
     private static let leadSize: CGFloat = 9
     private static let kindSize: CGFloat = 13
     private static let lineStep: CGFloat = 16
+    /// Eleven characters — "PRESS SPACE" — at 9pt is about 99pt of monospace,
+    /// the same width GameStatusNode already fits with "CHECKMATE" at 11.
+    private static let promptSize: CGFloat = 9
+    private static let promptPulseKey = "firePrompt"
 
     /// Two names at most, however many pieces are lit — see the note above.
     private static let maxKinds = 2
 
     private let leadLabel = SKLabelNode(fontNamed: ChessHintNode.font)
     private var kindLabels: [SKLabelNode] = []
+    /// Two lines, below the hint block. Independent of it: a player who has
+    /// turned Chess Hints off can still be the one who has not found the fire
+    /// key, and that is the more basic thing to be missing.
+    private let firePromptTop    = SKLabelNode(fontNamed: ChessHintNode.font)
+    private let firePromptBottom = SKLabelNode(fontNamed: ChessHintNode.font)
 
     private var current: [PieceType]?
+    private var isPromptingFire = false
 
     override init() {
         super.init()
@@ -50,7 +60,20 @@ final class ChessHintNode: SKNode {
             kindLabels.append(label)
         }
 
-        isHidden = true
+        for (index, label) in [firePromptTop, firePromptBottom].enumerated() {
+            label.fontSize = Self.promptSize
+            label.fontColor = NeonPalette.orange
+            label.horizontalAlignmentMode = .center
+            label.verticalAlignmentMode = .center
+            // Below the hint block, which grows upward from y = 0.
+            label.position = CGPoint(x: 0, y: -Self.lineStep * CGFloat(index + 1))
+            label.isHidden = true
+            addChild(label)
+        }
+        firePromptTop.text = "PRESS SPACE"
+        firePromptBottom.text = "TO FIRE!"
+
+        setHintVisible(false)
     }
 
     @available(*, unavailable)
@@ -64,7 +87,7 @@ final class ChessHintNode: SKNode {
         current = kinds
 
         guard let kinds, !kinds.isEmpty else {
-            isHidden = true
+            setHintVisible(false)
             return
         }
 
@@ -86,7 +109,35 @@ final class ChessHintNode: SKNode {
         }
         leadLabel.position = CGPoint(x: 0, y: CGFloat(lines.count) * Self.lineStep)
 
-        isHidden = false
+        setHintVisible(true)
+    }
+
+    /// Shows "PRESS SPACE / TO FIRE!" under the hint. Orange, because it is not
+    /// chess advice — it is the half of the game the player has not touched.
+    func showFirePrompt(_ showing: Bool) {
+        guard showing != isPromptingFire else { return }
+        isPromptingFire = showing
+        firePromptTop.isHidden = !showing
+        firePromptBottom.isHidden = !showing
+        guard showing else {
+            [firePromptTop, firePromptBottom].forEach {
+                $0.removeAction(forKey: Self.promptPulseKey)
+                $0.alpha = 1
+            }
+            return
+        }
+        for label in [firePromptTop, firePromptBottom] {
+            label.alpha = 1
+            label.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.35, duration: 0.55),
+                .fadeAlpha(to: 1.00, duration: 0.55),
+            ])), withKey: Self.promptPulseKey)
+        }
+    }
+
+    private func setHintVisible(_ visible: Bool) {
+        leadLabel.isHidden = !visible
+        kindLabels.forEach { $0.isHidden = !visible }
     }
 
     /// "PAWN", or "PAWN" / "OR QUEEN". Anything past the second kind is

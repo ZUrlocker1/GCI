@@ -84,6 +84,14 @@ class GameScene: SKScene {
     /// bails, and the answer arrives to find itself out of date when nothing
     /// had actually moved. Comparing boards cannot make that mistake.
     private var hintSearchBoard: Chess.Board?
+    /// True once the player has fired at all this game. The ship is half the
+    /// game and nothing on screen says so, so a player who only ever moves
+    /// pieces gets told where the trigger is.
+    private var hasFiredThisGame = false
+    /// Beats elapsed without a shot. Beats, not seconds: the prompt should
+    /// arrive after someone has had a few turns to find it on their own.
+    private var beatsWithoutFiring = 0
+    private static let beatsBeforeFirePrompt = 3
     private var autoModeLabel: SKLabelNode?
     private var fleet: FleetController?
     private var shipState: SpaceshipState?
@@ -1493,6 +1501,11 @@ class GameScene: SKScene {
         isEndingGame = false
         isResolvingBeat = false
         whiteHasMovedThisBeat = false
+        // Per game, not per session: someone who found the trigger last time
+        // may still be the one who needs telling after a week away.
+        hasFiredThisGame = false
+        beatsWithoutFiring = 0
+        hintNode?.showFirePrompt(false)
         // Reset, or a game that ended in check would swallow the next game's alarm.
         glowingKing?.setCheckGlow(false)
         glowingKing = nil
@@ -1594,6 +1607,8 @@ class GameScene: SKScene {
         // for the whole of Black's turn, so every `refreshStatus` inside that
         // window clears the hints and nothing inside it can put them back.
         refreshHints()
+        if !hasFiredThisGame { beatsWithoutFiring += 1 }
+        refreshFirePrompt()
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
             DiagnosticsLog.shared.log(.white, "in check")
@@ -2451,6 +2466,21 @@ class GameScene: SKScene {
         refreshHints()
     }
 
+    /// Shows the fire prompt once someone has played a few beats without ever
+    /// pressing Space, and takes it down the instant they do.
+    private func refreshFirePrompt() {
+        let show = !hasFiredThisGame
+            && beatsWithoutFiring >= Self.beatsBeforeFirePrompt
+            && stateMachine.currentState is PlayingState
+            && howToPlayNode == nil
+            && settingsNode == nil
+            && !isEndingGame
+        hintNode?.showFirePrompt(show)
+        if show, beatsWithoutFiring == Self.beatsBeforeFirePrompt {
+            DiagnosticsLog.shared.log(.info, "fire prompt shown — no shots in 3 beats")
+        }
+    }
+
     private func clearHints() {
         hintedNodes.forEach { $0.setHintPulse(false) }
         hintedNodes = []
@@ -2724,6 +2754,10 @@ class GameScene: SKScene {
         else { return }
 
         shipState.laserFired()
+        if !hasFiredThisGame {
+            hasFiredThisGame = true
+            refreshFirePrompt()
+        }
         laser.onDeactivate = { [weak shipState] in shipState?.laserResolved() }
         let origin = CGPoint(x: ship.position.x, y: ship.position.y + ship.size.height / 2)
         laser.fire(from: origin, damage: ProjectileState.playerLaserDamage,
