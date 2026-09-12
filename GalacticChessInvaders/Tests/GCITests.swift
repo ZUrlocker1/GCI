@@ -554,15 +554,20 @@ final class ChessEngineTests: XCTestCase {
         XCTAssertTrue(ChessEngine.rankedSources(in: mid, depth: 2, limit: 0).isEmpty)
     }
 
-    /// At the opening every pawn move scores identically — 31 apiece at depth 2,
-    /// against 0 for the knights. Showing three of them would be alphabetical
-    /// order dressed up as advice, so a wide tie at the top is shown whole.
-    func testOpeningLightsEveryPawnBecauseTheyAreEqual() throws {
+    /// The opening lights every legal move — eight pawns and both knights.
+    ///
+    /// The pawns score 31 at depth 2 and the knights 0, but that 31 is entirely
+    /// `favoursPawnAdvance`: with the bias off the knights score 0 and the
+    /// pawns −33, so the bias reverses the order by itself. A gap a tuning
+    /// constant can flip is not a recommendation, so the hint declines to rank
+    /// inside it.
+    func testOpeningLightsPawnsAndKnightsAlike() throws {
         let opening = try XCTUnwrap(
             Chess.FEN.position(from: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
         let sources = ChessEngine.rankedSources(in: opening, depth: 2, limit: 3)
-        XCTAssertEqual(sources.count, 8)
-        XCTAssertEqual(Set(sources), Set(["a2","b2","c2","d2","e2","f2","g2","h2"]))
+        XCTAssertEqual(Set(sources),
+                       Set(["a2","b2","c2","d2","e2","f2","g2","h2","b1","g1"]),
+                       "every legal opening move is reasonable, so every one is lit")
     }
 
     /// The flip side: a position with one clearly best move must not spray the

@@ -45,6 +45,7 @@ final class ChessHintNode: SKNode {
     enum ControlPrompt: Equatable {
         case fire
         case move
+        case friendlyFire
 
         var lines: (String, String) {
             switch self {
@@ -52,6 +53,7 @@ final class ChessHintNode: SKNode {
             // GameStatusNode fits in this gutter. Ten is safe.
             case .fire: return ("PRESS SPACE", "TO FIRE!")
             case .move: return ("USE ARROWS", "TO MOVE!")
+            case .friendlyFire: return ("WATCH YOUR", "OWN PIECES!")
             }
         }
     }

@@ -390,24 +390,33 @@ final class ChessEngine {
         let ranked = bestBySource
             .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
 
-        // Everything that scores *exactly* the best, which at the opening is all
-        // eight pawns: at depth 2 they each come back at 31 and the knights at
-        // 0. Cutting that to three and picking a2, b2, c2 is alphabetical
-        // order wearing the clothes of a recommendation — it says those three
-        // pawns are better when the engine says they are identical.
-        //
-        // So when the top is a wide tie, show the tie. When it is not, the
-        // ordering is real and the usual shortlist stands.
-        let best = ranked.first?.value
-        let tied = ranked.prefix { $0.value == best }
+        // Everything within `hintTieTolerance` of the best. When that band is
+        // wider than the shortlist, show the band: the ordering inside it is
+        // not a recommendation, and cutting it to three would just be
+        // alphabetical order wearing a recommendation's clothes.
+        guard let best = ranked.first?.value else { return [] }
+        let tied = ranked.prefix { best - $0.value <= hintTieTolerance }
         return tied.count > limit
             ? tied.prefix(maxTiedSources).map(\.key)
             : ranked.prefix(limit).map(\.key)
     }
 
-    /// Ceiling on a tie band, so a wide-open position lights a readable number
-    /// of pieces rather than most of the back rank.
-    private static let maxTiedSources = 8
+    /// How close two moves have to be before the hint treats them as equal.
+    ///
+    /// Measured, not picked. At the opening, `favoursPawnAdvance` is worth 64
+    /// to a pawn push at depth 2: with the bias on the pawns score 31 and the
+    /// knights 0, with it off the knights score 0 and the pawns −33. The bias
+    /// reverses the order on its own, which means a gap this size says nothing
+    /// about chess — it says which way a GCI tuning constant is pointing.
+    ///
+    /// So the hint refuses to rank inside that distance. At the opening it
+    /// lights all eight pawns *and* both knights, and says "MOVE A PAWN OR
+    /// KNIGHT", which is what an opening book would tell you too.
+    private static let hintTieTolerance = 64
+
+    /// Ceiling on a tie band. Ten is every legal opening move, which is the
+    /// widest a real position gets.
+    private static let maxTiedSources = 10
 
     private static let infinity = 1_000_000
     private static let mateScore = 100_000

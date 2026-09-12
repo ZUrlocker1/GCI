@@ -84,16 +84,16 @@ class GameScene: SKScene {
     /// bails, and the answer arrives to find itself out of date when nothing
     /// had actually moved. Comparing boards cannot make that mistake.
     private var hintSearchBoard: Chess.Board?
-    /// True once the player has fired at all this game. The ship is half the
+    /// True once the player has fired at all this level. The ship is half the
     /// game and nothing on screen says so, so a player who only ever moves
     /// pieces gets told where the trigger is.
-    private var hasFiredThisGame = false
+    private var hasFiredThisLevel = false
     /// Beats elapsed without a shot. Beats, not seconds: the prompt should
     /// arrive after someone has had a few turns to find it on their own.
     private var beatsWithoutFiring = 0
     private static let beatsBeforeFirePrompt = 3
-    /// True once the player has steered the ship at all this game.
-    private var hasMovedShipThisGame = false
+    /// True once the player has steered the ship at all this level.
+    private var hasMovedShipThisLevel = false
     /// The prompt last logged, so the log records each one appearing rather
     /// than every frame it is up.
     private var lastControlPrompt: ChessHintNode.ControlPrompt?
@@ -102,6 +102,18 @@ class GameScene: SKScene {
     /// chess one.
     private var secondsSinceFiring: TimeInterval = 0
     private static let secondsBeforeMovePrompt: TimeInterval = 10
+    /// Seconds left on the friendly-fire notice. Unlike the other two prompts
+    /// this one is an event, not a nudge toward something untried, so it shows
+    /// briefly and goes rather than waiting to be satisfied.
+    private var friendlyFireRemaining: TimeInterval = 0
+    private var friendlyFireHits = 0
+    private var hasShownFriendlyFireNotice = false
+    private static let friendlyFireNoticeDuration: TimeInterval = 3
+    /// Not the first hit, and only once a level. Shooting your own piece can be
+    /// deliberate — a nearly-dead White piece in your lane is worth clearing —
+    /// and a stray shot or two is the game being played. Three says it is a
+    /// habit rather than an accident, and by then one mention is enough.
+    private static let friendlyFireHitsBeforeNotice = 3
     private var autoModeLabel: SKLabelNode?
     private var fleet: FleetController?
     private var shipState: SpaceshipState?
@@ -1247,6 +1259,7 @@ class GameScene: SKScene {
 
     private func buildPlayfield(announceLevel: Bool = true) {
         hideBoard()
+        resetOnboardingPrompts()
         board.setupStandardPosition()
         // §10.1: at Level 9 the black king carries a forcefield worth 50%
         // more hits. Applied here so the extra HP is in place before any node
@@ -1515,14 +1528,6 @@ class GameScene: SKScene {
         isEndingGame = false
         isResolvingBeat = false
         whiteHasMovedThisBeat = false
-        // Per game, not per session: someone who found the trigger last time
-        // may still be the one who needs telling after a week away.
-        hasFiredThisGame = false
-        beatsWithoutFiring = 0
-        hasMovedShipThisGame = false
-        secondsSinceFiring = 0
-        lastControlPrompt = nil
-        hintNode?.showPrompt(nil)
         // Reset, or a game that ended in check would swallow the next game's alarm.
         glowingKing?.setCheckGlow(false)
         glowingKing = nil
@@ -1624,7 +1629,7 @@ class GameScene: SKScene {
         // for the whole of Black's turn, so every `refreshStatus` inside that
         // window clears the hints and nothing inside it can put them back.
         refreshHints()
-        if !hasFiredThisGame { beatsWithoutFiring += 1 }
+        if !hasFiredThisLevel { beatsWithoutFiring += 1 }
         refreshControlPrompt()
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
@@ -2493,9 +2498,13 @@ class GameScene: SKScene {
         }
 
         let next: ChessHintNode.ControlPrompt?
-        if !hasFiredThisGame {
+        // The event wins the slot while it lasts: it describes something that
+        // just happened, and the other two will still be true afterwards.
+        if friendlyFireRemaining > 0 {
+            next = .friendlyFire
+        } else if !hasFiredThisLevel {
             next = beatsWithoutFiring >= Self.beatsBeforeFirePrompt ? .fire : nil
-        } else if !hasMovedShipThisGame {
+        } else if !hasMovedShipThisLevel {
             next = secondsSinceFiring >= Self.secondsBeforeMovePrompt ? .move : nil
         } else {
             next = nil
@@ -2510,9 +2519,39 @@ class GameScene: SKScene {
         hintNode?.showPrompt(next)
     }
 
+    /// Raises the friendly-fire notice on the third hit of a run, once.
+    private func noteFriendlyFire() {
+        guard !hasShownFriendlyFireNotice else { return }
+        friendlyFireHits += 1
+        guard friendlyFireHits >= Self.friendlyFireHitsBeforeNotice else { return }
+        hasShownFriendlyFireNotice = true
+        friendlyFireRemaining = Self.friendlyFireNoticeDuration
+        DiagnosticsLog.shared.log(.info, "friendly fire notice — \(friendlyFireHits) hits")
+        refreshControlPrompt()
+    }
+
+    /// Per level, deliberately.
+    ///
+    /// A run can be long and a wave break is a natural place to forget things,
+    /// so each level re-arms the trigger, the steering and the friendly-fire
+    /// notices. They cost nothing to a player who remembers — the fire prompt
+    /// only appears after three beats of not firing, and by Level 2 anyone
+    /// still playing is firing within one.
+    private func resetOnboardingPrompts() {
+        hasFiredThisLevel = false
+        beatsWithoutFiring = 0
+        hasMovedShipThisLevel = false
+        secondsSinceFiring = 0
+        friendlyFireRemaining = 0
+        friendlyFireHits = 0
+        hasShownFriendlyFireNotice = false
+        lastControlPrompt = nil
+        hintNode?.showPrompt(nil)
+    }
+
     private func noteShipMoved() {
-        guard !hasMovedShipThisGame else { return }
-        hasMovedShipThisGame = true
+        guard !hasMovedShipThisLevel else { return }
+        hasMovedShipThisLevel = true
         refreshControlPrompt()
     }
 
@@ -2789,8 +2828,8 @@ class GameScene: SKScene {
         else { return }
 
         shipState.laserFired()
-        if !hasFiredThisGame {
-            hasFiredThisGame = true
+        if !hasFiredThisLevel {
+            hasFiredThisLevel = true
             secondsSinceFiring = 0
             refreshControlPrompt()
         }
@@ -4031,6 +4070,7 @@ class GameScene: SKScene {
             guard let result = CollisionResolver.playerLaserHitWhitePiece(
                 at: pieceNode.square, board: board) else { return }
             handleWhitePieceHit(result, node: pieceNode, impact: impact)
+            noteFriendlyFire()
         }
     }
 
@@ -4295,9 +4335,13 @@ class GameScene: SKScene {
             // The move prompt runs on playing time, so it is counted here
             // rather than on the beat — the point is ten seconds of shooting
             // while standing still, not two turns of it.
-            if hasFiredThisGame, !hasMovedShipThisGame {
+            if hasFiredThisLevel, !hasMovedShipThisLevel {
                 secondsSinceFiring += dt
                 refreshControlPrompt()
+            }
+            if friendlyFireRemaining > 0 {
+                friendlyFireRemaining = max(0, friendlyFireRemaining - dt)
+                if friendlyFireRemaining == 0 { refreshControlPrompt() }
             }
             // §13's effect clock. Ticked before the systems it gates, so the
             // frame a freeze ends on is already a running frame.
