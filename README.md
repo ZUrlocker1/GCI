@@ -26,12 +26,17 @@ clock and comes apart as you play it.
 
 <a href="https://www.youtube.com/watch?v=yVaNIPDnGa0"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
 
-[Download for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.0.dmg)
+[Download for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.1.dmg)
 
-Current release: `1.0` (build 7). Universal binary — runs natively on both Apple Silicon and Intel
+Current release: `1.1` (build 8). Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)). Third-party
 attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+**What's new in v1.1:**
+
+- **Chess Hints** — the three pieces worth moving pulse softly, and the
+  gutter names the best of them. On by default; switch it off in Settings.
 
 **What's new in v1.0:**
 

@@ -60,6 +60,7 @@
 		8045F16B75DCA226FEFC2848 /* ProjectileState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0C0E6B6868C3ACDC346F91 /* ProjectileState.swift */; };
 		82FBE8F0FE17EC1EED7ECC03 /* GameOverNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */; };
 		85830BC31A121E884D7C827C /* GameStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */; };
+		A1B2C3D40001E5F600110022 /* ChessHintNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002E5F600110022 /* ChessHintNode.swift */; };
 		87FF43D18AB562A891F9F2EB /* ChessEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00359D531409FD8FEF80590 /* ChessEngine.swift */; };
 		8916FC9528C763093B5D18BE /* LaserPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C9EB476F38A1115CA12AE8 /* LaserPool.swift */; };
 		89F9459783A37520E9B6A7D3 /* DiagnosticsLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C108816F834B07B96432B59 /* DiagnosticsLog.swift */; };
@@ -232,6 +233,7 @@
 		F8CB7404F3713FE581B43A87 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F9BCEF5A958D912F3D3834BC /* GameAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAction.swift; sourceTree = "<group>"; };
 		FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStatusNode.swift; sourceTree = "<group>"; };
+		A1B2C3D40002E5F600110022 /* ChessHintNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessHintNode.swift; sourceTree = "<group>"; };
 		FF11C903C797D394A807E396 /* Chess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chess.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -413,6 +415,7 @@
 				3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */,
 				8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */,
 				FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */,
+				A1B2C3D40002E5F600110022 /* ChessHintNode.swift */,
 				E6BD913BC0D0EB5692D30572 /* HighScoreEntryNode.swift */,
 				69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */,
 				A56497B49CFE839D85ABCC3A /* HUDNode.swift */,
@@ -655,6 +658,7 @@
 				DAADEF5196A423E549D68CDB /* GameSettings.swift in Sources */,
 				452008C69273C0B918DFAA99 /* GameState.swift in Sources */,
 				85830BC31A121E884D7C827C /* GameStatusNode.swift in Sources */,
+				A1B2C3D40001E5F600110022 /* ChessHintNode.swift in Sources */,
 				031533BB438B7A4BC1CE82C9 /* HUDNode.swift in Sources */,
 				E22CBB20BA38A80B327C715F /* HighScoreEntryNode.swift in Sources */,
 				2D6AEAFFDB4E3817A7AA8A3F /* HowToPlayNode.swift in Sources */,
@@ -711,7 +715,7 @@
 				CODE_SIGN_ENTITLEMENTS = GalacticChessInvaders.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -720,7 +724,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -737,7 +741,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -746,7 +750,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;

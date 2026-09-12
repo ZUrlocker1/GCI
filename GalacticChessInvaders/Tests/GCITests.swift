@@ -482,6 +482,67 @@ final class ChessEngineTests: XCTestCase {
         XCTAssertNil(ChessEngine.searchBestMove(in: mate, depth: 2))
     }
 
+    // MARK: - Chess hints
+
+    func testHintsLeadWithTheFreeQueen() throws {
+        let grab = try XCTUnwrap(Chess.FEN.position(from: "3q3k/8/8/8/8/8/8/3Q3K w - - 0 1"))
+        let sources = ChessEngine.rankedSources(in: grab, depth: 1, limit: 3)
+        XCTAssertEqual(sources.first, "d1", "the queen that can take a queen should rank first")
+    }
+
+    /// The whole reason this is not `searchBestMove` with a bigger result: that
+    /// one picks at random among near-equal moves, and a hint that reshuffled
+    /// every beat would read as a bug rather than as advice.
+    func testHintsAreDeterministic() throws {
+        let opening = try XCTUnwrap(
+            Chess.FEN.position(from: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
+        let first = ChessEngine.rankedSources(in: opening, depth: 1, limit: 3)
+        for _ in 0..<8 {
+            XCTAssertEqual(ChessEngine.rankedSources(in: opening, depth: 1, limit: 3), first)
+        }
+    }
+
+    /// Three entries have to mean three *pieces*. The top moves in an open
+    /// position are routinely one queen going to four squares, and pulsing a
+    /// single piece four times is not a shortlist.
+    func testHintsAreDistinctPieces() throws {
+        let open = try XCTUnwrap(Chess.FEN.position(from: "7k/8/8/8/8/8/8/3QK3 w - - 0 1"))
+        let sources = ChessEngine.rankedSources(in: open, depth: 1, limit: 3)
+        XCTAssertEqual(Set(sources).count, sources.count, "a piece must not be listed twice")
+        XCTAssertLessThanOrEqual(sources.count, 3)
+    }
+
+    func testHintsAreEmptyWhenMated() throws {
+        let mate = try XCTUnwrap(Chess.FEN.position(from: "R6k/6pp/8/8/8/8/8/7K b - - 0 1"))
+        XCTAssertTrue(ChessEngine.rankedSources(in: mate, depth: 1, limit: 3).isEmpty)
+    }
+
+    func testHintsHonourTheLimit() throws {
+        let mid = try XCTUnwrap(Chess.FEN.position(from: "3q3k/8/8/8/8/8/8/3Q3K w - - 0 1"))
+        XCTAssertLessThanOrEqual(ChessEngine.rankedSources(in: mid, depth: 2, limit: 3).count, 3)
+        XCTAssertTrue(ChessEngine.rankedSources(in: mid, depth: 2, limit: 0).isEmpty)
+    }
+
+    /// At the opening every pawn move scores identically — 31 apiece at depth 2,
+    /// against 0 for the knights. Showing three of them would be alphabetical
+    /// order dressed up as advice, so a wide tie at the top is shown whole.
+    func testOpeningLightsEveryPawnBecauseTheyAreEqual() throws {
+        let opening = try XCTUnwrap(
+            Chess.FEN.position(from: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
+        let sources = ChessEngine.rankedSources(in: opening, depth: 2, limit: 3)
+        XCTAssertEqual(sources.count, 8)
+        XCTAssertEqual(Set(sources), Set(["a2","b2","c2","d2","e2","f2","g2","h2"]))
+    }
+
+    /// The flip side: a position with one clearly best move must not spray the
+    /// board — the tie band is one move wide, so the ordinary shortlist stands.
+    func testAClearBestMoveStillGivesAShortlist() throws {
+        let grab = try XCTUnwrap(Chess.FEN.position(from: "3q3k/8/8/8/8/8/8/3Q3K w - - 0 1"))
+        let sources = ChessEngine.rankedSources(in: grab, depth: 2, limit: 3)
+        XCTAssertEqual(sources.first, "d1")
+        XCTAssertLessThanOrEqual(sources.count, 3)
+    }
+
     func testPlayerPromotionAlwaysTakesTheQueen() {
         let engine = ChessEngine(fen: "7k/P7/8/8/8/8/8/7K w - - 0 1")
         let applied = engine?.make(from: "a7", to: "a8")

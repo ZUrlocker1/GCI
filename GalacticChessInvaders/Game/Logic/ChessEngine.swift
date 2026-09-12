@@ -351,6 +351,64 @@ final class ChessEngine {
         return (choice.move.from.coordinate, choice.move.to.coordinate)
     }
 
+    /// The distinct source squares of the strongest moves for the side to move,
+    /// best first. Chess Hints pulses these so a player who does not read chess
+    /// has a shortlist instead of sixteen pieces and a five-second clock.
+    ///
+    /// Deliberately *not* `searchBestMove` with a larger result. That function
+    /// picks at random among near-equal contenders, which is what stops the
+    /// engine replaying the same game; a hint that reshuffled on every beat
+    /// would read as a bug. This orders strictly and breaks ties by square
+    /// name, so one position always advises the same pieces.
+    ///
+    /// Distinct *sources*, not moves: the top four entries are routinely one
+    /// knight going to four squares, and pulsing a single piece is not a
+    /// shortlist. A piece is ranked by its best move and counted once.
+    ///
+    /// `favoursPawnAdvance` defaults on, unlike the search, because this only
+    /// ever advises White and promotion is the player's one power-up (§7.2).
+    /// Auto-move runs with the same bias, so the hint and the move the clock
+    /// would make for you do not contradict each other.
+    nonisolated static func rankedSources(in position: Chess.Position,
+                                          depth: Int,
+                                          limit: Int,
+                                          favoursPawnAdvance: Bool = true) -> [String] {
+        guard limit > 0 else { return [] }
+        let moves = ChessRules.legalMoves(in: position)
+        guard !moves.isEmpty else { return [] }
+
+        let push = favoursPawnAdvance ? pawnAdvanceStep : 0
+        var bestBySource: [String: Int] = [:]
+        for move in moves {
+            let child = ChessRules.applying(move, to: position)
+            let score = -negamax(child, depth: depth - 1, whitePawnPush: push)
+            let from = move.from.coordinate
+            if let seen = bestBySource[from], seen >= score { continue }
+            bestBySource[from] = score
+        }
+
+        let ranked = bestBySource
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+
+        // Everything that scores *exactly* the best, which at the opening is all
+        // eight pawns: at depth 2 they each come back at 31 and the knights at
+        // 0. Cutting that to three and picking a2, b2, c2 is alphabetical
+        // order wearing the clothes of a recommendation — it says those three
+        // pawns are better when the engine says they are identical.
+        //
+        // So when the top is a wide tie, show the tie. When it is not, the
+        // ordering is real and the usual shortlist stands.
+        let best = ranked.first?.value
+        let tied = ranked.prefix { $0.value == best }
+        return tied.count > limit
+            ? tied.prefix(maxTiedSources).map(\.key)
+            : ranked.prefix(limit).map(\.key)
+    }
+
+    /// Ceiling on a tie band, so a wide-open position lights a readable number
+    /// of pieces rather than most of the back rank.
+    private static let maxTiedSources = 8
+
     private static let infinity = 1_000_000
     private static let mateScore = 100_000
     /// Centipawns deducted for stepping back into a recently occupied position.

@@ -14,6 +14,16 @@ final class PieceNode: SKSpriteNode {
     private static let danger  = SKColor(red: 1.00, green: 0.16, blue: 0.10, alpha: 1)
     private static let flickerKey = "criticalFlicker"
     private static let checkGlowKey = "checkGlow"
+    private static let hintGlowKey = "hintGlow"
+    private static let hintFillName = "hintFill"
+    /// Between the first pass, which read as a solid white piece, and the
+    /// halved second, which was too faint. The art stays the thing you are
+    /// looking at; the fill says which pieces to look at.
+    private static let hintFillLow: CGFloat = 0.14
+    private static let hintFillHigh: CGFloat = 0.52
+    /// Slow. A quick pulse reads as an alarm, and three of them at once reads
+    /// as the board malfunctioning. This is meant to breathe.
+    private static let hintFillPeriod: TimeInterval = 0.95
     private static let armorKey = "armor"
     private static let armorFillName = "armorFill"
     private static let chargeGlowName = "gunnerCharge"
@@ -42,6 +52,8 @@ final class PieceNode: SKSpriteNode {
 
     /// True while this piece is drawn as the king in check.
     private(set) var isShowingCheck = false
+    /// True while this piece is pulsing as a Chess Hint.
+    private(set) var isShowingHint = false
 
     /// The square this node currently represents. Kept in sync by the scene.
     var square: String { piece.logicalSquare }
@@ -295,6 +307,60 @@ final class PieceNode: SKSpriteNode {
         colorBlendFactor = Self.baseBlend
     }
 
+    // MARK: - Chess hint
+
+    /// Marks this piece as one of the moves worth making, by filling its
+    /// interior with a breathing white glow.
+    ///
+    /// Two earlier attempts failed for the same underlying reason, which is
+    /// worth recording so a third is not tried. A ring round the piece read as
+    /// check — check is the only other thing on this board that draws a circle
+    /// round a piece, and two circles meaning opposite things is worse than no
+    /// hint. Tinting the sprite then failed because these sprites are a thin
+    /// flat (224,224,224) outline: at the usual 0.22 blend a white piece
+    /// renders about (179,224,231), and no tint of a few hundred outline pixels
+    /// is legible from across the board, whatever colour it is.
+    ///
+    /// Filling the silhouette is what works, because it puts light where there
+    /// was none — the same trick the armour fill uses, in white rather than
+    /// green, and pulsing rather than holding.
+    func setHintPulse(_ active: Bool) {
+        guard active != isShowingHint else { return }
+        isShowingHint = active
+        active ? startHintPulse() : stopHintPulse()
+    }
+
+    private func startHintPulse() {
+        // Check owns this piece's look while it lasts, and a red ring over a
+        // white fill is noise. The scene filters these out too; this is the
+        // backstop.
+        guard !isShowingCheck else { return }
+        buildHintFill()
+    }
+
+    private func buildHintFill() {
+        childNode(withName: Self.hintFillName)?.removeFromParent()
+
+        let fill = SKSpriteNode(texture: Silhouette.filled(forTexture: piece.textureName),
+                                color: .white, size: size)
+        fill.name = Self.hintFillName
+        fill.colorBlendFactor = 1
+        fill.alpha = Self.hintFillLow
+        // Inside the outline and above the board, just under the armour fill so
+        // an armoured piece still reads as armoured first.
+        fill.zPosition = -0.45
+        addChild(fill)
+
+        fill.run(.repeatForever(.sequence([
+            .fadeAlpha(to: Self.hintFillHigh, duration: Self.hintFillPeriod),
+            .fadeAlpha(to: Self.hintFillLow,  duration: Self.hintFillPeriod),
+        ])), withKey: Self.hintGlowKey)
+    }
+
+    private func stopHintPulse() {
+        childNode(withName: Self.hintFillName)?.removeFromParent()
+    }
+
     // MARK: - Damage
 
     /// Records where a shot struck, in this node's own coordinates, so the
@@ -327,6 +393,9 @@ final class PieceNode: SKSpriteNode {
         texture = next
         size = Self.fit(next, in: squareSize)
         updateWedge()
+        // The hint fill is cut from the texture, so eroded art needs a new one
+        // or the glow keeps the shape the piece used to be.
+        if isShowingHint { buildHintFill() }
         // The eroded art is a different shape, so the hitbox has to follow it.
         rebuildPhysicsBody()
 

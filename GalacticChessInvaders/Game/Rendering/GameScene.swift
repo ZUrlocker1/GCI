@@ -67,6 +67,23 @@ class GameScene: SKScene {
     private let turnTimer = TurnTimer()
     private var turnTimerNode: TurnTimerNode?
     private var statusNode: GameStatusNode?
+    private var hintNode: ChessHintNode?
+    /// Squares currently advised, best first — compared to skip redundant work
+    /// when the advice has not changed between beats.
+    private var hintedSquares: [String] = []
+    /// The nodes actually pulsing. Held as nodes, not squares, because a hinted
+    /// piece can move or be taken before the hint is cleared, and a square
+    /// lookup would then miss it and leave the ring pulsing forever.
+    private var hintedNodes: [PieceNode] = []
+    /// The board the in-flight hint search was asked about.
+    ///
+    /// Staleness is checked against the *position*, not a request counter. A
+    /// counter bumped on every call — including the calls that bail out before
+    /// searching — throws away results that were still correct: the beat opens
+    /// and dispatches, a `refreshStatus` a moment later bumps the counter and
+    /// bails, and the answer arrives to find itself out of date when nothing
+    /// had actually moved. Comparing boards cannot make that mistake.
+    private var hintSearchBoard: Chess.Board?
     private var autoModeLabel: SKLabelNode?
     private var fleet: FleetController?
     private var shipState: SpaceshipState?
@@ -267,6 +284,23 @@ class GameScene: SKScene {
     /// land on the transient notice.
     private static let gutterDrop: CGFloat = 8
     private static let shipLaneY: CGFloat = 62
+    /// Chess Hints sits above everything else in the gutter. The power-up alley
+    /// stacks upward from 196 in 14pt steps and tops out near 252 with every
+    /// effect running, so this clears a full stack.
+    private static let chessHintY: CGFloat = 292
+    /// Depth 2, matching the engine that plays Black.
+    ///
+    /// Depth 1 was tried and produced "MOVE A PAWN" almost every beat. At depth
+    /// 1 nothing sees Black's reply, so every quiet move scores about the same
+    /// and `favoursPawnAdvance` — which the hint shares with White's auto-move,
+    /// because promotion is the player's power-up (§7.2) — becomes the only
+    /// term that separates them. Every pawn push gains, so pawns win, always.
+    ///
+    /// At depth 2 a pawn push that hangs a piece is scored as such, and real
+    /// moves surface. It costs one more depth-2 search per beat, on a detached
+    /// utility task, against the up-to-three Black already runs.
+    private static let hintDepth = 2
+    private static let hintCount = 3
     private static let shipMargin: CGFloat = 30
     /// Time between detecting mate and showing the game-over screen. The mating
     /// path takes ~1.5s to draw and pulse; the remainder is stillness so the
@@ -931,6 +965,10 @@ class GameScene: SKScene {
         // Cheap and idempotent, so it rides along with every change rather than
         // needing the panel to know which switch was the sidebar's.
         NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
+        // Opening Settings clears the hints, because `canAcceptChessInput` goes
+        // false while a panel is up. Closing it has to put them back, and this
+        // also picks up the switch itself having been thrown.
+        refreshHints()
     }
 
     /// Hands the music back to whatever screen the player is returning to.
@@ -1266,6 +1304,11 @@ class GameScene: SKScene {
         bloomNode.addChild(status)
         statusNode = status
 
+        let hints = ChessHintNode()
+        hints.position = CGPoint(x: 112, y: Self.chessHintY)
+        bloomNode.addChild(hints)
+        hintNode = hints
+
         let autoLabel = SKLabelNode(fontNamed: "PressStart2P-Regular")
         autoLabel.text = "AUTO CHESS"
         autoLabel.fontSize = 9
@@ -1436,6 +1479,9 @@ class GameScene: SKScene {
         turnTimerNode = nil
         statusNode?.removeFromParent()
         statusNode = nil
+        clearHints()
+        hintNode?.removeFromParent()
+        hintNode = nil
         autoModeLabel?.removeFromParent()
         autoModeLabel = nil
         pieceNodes.removeAll()
@@ -1543,6 +1589,11 @@ class GameScene: SKScene {
         turnTimer.start(level: levels.parameters, inCheck: inCheck,
                         override: isAutoMode ? Self.autoBeatDuration : nil)
         turnTimerNode?.refresh(from: turnTimer)
+        // The beat opening is the moment the advice is worth having, and it is
+        // the only reliable trigger: `playBlackMoves` holds `isEngineThinking`
+        // for the whole of Black's turn, so every `refreshStatus` inside that
+        // window clears the hints and nothing inside it can put them back.
+        refreshHints()
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
             DiagnosticsLog.shared.log(.white, "in check")
@@ -2081,6 +2132,48 @@ class GameScene: SKScene {
         boardNode?.clearTethers()
     }
 
+    /// Whether Chess Hints should be on screen right now.
+    ///
+    /// Deliberately *not* `canAcceptChessInput`, which is about whether a click
+    /// would be accepted. Two of its clauses are wrong for hints:
+    ///
+    /// `isResolvingBeat` is true for the whole of `resolveBeat`, and
+    /// `beginBeat` is called from inside it — so reusing that gate meant the
+    /// beat-start refresh bailed every single beat, and hints only ever
+    /// appeared on the two paths that reach `beginBeat` from elsewhere. That
+    /// looked like flakiness and was not.
+    ///
+    /// `isEngineThinking` is kept, and matters: Black's multi-move turn hands
+    /// the turn back to White between moves, so without it hints would flash
+    /// for positions the player never gets to act on.
+    private var canShowHints: Bool {
+        GameSettings.shared.chessHints
+            && stateMachine.currentState is PlayingState
+            && howToPlayNode == nil
+            && settingsNode == nil
+            // Nothing to advise when the engine is playing White for you.
+            && !GameSettings.shared.autoChess
+            && !isEndingGame
+            && !isEngineThinking
+            && !whiteHasMovedThisBeat
+            && board.turn == .white
+            && !board.isMate
+            && !board.isStalemate
+    }
+
+    /// The first clause of `canShowHints` that is false, for the log.
+    private var hintsBlockedReason: String? {
+        if !(stateMachine.currentState is PlayingState) { return "not playing" }
+        if howToPlayNode != nil || settingsNode != nil   { return "panel open" }
+        if GameSettings.shared.autoChess                 { return "auto chess" }
+        if isEndingGame                                  { return "game ending" }
+        if isEngineThinking                              { return "engine thinking" }
+        if whiteHasMovedThisBeat                         { return "white has moved" }
+        if board.turn != .white                          { return "black to move" }
+        if board.isMate || board.isStalemate             { return "game decided" }
+        return nil
+    }
+
     private var canAcceptChessInput: Bool {
         stateMachine.currentState is PlayingState
             && howToPlayNode == nil
@@ -2260,6 +2353,109 @@ class GameScene: SKScene {
             lastStatus = status
         }
         statusNode?.show(status)
+        refreshHints()
+    }
+
+    // MARK: - Chess hints
+
+    /// Recomputes the shortlist and pulses it.
+    ///
+    /// Driven from `refreshStatus`, which is already the one place that runs
+    /// after every position change — a move, a descent, a regeneration. Hints
+    /// track the position, so they track the same events.
+    private func refreshHints() {
+        // The advice stands for the whole beat: from the moment it becomes
+        // White's move until that move is made, whether the player makes it or
+        // the clock runs out and the engine makes it for them. Selecting a
+        // piece does not take it down — the player is mid-decision, which is
+        // exactly when they are still reading it.
+        guard canShowHints else {
+            // Names the clause that closed, so a hint that never appears can be
+            // read off the log rather than guessed at — which is how the
+            // `isResolvingBeat` bug above was found.
+            if GameSettings.shared.chessHints, !hintedSquares.isEmpty,
+               let why = hintsBlockedReason {
+                DiagnosticsLog.shared.log(.chess, "hints off — \(why)")
+            }
+            hintSearchBoard = nil
+            clearHints()
+            return
+        }
+
+        let position = board.currentPosition
+        // Already searching this exact position — let it land.
+        guard position.board != hintSearchBoard else { return }
+        hintSearchBoard = position.board
+        DiagnosticsLog.shared.log(.chess, "hints searching")
+
+        let depth = Self.hintDepth
+        let limit = Self.hintCount
+        Task { [weak self] in
+            let sources = await Task.detached(priority: .utility) {
+                ChessEngine.rankedSources(in: position, depth: depth, limit: limit)
+            }.value
+            guard let self, self.board.currentPosition.board == position.board else { return }
+            self.applyHints(sources)
+        }
+    }
+
+    private func applyHints(_ squares: [String]) {
+        // No early-out on "same advice as last time". The same three squares
+        // between two beats does not mean the same three *nodes* are still
+        // pulsing — anything in between may have cleared them, and a piece may
+        // have been taken and replaced on its square. Reapplying is cheap and
+        // `setHintPulse` is idempotent.
+        clearHints()
+        hintedSquares = squares
+
+        var pulsed = 0
+        for square in squares {
+            guard let node = pieceNodes[square] else {
+                DiagnosticsLog.shared.log(.error, "hint: no piece node at \(square)")
+                continue
+            }
+            // The king in check already wears a red ring, and the check glow
+            // owns this node's tint. Check has to stay the louder signal.
+            guard !node.isShowingCheck else { continue }
+            node.setHintPulse(true)
+            hintedNodes.append(node)
+            pulsed += 1
+        }
+        DiagnosticsLog.shared.log(.chess,
+            "hints \(squares.joined(separator: " ")) — \(pulsed) lit")
+
+        // Distinct kinds, best first. The board lights three pieces, so naming
+        // only the best of a mixed set would contradict what the player sees.
+        var kinds: [PieceType] = []
+        for square in squares {
+            guard let kind = board.piece(at: square)?.type else { continue }
+            if !kinds.contains(kind) { kinds.append(kind) }
+        }
+        hintNode?.show(kinds.isEmpty ? nil : kinds)
+    }
+
+    /// Puts hints back up if they should be showing and are not.
+    ///
+    /// Called every frame from `update`, in the same spirit as
+    /// `syncPowerUpAlley` beside it: cheap, idempotent, and it does not care
+    /// which event was supposed to have triggered the refresh. Hints are driven
+    /// from `beginBeat` and `refreshStatus`, and a missed trigger there used to
+    /// mean a whole beat with no advice — which is precisely what the
+    /// `isResolvingBeat` bug did. This makes that class of bug cost a frame
+    /// rather than a beat.
+    ///
+    /// `refreshHints` will not re-dispatch for a position it is already
+    /// searching, so this costs a boolean on the frames where nothing is wrong.
+    private func syncChessHints() {
+        guard hintedSquares.isEmpty, hintSearchBoard == nil, canShowHints else { return }
+        refreshHints()
+    }
+
+    private func clearHints() {
+        hintedNodes.forEach { $0.setHintPulse(false) }
+        hintedNodes = []
+        hintedSquares = []
+        hintNode?.show(nil)
     }
 
 
@@ -4025,6 +4221,7 @@ class GameScene: SKScene {
         if stateMachine.currentState is PlayingState {
             syncRespawnWarnings()
             syncPowerUpAlley()
+            syncChessHints()
             // §13's effect clock. Ticked before the systems it gates, so the
             // frame a freeze ends on is already a running frame.
             if let expired = powerUps.tick(dt) {

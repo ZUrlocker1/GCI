@@ -47,11 +47,30 @@ final class GameSettings {
 
     // MARK: - Gameplay
 
-    var difficulty: Difficulty  { didSet { persist() } }
+    var difficulty: Difficulty {
+        didSet {
+            // Hints follow difficulty only until the player has an opinion.
+            // Coupling them outright is the version of this that annoys people:
+            // turn hints off in Cadet, glance at Pilot, come back, and they are
+            // on again because the switch moved behind your back. Once the
+            // player has touched the switch it is theirs and difficulty never
+            // moves it.
+            if !chessHintsUserSet { chessHints = difficulty == .cadet }
+            persist()
+        }
+    }
     /// The engine plays White. Not a mechanics change — `resolveBeat` already
     /// auto-moves when the player doesn't — so this only suppresses the chess
     /// affordances and says so on the clock.
     var autoChess: Bool         { didSet { persist() } }
+    /// Pulse the three pieces worth moving, and name the best of them in the
+    /// gutter. On by default: the five-second beat is the hard part of this
+    /// game for anyone who does not read a position at a glance, and someone
+    /// who does not need the help will find the switch.
+    var chessHints: Bool        { didSet { persist() } }
+    /// Whether the player has thrown the Chess Hints switch themselves. Set by
+    /// the Settings screen, never by anything else — see `difficulty`.
+    var chessHintsUserSet: Bool { didSet { persist() } }
 
     // MARK: - Display
 
@@ -139,6 +158,8 @@ final class GameSettings {
         static let soundVolume     = "GCI_SoundVolume"
         static let difficulty      = "GCI_Difficulty"
         static let autoChess       = "GCI_AutoChess"
+        static let chessHints      = "GCI_ChessHints"
+        static let chessHintsSet   = "GCI_ChessHintsUserSet"
         static let neonGlow        = "GCI_NeonGlow"
         static let boardGrid       = "GCI_BoardGrid"
         static let nebula          = "GCI_Nebula"
@@ -166,8 +187,16 @@ final class GameSettings {
         musicVolume     = Float(number(Key.musicVolume, default: 1.0))
         soundOn         = flag(Key.soundOn, default: true)
         soundVolume     = Float(number(Key.soundVolume, default: 1.0))
-        difficulty      = Difficulty(rawValue: store.string(forKey: Key.difficulty) ?? "") ?? .pilot
+        // Cadet is the shipped default. The game is genuinely hard — two
+        // control schemes at once against a five-second clock — and a free
+        // download that beats someone in ninety seconds is uninstalled, not
+        // persevered with. Anyone who wants the harder game finds it in the
+        // first row of Settings. An existing player's saved choice is
+        // untouched: this only applies when the key was never written.
+        difficulty      = Difficulty(rawValue: store.string(forKey: Key.difficulty) ?? "") ?? .cadet
         autoChess       = flag(Key.autoChess, default: false)
+        chessHintsUserSet = flag(Key.chessHintsSet, default: false)
+        chessHints      = flag(Key.chessHints, default: difficulty == .cadet)
         neonGlow        = flag(Key.neonGlow, default: true)
         boardGrid       = CGFloat(number(Key.boardGrid, default: 0.5))
         nebula          = flag(Key.nebula, default: true)
@@ -184,6 +213,8 @@ final class GameSettings {
         store.set(Double(soundVolume),     forKey: Key.soundVolume)
         store.set(difficulty.rawValue,     forKey: Key.difficulty)
         store.set(autoChess,               forKey: Key.autoChess)
+        store.set(chessHints,              forKey: Key.chessHints)
+        store.set(chessHintsUserSet,       forKey: Key.chessHintsSet)
         store.set(neonGlow,                forKey: Key.neonGlow)
         store.set(Double(boardGrid),       forKey: Key.boardGrid)
         store.set(nebula,                  forKey: Key.nebula)
@@ -196,7 +227,8 @@ final class GameSettings {
         isPersisting = true
         musicOn = true;         musicVolume = 1.0
         soundOn = true;         soundVolume = 1.0
-        difficulty = .pilot;    autoChess = false
+        difficulty = .cadet;    autoChess = false
+        chessHints = true;      chessHintsUserSet = false
         neonGlow = true;        boardGrid = 0.5
         nebula = true;          logPanel = false
         shipSpeedScale = 1.0
