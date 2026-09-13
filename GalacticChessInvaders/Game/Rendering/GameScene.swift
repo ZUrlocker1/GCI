@@ -12,8 +12,15 @@ class GameScene: SKScene {
     // MARK: - Singleton
 
     static let shared: GameScene = {
-        let scene = GameScene(size: CGSize(width: 960, height: 700))
-        scene.scaleMode = .aspectFit
+        let scene = GameScene(size: SceneLayout.designSize)
+        // `.resizeFill`, not `.aspectFit`: the scene becomes the view's own
+        // size and lays itself out, rather than being a fixed 960×700 canvas
+        // scaled into whatever is available with black bars around it. On a Mac
+        // that is the difference between a resized window showing more game and
+        // showing more letterbox; on iOS it is the whole port (docs/IOS-Port.md
+        // §2). Press Start 2P is a pixel font, so it also keeps type at its
+        // native size instead of resampling it.
+        scene.scaleMode = .resizeFill
         return scene
     }()
 
@@ -309,22 +316,30 @@ class GameScene: SKScene {
     /// the reveal is not interrupted by a new beat or stray input.
     private var isEndingGame = false
 
-    /// The playfield's geometry, in one place. Every number below is read from
-    /// it rather than written here — see `SceneLayout` and docs/IOS-Port.md §3.
-    /// Still the design layout: this stage changes where the numbers live, not
-    /// what they are.
-    private var layout: SceneLayout { .design }
+    /// The playfield's geometry, derived from the size the scene actually has.
+    /// Every position in the scene reads from this — see `SceneLayout`.
+    private var layout: SceneLayout { SceneLayout(size: size) }
+
+    /// The square size the board on screen was actually built at.
+    ///
+    /// The board does not resize under the player mid-wave. Dragging a window
+    /// edge repositions the furniture immediately, but rescaling the board
+    /// means rebuilding its grid, refitting every piece and moving a fleet that
+    /// may be mid-sweep — visual churn during play, for a size the player is
+    /// still in the middle of choosing. The new size is adopted at the next
+    /// playfield build, which is every level and every new game.
+    private var builtSquareSize: CGFloat = SceneLayout.design.squareSize
 
     // Board sits above the ship lane, below the HUD.
-    static let boardBottomY: CGFloat = SceneLayout.design.boardBottomY
+    static var boardBottomY: CGFloat { SceneLayout.current.boardBottomY }
     /// Everything in the left gutter from the turn timer down sits this much
     /// lower than it used to, to open a gap between the chess readouts and the
     /// power-up block above them. Applied as one constant rather than four
     /// edited literals, because the four move together or the timer's digits
     /// land on the transient notice.
-    static let gutterDrop: CGFloat = SceneLayout.design.gutterDrop
-    private static let shipLaneY: CGFloat = SceneLayout.design.shipLaneY
-    private static let chessHintY: CGFloat = SceneLayout.design.chessHintY
+    static var gutterDrop: CGFloat { SceneLayout.current.gutterDrop }
+    private static var shipLaneY: CGFloat { SceneLayout.current.shipLaneY }
+    private static var chessHintY: CGFloat { SceneLayout.current.chessHintY }
     /// Depth 2, matching the engine that plays Black.
     ///
     /// Depth 1 was tried and produced "MOVE A PAWN" almost every beat. At depth
@@ -338,7 +353,7 @@ class GameScene: SKScene {
     /// utility task, against the up-to-three Black already runs.
     private static let hintDepth = 2
     private static let hintCount = 3
-    private static let shipMargin: CGFloat = SceneLayout.design.shipMargin
+    private static var shipMargin: CGFloat { SceneLayout.current.shipMargin }
     /// Time between detecting mate and showing the game-over screen. The mating
     /// path takes ~1.5s to draw and pulse; the remainder is stillness so the
     /// player can take in what happened before a menu replaces it.
@@ -591,6 +606,10 @@ class GameScene: SKScene {
         // empty wedges at the screen edges mid-cycle. Spawn stars across a band
         // wider than the screen by the drift distance on each side, and scale the
         // count to keep density constant.
+        // A zero-width scene is reachable under `.resizeFill` before the view
+        // has laid out, and `spawnWidth / sceneW` is then infinity, which traps
+        // on the way to Int. There is nothing to scatter stars across anyway.
+        guard sceneW > 0, sceneH > 0 else { return }
         let margin = abs(drift * sceneH)
         let spawnWidth = sceneW + margin * 2
         let scaledCount = Int((Double(count) * Double(spawnWidth / sceneW)).rounded())
@@ -1266,6 +1285,10 @@ class GameScene: SKScene {
 
     private func buildPlayfield(announceLevel: Bool = true) {
         hideBoard()
+        // Before a single node is made: every one of them measures itself
+        // against this.
+        builtSquareSize = layout.squareSize
+        SceneLayout.adopt(layout)
         resetOnboardingPrompts()
         board.setupStandardPosition()
         // §10.1: at Level 9 the black king carries a forcefield worth 50%
@@ -2327,6 +2350,44 @@ class GameScene: SKScene {
         refreshStatus()
     }
 
+    // MARK: - Layout
+
+    /// The scene now fills its view, so this fires on every frame of a window
+    /// drag on a Mac, and on rotation and multitasking on iOS.
+    ///
+    /// It repositions rather than rebuilds. Everything here is a handful of
+    /// `position` assignments, which is what makes it safe to run at that rate;
+    /// nothing is created, destroyed or re-measured. The board's *scale* is
+    /// deliberately left alone — see `builtSquareSize`.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard oldSize != size else { return }
+        applyLayout()
+    }
+
+    /// Moves the furniture to wherever the current layout puts it.
+    private func applyLayout() {
+        let layout = self.layout
+
+        // The board carries its pieces with it — they are its children — so one
+        // assignment moves the whole position.
+        boardNode?.position = layout.boardOrigin
+
+        turnTimerNode?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
+        autoModeLabel?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
+        statusNode?.position    = CGPoint(x: layout.gutterCentreX, y: layout.statusBannerY)
+        hintNode?.position      = CGPoint(x: layout.gutterCentreX, y: layout.chessHintY)
+
+        // The power-up alley is rebuilt from the layout every frame by
+        // `syncPowerUpAlley`, so it needs nothing here.
+
+        if let ship {
+            ship.position = CGPoint(
+                x: min(max(ship.position.x, layout.shipMargin), size.width - layout.shipMargin),
+                y: layout.shipLaneY)
+        }
+    }
+
     /// Lights the king of `side` red, clearing any previously lit king. Passing
     /// nil clears. The glow lives on the piece node, so it follows the king if it
     /// moves while still in check.
@@ -3113,7 +3174,7 @@ class GameScene: SKScene {
     /// into space nothing else wants. `PowerUpAlleyLayoutTests` pins it against
     /// every neighbour, because eyeballing this is what produced the first
     /// collision.
-    static let powerUpAlleyBottomY: CGFloat = SceneLayout.design.powerUpAlleyBottomY
+    static var powerUpAlleyBottomY: CGFloat { SceneLayout.current.powerUpAlleyBottomY }
     static let powerUpAlleyStep: CGFloat = SceneLayout.design.powerUpAlleyStep
     static let powerUpAlleyFontSize: CGFloat = SceneLayout.design.powerUpAlleyFontSize
     private static let powerUpBarName = "powerUpBar"
@@ -3121,7 +3182,7 @@ class GameScene: SKScene {
     /// The countdown bar sits under the bottom line, which is always the timed
     /// effect — it is appended last, and the block stacks upward from a fixed
     /// floor, so the bar never moves.
-    static let powerUpBarY = SceneLayout.design.powerUpBarY
+    static var powerUpBarY: CGFloat { SceneLayout.current.powerUpBarY }
     /// The stack the notice is currently showing, so it only flares when the
     /// number actually changes rather than on every frame.
     private var shownRapidFireStacks = 0

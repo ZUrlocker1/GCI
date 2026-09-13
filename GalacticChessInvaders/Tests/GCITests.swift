@@ -524,14 +524,62 @@ final class SceneLayoutTests: XCTestCase {
         XCTAssertGreaterThan(layout.chessHintY, stackTop)
     }
 
-    /// Only the board's horizontal placement reads `size` in Stage 1. Proving
-    /// that here means Stage 2's changes show up as test failures.
-    func testOnlyTheBoardOriginTracksSizeInStageOne() {
-        let wide = SceneLayout(size: CGSize(width: 1200, height: 700))
-        XCTAssertEqual(wide.boardOriginX, 344)              // (1200 - 512) / 2
-        XCTAssertEqual(wide.squareSize, layout.squareSize)
-        XCTAssertEqual(wide.boardBottomY, layout.boardBottomY)
-        XCTAssertEqual(wide.gutterCentreX, layout.gutterCentreX)
+    // MARK: - Stage 2: the layout responds to size
+
+    /// Extra width goes to the gutters. The board is already limited by height
+    /// at the design size, so widening the window must not stretch it.
+    func testExtraWidthWidensTheGuttersNotTheBoard() {
+        let wide = SceneLayout(size: CGSize(width: 1400, height: 700))
+        XCTAssertEqual(wide.squareSize, 64, "height still binds")
+        XCTAssertEqual(wide.boardOriginX, 444)              // (1400 - 512) / 2
+        XCTAssertEqual(wide.gutterCentreX, 222)             // and the gutter follows
+    }
+
+    /// Extra height grows the board until width binds instead.
+    func testExtraHeightGrowsTheBoardUntilWidthBinds() {
+        let tall = SceneLayout(size: CGSize(width: 960, height: 900))
+        // Height would allow (900 - 188) / 8 = 89, width allows (960 - 448) / 8 = 64.
+        XCTAssertEqual(tall.squareSize, 64)
+
+        let both = SceneLayout(size: CGSize(width: 1600, height: 900))
+        XCTAssertEqual(both.squareSize, 89)                 // floor of 712 / 8
+        XCTAssertEqual(both.boardSize, 712)
+    }
+
+    /// Whole points only. A grid line at a fractional spacing aliases.
+    func testSquareSizeIsAlwaysAWholeNumberOfPoints() {
+        for height in stride(from: 500.0, through: 1400.0, by: 7.0) {
+            let l = SceneLayout(size: CGSize(width: 1600, height: height))
+            XCTAssertEqual(l.squareSize, l.squareSize.rounded(.down),
+                           "fractional square at height \(height)")
+        }
+    }
+
+    /// The minimum window must still produce a playable board rather than a
+    /// negative one. 640×500 is the floor `windowResizability` enforces.
+    func testTheSmallestWindowStillYieldsAPlayableBoard() {
+        let small = SceneLayout(size: CGSize(width: 640, height: 500))
+        XCTAssertGreaterThanOrEqual(small.squareSize, SceneLayout.minSquareSize)
+        XCTAssertGreaterThan(small.boardSize, 0)
+        XCTAssertGreaterThan(small.boardBottomY, 0)
+    }
+
+    /// The gutter tracks the board rather than sitting at a fixed x, or it
+    /// would end up underneath it on a narrow window.
+    func testTheGutterNeverOverlapsTheBoard() {
+        for width in stride(from: 640.0, through: 2000.0, by: 13.0) {
+            let l = SceneLayout(size: CGSize(width: width, height: 900))
+            XCTAssertLessThanOrEqual(l.gutterCentreX, l.boardOriginX,
+                                     "gutter inside the board at width \(width)")
+        }
+    }
+
+    /// The ship stays under the board as the board moves, not pinned to the
+    /// window's bottom edge.
+    func testTheShipLaneFollowsTheBoard() {
+        let tall = SceneLayout(size: CGSize(width: 1600, height: 1200))
+        XCTAssertEqual(tall.shipLaneY, tall.boardBottomY - 58)
+        XCTAssertLessThan(tall.shipLaneY, tall.boardBottomY)
     }
 }
 

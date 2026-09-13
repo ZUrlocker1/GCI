@@ -17,12 +17,25 @@ import SpriteKit
 
 final class BoardNode: SKNode {
 
-    /// Kept as statics so the 58 test references and 15 call sites keep
-    /// working unchanged; the *value* now has one home. Stage 2 of the layout
-    /// work turns these into instance properties fed by the scene's live size
-    /// — see docs/IOS-Port.md §3.
-    static let squareSize: CGFloat = SceneLayout.design.squareSize
-    static let boardSize: CGFloat = SceneLayout.design.boardSize
+    /// The live square size, and the board's side.
+    ///
+    /// Static because there is exactly one board on screen and sixty-odd call
+    /// sites read it, most of them tests. Making it an instance property would
+    /// buy nothing — a second board has never existed and would need far more
+    /// than this to work — while spreading the change across every one of them.
+    ///
+    /// Set by `adopt(_:)` when the playfield is built, before any node reads
+    /// it. One source of truth, which is the point: a design constant sitting
+    /// beside a live value is exactly the drift this refactor exists to remove.
+    private(set) static var squareSize: CGFloat = SceneLayout.design.squareSize
+    private(set) static var boardSize: CGFloat = SceneLayout.design.boardSize
+
+    /// Adopt a layout's geometry. Called from `buildPlayfield` before the board
+    /// or any piece is constructed.
+    static func adopt(_ layout: SceneLayout) {
+        squareSize = layout.squareSize
+        boardSize = layout.boardSize
+    }
     /// Pool size for legal-move markers. A queen on an empty board reaches 27
     /// squares, so 32 covers every real case with headroom.
     static let markerPoolSize = 32
