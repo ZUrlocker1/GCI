@@ -41,8 +41,7 @@ attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
   `MOVE A PAWN`, or `MOVE A PAWN / OR KNIGHT` etc. 
 - **Arcade Hints** — Similarly a message is displayed if the user goes 3 moves
   without firing, or does not use the arrow keys. A message is also displayed
-  in red if they hit their own piece a second time.  Chess and Arcade hints
-  rearm at each new level. 
+  in red if they hit their own piece a second time. Hints rearm at each level. 
 
 **What's new in v1.0:**
 

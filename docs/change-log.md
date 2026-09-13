@@ -7,9 +7,8 @@
 - **Cadet is now the default difficulty** — The game asks a new player to run two control schemes at once against a five-second clock. The user can change to Ace mode for a harder game.
 - **The hard mode is now called Ace**, not Pilot — Anyone upgrading from 1.0 will find their difficulty back at Cadet, since the old setting no longer parses.
 - **Hints on for Cadet mode** — And are off for Ace. However, the player can set Hints independently.
-- **Arcade Hints** — The other half of the game gets the same treatment. Three beats without firing raises "PRESS SPACE TO FIRE!"  Ten seconds of firing without steering raises "USE ARROWS TO MOVE!"
+- **Arcade Hints** — The other half of the game gets the same treatment. Three beats without firing raises "PRESS SPACE TO FIRE!"  Ten seconds of firing without steering raises "USE ARROWS TO MOVE!" Hints rearm at each level.
 - **Friendly fire is called out** — The second time one of your own lasers damages one of your own pieces, a red "YOU HIT / YOUR ROOK!" names the piece for three seconds. Your own pieces sit in your firing line on every shot, and nothing on screen said so. Not the first hit, because a stray shot is the game being played, and clearing a nearly-dead piece out of your own lane is a real move.
-- **Hints re-arm at each level** — This provides a reminder for players who may forget some things.
 - **Under the hood** — The hint search runs at depth 2, matching the engine that plays Black. At depth 1 nothing sees Black's reply, every quiet move scored the same, and the promotion bias became the only term separating them — so the hint said "MOVE A PAWN" every single beat. The hint ranks distinct source squares rather than moves, because the top four entries in an open position are routinely one knight going to four squares. It orders strictly rather than picking at random among near-equal moves the way the engine does, since advice that reshuffled every beat would read as a bug. Eight new tests cover the ranking and the gutter text.
 
 ---
