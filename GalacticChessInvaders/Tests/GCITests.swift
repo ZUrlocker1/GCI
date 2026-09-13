@@ -1727,7 +1727,7 @@ private final class BeatSim {
 
 @MainActor
 final class BeatLifecycleTests: XCTestCase {
-    /// These assert Pilot's numbers — a 5s beat, power-ups that reset each wave
+    /// These assert Ace's numbers — a 5s beat, power-ups that reset each wave
     /// — so they pin the difficulty rather than inherit whatever ships as the
     /// default. Cadet became that default in 1.1 and broke them, which is the
     /// test's fault for depending on a product decision it is not about.
@@ -1736,7 +1736,7 @@ final class BeatLifecycleTests: XCTestCase {
     override func setUp() {
         super.setUp()
         priorDifficulty = GameSettings.shared.difficulty
-        GameSettings.shared.difficulty = .pilot
+        GameSettings.shared.difficulty = .ace
     }
 
     override func tearDown() {
@@ -1956,7 +1956,7 @@ final class MateRevealTests: XCTestCase {
 
 @MainActor
 final class LevelProgressionTests: XCTestCase {
-    /// These assert Pilot's numbers — a 5s beat, power-ups that reset each wave
+    /// These assert Ace's numbers — a 5s beat, power-ups that reset each wave
     /// — so they pin the difficulty rather than inherit whatever ships as the
     /// default. Cadet became that default in 1.1 and broke them, which is the
     /// test's fault for depending on a product decision it is not about.
@@ -1965,7 +1965,7 @@ final class LevelProgressionTests: XCTestCase {
     override func setUp() {
         super.setUp()
         priorDifficulty = GameSettings.shared.difficulty
-        GameSettings.shared.difficulty = .pilot
+        GameSettings.shared.difficulty = .ace
     }
 
     override func tearDown() {
@@ -3979,7 +3979,7 @@ final class PawnAdvanceBiasTests: XCTestCase {
 
 @MainActor
 final class PromotionRewardTests: XCTestCase {
-    /// These assert Pilot's numbers — a 5s beat, power-ups that reset each wave
+    /// These assert Ace's numbers — a 5s beat, power-ups that reset each wave
     /// — so they pin the difficulty rather than inherit whatever ships as the
     /// default. Cadet became that default in 1.1 and broke them, which is the
     /// test's fault for depending on a product decision it is not about.
@@ -3988,7 +3988,7 @@ final class PromotionRewardTests: XCTestCase {
     override func setUp() {
         super.setUp()
         priorDifficulty = GameSettings.shared.difficulty
-        GameSettings.shared.difficulty = .pilot
+        GameSettings.shared.difficulty = .ace
     }
 
     override func tearDown() {

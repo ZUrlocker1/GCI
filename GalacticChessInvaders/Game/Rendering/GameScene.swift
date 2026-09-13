@@ -106,14 +106,18 @@ class GameScene: SKScene {
     /// this one is an event, not a nudge toward something untried, so it shows
     /// briefly and goes rather than waiting to be satisfied.
     private var friendlyFireRemaining: TimeInterval = 0
+    /// The piece the notice is about, so the prompt can name it.
+    private var friendlyFireKind: PieceType?
     private var friendlyFireHits = 0
     private var hasShownFriendlyFireNotice = false
     private static let friendlyFireNoticeDuration: TimeInterval = 3
     /// Not the first hit, and only once a level. Shooting your own piece can be
     /// deliberate — a nearly-dead White piece in your lane is worth clearing —
-    /// and a stray shot or two is the game being played. Three says it is a
-    /// habit rather than an accident, and by then one mention is enough.
-    private static let friendlyFireHitsBeforeNotice = 3
+    /// so one hit is the game being played. Two is a pattern worth naming, and
+    /// the two can be the same piece twice or two different pieces: what the
+    /// player needs to know is that their own fire counts, not which piece it
+    /// landed on.
+    private static let friendlyFireHitsBeforeNotice = 2
     private var autoModeLabel: SKLabelNode?
     private var fleet: FleetController?
     private var shipState: SpaceshipState?
@@ -2500,8 +2504,8 @@ class GameScene: SKScene {
         let next: ChessHintNode.ControlPrompt?
         // The event wins the slot while it lasts: it describes something that
         // just happened, and the other two will still be true afterwards.
-        if friendlyFireRemaining > 0 {
-            next = .friendlyFire
+        if friendlyFireRemaining > 0, let kind = friendlyFireKind {
+            next = .friendlyFire(kind)
         } else if !hasFiredThisLevel {
             next = beatsWithoutFiring >= Self.beatsBeforeFirePrompt ? .fire : nil
         } else if !hasMovedShipThisLevel {
@@ -2520,11 +2524,12 @@ class GameScene: SKScene {
     }
 
     /// Raises the friendly-fire notice on the third hit of a run, once.
-    private func noteFriendlyFire() {
+    private func noteFriendlyFire(on kind: PieceType) {
         guard !hasShownFriendlyFireNotice else { return }
         friendlyFireHits += 1
         guard friendlyFireHits >= Self.friendlyFireHitsBeforeNotice else { return }
         hasShownFriendlyFireNotice = true
+        friendlyFireKind = kind
         friendlyFireRemaining = Self.friendlyFireNoticeDuration
         DiagnosticsLog.shared.log(.info, "friendly fire notice — \(friendlyFireHits) hits")
         refreshControlPrompt()
@@ -2543,6 +2548,7 @@ class GameScene: SKScene {
         hasMovedShipThisLevel = false
         secondsSinceFiring = 0
         friendlyFireRemaining = 0
+        friendlyFireKind = nil
         friendlyFireHits = 0
         hasShownFriendlyFireNotice = false
         lastControlPrompt = nil
@@ -4070,7 +4076,7 @@ class GameScene: SKScene {
             guard let result = CollisionResolver.playerLaserHitWhitePiece(
                 at: pieceNode.square, board: board) else { return }
             handleWhitePieceHit(result, node: pieceNode, impact: impact)
-            noteFriendlyFire()
+            noteFriendlyFire(on: pieceNode.piece.type)
         }
     }
 

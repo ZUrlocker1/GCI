@@ -33,7 +33,12 @@ final class GameSettings {
     /// until somebody has actually finished the game.
     enum Difficulty: String {
         case cadet
-        case pilot
+        /// Shipped as "pilot" through 1.0. Renamed for 1.1: Ace reads as earned
+        /// skill where Pilot is only a rank, and skill is what the mode asks
+        /// for. A saved "pilot" no longer parses and falls through to Cadet,
+        /// which is deliberate — the handful of people running 1.0 are testers,
+        /// and Cadet is where a fresh install should start anyway.
+        case ace
     }
 
     // MARK: - Audio

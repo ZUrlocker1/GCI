@@ -14,9 +14,10 @@ final class ChessHintNode: SKNode {
 
     private static let cyan = NeonPalette.cyan
     private static let font = "PressStart2P-Regular"
-    /// Six characters is the widest a name gets — "KNIGHT", "BISHOP" — and the
-    /// joined lines reach nine, "OR KNIGHT". GameStatusNode fits "CHECKMATE" at
-    /// 11pt in the same gutter, so nine at 13 is inside it.
+    /// The gutter is wider than it looks. The board starts at x=224 and this
+    /// node is centred at x=112, so there is ~200pt to play with once the rank
+    /// labels at x=212 are cleared — "FRIENDLY FIRE!" is fourteen characters of
+    /// 9pt monospace, about 126pt, and sits well inside it.
     private static let leadSize: CGFloat = 9
     private static let kindSize: CGFloat = 13
     private static let lineStep: CGFloat = 16
@@ -45,7 +46,32 @@ final class ChessHintNode: SKNode {
     enum ControlPrompt: Equatable {
         case fire
         case move
-        case friendlyFire
+        /// Carries the piece that was hit, so the notice can name it.
+        case friendlyFire(PieceType)
+
+        /// Uppercase name of a piece, for both the hint lines and the
+        /// friendly-fire notice. On the enum rather than the node because the
+        /// enum is reachable from outside the main actor and the node is not.
+        static func name(for kind: PieceType) -> String {
+            switch kind {
+            case .pawn:   return "PAWN"
+            case .knight: return "KNIGHT"
+            case .bishop: return "BISHOP"
+            case .rook:   return "ROOK"
+            case .queen:  return "QUEEN"
+            case .king:   return "KING"
+            }
+        }
+
+        /// Red for friendly fire — it is a cost, not a nudge. The other two
+        /// are orange, which is the game's colour for "here is something you
+        /// have not tried yet".
+        var color: SKColor {
+            switch self {
+            case .fire, .move:   return NeonPalette.orange
+            case .friendlyFire:  return NeonPalette.crimson
+            }
+        }
 
         var lines: (String, String) {
             switch self {
@@ -53,7 +79,12 @@ final class ChessHintNode: SKNode {
             // GameStatusNode fits in this gutter. Ten is safe.
             case .fire: return ("PRESS SPACE", "TO FIRE!")
             case .move: return ("USE ARROWS", "TO MOVE!")
-            case .friendlyFire: return ("WATCH YOUR", "OWN PIECES!")
+            // Names the piece actually hit. Advice about the future — "watch
+            // your own pieces" — is the wrong tense: by the time this shows,
+            // the shot has landed, and a player who did not realise their own
+            // fire counts needs telling what just happened, not what to do
+            // next. "YOUR KNIGHT!" is the longest at twelve characters.
+            case .friendlyFire(let kind): return ("YOU HIT", "YOUR \(Self.name(for: kind))!")
             }
         }
     }
@@ -162,6 +193,7 @@ final class ChessHintNode: SKNode {
         }
         (firePromptTop.text, firePromptBottom.text) = next.lines
         for label in [firePromptTop, firePromptBottom] {
+            label.fontColor = next.color
             label.alpha = 1
             label.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.35, duration: 0.55),
@@ -174,21 +206,11 @@ final class ChessHintNode: SKNode {
     /// "PAWN", or "PAWN" / "OR QUEEN". Anything past the second kind is
     /// dropped rather than crammed in.
     private static func lines(for kinds: [PieceType]) -> [String] {
-        let names = kinds.prefix(maxKinds).map(name(for:))
+        let names = kinds.prefix(maxKinds).map(ControlPrompt.name(for:))
         guard names.count > 1 else { return names }
         return names.enumerated().map { index, name in
             index == names.count - 1 ? "OR \(name)" : name
         }
     }
 
-    private static func name(for kind: PieceType) -> String {
-        switch kind {
-        case .pawn:   return "PAWN"
-        case .knight: return "KNIGHT"
-        case .bishop: return "BISHOP"
-        case .rook:   return "ROOK"
-        case .queen:  return "QUEEN"
-        case .king:   return "KING"
-        }
-    }
 }

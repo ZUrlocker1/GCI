@@ -160,9 +160,9 @@ final class SettingsNode: SKNode {
         // screen, and it used to sit underneath two volume sliders.
         heading("GAMEPLAY", Self.magenta, x: x, y: 540)
         segmentRow("DIFFICULTY", x: x, w: w, y: 512,
-                   options: ["CADET", "PILOT"],
+                   options: ["CADET", "ACE"],
                    selected: settings.difficulty == .cadet ? 0 : 1) { index in
-            self.settings.difficulty = index == 0 ? .cadet : .pilot
+            self.settings.difficulty = index == 0 ? .cadet : .ace
         }
         explain("SELECT CADET FOR AN EASIER ON RAMP.", x: x, y: 488)
 

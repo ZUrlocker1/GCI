@@ -35,12 +35,16 @@ attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 **What's new in v1.1:**
 
-- **Chess Hints** — the pieces worth moving glow, and the gutter names them.
-  On by default in Cadet; switch it either way in Settings.
-- **Cadet is now the default difficulty**, and hints follow difficulty until
-  you throw the switch yourself.
-- **Control prompts** — the game says where the trigger is if you have not
-  fired, and where the steering is if you have not moved.
+- **Chess Hints** — the pieces worth moving glow, and the gutter names them:
+  `MOVE A PAWN`, or `MOVE A PAWN / OR KNIGHT` when both are reasonable. The
+  advice holds for the whole beat, however the move is made.
+- **Cadet is now the default difficulty**, and the harder mode is **Ace** —
+  it was called Pilot. Hints are on for Cadet and off for Ace, until you throw
+  the switch yourself, after which it stays where you put it.
+- **Prompts for the controls you have not used** — where the trigger is if you
+  have not fired, where the steering is if you have not moved, and a red
+  `YOU HIT / YOUR ROOK!` the second time your own laser damages one of your
+  own pieces. Each re-arms at every level.
 
 **What's new in v1.0:**
 
