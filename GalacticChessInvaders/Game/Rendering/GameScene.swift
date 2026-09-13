@@ -806,12 +806,24 @@ class GameScene: SKScene {
     /// fine, which is what made it look like a start-up ordering bug.
     private func layOutTitleScreen() {
         guard let overlay = titleOverlay else { return }
+
+        // The title is composed at the design canvas like the panels are, so it
+        // needs the same treatment: on a scene narrower than 960 — the log
+        // sidebar open, say — the wordmark simply ran off the edge. Toggling
+        // the sidebar from the title screen looked like it did nothing.
+        let design = SceneLayout.designSize
+        let scale = min(1, min(size.width / design.width, size.height / design.height))
+        overlay.setScale(scale)
         overlay.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        // The overlay is centred, so the container is offset back to the
-        // scene's origin and then up to where the HUD would have been.
-        overlay.childNode(withName: Self.titleNavName)?.position =
-            CGPoint(x: -size.width / 2,
-                    y: size.height - HUDNode.height - size.height / 2)
+
+        // The nav pair is a child of the overlay so it is torn down with it,
+        // but it should stay the size the HUD's own pair is — so it cancels the
+        // overlay's scale and is positioned in the overlay's scaled space.
+        if let nav = overlay.childNode(withName: Self.titleNavName) {
+            nav.setScale(1 / scale)
+            nav.position = CGPoint(x: -size.width / 2 / scale,
+                                   y: (size.height - HUDNode.height - size.height / 2) / scale)
+        }
     }
 
     /// A raider wanders past the title every 25–35 seconds.
@@ -2441,8 +2453,12 @@ class GameScene: SKScene {
 
         let scale = min(1, min(size.width / designSize.width, size.height / designSize.height))
         panel.setScale(scale)
+        // Centred across, pinned to the top. Centring vertically left a band of
+        // dead space above the panel and pushed BACK down the screen; BACK sits
+        // in the panel's own HUD band, so top-aligning puts it exactly where
+        // SET and INFO are during play, which is where the eye looks for it.
         panel.position = CGPoint(x: (size.width - designSize.width * scale) / 2,
-                                 y: (size.height - designSize.height * scale) / 2)
+                                 y: size.height - designSize.height * scale)
     }
 
     /// Re-fits whichever panel is up, and hides the shade when none is.

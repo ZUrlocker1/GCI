@@ -582,6 +582,27 @@ final class SceneLayoutTests: XCTestCase {
         }
     }
 
+    /// The board must fit inside the scene at every width, including the narrow
+    /// ones the log sidebar produces.
+    func testTheBoardAlwaysFitsTheScene() {
+        for width in stride(from: 640.0, through: 2000.0, by: 11.0) {
+            let l = SceneLayout(size: CGSize(width: width, height: 900))
+            XCTAssertLessThanOrEqual(l.boardOriginX + l.boardSize, l.size.width,
+                                     "board overflows at width \(width)")
+        }
+    }
+
+    /// Only the left gutter is reserved. Reserving a second one on the right —
+    /// where nothing is drawn — cost the board 200pt it did not need to give
+    /// up, and made opening the log sidebar shrink the game far more than the
+    /// sidebar actually took.
+    func testOnlyTheLeftGutterIsReserved() {
+        let narrow = SceneLayout(size: CGSize(width: 650, height: 700))
+        XCTAssertEqual(narrow.squareSize, 50)   // floor((650 - 224 - 24) / 8)
+        // Reserving both gutters would have given 25.
+        XCTAssertGreaterThan(narrow.squareSize, 25)
+    }
+
     /// The ship stays under the board as the board moves, not pinned to the
     /// window's bottom edge.
     func testTheShipLaneFollowsTheBoard() {

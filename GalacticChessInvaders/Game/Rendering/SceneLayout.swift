@@ -69,6 +69,14 @@ struct SceneLayout {
     var shipBandHeight: CGFloat { 120 }
     /// What the left gutter needs for the widest thing it carries.
     var minGutterWidth: CGFloat { 224 }
+    /// Breathing room to the right of the board, and nothing more.
+    ///
+    /// The right-hand space is empty — the board is centred, and everything
+    /// that reads is in the left column. Reserving a second full gutter there
+    /// was costing the board 200pt it did not need to give up, which is why
+    /// opening the log sidebar shrank the game far more than the sidebar
+    /// actually took.
+    var rightMarginWidth: CGFloat { 24 }
 
     /// Never smaller than this, whatever the window does. Below it the pieces
     /// stop being readable and the game stops being playable.
@@ -93,7 +101,7 @@ struct SceneLayout {
     /// than the one the game was composed for.
     var squareSize: CGFloat {
         let fromHeight = (size.height - hudBandHeight - shipBandHeight) / 8
-        let fromWidth  = (size.width - 2 * minGutterWidth) / 8
+        let fromWidth  = (size.width - minGutterWidth - rightMarginWidth) / 8
         let fitted = floor(min(fromHeight, fromWidth))
         return min(Self.designSquareSize, max(Self.minSquareSize, fitted))
     }
@@ -108,7 +116,9 @@ struct SceneLayout {
         let available = size.height - hudBandHeight - shipBandHeight
         return shipBandHeight + max(0, (available - boardSize) / 2)
     }
-    var boardOriginX: CGFloat { (size.width - boardSize) / 2 }
+    /// Centred where there is room, and never further left than the gutter
+    /// needs — otherwise a narrow window slides the board over the readouts.
+    var boardOriginX: CGFloat { max(minGutterWidth, (size.width - boardSize) / 2) }
     var boardOrigin: CGPoint { CGPoint(x: boardOriginX, y: boardBottomY) }
     var boardTopY: CGFloat { boardBottomY + boardSize }
 
