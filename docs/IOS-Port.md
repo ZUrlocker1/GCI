@@ -135,8 +135,52 @@ touches the most files.
 
 **Do this on macOS first.** Ship it as a macOS point release that behaves identically at
 960×700 but also lets the window resize properly. That way the refactor is validated
-against a known-good build before any iOS variable enters, and the regression suite
-(388 tests) still applies.
+against a known-good build before any iOS variable enters.
+
+### How risky is it?
+
+Measured rather than estimated, and the answer is **less risky than it looks**, because
+the architecture rules already did most of the work:
+
+- **`PieceNode.squareSize` is already an instance property**, injected at construction.
+  The piece layer never reads the static.
+- **`FleetRules.sweepAmplitude(squareSize:ratio:)` already takes it as a parameter.** The
+  Logic layer does not depend on the constant either.
+- **58 test references** touch `squareSize` / `boardSize`. Geometry is not the untested
+  part of this codebase.
+
+So the usual hazard in a refactor like this — hidden couplings to a global — largely is
+not there. The consumers were written to be parameterised and are simply being handed a
+constant today.
+
+What remains, in order of care needed:
+
+| Area | Call sites | Note |
+|---|---|---|
+| `BoardNode` | 18 | Grid lines, rank/file labels, marker pool, selection |
+| `GameScene` | 12 | Plus the eight `x: 112` literals |
+| `FleetController` | 7 | Sweep and descent distances |
+| `RaiderController` | 3 | Crossing height |
+
+**Do it in two stages, and the first is near-zero risk:**
+
+1. **Parameterise without changing numbers.** Route everything through `SceneLayout`,
+   which returns exactly today's values. Behaviour-preserving by construction, verifiable
+   by screenshot at 960×700, and the 388 tests pass unchanged.
+2. **Make the values size-dependent.** Only now can behaviour change, and only when the
+   window is not 960×700.
+
+The genuine risks live in stage 2, and there are three:
+
+- **Non-integer square sizes.** A 1pt grid line at 63.4pt spacing will alias. Rounding
+  `squareSize` down to a whole point and centring the remainder is the fix, and it should
+  be in the layout from the start rather than bolted on.
+- **`didChangeSize` is a new code path.** On a Mac it fires continuously during a live
+  window drag. Rebuilding nodes there rather than repositioning them would be visibly
+  bad; the layout has to be cheap to recompute.
+- **Visual regressions the tests cannot see.** Spacing and overlap are exactly what this
+  session's bugs were made of. Screenshots before and after at 960×700, compared
+  directly, are the only real check.
 
 ---
 
@@ -318,6 +362,9 @@ Suggested restructuring:
 - **Control legends become contextual.** The Mac screen lists keys. On a touch device the
   Arcade Hints built this week already teach the controls in play, which is better than a
   legend nobody reads. Show the key list only when a hardware keyboard is attached.
+- **Drop Press Start 2P outside the title screen.** It is a pixel font and it is the
+  reason small text on a phone would be unreadable. A system font here also unlocks
+  Dynamic Type, which matters more on iOS than it does on a Mac.
 
 ---
 
@@ -377,19 +424,24 @@ Phase 0 is the one that is easy to skip and expensive to skip.
 
 ---
 
-## Open questions
+## Decisions taken
 
-1. **iPhone Duo.** I do not have dependable specifications for it. Folded and unfolded
-   point dimensions, and whether it presents as one continuous display or two, changes
-   Pass 5 completely. Can you point me at the numbers?
-2. **Minimum iOS version.** `GCVirtualController` needs iOS 15, `GCKeyboard` iOS 14.
-   Anything modern is fine, but it should be a decision — the Mac target is 14.0.
-3. **One app or two?** A universal bundle sharing
-   `com.zurlocker.GalacticChessInvaders` means one App Store listing, one price, one set
-   of reviews, and buyers get both. A separate iOS app is cleaner to manage and easier to
-   version independently. Zudio went universal within one project with separate targets,
-   which is a third option.
-4. **Free on iOS as well?** Assumed yes, but it affects nothing technical so it can wait.
-5. **Drag-to-move for chess pieces**, in addition to tap-then-tap? It is the gesture
-   people expect on a touch screen.
-6. **Keep Test Mode and the diagnostics log on iOS?** Both are keyboard-gated today.
+- **Minimum iOS 15.** Clears `GCVirtualController` (15) and `GCKeyboard` (14) with no
+  availability checks.
+- **Free on iOS**, as on the Mac.
+- **Drag-to-move for chess pieces**, alongside tap-then-tap.
+- **Press Start 2P is the title screen only.** Everywhere else on iOS, use whatever is
+  most legible. This removes a real problem: Press Start 2P is a pixel font, and under
+  any non-integer scale it turns to mush. A system font at a sensible weight solves the
+  gutter and Settings text at a stroke, and also makes Dynamic Type possible.
+- **Test Mode stays.** The diagnostics log is **landscape only** — it does not fit in
+  portrait and repositioning it to the bottom is not worth the work.
+
+## Still open
+
+1. **iPhone Duo.** I do not have dependable specifications. Folded and unfolded point
+   dimensions, and whether it presents as one continuous display or two, changes Pass 5
+   completely.
+2. **One app or two?** A universal bundle means one listing, one set of reviews, and
+   users get every platform. A separate iOS app versions independently. Zudio is a third
+   model — one project, separate targets, one App Store record.
