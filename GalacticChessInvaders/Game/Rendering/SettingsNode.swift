@@ -18,6 +18,9 @@ final class SettingsNode: SKNode {
     private static let magenta = NeonPalette.magenta
     private static let font    = "PressStart2P-Regular"
 
+    /// The panel's own composition. The scene scales and centres it, and
+    /// paints its own backdrop behind — see `GameScene.layOutPanel`.
+    static let designSize = CGSize(width: 960, height: 700)
     private static let W: CGFloat = 960
     private static let H: CGFloat = 700
     private static let hudBase: CGFloat = H - HUDNode.height   // 664

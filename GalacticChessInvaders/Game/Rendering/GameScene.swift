@@ -75,6 +75,8 @@ class GameScene: SKScene {
     private var turnTimerNode: TurnTimerNode?
     private var statusNode: GameStatusNode?
     private var hintNode: ChessHintNode?
+    /// Blacks out the scene behind a full-screen panel — see `layOutPanel`.
+    private var panelShade: SKSpriteNode?
     /// Squares currently advised, best first — compared to skip redundant work
     /// when the advice has not changed between beats.
     private var hintedSquares: [String] = []
@@ -327,6 +329,12 @@ class GameScene: SKScene {
     /// window smaller left a board too big for it, overflowing the edge and
     /// taking the HUD with it.
     private var builtSquareSize: CGFloat = SceneLayout.design.squareSize
+    /// When a deferred rescale comes due, or nil if none is pending.
+    private var rescaleDueAt: TimeInterval?
+    /// How long the size has to hold still before the board is remade. Long
+    /// enough that a drag remakes it once at the end, short enough that letting
+    /// go feels immediate.
+    private static let rescaleSettleDelay: TimeInterval = 0.2
 
     // Board sits above the ship lane, below the HUD.
     static var boardBottomY: CGFloat { SceneLayout.current.boardBottomY }
@@ -774,6 +782,11 @@ class GameScene: SKScene {
     /// underneath Settings and How To Play while those panels swallowed every
     /// click — a control that looks live, is not, and gives no clue why. The
     /// panels have their own BACK button, which is the way out.
+    private func syncPanelChrome() {
+        syncTitleNavVisibility()
+        layOutPanels()
+    }
+
     private func syncTitleNavVisibility() {
         let panelUp = settingsNode != nil || howToPlayNode != nil
         titleOverlay?.childNode(withName: Self.titleNavName)?.isHidden = panelUp
@@ -905,7 +918,7 @@ class GameScene: SKScene {
     }
 
     func showHowToPlay() {
-        defer { syncTitleNavVisibility() }
+        defer { syncPanelChrome() }
         guard howToPlayNode == nil else { return }
         // One panel at a time. The keyboard cannot reach here with Settings
         // open — any key closes Settings first — but the menu can, and two
@@ -951,7 +964,7 @@ class GameScene: SKScene {
 
     /// Dismisses the overlay and resumes from the exact state play was in (§10).
     func hideHowToPlay() {
-        defer { syncTitleNavVisibility() }
+        defer { syncPanelChrome() }
         guard howToPlayNode != nil else { return }
         howToPlayNode?.removeFromParent()
         howToPlayNode = nil
@@ -995,7 +1008,7 @@ class GameScene: SKScene {
     // MARK: - Settings (§20 Phase 5)
 
     func showSettings() {
-        defer { syncTitleNavVisibility() }
+        defer { syncPanelChrome() }
         guard settingsNode == nil else { return }
         if howToPlayNode != nil { hideHowToPlay() }
         AudioManager.shared.play(.uiSettingsBlip)
@@ -1026,7 +1039,7 @@ class GameScene: SKScene {
 
     /// BACK always returns to play — never to the title.
     func hideSettings() {
-        defer { syncTitleNavVisibility() }
+        defer { syncPanelChrome() }
         guard settingsNode != nil else { return }
         settingsNode?.removeFromParent()
         settingsNode = nil
@@ -2401,6 +2414,48 @@ class GameScene: SKScene {
         applyLayout()
     }
 
+    /// Fits a full-screen panel to the scene and blacks out everything behind it.
+    ///
+    /// The panels are composed at a fixed 960×700. Left at that size they were
+    /// wrong in both directions: on a bigger scene their backdrop did not reach
+    /// the edges, so the title screen showed around them and a passing raider
+    /// flew through the gap; on a smaller one — the log sidebar open, say —
+    /// their content ran off the side and the heading was cut in half.
+    ///
+    /// So the panel is scaled to fit and centred, and a plain black shade is
+    /// laid over the whole scene behind it. The shade is the part that makes
+    /// the panel opaque at any size; the panel's own backdrop only ever covered
+    /// its own 960×700.
+    private func layOutPanel(_ panel: SKNode, designSize: CGSize) {
+        let shade = panelShade ?? {
+            let node = SKSpriteNode(color: .black, size: size)
+            node.anchorPoint = .zero
+            node.zPosition = 19          // under the panels at 20, over everything else
+            addChild(node)
+            panelShade = node
+            return node
+        }()
+        shade.size = size
+        shade.position = .zero
+        shade.isHidden = false
+
+        let scale = min(1, min(size.width / designSize.width, size.height / designSize.height))
+        panel.setScale(scale)
+        panel.position = CGPoint(x: (size.width - designSize.width * scale) / 2,
+                                 y: (size.height - designSize.height * scale) / 2)
+    }
+
+    /// Re-fits whichever panel is up, and hides the shade when none is.
+    private func layOutPanels() {
+        if let settingsNode {
+            layOutPanel(settingsNode, designSize: SettingsNode.designSize)
+        } else if let howToPlayNode {
+            layOutPanel(howToPlayNode, designSize: HowToPlayNode.designSize)
+        } else {
+            panelShade?.isHidden = true
+        }
+    }
+
     /// Rebuilds the board's geometry at a new square size and re-fits every
     /// piece onto it, without disturbing the game being played.
     ///
@@ -2427,9 +2482,13 @@ class GameScene: SKScene {
         let layout = self.layout
 
         // A square-size change means the board is the wrong size for the
-        // window, not merely in the wrong place, so it has to be remade.
+        // window, not merely in the wrong place, so it has to be remade — but
+        // not on every frame of a drag. Moving things is cheap and happens
+        // immediately; remaking the board is not, and the sizes in between the
+        // one the player started at and the one they let go at are of no
+        // interest to anyone.
         if layout.squareSize != builtSquareSize {
-            rescaleBoard(to: layout)
+            rescaleDueAt = CACurrentMediaTime() + Self.rescaleSettleDelay
         }
 
         // The board carries its pieces with it — they are its children — so one
@@ -2454,6 +2513,16 @@ class GameScene: SKScene {
         // and it is what the player sees first — so it is the one thing a
         // mis-sized first frame shows off.
         layOutTitleScreen()
+        layOutPanels()
+
+        // The HUD spans the full width and sits against the top edge, and it
+        // bakes the width in at construction — so it is rebuilt rather than
+        // moved. Cheap, and it restores its own live values.
+        if hudNode != nil {
+            hideHUD()
+            showHUD()
+            hudNode?.updateScore(ScoreManager.shared.currentScore)
+        }
     }
 
     /// Lights the king of `side` red, clearing any previously lit king. Passing
@@ -4466,6 +4535,15 @@ class GameScene: SKScene {
         if !isBeatSuspended, !isTimeFrozen, stateMachine.currentState is PlayingState {
             advanceRegeneration(dt)
         }
+        if let due = rescaleDueAt, currentTime >= due {
+            rescaleDueAt = nil
+            let settled = layout
+            if settled.squareSize != builtSquareSize {
+                rescaleBoard(to: settled)
+                boardNode?.position = settled.boardOrigin
+            }
+        }
+
         if stateMachine.currentState is PlayingState {
             syncRespawnWarnings()
             syncPowerUpAlley()
