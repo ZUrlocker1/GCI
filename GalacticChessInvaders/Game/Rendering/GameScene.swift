@@ -322,12 +322,10 @@ class GameScene: SKScene {
 
     /// The square size the board on screen was actually built at.
     ///
-    /// The board does not resize under the player mid-wave. Dragging a window
-    /// edge repositions the furniture immediately, but rescaling the board
-    /// means rebuilding its grid, refitting every piece and moving a fleet that
-    /// may be mid-sweep — visual churn during play, for a size the player is
-    /// still in the middle of choosing. The new size is adopted at the next
-    /// playfield build, which is every level and every new game.
+    /// Tracked so a resize can tell whether the board needs remaking or merely
+    /// moving. Leaving it alone on a resize was tried and was wrong: making the
+    /// window smaller left a board too big for it, overflowing the edge and
+    /// taking the HUD with it.
     private var builtSquareSize: CGFloat = SceneLayout.design.squareSize
 
     // Board sits above the ship lane, below the HUD.
@@ -777,8 +775,11 @@ class GameScene: SKScene {
     /// click — a control that looks live, is not, and gives no clue why. The
     /// panels have their own BACK button, which is the way out.
     private func syncTitleNavVisibility() {
-        titleOverlay?.childNode(withName: Self.titleNavName)?
-            .isHidden = settingsNode != nil || howToPlayNode != nil
+        let panelUp = settingsNode != nil || howToPlayNode != nil
+        titleOverlay?.childNode(withName: Self.titleNavName)?.isHidden = panelUp
+        // The HUD carries the same pair during play, and it was the one still
+        // showing through How To Play mid-game.
+        hudNode?.setNavHidden(panelUp)
     }
 
 
@@ -2400,9 +2401,36 @@ class GameScene: SKScene {
         applyLayout()
     }
 
+    /// Rebuilds the board's geometry at a new square size and re-fits every
+    /// piece onto it, without disturbing the game being played.
+    ///
+    /// The pieces keep their squares; only their size and their point position
+    /// change. Anything transient — lasers in flight, explosions — is left to
+    /// expire at the old scale rather than being chased, which is invisible at
+    /// the speed they live and a great deal simpler than tracking them.
+    private func rescaleBoard(to layout: SceneLayout) {
+        builtSquareSize = layout.squareSize
+        SceneLayout.adopt(layout)
+        boardNode?.relayout()
+
+        for (square, node) in pieceNodes {
+            node.adopt(squareSize: layout.squareSize)
+            if let centre = boardNode?.center(of: square) { node.position = centre }
+        }
+        // The selection markers were thrown away with the old geometry.
+        clearSelection()
+        DiagnosticsLog.shared.log(.info, "board rescaled to \(Int(layout.squareSize))pt")
+    }
+
     /// Moves the furniture to wherever the current layout puts it.
     private func applyLayout() {
         let layout = self.layout
+
+        // A square-size change means the board is the wrong size for the
+        // window, not merely in the wrong place, so it has to be remade.
+        if layout.squareSize != builtSquareSize {
+            rescaleBoard(to: layout)
+        }
 
         // The board carries its pieces with it — they are its children — so one
         // assignment moves the whole position.
@@ -3181,7 +3209,7 @@ class GameScene: SKScene {
     /// the shield is offered on Level 3 alone, where Rapid Fire is not — but
     /// each gets a line of its own regardless, because a shared line reads as
     /// one status rather than two.
-    static let powerUpAlleyLines = SceneLayout.design.powerUpAlleyLines
+    static var powerUpAlleyLines: Int { SceneLayout.current.powerUpAlleyLines }
     private static let powerUpLineName = "powerUpLine"
 
     /// The left gutter is fuller than it looks. Measured at x=112, top down:
@@ -3215,10 +3243,10 @@ class GameScene: SKScene {
     /// every neighbour, because eyeballing this is what produced the first
     /// collision.
     static var powerUpAlleyBottomY: CGFloat { SceneLayout.current.powerUpAlleyBottomY }
-    static let powerUpAlleyStep: CGFloat = SceneLayout.design.powerUpAlleyStep
-    static let powerUpAlleyFontSize: CGFloat = SceneLayout.design.powerUpAlleyFontSize
+    static var powerUpAlleyStep: CGFloat { SceneLayout.current.powerUpAlleyStep }
+    static var powerUpAlleyFontSize: CGFloat { SceneLayout.current.powerUpAlleyFontSize }
     private static let powerUpBarName = "powerUpBar"
-    static let powerUpBarWidth: CGFloat = SceneLayout.design.powerUpBarWidth
+    static var powerUpBarWidth: CGFloat { SceneLayout.current.powerUpBarWidth }
     /// The countdown bar sits under the bottom line, which is always the timed
     /// effect — it is appended last, and the block stacks upward from a fixed
     /// floor, so the bar never moves.
@@ -3560,8 +3588,16 @@ class GameScene: SKScene {
     /// clipped the bottom of a piece there. Aiming at the rank rather than at a
     /// round number of squares is the difference between reaching it and nearly
     /// reaching it.
-    static let gatlingCeiling: CGFloat =
+    /// Computed, not a stored `static let`.
+    ///
+    /// It was stored, which was safe while the geometry it reads was a
+    /// compile-time constant. Now that the board can be rebuilt at a new square
+    /// size, a stored value freezes whatever the board happened to be the first
+    /// time anything touched it — which is how it came to claim the seventh
+    /// rank was at 639 on a 64pt board, where it is at 556.
+    static var gatlingCeiling: CGFloat {
         GameScene.boardBottomY + BoardNode.squareSize * 7 - 12
+    }
 
     /// The same thing as a travel distance, from the ship's muzzle. Derived, so
     /// the pool arithmetic and the tests cannot drift from the ceiling.

@@ -5935,7 +5935,11 @@ final class PowerUpTests: XCTestCase {
     /// range rule: uncapped it cleared everything from the ship's rank to the
     /// back wherever the fleet was, so collecting it ended the wave.
     func testTheSprayReachesTheSeventhRankAndNotTheEighth() {
-        let bottom: CGFloat = 120        // GameScene.boardBottomY
+        // The live board, not a hardcoded 120. The board is laid out against
+        // the window it is in now, so a test host of a different height gives a
+        // different bottom — the relationship this asserts holds at any size,
+        // the number does not.
+        let bottom = GameScene.boardBottomY
         func rank(_ n: Int) -> ClosedRange<CGFloat> {
             let low = bottom + CGFloat(n - 1) * BoardNode.squareSize
             return low...(low + BoardNode.squareSize)

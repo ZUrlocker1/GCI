@@ -46,7 +46,7 @@ final class PieceNode: SKSpriteNode {
     }
 
     private(set) var piece: Piece
-    private let squareSize: CGFloat
+    private var squareSize: CGFloat
     private let baseColor: SKColor
     private var halo: SKShapeNode?
 
@@ -305,6 +305,23 @@ final class PieceNode: SKSpriteNode {
         halo = nil
         color = baseColor
         colorBlendFactor = Self.baseBlend
+    }
+
+    // MARK: - Layout
+
+    /// Re-fit this piece to a new square size.
+    ///
+    /// The art, the damage wedge and the physics body are all measured against
+    /// the square, so all three have to follow. The halos are rebuilt rather
+    /// than scaled because their radius is baked in at construction.
+    func adopt(squareSize newValue: CGFloat) {
+        guard newValue != squareSize, let texture else { return }
+        squareSize = newValue
+        size = Self.fit(texture, in: squareSize)
+        updateWedge()
+        rebuildPhysicsBody()
+        if isShowingCheck { stopCheckGlow(); startCheckGlow() }
+        if isShowingHint  { buildHintFill() }
     }
 
     // MARK: - Chess hint

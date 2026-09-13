@@ -46,7 +46,9 @@ final class HUDNode: SKNode {
             ship.name = "lifeShip\(i)"; addChild(ship); lifeShips.append(ship)
         }
 
-        addChild(HUDNode.makeNavButtons())
+        let nav = HUDNode.makeNavButtons()
+        nav.name = HUDNode.navName
+        addChild(nav)
 
         // Bottom separator
         let sep = SKShapeNode()
@@ -68,6 +70,14 @@ final class HUDNode: SKNode {
     /// the whole point of the corner is that it does not move. Laid out in
     /// HUD-local coordinates, so the title screen offsets the container rather
     /// than repeating the numbers.
+    /// So the scene can hide the pair while a full-screen panel is over it.
+    static let navName = "hudNav"
+
+    /// Hides or shows the SET / INFO pair.
+    func setNavHidden(_ hidden: Bool) {
+        childNode(withName: HUDNode.navName)?.isHidden = hidden
+    }
+
     static func makeNavButtons() -> SKNode {
         let nav = SKNode()
         // `hotkey` is the index of the character that is also the keyboard

@@ -120,6 +120,33 @@ final class BoardNode: SKNode {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    // MARK: - Layout
+
+    /// Rebuild the board's own geometry after `adopt(_:)` changed the square.
+    ///
+    /// Everything here is measured against the square at construction — the
+    /// lattice, the home-zone bands, the a–h/1–8 labels, the selection ring and
+    /// the marker pool — so all of it is thrown away and remade. The pieces are
+    /// children of this node but are not touched here; the scene re-fits and
+    /// repositions them, because it is the one that knows which square each is
+    /// on.
+    func relayout() {
+        gridNode?.removeFromParent()
+        gridNode = nil
+        zoneNodes.forEach { $0.removeFromParent() }
+        zoneNodes = []
+        coordinateNodes.forEach { $0.removeFromParent() }
+        coordinateNodes = []
+        selection.removeFromParent()
+        markers.removeAllChildren()
+        markerPool = []
+
+        if Self.showsGrid { buildGrid() }
+        applyDisplaySettings()
+        buildSelection()
+        buildMarkerPool()
+    }
+
     // MARK: - Grid
 
     /// A fixed lattice. It never moves, scrolls or pulses — its entire job is to
