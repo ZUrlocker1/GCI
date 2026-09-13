@@ -83,11 +83,23 @@ struct SceneLayout {
     /// Whole points, deliberately. A grid line drawn at 63.4pt spacing aliases
     /// into a dashed mess; the remainder is given back to the gutters by the
     /// centring below, where nobody can see it.
+    ///
+    /// **Never larger than the design square.** Letting the board grow to fill
+    /// a big window was tried and looked wrong: at 1900pt wide the squares came
+    /// out at 176pt and the pieces were enormous, because the chrome around
+    /// them — type and the ship — stays a fixed size and the composition falls
+    /// apart. A bigger window gives you wider gutters and more room around the
+    /// board, not a bigger board. It only ever shrinks, to fit a window smaller
+    /// than the one the game was composed for.
     var squareSize: CGFloat {
         let fromHeight = (size.height - hudBandHeight - shipBandHeight) / 8
         let fromWidth  = (size.width - 2 * minGutterWidth) / 8
-        return max(Self.minSquareSize, floor(min(fromHeight, fromWidth)))
+        let fitted = floor(min(fromHeight, fromWidth))
+        return min(Self.designSquareSize, max(Self.minSquareSize, fitted))
     }
+
+    /// The square the game was composed at, and its ceiling.
+    static let designSquareSize: CGFloat = 64
 
     var boardSize: CGFloat { squareSize * 8 }
 

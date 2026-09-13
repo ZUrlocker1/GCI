@@ -530,20 +530,28 @@ final class SceneLayoutTests: XCTestCase {
     /// at the design size, so widening the window must not stretch it.
     func testExtraWidthWidensTheGuttersNotTheBoard() {
         let wide = SceneLayout(size: CGSize(width: 1400, height: 700))
-        XCTAssertEqual(wide.squareSize, 64, "height still binds")
+        XCTAssertEqual(wide.squareSize, 64)
         XCTAssertEqual(wide.boardOriginX, 444)              // (1400 - 512) / 2
         XCTAssertEqual(wide.gutterCentreX, 222)             // and the gutter follows
     }
 
-    /// Extra height grows the board until width binds instead.
-    func testExtraHeightGrowsTheBoardUntilWidthBinds() {
-        let tall = SceneLayout(size: CGSize(width: 960, height: 900))
-        // Height would allow (900 - 188) / 8 = 89, width allows (960 - 448) / 8 = 64.
-        XCTAssertEqual(tall.squareSize, 64)
+    /// A bigger window never gives a bigger board. Letting it grow produced
+    /// 176pt squares at 1900pt wide and the composition fell apart — the type
+    /// and the ship around it stay a fixed size.
+    func testABiggerWindowNeverGrowsTheBoard() {
+        for size in [CGSize(width: 1600, height: 900),
+                     CGSize(width: 1900, height: 1600),
+                     CGSize(width: 3000, height: 2000)] {
+            let l = SceneLayout(size: size)
+            XCTAssertEqual(l.squareSize, 64, "board grew at \(size)")
+        }
+    }
 
-        let both = SceneLayout(size: CGSize(width: 1600, height: 900))
-        XCTAssertEqual(both.squareSize, 89)                 // floor of 712 / 8
-        XCTAssertEqual(both.boardSize, 712)
+    /// It does shrink, to fit a window smaller than the design canvas.
+    func testASmallerWindowShrinksTheBoard() {
+        let short = SceneLayout(size: CGSize(width: 960, height: 560))
+        XCTAssertEqual(short.squareSize, 46)                // floor of 372 / 8
+        XCTAssertLessThan(short.boardSize, 512)
     }
 
     /// Whole points only. A grid line at a fractional spacing aliases.

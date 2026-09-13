@@ -763,10 +763,41 @@ class GameScene: SKScene {
         // the scene's origin and then up to where the HUD would have been —
         // which puts SET and INFO in exactly the pixels they occupy in play.
         let nav = HUDNode.makeNavButtons()
-        nav.position = CGPoint(x: -size.width / 2,
-                               y: size.height - HUDNode.height - size.height / 2)
+        nav.name = Self.titleNavName
         overlay.addChild(nav)
+        layOutTitleScreen()
+    }
 
+    private static let titleNavName = "titleNav"
+
+    /// The title screen's SET / INFO pair, hidden while a panel is over it.
+    ///
+    /// They are children of the title overlay, so they carried on showing
+    /// underneath Settings and How To Play while those panels swallowed every
+    /// click — a control that looks live, is not, and gives no clue why. The
+    /// panels have their own BACK button, which is the way out.
+    private func syncTitleNavVisibility() {
+        titleOverlay?.childNode(withName: Self.titleNavName)?
+            .isHidden = settingsNode != nil || howToPlayNode != nil
+    }
+
+
+    /// Centres the title and puts its SET / INFO pair where the HUD's would be.
+    ///
+    /// Separate from `showTitleScreen` because the scene can be resized after
+    /// the overlay is built — which is exactly what happens on a first launch
+    /// under `.resizeFill`: the title was composed against the design canvas
+    /// and then the view handed the scene its real size, leaving the title
+    /// sitting in the bottom-left corner. Pressing X rebuilt it and it looked
+    /// fine, which is what made it look like a start-up ordering bug.
+    private func layOutTitleScreen() {
+        guard let overlay = titleOverlay else { return }
+        overlay.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        // The overlay is centred, so the container is offset back to the
+        // scene's origin and then up to where the HUD would have been.
+        overlay.childNode(withName: Self.titleNavName)?.position =
+            CGPoint(x: -size.width / 2,
+                    y: size.height - HUDNode.height - size.height / 2)
     }
 
     /// A raider wanders past the title every 25–35 seconds.
@@ -873,6 +904,7 @@ class GameScene: SKScene {
     }
 
     func showHowToPlay() {
+        defer { syncTitleNavVisibility() }
         guard howToPlayNode == nil else { return }
         // One panel at a time. The keyboard cannot reach here with Settings
         // open — any key closes Settings first — but the menu can, and two
@@ -918,6 +950,7 @@ class GameScene: SKScene {
 
     /// Dismisses the overlay and resumes from the exact state play was in (§10).
     func hideHowToPlay() {
+        defer { syncTitleNavVisibility() }
         guard howToPlayNode != nil else { return }
         howToPlayNode?.removeFromParent()
         howToPlayNode = nil
@@ -961,6 +994,7 @@ class GameScene: SKScene {
     // MARK: - Settings (§20 Phase 5)
 
     func showSettings() {
+        defer { syncTitleNavVisibility() }
         guard settingsNode == nil else { return }
         if howToPlayNode != nil { hideHowToPlay() }
         AudioManager.shared.play(.uiSettingsBlip)
@@ -991,6 +1025,7 @@ class GameScene: SKScene {
 
     /// BACK always returns to play — never to the title.
     func hideSettings() {
+        defer { syncTitleNavVisibility() }
         guard settingsNode != nil else { return }
         settingsNode?.removeFromParent()
         settingsNode = nil
@@ -2386,6 +2421,11 @@ class GameScene: SKScene {
                 x: min(max(ship.position.x, layout.shipMargin), size.width - layout.shipMargin),
                 y: layout.shipLaneY)
         }
+
+        // The title is centred on the scene rather than placed by the layout,
+        // and it is what the player sees first — so it is the one thing a
+        // mis-sized first frame shows off.
+        layOutTitleScreen()
     }
 
     /// Lights the king of `side` red, clearing any previously lit king. Passing
