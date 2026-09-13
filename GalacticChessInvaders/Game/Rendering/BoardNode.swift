@@ -17,8 +17,12 @@ import SpriteKit
 
 final class BoardNode: SKNode {
 
-    static let squareSize: CGFloat = 64
-    static let boardSize: CGFloat = squareSize * 8
+    /// Kept as statics so the 58 test references and 15 call sites keep
+    /// working unchanged; the *value* now has one home. Stage 2 of the layout
+    /// work turns these into instance properties fed by the scene's live size
+    /// — see docs/IOS-Port.md §3.
+    static let squareSize: CGFloat = SceneLayout.design.squareSize
+    static let boardSize: CGFloat = SceneLayout.design.boardSize
     /// Pool size for legal-move markers. A queen on an empty board reaches 27
     /// squares, so 32 covers every real case with headroom.
     static let markerPoolSize = 32

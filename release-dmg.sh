@@ -49,15 +49,8 @@ echo ""
 echo "==> Source app: ${APP_SRC}"
 echo "==> Output DMG: ${OUTPUT_DMG}"
 
-if ! command -v create-dmg &>/dev/null; then
-    echo ""
-    echo "ERROR: create-dmg not found. Install it with:"
-    echo "  brew install create-dmg"
-    exit 1
-fi
-
 # ---------------------------------------------------------------------------
-# Step 1: Check the app really is signed and notarized
+# Step 1: Tools
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> [1/4] Checking create-dmg is available..."

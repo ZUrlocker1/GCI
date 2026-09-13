@@ -309,19 +309,22 @@ class GameScene: SKScene {
     /// the reveal is not interrupted by a new beat or stray input.
     private var isEndingGame = false
 
+    /// The playfield's geometry, in one place. Every number below is read from
+    /// it rather than written here — see `SceneLayout` and docs/IOS-Port.md §3.
+    /// Still the design layout: this stage changes where the numbers live, not
+    /// what they are.
+    private var layout: SceneLayout { .design }
+
     // Board sits above the ship lane, below the HUD.
-    private static let boardBottomY: CGFloat = 120
+    static let boardBottomY: CGFloat = SceneLayout.design.boardBottomY
     /// Everything in the left gutter from the turn timer down sits this much
     /// lower than it used to, to open a gap between the chess readouts and the
     /// power-up block above them. Applied as one constant rather than four
     /// edited literals, because the four move together or the timer's digits
     /// land on the transient notice.
-    private static let gutterDrop: CGFloat = 8
-    private static let shipLaneY: CGFloat = 62
-    /// Chess Hints sits above everything else in the gutter. The power-up alley
-    /// stacks upward from 196 in 14pt steps and tops out near 252 with every
-    /// effect running, so this clears a full stack.
-    private static let chessHintY: CGFloat = 292
+    static let gutterDrop: CGFloat = SceneLayout.design.gutterDrop
+    private static let shipLaneY: CGFloat = SceneLayout.design.shipLaneY
+    private static let chessHintY: CGFloat = SceneLayout.design.chessHintY
     /// Depth 2, matching the engine that plays Black.
     ///
     /// Depth 1 was tried and produced "MOVE A PAWN" almost every beat. At depth
@@ -335,7 +338,7 @@ class GameScene: SKScene {
     /// utility task, against the up-to-three Black already runs.
     private static let hintDepth = 2
     private static let hintCount = 3
-    private static let shipMargin: CGFloat = 30
+    private static let shipMargin: CGFloat = SceneLayout.design.shipMargin
     /// Time between detecting mate and showing the game-over screen. The mating
     /// path takes ~1.5s to draw and pulse; the remainder is stillness so the
     /// player can take in what happened before a menu replaces it.
@@ -1170,7 +1173,7 @@ class GameScene: SKScene {
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         // Sits just under the AUTO MODE slot so both can show at once.
-        label.position = CGPoint(x: 112, y: Self.boardBottomY + 30 - Self.gutterDrop)
+        label.position = CGPoint(x: layout.gutterCentreX, y: Self.boardBottomY + 30 - Self.gutterDrop)
         label.zPosition = 12
         bloomNode.addChild(label)
         label.run(.sequence([
@@ -1282,7 +1285,7 @@ class GameScene: SKScene {
         starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
 
         let node = BoardNode()
-        node.position = CGPoint(x: (size.width - BoardNode.boardSize) / 2, y: Self.boardBottomY)
+        node.position = SceneLayout(size: size).boardOrigin
         bloomNode.addChild(node)
         boardNode = node
 
@@ -1333,18 +1336,18 @@ class GameScene: SKScene {
         // Countdown lives in the gutter left of the board (§19), with the
         // check/mate banner directly beneath it.
         let timerDisplay = TurnTimerNode()
-        timerDisplay.position = CGPoint(x: 112, y: Self.boardBottomY + 46 - Self.gutterDrop)
+        timerDisplay.position = CGPoint(x: layout.gutterCentreX, y: Self.boardBottomY + 46 - Self.gutterDrop)
         timerDisplay.isHidden = true
         bloomNode.addChild(timerDisplay)
         turnTimerNode = timerDisplay
 
         let status = GameStatusNode()
-        status.position = CGPoint(x: 112, y: Self.boardBottomY - 4 - Self.gutterDrop)
+        status.position = CGPoint(x: layout.gutterCentreX, y: Self.boardBottomY - 4 - Self.gutterDrop)
         bloomNode.addChild(status)
         statusNode = status
 
         let hints = ChessHintNode()
-        hints.position = CGPoint(x: 112, y: Self.chessHintY)
+        hints.position = CGPoint(x: layout.gutterCentreX, y: Self.chessHintY)
         bloomNode.addChild(hints)
         hintNode = hints
 
@@ -1354,7 +1357,7 @@ class GameScene: SKScene {
         autoLabel.fontColor = NeonPalette.orange
         autoLabel.horizontalAlignmentMode = .center
         autoLabel.verticalAlignmentMode = .center
-        autoLabel.position = CGPoint(x: 112, y: Self.boardBottomY + 46 - Self.gutterDrop)
+        autoLabel.position = CGPoint(x: layout.gutterCentreX, y: Self.boardBottomY + 46 - Self.gutterDrop)
         autoLabel.isHidden = !isAutoMode
         autoLabel.run(.repeatForever(.sequence([
             .fadeAlpha(to: 0.4, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
@@ -2173,13 +2176,19 @@ class GameScene: SKScene {
         boardNode?.clearTethers()
     }
 
-    /// Whether Chess Hints should be on screen right now.
+    /// Whether Chess Hints should be on screen right now, and if not, why not.
     ///
-    /// Deliberately *not* `canAcceptChessInput`, which is about whether a click
-    /// would be accepted. Two of its clauses are wrong for hints:
+    /// One list, not two. This was written as a `canShowHints` boolean beside a
+    /// `hintsBlockedReason` string listing the same clauses in the same order,
+    /// which is a standing invitation for the two to drift and for the log to
+    /// start lying about a hint that is missing for some other reason.
+    ///
+    /// Deliberately *not* `canAcceptChessInput`, which answers a different
+    /// question — whether a click would be accepted. Two of its clauses are
+    /// wrong here:
     ///
     /// `isResolvingBeat` is true for the whole of `resolveBeat`, and
-    /// `beginBeat` is called from inside it — so reusing that gate meant the
+    /// `beginBeat` is called from inside it. Reusing that gate meant the
     /// beat-start refresh bailed every single beat, and hints only ever
     /// appeared on the two paths that reach `beginBeat` from elsewhere. That
     /// looked like flakiness and was not.
@@ -2187,33 +2196,20 @@ class GameScene: SKScene {
     /// `isEngineThinking` is kept, and matters: Black's multi-move turn hands
     /// the turn back to White between moves, so without it hints would flash
     /// for positions the player never gets to act on.
-    private var canShowHints: Bool {
-        GameSettings.shared.chessHints
-            && stateMachine.currentState is PlayingState
-            && howToPlayNode == nil
-            && settingsNode == nil
-            // Nothing to advise when the engine is playing White for you.
-            && !GameSettings.shared.autoChess
-            && !isEndingGame
-            && !isEngineThinking
-            && !whiteHasMovedThisBeat
-            && board.turn == .white
-            && !board.isMate
-            && !board.isStalemate
-    }
-
-    /// The first clause of `canShowHints` that is false, for the log.
     private var hintsBlockedReason: String? {
-        if !(stateMachine.currentState is PlayingState) { return "not playing" }
-        if howToPlayNode != nil || settingsNode != nil   { return "panel open" }
-        if GameSettings.shared.autoChess                 { return "auto chess" }
-        if isEndingGame                                  { return "game ending" }
-        if isEngineThinking                              { return "engine thinking" }
-        if whiteHasMovedThisBeat                         { return "white has moved" }
-        if board.turn != .white                          { return "black to move" }
-        if board.isMate || board.isStalemate             { return "game decided" }
+        if !GameSettings.shared.chessHints                { return "switched off" }
+        if !(stateMachine.currentState is PlayingState)   { return "not playing" }
+        if howToPlayNode != nil || settingsNode != nil    { return "panel open" }
+        if GameSettings.shared.autoChess                  { return "auto chess" }
+        if isEndingGame                                   { return "game ending" }
+        if isEngineThinking                               { return "engine thinking" }
+        if whiteHasMovedThisBeat                          { return "white has moved" }
+        if board.turn != .white                           { return "black to move" }
+        if board.isMate || board.isStalemate              { return "game decided" }
         return nil
     }
+
+    private var canShowHints: Bool { hintsBlockedReason == nil }
 
     private var canAcceptChessInput: Bool {
         stateMachine.currentState is PlayingState
@@ -2414,8 +2410,7 @@ class GameScene: SKScene {
             // Names the clause that closed, so a hint that never appears can be
             // read off the log rather than guessed at — which is how the
             // `isResolvingBeat` bug above was found.
-            if GameSettings.shared.chessHints, !hintedSquares.isEmpty,
-               let why = hintsBlockedReason {
+            if !hintedSquares.isEmpty, let why = hintsBlockedReason {
                 DiagnosticsLog.shared.log(.chess, "hints off — \(why)")
             }
             hintSearchBoard = nil
@@ -3085,7 +3080,7 @@ class GameScene: SKScene {
     /// the shield is offered on Level 3 alone, where Rapid Fire is not — but
     /// each gets a line of its own regardless, because a shared line reads as
     /// one status rather than two.
-    static let powerUpAlleyLines = 3
+    static let powerUpAlleyLines = SceneLayout.design.powerUpAlleyLines
     private static let powerUpLineName = "powerUpLine"
 
     /// The left gutter is fuller than it looks. Measured at x=112, top down:
@@ -3118,15 +3113,15 @@ class GameScene: SKScene {
     /// into space nothing else wants. `PowerUpAlleyLayoutTests` pins it against
     /// every neighbour, because eyeballing this is what produced the first
     /// collision.
-    static let powerUpAlleyBottomY: CGFloat = 196
-    static let powerUpAlleyStep: CGFloat = 14      // 9pt of type, 5pt of air
-    static let powerUpAlleyFontSize: CGFloat = 9
+    static let powerUpAlleyBottomY: CGFloat = SceneLayout.design.powerUpAlleyBottomY
+    static let powerUpAlleyStep: CGFloat = SceneLayout.design.powerUpAlleyStep
+    static let powerUpAlleyFontSize: CGFloat = SceneLayout.design.powerUpAlleyFontSize
     private static let powerUpBarName = "powerUpBar"
-    static let powerUpBarWidth: CGFloat = 84
+    static let powerUpBarWidth: CGFloat = SceneLayout.design.powerUpBarWidth
     /// The countdown bar sits under the bottom line, which is always the timed
     /// effect — it is appended last, and the block stacks upward from a fixed
     /// floor, so the bar never moves.
-    static let powerUpBarY = GameScene.powerUpAlleyBottomY - 7
+    static let powerUpBarY = SceneLayout.design.powerUpBarY
     /// The stack the notice is currently showing, so it only flares when the
     /// number actually changes rather than on every frame.
     private var shownRapidFireStacks = 0
@@ -3179,7 +3174,7 @@ class GameScene: SKScene {
             // Bottom-up from a fixed floor, so the first line the player earns
             // stays where they last read it and later ones stack above it.
             label.position = CGPoint(
-                x: 112,
+                x: layout.gutterCentreX,
                 y: Self.powerUpAlleyBottomY
                     + CGFloat(lines.count - 1 - index) * Self.powerUpAlleyStep)
         }
@@ -3210,7 +3205,7 @@ class GameScene: SKScene {
                                      size: CGSize(width: Self.powerUpBarWidth, height: 3))
             fresh.name = Self.powerUpBarName
             fresh.anchorPoint = CGPoint(x: 0, y: 0.5)
-            fresh.position = CGPoint(x: 112 - Self.powerUpBarWidth / 2,
+            fresh.position = CGPoint(x: layout.gutterCentreX - Self.powerUpBarWidth / 2,
                                      y: Self.powerUpBarY)
             fresh.zPosition = 12
             bloomNode.addChild(fresh)
@@ -3277,7 +3272,7 @@ class GameScene: SKScene {
         label.verticalAlignmentMode = .center
         label.zPosition = 12
         label.position = CGPoint(
-            x: 112,
+            x: layout.gutterCentreX,
             y: side == .black ? Self.boardBottomY + BoardNode.boardSize - 40
                               : Self.boardBottomY - 40)
         label.run(.repeatForever(.sequence([

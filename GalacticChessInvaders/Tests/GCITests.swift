@@ -469,6 +469,72 @@ final class GCIBoardTests: XCTestCase {
     }
 }
 
+/// Pins Stage 1 of the layout work: `SceneLayout` must return exactly the
+/// numbers that were literals in GameScene and BoardNode, so the refactor is
+/// provably behaviour-preserving. Stage 2 will change these deliberately, and
+/// this test is what makes that change visible rather than accidental.
+final class SceneLayoutTests: XCTestCase {
+
+    private let layout = SceneLayout.design
+
+    func testDesignCanvasIsUnchanged() {
+        XCTAssertEqual(SceneLayout.designSize, CGSize(width: 960, height: 700))
+    }
+
+    func testBoardGeometryIsUnchanged() {
+        XCTAssertEqual(layout.squareSize, 64)
+        XCTAssertEqual(layout.boardSize, 512)
+        XCTAssertEqual(layout.boardBottomY, 120)
+        XCTAssertEqual(layout.boardTopY, 632)
+        // Centred in 960: (960 - 512) / 2.
+        XCTAssertEqual(layout.boardOriginX, 224)
+        XCTAssertEqual(layout.boardOrigin, CGPoint(x: 224, y: 120))
+    }
+
+    func testBoardNodeStillAgreesWithTheLayout() {
+        XCTAssertEqual(BoardNode.squareSize, layout.squareSize)
+        XCTAssertEqual(BoardNode.boardSize, layout.boardSize)
+    }
+
+    func testGutterGeometryIsUnchanged() {
+        XCTAssertEqual(layout.gutterCentreX, 112)
+        XCTAssertEqual(layout.gutterDrop, 8)
+        XCTAssertEqual(layout.turnTimerY, 158)      // 120 + 46 - 8
+        XCTAssertEqual(layout.gutterNoticeY, 142)   // 120 + 30 - 8
+        XCTAssertEqual(layout.statusBannerY, 108)   // 120 -  4 - 8
+        XCTAssertEqual(layout.chessHintY, 292)
+    }
+
+    func testShipAndPowerUpGeometryIsUnchanged() {
+        XCTAssertEqual(layout.shipLaneY, 62)
+        XCTAssertEqual(layout.shipMargin, 30)
+        XCTAssertEqual(layout.powerUpAlleyLines, 3)
+        XCTAssertEqual(layout.powerUpAlleyBottomY, 196)
+        XCTAssertEqual(layout.powerUpAlleyStep, 14)
+        XCTAssertEqual(layout.powerUpAlleyFontSize, 9)
+        XCTAssertEqual(layout.powerUpBarWidth, 84)
+        XCTAssertEqual(layout.powerUpBarY, 189)     // 196 - 7
+    }
+
+    /// The Chess Hints block must clear a full power-up stack. Three lines of
+    /// 14pt from a floor of 196 tops out at 224; the hint sits at 292.
+    func testChessHintsClearAFullPowerUpStack() {
+        let stackTop = layout.powerUpAlleyBottomY
+            + CGFloat(layout.powerUpAlleyLines - 1) * layout.powerUpAlleyStep
+        XCTAssertGreaterThan(layout.chessHintY, stackTop)
+    }
+
+    /// Only the board's horizontal placement reads `size` in Stage 1. Proving
+    /// that here means Stage 2's changes show up as test failures.
+    func testOnlyTheBoardOriginTracksSizeInStageOne() {
+        let wide = SceneLayout(size: CGSize(width: 1200, height: 700))
+        XCTAssertEqual(wide.boardOriginX, 344)              // (1200 - 512) / 2
+        XCTAssertEqual(wide.squareSize, layout.squareSize)
+        XCTAssertEqual(wide.boardBottomY, layout.boardBottomY)
+        XCTAssertEqual(wide.gutterCentreX, layout.gutterCentreX)
+    }
+}
+
 @MainActor
 final class ChessHintNodeTests: XCTestCase {
 
