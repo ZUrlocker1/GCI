@@ -1,6 +1,39 @@
 import SpriteKit
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 final class HowToPlayNode: SKNode {
+
+    /// Where the "Zudio" credit in How To Play goes, and how to open it.
+    ///
+    /// One link for every platform. Zudio is a universal app with native Mac,
+    /// iPhone and iPad builds under a single App Store record, so the store
+    /// routes this to the right one by itself — a Mac opens it in the Mac App
+    /// Store and gets the Mac build. Hardcoding a per-platform URL here would
+    /// be second-guessing that, and would go stale the moment the listing
+    /// gains a platform.
+    ///
+    /// The region is left out deliberately: `/app/id…` without a country code
+    /// resolves to the visitor's own storefront. `/us/app/…` sends everyone to
+    /// the American store.
+    ///
+    /// Only the *opener* is platform-specific, and it has to be — `NSWorkspace`
+    /// does not exist on iOS. When GCI itself ships there, this compiles as is.
+    enum MusicCredit {
+        static let url = URL(string: "https://apps.apple.com/app/id6762574335")
+
+        static func open() {
+            guard let url else { return }
+            #if os(macOS)
+            NSWorkspace.shared.open(url)
+            #else
+            UIApplication.shared.open(url)
+            #endif
+        }
+    }
 
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
@@ -317,7 +350,7 @@ final class HowToPlayNode: SKNode {
         style.lineSpacing = 4.0
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont(name: Self.font, size: size) ?? NSFont.monospacedSystemFont(ofSize: size, weight: .regular),
-            .foregroundColor: NSColor.white.withAlphaComponent(0.85),
+            .foregroundColor: SKColor.white.withAlphaComponent(0.85),
             .paragraphStyle: style
         ]
         node.attributedText = NSAttributedString(string: text, attributes: attrs)

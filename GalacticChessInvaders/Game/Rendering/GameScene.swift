@@ -4786,14 +4786,9 @@ class GameScene: SKScene {
             if hit.name == "backButton" || hit.parent?.name == "backButton" {
                 AudioManager.shared.play(.uiButtonClick)
                 pressButton(hit) { [weak self] in self?.hideHowToPlay() }
-            } else if hit.name == HowToPlayNode.musicLinkName,
-                      // The App Store page rather than the Zudio marketing page:
-                      // someone reading this credit has just heard the music and
-                      // the useful next step is getting the app, not reading about
-                      // it. Opens in App Store on a Mac signed into one.
-                      let url = URL(string: "https://apps.apple.com/us/app/zudio-music/id6762574335") {
+            } else if hit.name == HowToPlayNode.musicLinkName {
                 AudioManager.shared.play(.uiButtonClick)
-                NSWorkspace.shared.open(url)
+                HowToPlayNode.MusicCredit.open()
             }
             return
         }

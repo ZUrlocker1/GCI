@@ -43,12 +43,12 @@ tests without a rendering host.
 ```
 GameScene.swift          keyDown, keyUp, mouseDown, mouseDragged, mouseUp   (5 overrides)
 HighScoreEntryNode.swift handleKey(_ event: NSEvent)                        (1 method)
-HowToPlayNode.swift      NSColor.white                                      (1 literal)
+HowToPlayNode.swift      NSColor.white, NSWorkspace link open               FIXED 13 Sep
 InputHandler.swift       already wrapped in #if os(macOS)
 App/                     ContentView, App, LogTextView — the shell, expected
 ```
 
-That is the entire list. Seven things outside the app shell.
+Six things outside the app shell, and five of them are one method each.
 
 ---
 
@@ -344,7 +344,12 @@ Proposed split, in the order that pays off soonest:
 
 - `HighScoreEntryNode.handleKey(_ event: NSEvent)` should take a character and a key
   code, not an `NSEvent`. It is the only node that reads raw events.
-- `HowToPlayNode`'s single `NSColor.white` should be `SKColor.white`.
+- ~~`HowToPlayNode`'s single `NSColor.white`~~ — done, along with the Zudio credit link.
+  `HowToPlayNode.MusicCredit` now owns both the URL and the opener, so the scene's click
+  handler is platform-free. One universal App Store link serves every platform, since
+  Zudio is a universal app and the store routes it; only the opener needs an `#if`,
+  because `NSWorkspace` does not exist on iOS. That is the pattern the rest of the port
+  wants — the `#if` lives with the thing it describes, not at the call site.
 
 **A note on tests.** The 388-test suite is a real asset here and most of it is
 platform-agnostic. Two tests are known-flaky by design
