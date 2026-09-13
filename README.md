@@ -30,8 +30,7 @@ clock and comes apart as you play it.
 
 Current release: `1.1` (build 8). Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
-Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)). Third-party
-attribution is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)). 
 
 **What's new in v1.1:**
 
