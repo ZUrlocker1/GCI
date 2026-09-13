@@ -77,6 +77,17 @@ class GameScene: SKScene {
     private var hintNode: ChessHintNode?
     /// Blacks out the scene behind a full-screen panel — see `layOutPanel`.
     private var panelShade: SKSpriteNode?
+
+    /// Overlays placed against the middle of the scene, with the offset each
+    /// was given when it was built.
+    ///
+    /// PAUSED, GAME OVER, LEVEL CLEARED, the quit prompt and the high-score
+    /// entry were each positioned once, at the centre the scene had at the
+    /// time, and then never again — so resizing while one was up left it
+    /// stranded off to one side with the board showing past it. This is the
+    /// third overlay to have that bug, after the title screen and the panels,
+    /// which is why it is a list rather than another special case.
+    private var centredOverlays: [(node: SKNode, offset: CGPoint)] = []
     /// Squares currently advised, best first — compared to skip redundant work
     /// when the advice has not changed between beats.
     private var hintedSquares: [String] = []
@@ -1901,6 +1912,7 @@ class GameScene: SKScene {
                                    score: ScoreManager.shared.currentScore,
                                    sceneSize: size)
         overlay.zPosition = 25
+        registerCentredOverlay(overlay)
         addChild(overlay)
         gameOverNode = overlay
         isAwaitingWaveContinue = true
@@ -1943,6 +1955,7 @@ class GameScene: SKScene {
         label.verticalAlignmentMode   = .center
         label.position = CGPoint(x: size.width / 2, y: size.height / 2)
         label.zPosition = 24
+        registerCentredOverlay(label)
         label.setScale(0.7)
         label.alpha = 0
         bloomNode.addChild(label)
@@ -2461,6 +2474,24 @@ class GameScene: SKScene {
                                  y: size.height - designSize.height * scale)
     }
 
+    /// Remembers a node's offset from the middle, so a resize can put it back.
+    /// Call after the node's position is set.
+    private func registerCentredOverlay(_ node: SKNode) {
+        let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+        centredOverlays.append((node, CGPoint(x: node.position.x - centre.x,
+                                              y: node.position.y - centre.y)))
+    }
+
+    /// Puts every registered overlay back in the middle, and forgets the ones
+    /// that have since been removed.
+    private func recentreOverlays() {
+        centredOverlays.removeAll { $0.node.parent == nil }
+        let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+        for (node, offset) in centredOverlays {
+            node.position = CGPoint(x: centre.x + offset.x, y: centre.y + offset.y)
+        }
+    }
+
     /// Re-fits whichever panel is up, and hides the shade when none is.
     private func layOutPanels() {
         if let settingsNode {
@@ -2530,6 +2561,7 @@ class GameScene: SKScene {
         // mis-sized first frame shows off.
         layOutTitleScreen()
         layOutPanels()
+        recentreOverlays()
 
         // The HUD spans the full width and sits against the top edge, and it
         // bakes the width in at construction — so it is rebuilt rather than
@@ -2809,6 +2841,7 @@ class GameScene: SKScene {
         label.position = CGPoint(x: size.width / 2,
                                  y: size.height / 2 + Self.pauseLift)
         bloomNode.addChild(label)
+        registerCentredOverlay(label)
 
         // Say how to get out, the same way the title screen does — "any key"
         // is not discoverable otherwise.
@@ -2825,6 +2858,7 @@ class GameScene: SKScene {
             .fadeAlpha(to: 0.35, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
         ])))
         bloomNode.addChild(hint)
+        registerCentredOverlay(hint)
 
         // A level banner sits in the same place at a similar size, so the two
         // overlap into mush. PAUSED wins — the announcement is forfeited, which
@@ -2924,6 +2958,7 @@ class GameScene: SKScene {
 
         addChild(node)
         quitPrompt = node
+        registerCentredOverlay(node)
 
         quitPromptWasPaused = isPaused
         turnTimer.pause()
@@ -2974,6 +3009,7 @@ class GameScene: SKScene {
                                    score: ScoreManager.shared.currentScore,
                                    sceneSize: size)
         overlay.zPosition = 25
+        registerCentredOverlay(overlay)
         addChild(overlay)
         gameOverNode = overlay
         logWave("\(outcome.headline) — \(ScoreManager.shared.currentScore)")
@@ -2995,6 +3031,7 @@ class GameScene: SKScene {
                                        level: levels.level,
                                        sceneSize: size)
         entry.zPosition = 26
+        registerCentredOverlay(entry)
         entry.onSubmit = { [weak self] name in
             guard let self else { return }
             ScoreManager.shared.submitHighScore(initials: name)
