@@ -7,15 +7,23 @@ struct ContentView: View {
     // but nobody should meet the game for the first time next to a wall of
     // green text.
     @State private var showSidebar = GameSettings.shared.logPanel
+    /// The collapsed sidebar's tab is the last thing advertising the panel to a
+    /// player who has not asked for it — `L` and the Settings row are both
+    /// behind Test Mode now, and a chevron sitting in the corner of the window
+    /// undoes that on its own. Off until ⌘T.
+    @State private var testMode = false
 
     var body: some View {
         HStack(spacing: 0) {
             GameSKViewRepresentable(showsDrawCount: showSidebar)
 
-            DiagnosticsSidebarView(isExpanded: $showSidebar)
+            DiagnosticsSidebarView(isExpanded: $showSidebar, showsTab: testMode)
         }
         // Re-reads rather than flips, so setting the switch to the state it is
         // already in cannot close the panel.
+        .onReceive(NotificationCenter.default.publisher(for: .gciTestModeChanged)) { note in
+            testMode = note.object as? Bool ?? false
+        }
         .onReceive(NotificationCenter.default.publisher(for: .gciSidebarChanged)) { _ in
             guard showSidebar != GameSettings.shared.logPanel else { return }
             showSidebar = GameSettings.shared.logPanel
@@ -117,12 +125,19 @@ final class KeyboardFocusedSKView: SKView {
 
 extension Notification.Name {
     static let gciSidebarChanged = Notification.Name("gciSidebarChanged")
+    /// Posted when ⌘T turns Test Mode on or off, so the sidebar's collapsed tab
+    /// can appear and disappear with it.
+    static let gciTestModeChanged = Notification.Name("gciTestModeChanged")
 }
 
 // MARK: - Diagnostics Sidebar
 
 struct DiagnosticsSidebarView: View {
     @Binding var isExpanded: Bool
+    /// Whether the collapsed tab is offered at all. The expanded panel keeps
+    /// its own close button regardless, so leaving Test Mode with the panel
+    /// open cannot trap it — though the scene closes it in that case anyway.
+    var showsTab = true
     private let log = DiagnosticsLog.shared
 
     // GCI cyan — matches the white-side piece colour
@@ -144,7 +159,7 @@ struct DiagnosticsSidebarView: View {
                 }
                 .frame(width: 280)
                 .background(Color.black)
-            } else {
+            } else if showsTab {
                 VStack(spacing: 0) {
                     expandButton
                     Spacer()

@@ -4928,6 +4928,7 @@ class GameScene: SKScene {
         // with anything the game reads, and per session so nobody leaves it on.
         if key == "t", event.modifierFlags.contains(.command) {
             testMode.toggle()
+            NotificationCenter.default.post(name: .gciTestModeChanged, object: testMode)
             // Otherwise the panel is stranded: open, and with no way to close
             // it short of turning Test Mode back on.
             if !testMode, GameSettings.shared.logPanel {
