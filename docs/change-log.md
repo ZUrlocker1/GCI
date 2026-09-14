@@ -1,12 +1,10 @@
 # Galactic Chess Invaders Change Log
 
-## V 1.2 (Build 9)  Resizable window
+## V 1.2 (Build 9)  Better Screen Resizing
 
-- **The window resizes properly** — The game used to be a fixed 960×700 canvas scaled into whatever space was available, with black bars around it. It now lays itself out from the size it actually has: the board is centred, the gutters take up the slack, and a smaller window shrinks the board to fit rather than letting it run off the edge.
-- **Opening the log panel no longer squashes the game** — It was reserving a full gutter on the right, where nothing is drawn. It now reserves only the left column. On a narrow window the board is roughly twice the size it was.
-- **The Back button on Settings and How To Play** sits where the INFO button does, at the same size, so the control that closes a panel is where the control that opened it was. The SET / INFO pair is hidden while either panel is open.
-- **"SHOOT SOMETHING!"** — Three beats without firing, while black pieces are still on the board, raises a red reminder in the gutter. Aimed at the later levels, where it is tempting to play only the chess half and let the fleet take you apart.
-- **Groundwork for iPad and iPhone.** This is the refactor the port needs — the port plan is in [IOS-Port.md](IOS-Port.md). Nothing in the game changes at the size it has always run at.
+- **Better resizing ** — The game used to be a fixed 960×700 canvas scaled into whatever space was available, with black bars around it. It now lays itself out from the size it actually has: the board is centred, the gutters take up the slack, and a smaller window shrinks the board to fit rather than letting it run off the edge.
+- **"SHOOT SOMETHING!"** — Three beats without firing *and* two of your pieces hit by Black in that time raises a red reminder in the gutter. Both conditions, so it only speaks when going quiet is actually costing you. Aimed at the later levels, where it is tempting to play only the chess half and let the fleet take the board apart.
+- **Groundwork for iPad and iPhone.** This is the refactor in advance of the iOS port. The plan is in [IOS-Port.md](IOS-Port.md). 
 
 ---
 

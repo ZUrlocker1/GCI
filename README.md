@@ -34,9 +34,7 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 
 **What's new in v1.2:**
 
-- **The window resizes properly.** The board and the readouts lay themselves out
-  from the space available instead of being scaled into a fixed canvas, and
-  opening the log panel no longer squashes the game.
+- **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. 
 - Groundwork for the iPad and iPhone port — see [IOS-Port.md](docs/IOS-Port.md).
 
 **What's new in v1.1:**

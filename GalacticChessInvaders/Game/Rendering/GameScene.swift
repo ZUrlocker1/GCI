@@ -113,15 +113,20 @@ class GameScene: SKScene {
     private var beatsWithoutFiring = 0
     private static let beatsBeforeFirePrompt = 3
     /// Beats since the player last fired, or since the level began.
-    ///
-    /// The trigger for "SHOOT SOMETHING!" is silence, not damage. Damage is the
-    /// *reason* it matters — a player who only plays chess gets taken apart —
-    /// but it is a poor signal: a crush or a descent damages White without the
-    /// player having done anything wrong, and a player who is shooting well can
-    /// still be unlucky. Beats without a shot says exactly the thing the taunt
-    /// is about.
     private var beatsSinceLastShot = 0
+    /// White pieces hit by Black's fire since the player last fired.
+    private var whiteHitsSinceLastShot = 0
+
+    // "SHOOT SOMETHING!" needs *both*: gone quiet, and paying for it.
+    //
+    // Idleness alone was tried and nags a player who is doing fine — an early
+    // level where Black is not shooting back, or a beat spent deliberately not
+    // wasting a shot. Damage alone would fire at someone shooting well and
+    // merely unlucky. Together they describe the failure this is actually for:
+    // playing only the chess half while the fleet takes the board apart. Both
+    // counters reset on the shot that answers it.
     private static let beatsBeforeShootPrompt = 3
+    private static let hitsBeforeShootPrompt = 2
 
     /// True once the player has steered the ship at all this level.
     private var hasMovedShipThisLevel = false
@@ -2782,7 +2787,9 @@ class GameScene: SKScene {
             next = beatsWithoutFiring >= Self.beatsBeforeFirePrompt ? .fire : nil
         } else if !hasMovedShipThisLevel {
             next = secondsSinceFiring >= Self.secondsBeforeMovePrompt ? .move : nil
-        } else if beatsSinceLastShot >= Self.beatsBeforeShootPrompt, blackPiecesRemain {
+        } else if beatsSinceLastShot >= Self.beatsBeforeShootPrompt,
+                  whiteHitsSinceLastShot >= Self.hitsBeforeShootPrompt,
+                  blackPiecesRemain {
             // Last in the chain on purpose: it is only reachable once the
             // player has found the trigger and the steering, so it cannot
             // crowd out either of those, and friendly fire still outranks it.
@@ -2825,6 +2832,7 @@ class GameScene: SKScene {
         hasMovedShipThisLevel = false
         secondsSinceFiring = 0
         beatsSinceLastShot = 0
+        whiteHitsSinceLastShot = 0
         friendlyFireRemaining = 0
         friendlyFireKind = nil
         friendlyFireHits = 0
@@ -3123,6 +3131,7 @@ class GameScene: SKScene {
 
         shipState.laserFired()
         beatsSinceLastShot = 0
+        whiteHitsSinceLastShot = 0
         if !hasFiredThisLevel {
             hasFiredThisLevel = true
             secondsSinceFiring = 0
@@ -4404,6 +4413,9 @@ class GameScene: SKScene {
             }
             shot.deactivate()
             handleWhitePieceHit(result, node: pieceNode, impact: impact)
+            // Black's doing, not the player's — friendly fire has its own
+            // counter and must not argue that the player should shoot more.
+            whiteHitsSinceLastShot += 1
         }
     }
 
