@@ -566,6 +566,51 @@ UIKit twin or, more simply, a SwiftUI `ScrollView` of `Text` on both platforms.
 
 ---
 
+## 6a. Render cost, and what to turn off on a small screen
+
+Measured on an M-series Mac in ordinary play: **35–38% of one core**, holding 60fps.
+That is around 6ms of CPU per 16.7ms frame — comfortable on a desktop, and the figure
+to carry into the port as the thing to beat, because a phone has nothing like that
+headroom.
+
+**The bloom is the single largest item.** One `SKEffectNode` wraps the whole playfield
+and carries a `CIBloom` at radius 6, intensity 0.9, re-filtered every frame —
+`shouldRasterize` is off because the subtree changes constantly, so the cache would be
+invalidated before it was ever read. A full-screen Core Image pass per frame is exactly
+the kind of thing that throttles a phone and drains its battery, and the glow is most
+of the game's look, so this is the trade-off the port has to make consciously rather
+than discover.
+
+**The switch already exists.** `GameSettings.neonGlow` detaches the filter entirely
+rather than zeroing its intensity, which is what actually skips the offscreen pass —
+see `GameScene.applyGlowSetting()`. So the iOS work is not building a toggle, it is
+choosing the **default**:
+
+1. **Glow on** for iPad, which has the die and the thermal envelope for it.
+2. **Glow off by default on iPhone**, or on any scene below some width, with the
+   setting still there for anyone who wants it. The sprites are neon outlines on black
+   and read perfectly well without the bloom; they lose atmosphere, not legibility.
+3. If losing it entirely is too much, the cheaper substitutes are a **pre-blurred
+   sprite behind each piece** (a texture, drawn once, no per-frame filter) or simply a
+   smaller `inputRadius`. Both are worth measuring before accepting option 2.
+
+**The other two per-frame costs, in order.** The starfield is 84 sprites in three
+parallax tiers, batched into one draw call because they share a texture — cheap, but
+84 nodes is 84 nodes on a phone, and the tier counts are the obvious dial. The nebula
+is a single additive sprite on slow `SKAction`s, which costs almost nothing and can
+stay. Both are rebuilt by `rebuildSky()` when the scene's size changes, which is also
+where a per-device star count would belong if one is wanted.
+
+**A caution from the Mac.** The title screen measured *higher* than gameplay — 53% —
+and the cause was not the bloom but two `SKLabelNode`s having their `fontColor` written
+every frame by a colour-cycling `customAction`. Writing `fontColor` re-renders the
+glyphs; at 60pt and 48pt, inside the bloom node, that was the most expensive thing in
+the game. It is `SKAction.colorize` on white glyphs now. **Anything that animates a
+label's colour or text per frame is a bug**, and a phone will punish it far harder than
+a Mac did.
+
+---
+
 ## 7. Reducing the text-heavy screens
 
 **How To Play** is 365 lines of Swift holding roughly 636 characters of body copy in four
