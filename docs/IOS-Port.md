@@ -19,7 +19,9 @@ luck. It does not survive portrait, and it wastes a third of an iPhone screen.
 
 So the port was one substantial refactor — make the scene lay itself out from its own
 size — followed by four increasingly fiddly device passes. **The refactor is done**
-as of 1.2; see §3. The device passes remain.
+as of 1.2; see §3, which also records why it was done, what it cost, the cheaper
+option that was not considered at the time, and the one line that reverts macOS to
+the 1.1 behaviour. The device passes remain.
 
 ---
 
@@ -56,7 +58,10 @@ Six things outside the app shell, and five of them are one method each.
 
 ## 2. The geometry problem
 
-The scene is created once at 960×700 and scaled to fit:
+*Describes 1.1, which is what this was written against. 1.2 changed it — see §3,
+including why, what it cost, and how to put it back.*
+
+The scene was created once at 960×700 and scaled to fit:
 
 ```swift
 let scene = GameScene(size: CGSize(width: 960, height: 700))
@@ -113,9 +118,11 @@ view rather than a fixed canvas scaled into it. `didChangeSize` repositions.
 - **Three bands.** A HUD strip at the top and the ship's lane at the bottom stay
   fixed in points; only the board flexes between them. The chrome holds type and
   the ship, and neither should shrink because a window got shorter.
-- **The board never grows past the design 64pt square.** Letting it fill the space
-  gave 176pt squares at 1900pt wide and the composition fell apart, because
-  everything around it is a fixed size. Extra space becomes gutter, not board.
+- **The board is capped at 96pt squares**, one and a half times the design 64.
+  Letting it fill the space gave 176pt squares at 1900pt wide and the composition
+  fell apart, because everything around it is a fixed size. Capping at the design
+  64 went too far the other way and left most of a full-screen laptop black.
+  Beyond the cap, extra space becomes gutter rather than board.
 - **Only the left gutter is reserved** — 224pt — plus 24pt of breathing room on the
   right. Reserving a second full gutter on the right, where nothing is drawn, cost
   the board 200pt it never needed. This will matter more on a phone than it did on
@@ -153,10 +160,75 @@ rotates:
    scene and collided with the log sidebar's toggle. `HUDNode.navOriginX(forSceneWidth:)`
    anchors it right. **Portrait on a phone is the narrow case, repeatedly.**
 
-A fourth, subtler one: **a stored `static let` that reads the geometry freezes it.**
+4. **Anything drawn in design points on the playfield has to be told the scale.**
+   Under `.aspectFit` every pixel of the game scaled together for free. Under
+   `.resizeFill` only what reads the layout scales, and the rest silently keeps
+   its 64pt-board size: the player ship, laser rounds, raider scouts, score pops,
+   the power-up name flashed at a kill, AUTO over a moved piece, explosions and
+   glass, the legal-move dots, the coordinate labels, the check path, the charge
+   telegraph, the Nuke's shockwave — and the screen shake, whose 30pt is half a
+   square at the design size and a third of one at 96. All of it now reads
+   `SceneLayout.contentScale` (or `BoardNode.scale` for what is drawn on the
+   board) **at the moment it draws**, which matters because the pools outlive any
+   one board size. Anything new that is drawn in points rather than in squares
+   needs the same treatment.
+
+A fifth, subtler one: **a stored `static let` that reads the geometry freezes it.**
 `gatlingCeiling` was computed once at first access and then insisted the seventh
 rank was somewhere it was not. Making a constant variable turns every copy of its
 value into a latent bug, and they only surface where something reads them.
+
+### Why this was done at all, and why the Mac paid for it
+
+Worth writing down, because the answer is not "the old way was broken".
+
+**The old way could not break.** A fixed canvas under `.aspectFit` is one image
+scaled uniformly, so fonts, banners, missiles and messages all resized together
+by construction. There was no per-element work to get wrong because there was
+none to do. Every resize bug listed above is a bug this change created.
+
+**Where `.aspectFit` genuinely fails is legibility, not letterboxing.** A uniform
+scale shrinks type along with the board, and the HUD and gutter already run at
+8–11pt. The scale factors from §2's table, applied to 9pt gutter type:
+
+| Target | Uniform scale | 9pt type renders at |
+|---|---|---|
+| iPad 12.9" landscape | 1.42× | 12.8pt |
+| iPad mini landscape | 1.06× | 9.6pt |
+| iPad portrait | 1.07× | 9.6pt, in a 45%-black screen |
+| iPhone landscape | 0.56× | **5.0pt** |
+| iPhone portrait | 0.41× | **3.7pt** |
+
+So the refactor was **unnecessary for macOS, unnecessary for iPad landscape,
+marginal for iPad portrait, and genuinely required for iPhone**. Below roughly
+0.7× the game stops being readable however much screen is left over.
+
+**The cheaper option, not taken.** Keep `.aspectFit` and swap the *design canvas*
+per orientation — 960×700 landscape, something nearer 760×1000 portrait —
+rebuilding the scene on rotation. Two or three fixed canvases, each internally
+rigid and each scaled uniformly the way the Mac already did. That still requires
+composing a portrait layout, which is the real work in §5, but it would not have
+required parameterising every round, pop and dot. It reaches iPad fully and
+iPhone acceptably for a fraction of the effort, and it was not on the table when
+this was planned. If the phone passes turn out harder than §5 expects, this is
+the fallback worth reconsidering.
+
+**What it cost.** 1,502 lines across 19 files, and about sixteen of the
+twenty-three commits after Stage 2 exist only to clean up after it — including
+one regression that stopped the fleet sweeping horizontally from Level 02
+onward, in a game that had already shipped twice.
+
+**The sequencing was the mistake, more than the decision.** `scaleMode` is set in
+one line per platform. macOS could have stayed on `.aspectFit` until an iOS
+target existed and the responsive layout had been proven there. Doing it on the
+shipping platform first meant paying the whole destabilisation cost where none of
+the benefit lands.
+
+**The fallback is still one line.** Setting `scene.scaleMode = .aspectFit` in
+`GameScene.shared` pins the scene at 960×700 forever, so `SceneLayout` always
+returns its design values and macOS renders exactly as 1.1 did. Everything in
+this section goes dormant and stays available for iOS. Worth remembering if a
+Mac release ever needs the safe path in a hurry.
 
 ---
 
