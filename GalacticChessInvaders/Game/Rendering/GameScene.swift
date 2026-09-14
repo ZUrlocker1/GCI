@@ -1657,6 +1657,7 @@ class GameScene: SKScene {
         raiders?.teardown()
         raiders = nil
         for side in [PieceColor.black, .white] { setRespawnWarning(side, on: false) }
+        isShowingRespawnWarning = false
         clearPowerUpAlley()
         // §13.2: neither the shield nor a running clock carries to the next
         // level. Lifting the effect first puts the world back before the state
@@ -2384,6 +2385,13 @@ class GameScene: SKScene {
     /// `isEngineThinking` is kept, and matters: Black's multi-move turn hands
     /// the turn back to White between moves, so without it hints would flash
     /// for positions the player never gets to act on.
+    /// The order here is load-bearing, not incidental.
+    ///
+    /// The last two checks call `isMate` and `isStalemate`, and each of those
+    /// generates every legal move — the most expensive thing the chess model
+    /// does. They sit behind eight cheap checks, including whose turn it is, so
+    /// the update loop's per-frame call returns long before reaching them.
+    /// Moving either one up puts move generation in the frame budget.
     private var hintsBlockedReason: String? {
         if !GameSettings.shared.chessHints                { return "switched off" }
         if !(stateMachine.currentState is PlayingState)   { return "not playing" }
@@ -2975,8 +2983,12 @@ class GameScene: SKScene {
     }
 
     /// Nothing to shoot at means nothing to be told off about.
+    ///
+    /// `contains`, not `allPieces(color:).isEmpty`: that built and threw away a
+    /// filtered array to answer a yes/no question, on a path the update loop
+    /// reaches.
     private var blackPiecesRemain: Bool {
-        !board.allPieces(color: .black).isEmpty
+        board.containsPiece(color: .black)
     }
 
     private func noteShipMoved() {
@@ -3681,7 +3693,14 @@ class GameScene: SKScene {
     /// the left gutter, high for Black and low for White, so the side it
     /// belongs to is readable without stopping to read it — White is unused
     /// today and waiting for a power-up that brings a piece back.
+    private var isShowingRespawnWarning = false
+
     private func syncRespawnWarnings() {
+        // Only when it actually changes. This ran every frame, and each run
+        // interpolated a name string and walked bloomNode's children to find a
+        // node that is usually not there.
+        guard regeneration.isWarning != isShowingRespawnWarning else { return }
+        isShowingRespawnWarning = regeneration.isWarning
         setRespawnWarning(.black, on: regeneration.isWarning)
         // Nothing white regenerates yet. The ship's own one-second respawn is
         // deliberately silent — it is short, it is centre-screen, and the

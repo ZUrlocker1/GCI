@@ -81,6 +81,12 @@ final class GCIBoard {
         pieces.values.filter { $0.color == color }
     }
 
+    /// Whether `color` has anything left, without building the array to find
+    /// out. The update loop asks this.
+    func containsPiece(color: PieceColor) -> Bool {
+        pieces.values.contains { $0.color == color }
+    }
+
     // MARK: - Chess moves
 
     func legalDestinations(from square: String) -> [String] {
