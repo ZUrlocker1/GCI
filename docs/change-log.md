@@ -6,6 +6,8 @@
 - **"SHOOT SOMETHING!"** — Three beats without firing *and* four hits on your pieces from Black in that time raises a red reminder in the gutter. Both conditions, so it only speaks when going quiet is actually costing you. Aimed at the later levels, where it is tempting to play only the chess half and let the fleet take the board apart.
 - **`M` mutes the music**, from anywhere. It always did; it was never written down. Now on the How To Play screen beside pause and quit.
 - **The log panel is now a Test Mode feature** — `L` and the Settings row both require ⌘T first. It is a developer readout, and a player who opened it by accident had no idea what they were looking at. Leaving Test Mode closes it. Settings closes the gap where the row was.
+- **Everything on the playfield scales with the board.** The ship, laser rounds, raider scouts, score pops, explosions, the move dots and the screen shake all follow the squares now, rather than staying the size they were drawn at on a 960×700 canvas.
+- **A pass over the game loop.** Several readouts were being redrawn sixty times a second to say what they already said — the turn clock, the power-up alley — and the fleet's back rank was being counted from scratch on every frame. They are all driven by change now. Worth a couple of points of CPU, measured: ordinary play sits at **35–38%**.
 - **Groundwork for iPad and iPhone.** This is the refactor in advance of the iOS port. The plan is in [IOS-Port.md](IOS-Port.md). 
 
 ---

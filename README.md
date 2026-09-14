@@ -34,7 +34,8 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 
 **What's new in v1.2:**
 
-- **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. 
+- **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. Everything on the playfield — the ship, the lasers, the raiders, the explosions — is sized against the board rather than staying as drawn.
+- **Lighter on the CPU.** Readouts redraw when they change rather than on every frame — a couple of points' worth. Ordinary play sits at 35–38%.
 - **The log panel moved behind Test Mode.** Press `⌘T`, then `L`.
 - Groundwork for the iPad and iPhone port — see [IOS-Port.md](docs/IOS-Port.md).
 
