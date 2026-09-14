@@ -88,6 +88,17 @@ class GameScene: SKScene {
     /// third overlay to have that bug, after the title screen and the panels,
     /// which is why it is a list rather than another special case.
     private var centredOverlays: [(node: SKNode, offset: CGPoint)] = []
+
+    /// How much to shrink the centred banners by.
+    ///
+    /// PAUSED is 36pt and the rest are 30, fixed, which is right against a
+    /// 512pt board and far too loud against a 300pt one — the word ended up
+    /// wider than the board it was covering. Tied to the square rather than to
+    /// the window, so the banners keep their proportion to the thing they sit
+    /// over, and capped at 1 so they never grow.
+    private var bannerScale: CGFloat {
+        min(1, layout.squareSize / SceneLayout.designSquareSize)
+    }
     /// Squares currently advised, best first — compared to skip redundant work
     /// when the advice has not changed between beats.
     private var hintedSquares: [String] = []
@@ -2526,6 +2537,9 @@ class GameScene: SKScene {
         let centre = CGPoint(x: size.width / 2, y: size.height / 2)
         centredOverlays.append((node, CGPoint(x: node.position.x - centre.x,
                                               y: node.position.y - centre.y)))
+        // Immediately, not on the next resize: a banner raised while the board
+        // is already small has to be the right size on its first frame.
+        recentreOverlays()
     }
 
     /// Puts every registered overlay back in the middle, and forgets the ones
@@ -2533,8 +2547,14 @@ class GameScene: SKScene {
     private func recentreOverlays() {
         centredOverlays.removeAll { $0.node.parent == nil }
         let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+        let scale = bannerScale
         for (node, offset) in centredOverlays {
-            node.position = CGPoint(x: centre.x + offset.x, y: centre.y + offset.y)
+            node.setScale(scale)
+            // The offset scales with the banner, so a line sitting 24pt above
+            // centre stays 24pt above it *in the banner's own terms* rather
+            // than drifting away from its heading as everything shrinks.
+            node.position = CGPoint(x: centre.x + offset.x * scale,
+                                    y: centre.y + offset.y * scale)
         }
     }
 
