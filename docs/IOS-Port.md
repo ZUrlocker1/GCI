@@ -281,6 +281,84 @@ than days, and decide on looks with it running. If it clashes, a custom `SKNode`
 pair is a contained replacement — the input layer is one adapter either way, and
 `GameAction` means nothing downstream knows the difference.
 
+### What other arcade ports actually do
+
+Worth settling by looking at what shipped and worked, rather than by reasoning from
+first principles. The pattern across touch conversions of one-axis shooters is
+fairly consistent:
+
+| Game | Movement | Firing |
+|---|---|---|
+| Sky Force Reloaded | drag anywhere | auto |
+| Phoenix 2 | drag anywhere | auto |
+| Galaga Wars | drag anywhere | auto |
+| Space Invaders (Taito) | virtual d-pad, later direct touch | button |
+| Geometry Wars 3 | twin virtual sticks | auto / stick |
+| Super Hexagon | tap left or right half | n/a |
+
+Two things stand out. **Direct drag beat the virtual d-pad**, everywhere, and the
+ports that kept a d-pad are the ones people complain about — a d-pad gives no
+tactile edge, so a thumb drifts off it and the player finds out by dying. And
+**auto-fire is close to universal**, because it removes the second input entirely
+and leaves one thumb doing everything.
+
+Most implementations also use **offset drag**: the ship tracks the finger's
+*movement* rather than sitting under it, so the finger never covers the thing you
+are aiming.
+
+### Why GCI cannot just copy that
+
+Two complications, and the second is the interesting one.
+
+**The screen is also a chess board.** A drag-anywhere scheme assumes the whole
+surface is a movement pad. Here, taps on the board select and move pieces. So the
+drag region has to be bounded — most likely the ship's own lane and the space below
+the board, which is exactly the band the layout already reserves as
+`shipBandHeight`. That is a reason to keep that band generous on a phone rather
+than trimming it to make the board bigger.
+
+**Auto-fire would be actively harmful.** In every game in that table, the only
+things in front of you are enemies. In GCI your own pieces sit in your firing line
+on every shot — that is what the friendly-fire hint exists to teach. Auto-fire would
+demolish White's position without the player ever choosing to. So GCI keeps an
+explicit fire control, and the dominant touch-shmup solution is not available to it.
+
+That leaves the two-input problem that auto-fire usually solves. Options, roughly in
+order of how much they ask of the player:
+
+1. **Drag in the ship lane to move, tap anywhere in the lane to fire.** One thumb,
+   no on-screen furniture, no chrome over the art. Risk: a tap and the start of a
+   drag are hard to tell apart, so firing may trigger on movement.
+2. **Drag to move with the left thumb, a fire button under the right.** Two thumbs,
+   which is the natural landscape grip anyway, and it is unambiguous.
+3. **`GCVirtualController`** — the d-pad the table above says people dislike, but it
+   is free, native, and disappears when a real controller connects.
+
+My reading is that **2 is the one to build first** and 1 is the one to test against
+it. Landscape on a phone puts both thumbs at the bottom corners already, and the
+fire button can sit in the right-hand gutter — space the layout has spare, and which
+the Mac build does not use for anything.
+
+### Testing for playability
+
+Not a simulator job. The things that decide this cannot be seen on a desktop:
+
+- **Occlusion.** In portrait a thumb covers the bottom rank. That is where White's
+  back rank lives, and where the ship is. Worth checking before committing to
+  portrait at all.
+- **Thumb reach.** On a large phone the top of the board is not reachable one-handed.
+  Chess selection may need the other hand, which changes the whole control scheme.
+- **Tap targets.** Apple's floor is 44pt. A square below that fails; §4's layout has
+  to enforce it and the port should measure the real number on each device.
+- **A case.** Phones live in cases, which changes where the edges are.
+- **The five-second clock is the real test.** The Mac build is playable because a
+  mouse click is precise and instant. If selecting a piece on glass takes two
+  attempts, the beat expires and the engine moves for you — which is a worse game,
+  not a slower one. **If one metric decides whether the phone port ships, it is the
+  proportion of beats where the player completes their own move.**
+- **Cadet first.** Test on Cadet, which is the default and gives a seven-second beat.
+  If it is not playable there it is not playable.
+
 ### Touch for chess
 
 The existing flow is click piece, click destination. That maps to tap-then-tap with no
