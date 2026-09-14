@@ -126,7 +126,9 @@ class GameScene: SKScene {
     // playing only the chess half while the fleet takes the board apart. Both
     // counters reset on the shot that answers it.
     private static let beatsBeforeShootPrompt = 3
-    private static let hitsBeforeShootPrompt = 2
+    /// Four, not one or two. A couple of hits is the game being played; four
+    /// while the guns are silent is the board being taken apart.
+    private static let hitsBeforeShootPrompt = 4
 
     /// True once the player has steered the ship at all this level.
     private var hasMovedShipThisLevel = false
