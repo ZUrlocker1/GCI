@@ -148,7 +148,7 @@ final class HowToPlayNode: SKNode {
         chip("CLICK",  "Pick piece, then new square",        x: x, y: 300)
         // Two keys on one row: a fifth chip would run into the HISTORY heading
         // below, and 25 characters at 12pt still clears the column.
-        chip("ESC",    "Escape pauses  ·  Q quits",          x: x, y: 256)
+        chip("ESC",    "Pause  ·  Q quits  ·  M mutes",      x: x, y: 256)
 
         // — HISTORY —
         heading("HISTORY", Self.magenta, x: x, y: 203)

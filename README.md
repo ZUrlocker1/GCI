@@ -55,8 +55,8 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 Earlier releases are in the [change log](docs/change-log.md).
 
 **Status:** The game is fully functional and feature complete. It is playable with all ten levels,
-power-ups and full arcade audio. Press `⌘T` for Test Mode, which unlocks the diagnostics log on
-`L` and 4 debug keys:
+power-ups and full arcade audio. `M` mutes the music from anywhere. Press `⌘T` for Test Mode, which
+unlocks the diagnostics log on `L` and 4 debug keys:
 
 - `A` plays White automatically, at speed
 - `P` grants the next power-up
