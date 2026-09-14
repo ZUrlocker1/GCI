@@ -87,7 +87,12 @@ class GameScene: SKScene {
     /// stranded off to one side with the board showing past it. This is the
     /// third overlay to have that bug, after the title screen and the panels,
     /// which is why it is a list rather than another special case.
-    private var centredOverlays: [(node: SKNode, offset: CGPoint)] = []
+    /// `scales` is false for overlays that lay their contents out against the
+    /// scene size they were built with. Those are already the size of the
+    /// screen; scaling them on top of that makes them enormous — which is what
+    /// put GAME OVER across the top of the board after a resize. They are
+    /// recentred and left at their own size. Plain labels do scale.
+    private var centredOverlays: [(node: SKNode, offset: CGPoint, scales: Bool)] = []
 
     /// How much to shrink the centred banners by.
     ///
@@ -1529,7 +1534,10 @@ class GameScene: SKScene {
     /// it — so nothing is left half-shown or still counting down.
     private func dismissLevelBanner() {
         removeAction(forKey: Self.levelAnnounceKey)
-        enumerateChildNodes(withName: LevelBannerNode.nodeName) { node, _ in
+        // Carriers, not banners: the banner is a child of one now, so clearing
+        // by the banner's own name stopped finding anything and V-skipping
+        // stacked one announcement on the next.
+        enumerateChildNodes(withName: LevelBannerNode.carrierName) { node, _ in
             node.removeFromParent()
         }
         isAnnouncingLevel = false
@@ -1581,7 +1589,13 @@ class GameScene: SKScene {
         // animate `position` without the centred-overlay registry fighting it
         // for the same property. The carrier never moves under its own power,
         // which is exactly what the registry assumes of everything it holds.
+        // Whatever is still on screen from the last wave goes first.
+        enumerateChildNodes(withName: LevelBannerNode.carrierName) { node, _ in
+            node.removeFromParent()
+        }
+
         let carrier = SKNode()
+        carrier.name = LevelBannerNode.carrierName
         carrier.position = CGPoint(x: size.width / 2, y: size.height / 2)
         carrier.zPosition = banner.zPosition
         carrier.addChild(banner)
@@ -1979,7 +1993,7 @@ class GameScene: SKScene {
                                    score: ScoreManager.shared.currentScore,
                                    sceneSize: size)
         overlay.zPosition = 25
-        registerCentredOverlay(overlay)
+        registerCentredOverlay(overlay, scales: false)
         addChild(overlay)
         gameOverNode = overlay
         isAwaitingWaveContinue = true
@@ -2561,10 +2575,10 @@ class GameScene: SKScene {
 
     /// Remembers a node's offset from the middle, so a resize can put it back.
     /// Call after the node's position is set.
-    private func registerCentredOverlay(_ node: SKNode) {
+    private func registerCentredOverlay(_ node: SKNode, scales: Bool = true) {
         let centre = CGPoint(x: size.width / 2, y: size.height / 2)
         centredOverlays.append((node, CGPoint(x: node.position.x - centre.x,
-                                              y: node.position.y - centre.y)))
+                                              y: node.position.y - centre.y), scales))
         // Immediately, not on the next resize: a banner raised while the board
         // is already small has to be the right size on its first frame.
         recentreOverlays()
@@ -2575,8 +2589,8 @@ class GameScene: SKScene {
     private func recentreOverlays() {
         centredOverlays.removeAll { $0.node.parent == nil }
         let centre = CGPoint(x: size.width / 2, y: size.height / 2)
-        let scale = bannerScale
-        for (node, offset) in centredOverlays {
+        for (node, offset, scales) in centredOverlays {
+            let scale = scales ? bannerScale : 1
             node.setScale(scale)
             // The offset scales with the banner, so a line sitting 24pt above
             // centre stays 24pt above it *in the banner's own terms* rather
@@ -3117,7 +3131,7 @@ class GameScene: SKScene {
                                    score: ScoreManager.shared.currentScore,
                                    sceneSize: size)
         overlay.zPosition = 25
-        registerCentredOverlay(overlay)
+        registerCentredOverlay(overlay, scales: false)
         addChild(overlay)
         gameOverNode = overlay
         logWave("\(outcome.headline) — \(ScoreManager.shared.currentScore)")
@@ -3139,7 +3153,7 @@ class GameScene: SKScene {
                                        level: levels.level,
                                        sceneSize: size)
         entry.zPosition = 26
-        registerCentredOverlay(entry)
+        registerCentredOverlay(entry, scales: false)
         entry.onSubmit = { [weak self] name in
             guard let self else { return }
             ScoreManager.shared.submitHighScore(initials: name)
@@ -5137,7 +5151,9 @@ class GameScene: SKScene {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        settingsNode?.handleDrag(at: event.location(in: self))
+        if let settingsNode {
+            settingsNode.handleDrag(at: settingsNode.convert(event.location(in: self), from: self))
+        }
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -5158,7 +5174,11 @@ class GameScene: SKScene {
                 AudioManager.shared.play(.uiSettingsBlip)
                 pressButton(hit) { [weak self] in self?.hideSettings() }
             } else {
-                panel.handleClick(at: location)
+                // In the panel's own coordinates, not the scene's. The panel
+                // is scaled and offset now, and its hit rects are in the space
+                // it was composed in — so a scene point missed every one of
+                // them and the whole screen went dead after a resize.
+                panel.handleClick(at: panel.convert(location, from: self))
             }
             return
         }

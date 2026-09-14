@@ -20,6 +20,11 @@ final class LevelBannerNode: SKNode {
     private static let font = "PressStart2P-Regular"
     /// So the scene can clear a previous banner before showing another.
     static let nodeName = "levelBanner"
+    /// The scene wraps each banner in a carrier it owns — see `GameScene`. The
+    /// carrier carries this name so the scene can clear a previous
+    /// announcement whole, which matters when V skips levels faster than a
+    /// banner's own lifetime.
+    static let carrierName = "levelBannerCarrier"
 
     /// `title` is the mechanic name, `subtitle` the one-line explanation.
     ///
