@@ -48,6 +48,7 @@ final class HUDNode: SKNode {
 
         let nav = HUDNode.makeNavButtons()
         nav.name = HUDNode.navName
+        nav.position.x = HUDNode.navOriginX(forSceneWidth: sceneWidth)
         addChild(nav)
 
         // Bottom separator
@@ -72,6 +73,23 @@ final class HUDNode: SKNode {
     /// than repeating the numbers.
     /// So the scene can hide the pair while a full-screen panel is over it.
     static let navName = "hudNav"
+
+    /// The right edge of the INFO button in the pair's own coordinates, and the
+    /// margin the design leaves beyond it.
+    ///
+    /// The pair is composed at fixed x — SET at 742, INFO at 820 to 890 —
+    /// against the 960-wide design canvas, which anchors it to the *left*. That
+    /// was invisible while the canvas was fixed and wrong the moment it was
+    /// not: on a narrow scene the INFO button ran off the edge and the log
+    /// sidebar's toggle sat on top of it; on a wide one the pair would have
+    /// been stranded in the middle. Anchoring to the right keeps it in the
+    /// corner at any width, and reproduces the design exactly at 960.
+    static let navDesignRight: CGFloat = 890
+    static let navRightMargin: CGFloat = 70
+
+    static func navOriginX(forSceneWidth width: CGFloat) -> CGFloat {
+        width - navDesignRight - navRightMargin      // 0 at the design width
+    }
 
     /// Hides or shows the SET / INFO pair.
     func setNavHidden(_ hidden: Bool) {

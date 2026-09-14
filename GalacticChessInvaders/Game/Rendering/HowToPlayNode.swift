@@ -89,17 +89,26 @@ final class HowToPlayNode: SKNode {
     /// that closes it are the same shape in the same place.
     static let navRect = CGRect(x: 820, y: 671, width: 70, height: 22)
 
+    /// The container holding BACK, so the scene can anchor it to the same
+    /// corner the HUD's INFO button occupies rather than leaving it adrift in
+    /// the middle of a centred panel.
+    static let backNavName = "backNav"
+
     private func buildBackButton(w: CGFloat, h: CGFloat) {
+        let nav = SKNode()
+        nav.name = Self.backNavName
+        addChild(nav)
+
         let btn = SKShapeNode(rect: Self.navRect, cornerRadius: 3)
         btn.fillColor   = Self.cyan.withAlphaComponent(0.18)
         btn.strokeColor = Self.cyan; btn.lineWidth = 1; btn.name = "backButton"
-        addChild(btn)
+        nav.addChild(btn)
 
         let lbl = label("• BACK", 8, Self.cyan, .center)
         lbl.verticalAlignmentMode = .center
         lbl.position = CGPoint(x: Self.navRect.midX, y: Self.navRect.midY)
         lbl.name = "backButton"
-        addChild(lbl)
+        nav.addChild(lbl)
     }
 
     // MARK: - Header

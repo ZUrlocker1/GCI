@@ -269,18 +269,22 @@ final class SettingsNode: SKNode {
 
         // Top right, in the same box the HUD's SETTINGS button occupies.
         let rect = HowToPlayNode.navRect
+        let nav = SKNode()
+        nav.name = HowToPlayNode.backNavName
+        content.addChild(nav)
+
         let box = SKShapeNode(rect: rect, cornerRadius: 3)
         box.fillColor   = Self.cyan.withAlphaComponent(0.18)
         box.strokeColor = Self.cyan
         box.lineWidth   = 1
         box.name        = "backButton"
-        content.addChild(box)
+        nav.addChild(box)
 
         let lbl = label("• BACK", 8, Self.cyan, .center)
         lbl.verticalAlignmentMode = .center
         lbl.position = CGPoint(x: rect.midX, y: rect.midY)
         lbl.name = "backButton"
-        content.addChild(lbl)
+        nav.addChild(lbl)
 
         let hint = label("PRESS ANY KEY TO RESUME GAME", 10,
                          Self.cyan.withAlphaComponent(0.65), .left)

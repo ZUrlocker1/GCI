@@ -1,6 +1,7 @@
 # Porting Galactic Chess Invaders to iPad and iPhone
 
-*Plan, not a commitment. Written 13 September 2026 against v1.1 (build 8). No code changed.*
+*Written 13 September 2026 against v1.1. Updated for 1.2, in which §3 — the layout
+refactor — was built and shipped on macOS. Everything else is still a plan.*
 
 ---
 
@@ -16,8 +17,9 @@ measured against it — the board is 512pt because a square is 64pt, the gutter 
 x=112, the ship lane is at y=62. That works on one Mac window and on iPad landscape by
 luck. It does not survive portrait, and it wastes a third of an iPhone screen.
 
-So the port is one substantial refactor — make the scene lay itself out from its own
-size — followed by four increasingly fiddly device passes.
+So the port was one substantial refactor — make the scene lay itself out from its own
+size — followed by four increasingly fiddly device passes. **The refactor is done**
+as of 1.2; see §3. The device passes remain.
 
 ---
 
@@ -97,7 +99,70 @@ should go; on a phone in portrait there is no room for either.
 
 ---
 
-## 3. The core refactor: a layout value
+## 3. The core refactor: a layout value — **done, both stages**
+
+*Shipped in 1.2. What follows describes the design as built; the lessons at the end
+of this section are the ones that will repeat on iOS.*
+
+`SceneLayout` is the single home for every position in the playfield, derived from
+the size the scene actually has. `scaleMode` is `.resizeFill`, so the scene *is* the
+view rather than a fixed canvas scaled into it. `didChangeSize` repositions.
+
+**The rules the layout settled on**, all of which iOS inherits:
+
+- **Three bands.** A HUD strip at the top and the ship's lane at the bottom stay
+  fixed in points; only the board flexes between them. The chrome holds type and
+  the ship, and neither should shrink because a window got shorter.
+- **The board never grows past the design 64pt square.** Letting it fill the space
+  gave 176pt squares at 1900pt wide and the composition fell apart, because
+  everything around it is a fixed size. Extra space becomes gutter, not board.
+- **Only the left gutter is reserved** — 224pt — plus 24pt of breathing room on the
+  right. Reserving a second full gutter on the right, where nothing is drawn, cost
+  the board 200pt it never needed. This will matter more on a phone than it did on
+  a Mac.
+- **Square size floors to whole points**, or grid lines land on fractional spacing
+  and alias into a dashed mess.
+- **The layout clamps its own input** to a 480×360 minimum. Under `.resizeFill` a
+  scene really is handed a zero size before its view lays out — the diagnostics log
+  shows `Screen: 0×0` on every launch — and clamping once inside the layout beats
+  guarding at every consumer.
+
+**Rescaling is real, not deferred.** `BoardNode.relayout()` rebuilds the lattice,
+bands, labels, selection ring and marker pool at a new square; `PieceNode.adopt()`
+re-fits art, damage wedge and physics body. Pieces keep their squares, so a game in
+progress survives a resize. It is debounced by 0.2s — a window drag would otherwise
+remake the board sixty times a second.
+
+### What this cost, and what iOS should expect
+
+Three classes of bug came out of it, and every one will recur on a device that
+rotates:
+
+1. **Anything positioned once against the scene centre gets stranded.** The title
+   screen, both panels, and then PAUSED / GAME OVER / LEVEL CLEARED / the quit
+   prompt / the high-score entry. That is now a registry — `registerCentredOverlay`
+   records a node's offset from the middle and a resize puts every one back — so a
+   new overlay gets it for free. **Use it for anything new.**
+2. **Anything composed at a fixed size needs scaling, not just moving.** The panels
+   and the title are laid out against 960×700 and are scaled to fit with a black
+   shade behind. Their own backdrops only ever covered their own design size, which
+   is why the title used to show around them.
+3. **Anything anchored to the left breaks on a narrow screen.** The SET / INFO pair
+   was composed at fixed x against a 960-wide canvas, which anchored it to the left
+   — invisible until the canvas stopped being fixed, then it clipped off a narrow
+   scene and collided with the log sidebar's toggle. `HUDNode.navOriginX(forSceneWidth:)`
+   anchors it right. **Portrait on a phone is the narrow case, repeatedly.**
+
+A fourth, subtler one: **a stored `static let` that reads the geometry freezes it.**
+`gatlingCeiling` was computed once at first access and then insisted the seventh
+rank was somewhere it was not. Making a constant variable turns every copy of its
+value into a latent bug, and they only surface where something reads them.
+
+---
+
+## 3a. Original plan
+
+
 
 Everything else depends on this, so it comes first and it is worth doing properly.
 

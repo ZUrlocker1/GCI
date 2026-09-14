@@ -832,7 +832,11 @@ class GameScene: SKScene {
         // overlay's scale and is positioned in the overlay's scaled space.
         if let nav = overlay.childNode(withName: Self.titleNavName) {
             nav.setScale(1 / scale)
-            nav.position = CGPoint(x: -size.width / 2 / scale,
+            // Right-anchored, like the HUD's pair, then expressed in the
+            // overlay's scaled space. Anchoring it to the left is what clipped
+            // SET and INFO off the title screen on a narrow window.
+            let originX = HUDNode.navOriginX(forSceneWidth: size.width)
+            nav.position = CGPoint(x: (originX - size.width / 2) / scale,
                                    y: (size.height - HUDNode.height - size.height / 2) / scale)
         }
     }
@@ -2472,6 +2476,21 @@ class GameScene: SKScene {
         // SET and INFO are during play, which is where the eye looks for it.
         panel.position = CGPoint(x: (size.width - designSize.width * scale) / 2,
                                  y: size.height - designSize.height * scale)
+
+        // BACK is drawn in the panel's own top-right, which on a wide scene is
+        // well inboard of where the HUD's INFO button sits. Anchor it to the
+        // same corner, at the same size, so the control that closes a panel is
+        // where the control that opened it was. Its container cancels the
+        // panel's scale, then is placed in the panel's scaled space.
+        // "//" searches descendants — Settings nests its BACK inside an unnamed
+        // content node, How To Play does not.
+        if let nav = panel.childNode(withName: "//" + HowToPlayNode.backNavName) {
+            nav.setScale(1 / scale)
+            let target = CGPoint(x: HUDNode.navOriginX(forSceneWidth: size.width),
+                                 y: size.height - designSize.height)
+            nav.position = CGPoint(x: (target.x - panel.position.x) / scale,
+                                   y: (target.y - panel.position.y) / scale)
+        }
     }
 
     /// Remembers a node's offset from the middle, so a resize can put it back.

@@ -1,5 +1,14 @@
 # Galactic Chess Invaders Change Log
 
+## V 1.2 (Build 9)  Resizable window
+
+- **The window resizes properly** — The game used to be a fixed 960×700 canvas scaled into whatever space was available, with black bars around it. It now lays itself out from the size it actually has: the board is centred, the gutters take up the slack, and a smaller window shrinks the board to fit rather than letting it run off the edge.
+- **Opening the log panel no longer squashes the game** — It was reserving a full gutter on the right, where nothing is drawn. It now reserves only the left column. On a narrow window the board is roughly twice the size it was.
+- **The Back button on Settings and How To Play** sits where the INFO button does, at the same size, so the control that closes a panel is where the control that opened it was. The SET / INFO pair is hidden while either panel is open.
+- **Groundwork for iPad and iPhone.** This is the refactor the port needs — the port plan is in [IOS-Port.md](IOS-Port.md). Nothing in the game changes at the size it has always run at.
+
+---
+
 ## V 1.1 (Build 8)  Chess Hints
 
 - **Chess Hints** — The three pieces worth moving glow, and the gutter names them: "MOVE A PAWN", or "MOVE A PAWN / OR QUEEN" or similar. Aimed at the large share of players who may not know chess.
