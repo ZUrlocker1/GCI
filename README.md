@@ -35,6 +35,7 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 **What's new in v1.2:**
 
 - **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. 
+- **The log panel moved behind Test Mode.** Press `⌘T`, then `L`.
 - Groundwork for the iPad and iPhone port — see [IOS-Port.md](docs/IOS-Port.md).
 
 **What's new in v1.1:**
@@ -54,8 +55,8 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 Earlier releases are in the [change log](docs/change-log.md).
 
 **Status:** The game is fully functional and feature complete. It is playable with all ten levels,
-power-ups and full arcade audio. Press `L` in game for the log diagnostics panel if you want to look
-behind the scenes. There are also 4 debug keys:
+power-ups and full arcade audio. Press `⌘T` for Test Mode, which unlocks the diagnostics log on
+`L` and 4 debug keys:
 
 - `A` plays White automatically, at speed
 - `P` grants the next power-up

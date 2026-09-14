@@ -161,8 +161,9 @@ Reviewers sometimes treat hidden developer features as undocumented functionalit
 deliberate gate and is documented on the How To Play screen, which should be enough, but be ready to
 explain it in the review notes.
 
-**3. The diagnostics log.** `L` opens a developer panel in the shipping build. Harmless, but mention
-it in the review notes rather than letting a reviewer find it and wonder.
+**3. The diagnostics log.** `L` opens a developer panel, but only inside Test Mode — ⌘T first, as of
+1.2. A reviewer cannot now reach it by accident, which largely retires this risk; it is still worth a
+line in the notes so that nothing about ⌘T looks undisclosed.
 
 **Suggested App Review notes:**
 
@@ -171,8 +172,9 @@ it in the review notes rather than letting a reviewer find it and wonder.
 >
 > Two features are worth flagging so they do not look undocumented. ⌘T toggles a Test Mode that
 > enables four keys (A, P, R, V) for auto-play, power-ups, raiders and level skip — it is documented
-> on the in-app How To Play screen. The L key opens a diagnostics log panel, which ships
-> deliberately so that players can report problems with detail.
+> on the in-app How To Play screen. One of those keys, L, opens a diagnostics log panel, which
+> ships deliberately so that testers can report problems with detail. It is reachable only inside
+> Test Mode.
 
 ---
 
@@ -215,7 +217,7 @@ would rather use both slots on gameplay; store listings reward action over menus
 2. `⇧⌘4`, then `Space`, then click the window captures the window — but it includes the shadow. Hold
    `⌥` while clicking to drop the shadow.
 3. Or capture the full screen with `⇧⌘3` and crop to the game area.
-4. Turn the diagnostics log **off** (`L`) before capturing.
+4. Turn the diagnostics log off before capturing — ⌘T, then `L`.
 5. Save into `~/Downloads/AppStoreScreenshots/GCI/`.
 
 Capture them larger than you need and hand them to me — I will crop, resize to an accepted size and

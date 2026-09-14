@@ -712,6 +712,14 @@ class GameScene: SKScene {
     private func handle(_ action: GameAction) {
         switch action {
         case .toggleDiagnostics:
+            // Behind Test Mode, along with the Settings row that mirrors it.
+            // The panel is a developer readout — green-on-black category names
+            // — and a player who opens it by accident has no idea what they are
+            // looking at or that they asked for it. Testers get told ⌘T then L.
+            guard testMode else {
+                flashGutterNotice("⌘T FIRST")
+                return
+            }
             // `L` and the settings switch are the same control reached two
             // ways, so the key writes the setting rather than the view.
             GameSettings.shared.logPanel.toggle()
@@ -1060,7 +1068,7 @@ class GameScene: SKScene {
         endLevelAnnouncement()
         removeEndBanner()
 
-        let panel = SettingsNode()
+        let panel = SettingsNode(showsLogRow: testMode)
         panel.position = .zero
         panel.zPosition = 20
         panel.onChange = { [weak self] in self?.applyLiveSettings() }
@@ -4920,6 +4928,12 @@ class GameScene: SKScene {
         // with anything the game reads, and per session so nobody leaves it on.
         if key == "t", event.modifierFlags.contains(.command) {
             testMode.toggle()
+            // Otherwise the panel is stranded: open, and with no way to close
+            // it short of turning Test Mode back on.
+            if !testMode, GameSettings.shared.logPanel {
+                GameSettings.shared.logPanel = false
+                NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
+            }
             flashGutterNotice(testMode ? "TEST MODE ON" : "TEST MODE OFF")
             DiagnosticsLog.shared.log(.info, "test mode \(testMode ? "on" : "off")")
             return

@@ -62,7 +62,11 @@ final class SettingsNode: SKNode {
 
     private var settings: GameSettings { GameSettings.shared }
 
-    override init() {
+    /// Whether the LOG PANEL row is offered. True only in Test Mode.
+    private let showsLogRow: Bool
+
+    init(showsLogRow: Bool = false) {
+        self.showsLogRow = showsLogRow
         super.init()
         buildBackground()
         addChild(content)
@@ -230,28 +234,38 @@ final class SettingsNode: SKNode {
         }
         explain("COLORED HAZE BACKGROUND IN LATER LEVELS", x: x, y: 386)
 
-        toggleRow("LOG PANEL", x: x, w: w, y: 358, value: settings.logPanel) {
-            self.settings.logPanel = $0
+        // Only inside Test Mode — see `GameScene.toggleDiagnostics`. The row
+        // is omitted rather than dimmed, because a disabled switch invites the
+        // question "how do I enable this?" for a control nobody outside
+        // testing wants.
+        if showsLogRow {
+            toggleRow("LOG PANEL", x: x, w: w, y: 358, value: settings.logPanel) {
+                self.settings.logPanel = $0
+            }
+            explain("SAME AS THE L KEY", x: x, y: 336)
         }
-        explain("SAME AS THE L KEY", x: x, y: 336)
 
-        heading("CONTROLS", Self.cyan, x: x, y: 305)
+        // The right column closes up when the LOG PANEL row is absent, so Test
+        // Mode does not leave a hole in the middle of Display.
+        let drop: CGFloat = showsLogRow ? 0 : 52
+
+        heading("CONTROLS", Self.cyan, x: x, y: 305 + drop)
         let range = GameSettings.shipSpeedRange
         let span = range.upperBound - range.lowerBound
-        sliderRow("SHIP SPEED", x: x, w: w, y: 277,
+        sliderRow("SHIP SPEED", x: x, w: w, y: 277 + drop,
                   fraction: (settings.shipSpeedScale - range.lowerBound) / span,
                   readout: percent(settings.shipSpeedScale), dimmed: false,
                   defaultMark: 0.5) { fraction in
             self.settings.shipSpeedScale = range.lowerBound + fraction * span
         }
-        explain("DEFAULT IS PLAYTESTED", x: x, y: 252)
+        explain("DEFAULT IS PLAYTESTED", x: x, y: 252 + drop)
 
-        heading("DATA", Self.magenta, x: x, y: 199)
-        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 171, tint: Self.magenta) {
+        heading("DATA", Self.magenta, x: x, y: 199 + drop)
+        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 171 + drop, tint: Self.magenta) {
             ScoreManager.shared.clearHighScores()
         }
-        explain("BACK TO ORIGINAL SCORES", x: x, y: 149)
-        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 121, tint: Self.cyan) {
+        explain("BACK TO ORIGINAL SCORES", x: x, y: 149 + drop)
+        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 121 + drop, tint: Self.cyan) {
             self.settings.restoreDefaults()
         }
     }

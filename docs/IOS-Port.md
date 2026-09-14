@@ -591,6 +591,13 @@ Phase 0 is the one that is easy to skip and expensive to skip.
   gutter and Settings text at a stroke, and also makes Dynamic Type possible.
 - **Test Mode stays.** The diagnostics log is **landscape only** — it does not fit in
   portrait and repositioning it to the bottom is not worth the work.
+- **Test Mode needs a way in without a keyboard.** As of 1.2 it is ⌘T on the Mac, and
+  the log panel sits behind it. Neither exists on a device with no hardware keyboard,
+  so iOS needs its own door. Options: a row at the bottom of Settings, which is
+  discoverable and therefore slightly defeats the point of hiding the log; or a
+  gesture — a long press on the version string in Settings is the convention, and
+  keeps it out of a casual player's way. **Prefer the gesture**, and keep ⌘T working
+  when a keyboard is attached.
 
 ## Still open
 
