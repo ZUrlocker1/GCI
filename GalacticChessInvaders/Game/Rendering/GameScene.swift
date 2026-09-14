@@ -87,12 +87,10 @@ class GameScene: SKScene {
     /// stranded off to one side with the board showing past it. This is the
     /// third overlay to have that bug, after the title screen and the panels,
     /// which is why it is a list rather than another special case.
-    /// `scales` is false for overlays that lay their contents out against the
-    /// scene size they were built with. Those are already the size of the
-    /// screen; scaling them on top of that makes them enormous — which is what
-    /// put GAME OVER across the top of the board after a resize. They are
-    /// recentred and left at their own size. Plain labels do scale.
-    private var centredOverlays: [(node: SKNode, offset: CGPoint, scales: Bool)] = []
+    /// Plain labels placed relative to the middle of the scene. Anything that
+    /// lays itself out against the scene *size* is rebuilt instead — see
+    /// `rebuildSceneSizedOverlays`.
+    private var centredOverlays: [(node: SKNode, offset: CGPoint)] = []
 
     /// How much to shrink the centred banners by.
     ///
@@ -101,9 +99,7 @@ class GameScene: SKScene {
     /// wider than the board it was covering. Tied to the square, so the banners
     /// keep their proportion to the thing they sit over, in both directions:
     /// the square's own limits (32 to 96) bound this to 0.5 up to 1.5.
-    private var bannerScale: CGFloat {
-        layout.squareSize / SceneLayout.designSquareSize
-    }
+    private var bannerScale: CGFloat { layout.contentScale }
 
     /// Shrinks a label's type until it fits `maxWidth`, and leaves it alone if
     /// it already does.
@@ -1519,6 +1515,12 @@ class GameScene: SKScene {
         autoModeLabel = autoLabel
 
         refreshHUD()
+        // Everything above was placed by the layout but not scaled by it —
+        // scaling is `applyLayout`'s job, and a level built at a size other
+        // than the design canvas needs it on its first frame rather than on the
+        // next resize.
+        applyLayout()
+
         if announceLevel {
             announceLevelThenBegin()
         } else {
@@ -1589,10 +1591,9 @@ class GameScene: SKScene {
         // animate `position` without the centred-overlay registry fighting it
         // for the same property. The carrier never moves under its own power,
         // which is exactly what the registry assumes of everything it holds.
-        // Whatever is still on screen from the last wave goes first.
-        enumerateChildNodes(withName: LevelBannerNode.carrierName) { node, _ in
-            node.removeFromParent()
-        }
+        // Whatever is still on screen from the last wave goes first — V skips
+        // levels faster than a banner's own lifetime.
+        dismissLevelBanner()
 
         let carrier = SKNode()
         carrier.name = LevelBannerNode.carrierName
@@ -1989,13 +1990,7 @@ class GameScene: SKScene {
             return
         }
         outcome = .waveCleared(next: levels.level + 1)
-        let overlay = GameOverNode(outcome: outcome,
-                                   score: ScoreManager.shared.currentScore,
-                                   sceneSize: size)
-        overlay.zPosition = 25
-        registerCentredOverlay(overlay, scales: false)
-        addChild(overlay)
-        gameOverNode = overlay
+        buildGameOverOverlay()
         isAwaitingWaveContinue = true
         logWave("wave clear")
     }
@@ -2573,12 +2568,59 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - Scene-sized overlays
+    //
+    // GAME OVER and the high-score prompt lay their contents out — including
+    // their own dimming wash — against the scene size they are handed. There is
+    // no transform that makes a 960-wide backdrop cover a 1400-wide screen:
+    // recentring left the wash short, and scaling shrank the wash with
+    // everything else. So a resize rebuilds them at the size that is actually
+    // there. Everything they need is already to hand, which is why this should
+    // have been the first answer rather than the fourth.
+
+    @discardableResult
+    private func buildGameOverOverlay() -> GameOverNode {
+        let overlay = GameOverNode(outcome: outcome,
+                                   score: ScoreManager.shared.currentScore,
+                                   sceneSize: size)
+        overlay.zPosition = 25
+        addChild(overlay)
+        gameOverNode = overlay
+        return overlay
+    }
+
+    private func buildHighScoreEntry() -> HighScoreEntryNode {
+        let entry = HighScoreEntryNode(score: ScoreManager.shared.currentScore,
+                                       level: levels.level,
+                                       sceneSize: size)
+        entry.zPosition = 26
+        addChild(entry)
+        highScoreEntry = entry
+        return entry
+    }
+
+    /// Rebuilds whichever of the two is up, carrying its state across.
+    private func rebuildSceneSizedOverlays() {
+        if gameOverNode != nil {
+            gameOverNode?.removeFromParent()
+            buildGameOverOverlay()
+        }
+        if let old = highScoreEntry {
+            let typed = old.enteredName
+            let submit = old.onSubmit
+            old.removeFromParent()
+            let fresh = buildHighScoreEntry()
+            fresh.onSubmit = submit
+            fresh.restore(name: typed)
+        }
+    }
+
     /// Remembers a node's offset from the middle, so a resize can put it back.
     /// Call after the node's position is set.
-    private func registerCentredOverlay(_ node: SKNode, scales: Bool = true) {
+    private func registerCentredOverlay(_ node: SKNode) {
         let centre = CGPoint(x: size.width / 2, y: size.height / 2)
         centredOverlays.append((node, CGPoint(x: node.position.x - centre.x,
-                                              y: node.position.y - centre.y), scales))
+                                              y: node.position.y - centre.y)))
         // Immediately, not on the next resize: a banner raised while the board
         // is already small has to be the right size on its first frame.
         recentreOverlays()
@@ -2589,8 +2631,8 @@ class GameScene: SKScene {
     private func recentreOverlays() {
         centredOverlays.removeAll { $0.node.parent == nil }
         let centre = CGPoint(x: size.width / 2, y: size.height / 2)
-        for (node, offset, scales) in centredOverlays {
-            let scale = scales ? bannerScale : 1
+        let scale = bannerScale
+        for (node, offset) in centredOverlays {
             node.setScale(scale)
             // The offset scales with the banner, so a line sitting 24pt above
             // centre stays 24pt above it *in the banner's own terms* rather
@@ -2650,6 +2692,12 @@ class GameScene: SKScene {
         // assignment moves the whole position.
         boardNode?.position = layout.boardOrigin
 
+        // Scaled as well as placed. The gutter's width is `boardOriginX`, so it
+        // narrows with the board — type that stayed 11pt in a 120pt column was
+        // the last thing still ignoring the window.
+        for node in [turnTimerNode, autoModeLabel, statusNode, hintNode].compactMap({ $0 }) {
+            node.setScale(layout.contentScale)
+        }
         turnTimerNode?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
         autoModeLabel?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
         statusNode?.position    = CGPoint(x: layout.gutterCentreX, y: layout.statusBannerY)
@@ -2670,6 +2718,7 @@ class GameScene: SKScene {
         layOutTitleScreen()
         layOutPanels()
         recentreOverlays()
+        rebuildSceneSizedOverlays()
 
         // The HUD spans the full width and sits against the top edge, and it
         // bakes the width in at construction — so it is rebuilt rather than
@@ -3127,13 +3176,7 @@ class GameScene: SKScene {
             return
         }
 
-        let overlay = GameOverNode(outcome: outcome,
-                                   score: ScoreManager.shared.currentScore,
-                                   sceneSize: size)
-        overlay.zPosition = 25
-        registerCentredOverlay(overlay, scales: false)
-        addChild(overlay)
-        gameOverNode = overlay
+        buildGameOverOverlay()
         logWave("\(outcome.headline) — \(ScoreManager.shared.currentScore)")
     }
 
@@ -3149,11 +3192,7 @@ class GameScene: SKScene {
         // so anything that re-enters this path would otherwise prompt again.
         hasOfferedHighScore = true
 
-        let entry = HighScoreEntryNode(score: ScoreManager.shared.currentScore,
-                                       level: levels.level,
-                                       sceneSize: size)
-        entry.zPosition = 26
-        registerCentredOverlay(entry, scales: false)
+        let entry = buildHighScoreEntry()
         entry.onSubmit = { [weak self] name in
             guard let self else { return }
             ScoreManager.shared.submitHighScore(initials: name)
@@ -3162,8 +3201,6 @@ class GameScene: SKScene {
             self.refreshHUD()
             self.showGameOverOverlay()
         }
-        addChild(entry)
-        highScoreEntry = entry
 
         // Let the loss sting finish first. `asyncAfter` rather than an
         // `SKAction`: an overlay can pause the scene, and a paused node's

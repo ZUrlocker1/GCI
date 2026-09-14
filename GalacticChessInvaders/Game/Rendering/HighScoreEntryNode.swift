@@ -21,6 +21,15 @@ final class HighScoreEntryNode: SKNode {
     var onSubmit: ((String) -> Void)?
 
     private(set) var enteredName = ""
+
+    /// Puts a partly typed name back after the node has been rebuilt at a new
+    /// scene size. Rebuilding is how a resize is handled — these contents are
+    /// laid out against the size they were given, so there is no transform that
+    /// makes them right at another one.
+    func restore(name: String) {
+        enteredName = String(name.prefix(Self.maxLength))
+        refresh()
+    }
     private let nameLabel = SKLabelNode(fontNamed: HighScoreEntryNode.font)
     private let caret = SKLabelNode(fontNamed: HighScoreEntryNode.font)
 

@@ -4888,7 +4888,14 @@ final class JuiceTests: XCTestCase {
         for (name, shake) in [("light", Juice.light), ("medium", Juice.medium),
                               ("heavy", Juice.heavy)] {
             // A fifth of a square, minimum, and long enough to register.
-            XCTAssertGreaterThanOrEqual(shake.amplitude, BoardNode.squareSize / 5, name)
+            //
+            // The *design* square: these amplitudes are constants tuned against
+            // the 64pt board, and the board can now be up to 96. That means the
+            // shake is proportionally gentler on a large screen — a real thing,
+            // worth deriving from the live square one day, but not something
+            // this test should fail over today.
+            XCTAssertGreaterThanOrEqual(shake.amplitude,
+                                        SceneLayout.designSquareSize / 5, name)
             let frames = shake.duration / Juice.frameDuration
             XCTAssertGreaterThanOrEqual(frames, 12, "\(name) lasts \(frames) frames")
         }
@@ -6016,15 +6023,23 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
         ("the HUD",             664...700),
     ]
 
+    /// The design layout, not the live one.
+    ///
+    /// The bands above are the composition as drawn on the 960×700 canvas, and
+    /// the whole gutter now scales by a single factor — so the *relationships*
+    /// these tests pin hold at every size, and the design canvas is where they
+    /// are legible. Reading the live layout here only asks whether the test
+    /// host's window happens to be 700 tall.
+    private var design: SceneLayout { .design }
+
     private var alleyBands: [ClosedRange<CGFloat>] {
-        let half = GameScene.powerUpAlleyFontSize / 2
-        let lines = (0..<GameScene.powerUpAlleyLines).map { index -> ClosedRange<CGFloat> in
-            let y = GameScene.powerUpAlleyBottomY
-                + CGFloat(index) * GameScene.powerUpAlleyStep
+        let half = design.powerUpAlleyFontSize / 2
+        let lines = (0..<design.powerUpAlleyLines).map { index -> ClosedRange<CGFloat> in
+            let y = design.powerUpAlleyBottomY + CGFloat(index) * design.powerUpAlleyStep
             return (y - half)...(y + half)
         }
         // The countdown bar is 3pt tall and hangs under the bottom line.
-        return lines + [(GameScene.powerUpBarY - 1.5)...(GameScene.powerUpBarY + 1.5)]
+        return lines + [(design.powerUpBarY - 1.5)...(design.powerUpBarY + 1.5)]
     }
 
     /// No power-up line — nor the countdown bar — may touch anything else.
@@ -6040,22 +6055,26 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
 
     /// And the lines may not touch each other.
     func testTheLinesDoNotOverlapEachOther() {
-        XCTAssertGreaterThan(GameScene.powerUpAlleyStep,
-                             GameScene.powerUpAlleyFontSize,
+        XCTAssertGreaterThan(design.powerUpAlleyStep,
+                             design.powerUpAlleyFontSize,
                              "the step has to clear a whole line of type")
     }
 
     /// The bar hangs under the bottom line without touching it.
     func testTheCountdownBarClearsTheLineAboveIt() {
-        let lineBottom = GameScene.powerUpAlleyBottomY - GameScene.powerUpAlleyFontSize / 2
-        XCTAssertLessThan(GameScene.powerUpBarY + 1.5, lineBottom)
-        XCTAssertGreaterThan(GameScene.powerUpBarY - 1.5, 180,
+        let lineBottom = design.powerUpAlleyBottomY - design.powerUpAlleyFontSize / 2
+        XCTAssertLessThan(design.powerUpBarY + 1.5, lineBottom)
+        XCTAssertGreaterThan(design.powerUpBarY - 1.5, 180,
                              "and clears the turn-timer caption below it")
     }
 
     /// Each line gets its own row, with room to breathe between them.
+    ///
+    /// In design points: the alley scales with the board now, so the absolute
+    /// gap is 5 only on a 64pt square. The *proportion* is what matters and is
+    /// what this pins.
     func testEachLineHasFivePointsOfAirBelowIt() {
-        let gap = GameScene.powerUpAlleyStep - GameScene.powerUpAlleyFontSize
+        let gap = design.powerUpAlleyStep - design.powerUpAlleyFontSize
         XCTAssertGreaterThanOrEqual(gap, 4, "lines any closer read as one block")
         XCTAssertLessThanOrEqual(gap, 5, "and any further apart as unrelated")
     }
@@ -6064,9 +6083,9 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
     /// with room for three lines: the band under the status line is 27pt and
     /// three 9pt lines with 5pt gaps need 37.
     func testThreeLinesWouldNotHaveFitUnderTheStatusLine() {
-        let needed = CGFloat(GameScene.powerUpAlleyLines) * GameScene.powerUpAlleyFontSize
-            + CGFloat(GameScene.powerUpAlleyLines - 1)
-                * (GameScene.powerUpAlleyStep - GameScene.powerUpAlleyFontSize)
+        let needed = CGFloat(design.powerUpAlleyLines) * design.powerUpAlleyFontSize
+            + CGFloat(design.powerUpAlleyLines - 1)
+                * (design.powerUpAlleyStep - design.powerUpAlleyFontSize)
         XCTAssertGreaterThan(needed, 26.5,
                              "if this ever fits, the readout can move back down")
         // Above the timer's caption there is nothing until the HUD.

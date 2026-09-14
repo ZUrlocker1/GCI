@@ -145,32 +145,41 @@ struct SceneLayout {
     /// board rather than sitting at a fixed x and colliding with it.
     var gutterCentreX: CGFloat { boardOriginX / 2 }
 
+    /// How much to scale everything that is not the board itself: the gutter
+    /// readouts, and the centred banners.
+    ///
+    /// The gutter's *width* is `boardOriginX`, which shrinks with the board —
+    /// so its type has to shrink with it or a narrow window has 11pt text in a
+    /// 120pt column. Tied to the square, which makes it 1 at the design canvas
+    /// and bounded to 0.5…1.5 by the square's own limits.
+    var contentScale: CGFloat { squareSize / Self.designSquareSize }
+
     /// Everything from the turn timer down sits this much lower than it used
     /// to, to open a gap between the chess readouts and the power-up block
     /// above them. One constant rather than four edited literals, because the
     /// four move together or the timer's digits land on the transient notice.
-    var gutterDrop: CGFloat { 8 }
+    var gutterDrop: CGFloat { 8 * contentScale }
 
-    var turnTimerY: CGFloat { boardBottomY + 46 - gutterDrop }
-    var gutterNoticeY: CGFloat { boardBottomY + 30 - gutterDrop }
-    var statusBannerY: CGFloat { boardBottomY - 4 - gutterDrop }
+    var turnTimerY: CGFloat { boardBottomY + 46 * contentScale - gutterDrop }
+    var gutterNoticeY: CGFloat { boardBottomY + 30 * contentScale - gutterDrop }
+    var statusBannerY: CGFloat { boardBottomY - 4 * contentScale - gutterDrop }
 
     /// Chess Hints sit above everything else in the gutter, clearing a full
     /// power-up stack.
-    var chessHintY: CGFloat { boardBottomY + 172 }
+    var chessHintY: CGFloat { boardBottomY + 172 * contentScale }
 
     // MARK: - Power-up alley
 
     var powerUpAlleyLines: Int { 3 }
     /// The block stacks *upward* from this floor, so the first line the player
     /// earns stays where they last read it and later ones go above it.
-    var powerUpAlleyBottomY: CGFloat { boardBottomY + 76 }
-    var powerUpAlleyStep: CGFloat { 14 }      // 9pt of type, 5pt of air
-    var powerUpAlleyFontSize: CGFloat { 9 }
-    var powerUpBarWidth: CGFloat { 84 }
+    var powerUpAlleyBottomY: CGFloat { boardBottomY + 76 * contentScale }
+    var powerUpAlleyStep: CGFloat { 14 * contentScale }   // 9pt of type, 5pt of air
+    var powerUpAlleyFontSize: CGFloat { 9 * contentScale }
+    var powerUpBarWidth: CGFloat { 84 * contentScale }
     /// Under the bottom line, which is always the timed effect — it is appended
     /// last and the block grows upward, so the bar never moves.
-    var powerUpBarY: CGFloat { powerUpAlleyBottomY - 7 }
+    var powerUpBarY: CGFloat { powerUpAlleyBottomY - 7 * contentScale }
 
     // MARK: - Raiders
 
