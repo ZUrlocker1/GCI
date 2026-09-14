@@ -1566,6 +1566,10 @@ class GameScene: SKScene {
                                      subtitle: announcement.subtitle,
                                      sceneSize: size)
         addChild(banner)
+        // Same treatment as PAUSED and GAME OVER: shrinks with the board and
+        // follows a resize. It is laid out against `sceneSize` from the origin,
+        // which is the shape the registry's offset rule already handles.
+        registerCentredOverlay(banner)
         // The title alone. The subtitle is on screen at the same moment in
         // 26-point type, so repeating it here only pushed the lines either side
         // of it off the top of the panel.
