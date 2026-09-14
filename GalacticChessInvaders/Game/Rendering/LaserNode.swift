@@ -29,9 +29,14 @@ final class LaserNode: SKSpriteNode {
     /// An angled round is longer and narrower than a straight bolt: its whole
     /// job is to read as travelling *along* a line the player has to judge.
     private static let diagonalSize = CGSize(width: 3.4, height: 22)
+    private static var scaledDiagonalSize: CGSize {
+        CGSize(width: diagonalSize.width * contentScale,
+               height: diagonalSize.height * contentScale)
+    }
     /// Slightly wider than a straight bolt's 4pt, so an angled shot is no
     /// harder to land than a vertical one.
     private static let diagonalHitRadius: CGFloat = 4.5
+    private static var scaledDiagonalHitRadius: CGFloat { diagonalHitRadius * contentScale }
 
     /// Whether the current body is the angled round's circle. Tracked because
     /// `size` alone cannot tell the two apart on a re-fire.
@@ -45,12 +50,32 @@ final class LaserNode: SKSpriteNode {
     /// `aim(dx:dy:)` then points down the flight path.
     private let missileRig = SKNode()
 
+    /// The board's scale, so rounds stay in proportion to the squares they
+    /// cross. Set with the rest of the geometry in `SceneLayout.adopt`.
+    ///
+    /// Read at dressing time rather than baked in at init: the pool is built
+    /// once for the life of the scene, so a round made on a 64pt board is
+    /// still in that pool when the window has grown the board to 96. Every
+    /// shot goes through `applyDressing`, so reading it there is enough to
+    /// resize the whole pool without touching it.
+    static var contentScale: CGFloat = 1
+
+    /// A straight bolt, at the board's current scale. The enemy's is shorter.
+    private static func boltSize(for owner: ProjectileState.Owner) -> CGSize {
+        CGSize(width: width * contentScale,
+               height: (owner == .player ? 18 : 14) * contentScale)
+    }
+
+    /// The scale `missileRig` was built at, so it can be rebuilt when the board
+    /// changes size under it. The rig is geometry, not a sprite, so unlike the
+    /// body it cannot simply be re-fitted.
+    private var rigScale: CGFloat = 0
+
     init(owner: ProjectileState.Owner) {
         self.owner = owner
-        let height: CGFloat = owner == .player ? 18 : 14
         let tint = owner == .player ? NeonPalette.cyan : NeonPalette.magentaLight
         super.init(texture: Self.solidTexture, color: tint,
-                   size: CGSize(width: Self.width, height: height))
+                   size: Self.boltSize(for: owner))
         colorBlendFactor = 1.0
         zPosition = 7
         isHidden = true
@@ -66,7 +91,7 @@ final class LaserNode: SKSpriteNode {
     /// is re-derived from `isActive` rather than copied.
     private func installBody(for size: CGSize) {
         let body = bodyIsRound
-            ? SKPhysicsBody(circleOfRadius: Self.diagonalHitRadius)
+            ? SKPhysicsBody(circleOfRadius: Self.scaledDiagonalHitRadius)
             : SKPhysicsBody(rectangleOf: size)
         // MUST be dynamic. SpriteKit only evaluates a contact pair when at
         // least one body is dynamic — two static bodies never produce a
@@ -98,7 +123,10 @@ final class LaserNode: SKSpriteNode {
     /// as a missile pointed somewhere rather than as a tumbling slab. Local -y
     /// is the nose; `aim(dx:dy:)` turns that into the direction of travel.
     private func buildMissileRig() {
-        let half = Self.diagonalSize.height / 2
+        rigScale = Self.contentScale
+        missileRig.removeAllChildren()
+        let scale = Self.contentScale
+        let half = Self.scaledDiagonalSize.height / 2
         func part(_ size: CGSize, y: CGFloat, color: SKColor, alpha: CGFloat) -> SKSpriteNode {
             let node = SKSpriteNode(texture: Self.solidTexture, color: color, size: size)
             node.colorBlendFactor = 1.0
@@ -108,17 +136,21 @@ final class LaserNode: SKSpriteNode {
         }
         // A hot white tip overhanging the head slightly: the point of the round
         // is where it is going, so that is what should be brightest.
-        missileRig.addChild(part(CGSize(width: 2.2, height: 7),
-                                 y: -half - 1.5, color: .white, alpha: 0.95))
+        missileRig.addChild(part(CGSize(width: 2.2 * scale, height: 7 * scale),
+                                 y: -half - 1.5 * scale, color: .white, alpha: 0.95))
         // Exhaust, behind the head and fading as it goes.
         let trail = owner == .player ? NeonPalette.cyan : NeonPalette.shotPurple
-        let near = part(CGSize(width: 2.6, height: 12), y: half + 5, color: trail, alpha: 0.55)
-        let far  = part(CGSize(width: 1.6, height: 12), y: half + 17, color: trail, alpha: 0.22)
+        let near = part(CGSize(width: 2.6 * scale, height: 12 * scale),
+                        y: half + 5 * scale, color: trail, alpha: 0.55)
+        let far  = part(CGSize(width: 1.6 * scale, height: 12 * scale),
+                        y: half + 17 * scale, color: trail, alpha: 0.22)
         missileRig.addChild(near)
         missileRig.addChild(far)
         missileRig.zPosition = -1
-        missileRig.isHidden = true
-        addChild(missileRig)
+        if missileRig.parent == nil {
+            missileRig.isHidden = true
+            addChild(missileRig)
+        }
     }
 
     /// The unit vector this round is travelling along.
@@ -275,7 +307,7 @@ final class LaserNode: SKSpriteNode {
     /// damage are the caller's.
     func setHeavy(_ heavy: Bool) {
         isHeavy = heavy
-        let baseHeight: CGFloat = owner == .player ? 18 : 14
+        let bolt = Self.boltSize(for: owner)
         applyDressing()
 
         childNode(withName: Self.beamName)?.removeFromParent()
@@ -285,8 +317,8 @@ final class LaserNode: SKSpriteNode {
             // its own crisp shape and the physics body stays small.
             let beam = SKSpriteNode(texture: Self.solidTexture,
                                     color: NeonPalette.kingBeamRed,
-                                    size: CGSize(width: Self.width * 0.9,
-                                                 height: baseHeight * 5))
+                                    size: CGSize(width: bolt.width * 0.9,
+                                                 height: bolt.height * 5))
             beam.name = Self.beamName
             beam.colorBlendFactor = 1.0
             beam.alpha = 0.75
@@ -309,17 +341,19 @@ final class LaserNode: SKSpriteNode {
     /// ordinary bolt's size and colour while leaving its beam attached. One
     /// function owns the whole look now.
     private func applyDressing() {
-        let baseHeight: CGFloat = owner == .player ? 18 : 14
+        // The board may have been resized since this round was pooled.
+        if rigScale != Self.contentScale { buildMissileRig() }
+        let bolt = Self.boltSize(for: owner)
         let target: CGSize
         if isHeavy {
             // Only slightly bigger than an ordinary bolt. At 2.5x width it read
             // as a blocky rectangle rather than a projectile — the beam is what
             // carries the "this is the king's weapon" signal.
-            target = CGSize(width: Self.width * 1.3, height: baseHeight * 1.4)
+            target = CGSize(width: bolt.width * 1.3, height: bolt.height * 1.4)
         } else if isDiagonal {
-            target = Self.diagonalSize
+            target = Self.scaledDiagonalSize
         } else {
-            target = CGSize(width: Self.width, height: baseHeight)
+            target = bolt
         }
         size = target
         color = isHeavy ? .white

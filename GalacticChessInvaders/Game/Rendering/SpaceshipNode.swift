@@ -39,12 +39,31 @@ final class SpaceshipNode: SKSpriteNode {
         color = NeonPalette.cyan
         zPosition = 6
 
+        installBody()
+    }
+
+    private func installBody() {
         let body = SKPhysicsBody(rectangleOf: size)
         body.isDynamic = false
         body.categoryBitMask = PhysicsCategory.ship
         body.contactTestBitMask = PhysicsCategory.none   // the enemy shot side tests for this
         body.collisionBitMask = PhysicsCategory.none
         physicsBody = body
+    }
+
+    /// Re-fits the ship to the board's scale.
+    ///
+    /// Resized rather than `setScale`d, because the hitbox is built from
+    /// `size` and a physics body does not follow a node's scale — the ship
+    /// would have shrunk on screen while still being shot at through the
+    /// footprint of the old one.
+    func adopt(scale: CGFloat) {
+        let height = Self.displayHeight * scale
+        guard abs(height - size.height) > 0.5, let texture else { return }
+        let source = texture.size()
+        let unit = source.height > 0 ? height / source.height : 1
+        size = CGSize(width: source.width * unit, height: height)
+        installBody()
     }
 
     @available(*, unavailable)

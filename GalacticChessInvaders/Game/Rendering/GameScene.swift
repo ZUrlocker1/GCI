@@ -1604,7 +1604,7 @@ class GameScene: SKScene {
         // which is exactly what the registry assumes of everything it holds.
         let carrier = SKNode()
         carrier.name = LevelBannerNode.carrierName
-        carrier.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        carrier.position = overlayCentre
         carrier.zPosition = banner.zPosition
         carrier.addChild(banner)
         addChild(carrier)
@@ -2037,7 +2037,7 @@ class GameScene: SKScene {
         label.fontColor = color
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode   = .center
-        label.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        label.position = overlayCentre
         label.zPosition = 24
         // Against the board, not the window: the banner belongs to the board it
         // covers, and `bannerScale` grows it from here.
@@ -2631,10 +2631,14 @@ class GameScene: SKScene {
         }
     }
 
+    /// Where a centred overlay goes: the middle of the board rather than of
+    /// the window. See `SceneLayout.boardCentre`.
+    private var overlayCentre: CGPoint { layout.boardCentre }
+
     /// Remembers a node's offset from the middle, so a resize can put it back.
     /// Call after the node's position is set.
     private func registerCentredOverlay(_ node: SKNode) {
-        let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+        let centre = overlayCentre
         centredOverlays.append((node, CGPoint(x: node.position.x - centre.x,
                                               y: node.position.y - centre.y)))
         // Immediately, not on the next resize: a banner raised while the board
@@ -2646,7 +2650,7 @@ class GameScene: SKScene {
     /// that have since been removed.
     private func recentreOverlays() {
         centredOverlays.removeAll { $0.node.parent == nil }
-        let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+        let centre = overlayCentre
         let scale = bannerScale
         for (node, offset) in centredOverlays {
             node.setScale(scale)
@@ -2723,6 +2727,9 @@ class GameScene: SKScene {
         // `syncPowerUpAlley`, so it needs nothing here.
 
         if let ship {
+            // The ship belongs to the board's scale, not the window's — it sits
+            // under the board and is read against the squares.
+            ship.adopt(scale: layout.contentScale)
             ship.position = CGPoint(
                 x: min(max(ship.position.x, layout.shipMargin), size.width - layout.shipMargin),
                 y: layout.shipLaneY)
@@ -3029,8 +3036,8 @@ class GameScene: SKScene {
         label.fontColor = .white
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode   = .center
-        label.position = CGPoint(x: size.width / 2,
-                                 y: size.height / 2 + Self.pauseLift)
+        label.position = CGPoint(x: overlayCentre.x,
+                                 y: overlayCentre.y + Self.pauseLift)
         bloomNode.addChild(label)
         registerCentredOverlay(label)
 
@@ -3043,8 +3050,8 @@ class GameScene: SKScene {
         hint.fontColor = NeonPalette.cyan
         hint.horizontalAlignmentMode = .center
         hint.verticalAlignmentMode   = .center
-        hint.position = CGPoint(x: size.width / 2,
-                                y: size.height / 2 + Self.pauseLift - Self.pauseHintGap)
+        hint.position = CGPoint(x: overlayCentre.x,
+                                y: overlayCentre.y + Self.pauseLift - Self.pauseHintGap)
         hint.run(.repeatForever(.sequence([
             .fadeAlpha(to: 0.35, duration: 0.6), .fadeAlpha(to: 1.0, duration: 0.6),
         ])))
@@ -3132,7 +3139,11 @@ class GameScene: SKScene {
         let node = SKNode()
         node.zPosition = 40          // over every panel, including name entry at 26
 
-        let dim = SKShapeNode(rect: CGRect(origin: .zero, size: size))
+        node.position = overlayCentre
+        // Far larger than any window, and centred on the node, so the wash
+        // still reaches every edge after the registry has scaled the prompt
+        // down. Sizing it to the scene left a lit border once it shrank.
+        let dim = SKShapeNode(rect: CGRect(x: -4000, y: -4000, width: 8000, height: 8000))
         dim.fillColor = SKColor.black.withAlphaComponent(0.74)
         dim.strokeColor = .clear
         node.addChild(dim)
@@ -3143,7 +3154,7 @@ class GameScene: SKScene {
         question.fontColor = NeonPalette.magenta
         question.horizontalAlignmentMode = .center
         question.verticalAlignmentMode = .center
-        question.position = CGPoint(x: size.width / 2, y: size.height / 2 + 24)
+        question.position = CGPoint(x: 0, y: 24)
         node.addChild(question)
 
         let answer = SKLabelNode(fontNamed: "PressStart2P-Regular")
@@ -3152,7 +3163,7 @@ class GameScene: SKScene {
         answer.fontColor = NeonPalette.cyan
         answer.horizontalAlignmentMode = .center
         answer.verticalAlignmentMode = .center
-        answer.position = CGPoint(x: size.width / 2, y: size.height / 2 - 26)
+        answer.position = CGPoint(x: 0, y: -26)
         node.addChild(answer)
 
         addChild(node)

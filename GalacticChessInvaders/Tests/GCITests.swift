@@ -614,6 +614,24 @@ final class SceneLayoutTests: XCTestCase {
         XCTAssertGreaterThan(narrow.squareSize, 25)
     }
 
+    /// A centred banner belongs to the board, not the window — and the two are
+    /// never the same point. The HUD strip is 68 and the ship's lane 120, so
+    /// the board always sits above the window's middle, and a narrow window
+    /// pushes it right of centre as well. Banners centred on the window read
+    /// as low and left of what they cover.
+    func testTheBoardsCentreIsNotTheWindowsCentre() {
+        let design = SceneLayout.design
+        XCTAssertEqual(design.boardCentre.x, 480)              // centred, at this width
+        XCTAssertEqual(design.boardCentre.y, 376)              // 26 above 350
+        XCTAssertEqual(design.boardCentre.y - design.size.height / 2, 26)
+
+        // Narrow enough that the gutter's minimum, not the centring, sets the
+        // board's left edge — so the board is right of the window's middle.
+        let narrow = SceneLayout(size: CGSize(width: 650, height: 700))
+        XCTAssertEqual(narrow.boardOriginX, narrow.minGutterWidth)
+        XCTAssertGreaterThan(narrow.boardCentre.x, narrow.size.width / 2)
+    }
+
     /// The ship stays under the board as the board moves, not pinned to the
     /// window's bottom edge.
     func testTheShipLaneFollowsTheBoard() {
@@ -3981,6 +3999,24 @@ final class LaserPhysicsTests: XCTestCase {
         // must still test nothing at all.
         shot.deactivate()
         XCTAssertEqual(shot.physicsBody?.contactTestBitMask, PhysicsCategory.none)
+    }
+
+    /// Rounds cross the board, so they are the board's scale. The pool is built
+    /// once for the life of the scene, so the size cannot be baked in at init:
+    /// a round made on a 64pt board is still in that pool when the window has
+    /// grown the board to 96.
+    func testRoundsTakeTheBoardsScaleWhenTheyAreFired() {
+        let laser = LaserNode(owner: .player)
+        laser.fire(from: .zero, damage: 1, speed: 400, travelDistance: 400)
+        let atDesign = laser.size
+
+        let previous = LaserNode.contentScale
+        defer { LaserNode.contentScale = previous }
+        LaserNode.contentScale = 1.5
+        laser.deactivate()
+        laser.fire(from: .zero, damage: 1, speed: 400, travelDistance: 400)
+        XCTAssertEqual(laser.size.width, atDesign.width * 1.5, accuracy: 0.01)
+        XCTAssertEqual(laser.size.height, atDesign.height * 1.5, accuracy: 0.01)
     }
 
     func testFiringIsRefusedWithoutRealSpeedOrDistance() {

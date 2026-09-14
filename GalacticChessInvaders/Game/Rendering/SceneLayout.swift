@@ -39,6 +39,10 @@ struct SceneLayout {
     @MainActor static func adopt(_ layout: SceneLayout) {
         current = layout
         BoardNode.adopt(layout)
+        // Rounds cross the board, so they are the board's scale rather than the
+        // window's. The pool is rebuilt with the playfield, so this only has to
+        // be right before that happens.
+        LaserNode.contentScale = layout.contentScale
     }
 
     let size: CGSize
@@ -126,6 +130,17 @@ struct SceneLayout {
     var boardOriginX: CGFloat { max(minGutterWidth, (size.width - boardSize) / 2) }
     var boardOrigin: CGPoint { CGPoint(x: boardOriginX, y: boardBottomY) }
     var boardTopY: CGFloat { boardBottomY + boardSize }
+
+    /// The middle of the board, which is where a centred banner belongs.
+    ///
+    /// Not the middle of the scene, and the two are never quite the same: the
+    /// HUD strip is 68 and the ship's lane 120, so the board sits 26pt above
+    /// the window's centre, and on a narrow window the gutter's minimum pushes
+    /// it right of centre as well. Banners centred on the window read as
+    /// slightly low and slightly left of the board they cover.
+    var boardCentre: CGPoint {
+        CGPoint(x: boardOriginX + boardSize / 2, y: boardBottomY + boardSize / 2)
+    }
 
     // MARK: - Ship lane
 
