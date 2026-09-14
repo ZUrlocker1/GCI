@@ -32,10 +32,11 @@ Current release: `1.2` (build 9). Universal binary — runs natively on both App
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)). 
 
-**What's new in v1.2:**
+**What's new in v1.2** — the release that prepares the Mac game for iPad and iPhone:
 
 - **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. Everything on the playfield — the ship, the lasers, the raiders, the explosions — is sized against the board rather than staying as drawn.
-- **Lighter on the CPU.** Readouts redraw when they change rather than on every frame — a couple of points' worth. Ordinary play sits at 35–38%.
+- **Lighter on the CPU.** Readouts redraw when they change rather than on every frame, and the title screen no longer re-renders its own type sixty times a second — that alone took it from 53% CPU to under 40%. Steady 60fps throughout.
+- **Fixed:** the starfield and nebula could fail to appear at all, depending on how quickly the window was ready at launch.
 - **The log panel moved behind Test Mode.** Press `⌘T`, then `L`.
 - Groundwork for the iPad and iPhone port — see [IOS-Port.md](docs/IOS-Port.md).
 
