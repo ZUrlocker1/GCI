@@ -334,10 +334,19 @@ order of how much they ask of the player:
 3. **`GCVirtualController`** — the d-pad the table above says people dislike, but it
    is free, native, and disappears when a real controller connects.
 
-My reading is that **2 is the one to build first** and 1 is the one to test against
-it. Landscape on a phone puts both thumbs at the bottom corners already, and the
-fire button can sit in the right-hand gutter — space the layout has spare, and which
-the Mac build does not use for anything.
+**Decided: 2, and no auto-fire.** Drag in the ship's lane with the left thumb, a
+fire button under the right. Landscape puts both thumbs in the bottom corners
+already, and the fire button can sit in the right-hand gutter — space the layout
+has spare and the Mac build uses for nothing. Option 1 is the thing to test it
+against, not the thing to build.
+
+**Chess pieces drag too.** Tap-then-tap still works, but drag is the default: it is
+what every chess app on a phone has taught people, and it is one gesture instead of
+two at a moment when the clock is running. That matters more here than the
+convention does — see the metric under *Testing* below.
+
+Which leaves the port with one consistent rule: **on iOS you drag things.** The ship
+in its lane, a piece to its square. The only tap is the fire button.
 
 ### Testing for playability
 
@@ -572,7 +581,10 @@ Phase 0 is the one that is easy to skip and expensive to skip.
 - **Minimum iOS 15.** Clears `GCVirtualController` (15) and `GCKeyboard` (14) with no
   availability checks.
 - **Free on iOS**, as on the Mac.
-- **Drag-to-move for chess pieces**, alongside tap-then-tap.
+- **Drag-to-move for chess pieces**, as the default, with tap-then-tap still
+  working. Combined with drag-to-move for the ship, the rule on iOS is that you
+  drag things and the only tap is the fire button.
+- **No auto-fire**, and an explicit fire button — see §4.
 - **Press Start 2P is the title screen only.** Everywhere else on iOS, use whatever is
   most legible. This removes a real problem: Press Start 2P is a pixel font, and under
   any non-integer scale it turns to mush. A system font at a sensible weight solves the

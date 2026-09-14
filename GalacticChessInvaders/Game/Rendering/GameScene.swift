@@ -112,6 +112,17 @@ class GameScene: SKScene {
     /// arrive after someone has had a few turns to find it on their own.
     private var beatsWithoutFiring = 0
     private static let beatsBeforeFirePrompt = 3
+    /// Beats since the player last fired, or since the level began.
+    ///
+    /// The trigger for "SHOOT SOMETHING!" is silence, not damage. Damage is the
+    /// *reason* it matters — a player who only plays chess gets taken apart —
+    /// but it is a poor signal: a crush or a descent damages White without the
+    /// player having done anything wrong, and a player who is shooting well can
+    /// still be unlucky. Beats without a shot says exactly the thing the taunt
+    /// is about.
+    private var beatsSinceLastShot = 0
+    private static let beatsBeforeShootPrompt = 3
+
     /// True once the player has steered the ship at all this level.
     private var hasMovedShipThisLevel = false
     /// The prompt last logged, so the log records each one appearing rather
@@ -1736,6 +1747,7 @@ class GameScene: SKScene {
         // window clears the hints and nothing inside it can put them back.
         refreshHints()
         if !hasFiredThisLevel { beatsWithoutFiring += 1 }
+        beatsSinceLastShot += 1
         refreshControlPrompt()
         if inCheck {
             // The timer already shows CHECK, so the extension needs no log line.
@@ -2770,6 +2782,11 @@ class GameScene: SKScene {
             next = beatsWithoutFiring >= Self.beatsBeforeFirePrompt ? .fire : nil
         } else if !hasMovedShipThisLevel {
             next = secondsSinceFiring >= Self.secondsBeforeMovePrompt ? .move : nil
+        } else if beatsSinceLastShot >= Self.beatsBeforeShootPrompt, blackPiecesRemain {
+            // Last in the chain on purpose: it is only reachable once the
+            // player has found the trigger and the steering, so it cannot
+            // crowd out either of those, and friendly fire still outranks it.
+            next = .shootSomething
         } else {
             next = nil
         }
@@ -2807,12 +2824,18 @@ class GameScene: SKScene {
         beatsWithoutFiring = 0
         hasMovedShipThisLevel = false
         secondsSinceFiring = 0
+        beatsSinceLastShot = 0
         friendlyFireRemaining = 0
         friendlyFireKind = nil
         friendlyFireHits = 0
         hasShownFriendlyFireNotice = false
         lastControlPrompt = nil
         hintNode?.showPrompt(nil)
+    }
+
+    /// Nothing to shoot at means nothing to be told off about.
+    private var blackPiecesRemain: Bool {
+        !board.allPieces(color: .black).isEmpty
     }
 
     private func noteShipMoved() {
@@ -3099,6 +3122,7 @@ class GameScene: SKScene {
         else { return }
 
         shipState.laserFired()
+        beatsSinceLastShot = 0
         if !hasFiredThisLevel {
             hasFiredThisLevel = true
             secondsSinceFiring = 0

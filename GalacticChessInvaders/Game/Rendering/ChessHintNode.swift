@@ -46,6 +46,8 @@ final class ChessHintNode: SKNode {
     enum ControlPrompt: Equatable {
         case fire
         case move
+        /// Fired, then stopped — see `beatsSinceLastShot`.
+        case shootSomething
         /// Carries the piece that was hit, so the notice can name it.
         case friendlyFire(PieceType)
 
@@ -68,8 +70,8 @@ final class ChessHintNode: SKNode {
         /// have not tried yet".
         var color: SKColor {
             switch self {
-            case .fire, .move:   return NeonPalette.orange
-            case .friendlyFire:  return NeonPalette.crimson
+            case .fire, .move:              return NeonPalette.orange
+            case .shootSomething, .friendlyFire: return NeonPalette.crimson
             }
         }
 
@@ -79,6 +81,10 @@ final class ChessHintNode: SKNode {
             // GameStatusNode fits in this gutter. Ten is safe.
             case .fire: return ("PRESS SPACE", "TO FIRE!")
             case .move: return ("USE ARROWS", "TO MOVE!")
+            // No "PRESS SPACE" — this only ever shows to someone who has
+            // already fired this level, so they know where the trigger is.
+            // What they have stopped doing is using it.
+            case .shootSomething: return ("SHOOT", "SOMETHING!")
             // Names the piece actually hit. Advice about the future — "watch
             // your own pieces" — is the wrong tense: by the time this shows,
             // the shot has landed, and a player who did not realise their own
