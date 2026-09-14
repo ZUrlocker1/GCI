@@ -28,38 +28,32 @@ final class HUDNode: SKNode {
 
         // Hi-score
         let hiTitleLbl = SKLabelNode()
-        place(hiTitleLbl, "HI",     HUDNode.orange, 8,  200, 24)
-        place(hiValue,    "0",      HUDNode.orange, 11, 200, 10)
+        place(hiTitleLbl, "HI",     HUDNode.orange, 8,  HUDNode.hiX, 24)
+        place(hiValue,    "0",      HUDNode.orange, 11, HUDNode.hiX, 10)
         hiValue.name = "hiValue"
 
         // Level
-        // SCORE and HI are left-anchored above; the lives and the nav belong to
-        // the right edge, and LEVEL takes whatever gap is left between them.
-        //
-        // All of these used to sit at a fixed x for the 960-wide canvas, which
-        // was fine while the canvas was fixed. Once the nav was anchored right,
-        // a narrow window slid it left underneath LEVEL and the lives — three
-        // readouts and two buttons in the same pixels. Each group now measures
-        // from the edge it belongs to, and every one reproduces its design
-        // position exactly at 960.
-        let navLeftEdge = HUDNode.navOriginX(forSceneWidth: sceneWidth) + HUDNode.navDesignLeft
-        let livesRight = navLeftEdge - HUDNode.livesNavGap      // 690 at the design width
-
-        // Life ships, right-anchored so they stay with the nav.
-        for i in 0..<3 {
+        // Life ships sit between HI and LEVEL, left-anchored with the rest of
+        // the block, so nothing downstream of them has to move when a life is
+        // lost.
+        for i in 0..<HUDNode.maxLives {
             let ship = SKSpriteNode(imageNamed: "ship-player")
             if ship.size.height > 0 { ship.setScale(18 / ship.size.height) }
             ship.color = HUDNode.cyan; ship.colorBlendFactor = 0.2
-            ship.position = CGPoint(x: livesRight - CGFloat(2 - i) * HUDNode.livesStep, y: 18)
+            ship.position = CGPoint(x: HUDNode.livesX + CGFloat(i) * HUDNode.livesStep, y: 18)
             ship.name = "lifeShip\(i)"; addChild(ship); lifeShips.append(ship)
         }
 
-        // Centred in the scene where there is room, pushed left of the lives
-        // when there is not, and never back into HI.
-        let livesLeftEdge = livesRight - 2 * HUDNode.livesStep - 12
-        let levelX = max(HUDNode.levelMinX,
-                         min(sceneWidth / 2, livesLeftEdge - HUDNode.levelLivesGap))
-        place(levelLabel, "LEVEL 01", HUDNode.cyan, 11, levelX, 18, align: .center)
+        // LEVEL takes the gap between the lives and the nav, centred in it, and
+        // drops to "L 01" when that gap will not hold the long form.
+        let livesRight = HUDNode.livesX + CGFloat(HUDNode.maxLives - 1) * HUDNode.livesStep + 9
+        let navLeft = HUDNode.navOriginX(forSceneWidth: sceneWidth) + HUDNode.navDesignLeft
+        let gapLeft = livesRight + HUDNode.levelGap
+        let gapRight = navLeft - HUDNode.levelGap
+        levelIsAbbreviated = (gapRight - gapLeft) < HUDNode.levelFullWidth
+
+        place(levelLabel, "LEVEL 01", HUDNode.cyan, 11,
+              max(gapLeft, (gapLeft + gapRight) / 2), 18, align: .center)
         levelLabel.verticalAlignmentMode = .center
         levelLabel.name = "levelLabel"
 
@@ -106,13 +100,21 @@ final class HUDNode: SKNode {
 
     /// SET's left edge in the pair's own coordinates.
     static let navDesignLeft: CGFloat = 742
-    /// Air between the last life icon and SET, and between the icons.
-    static let livesNavGap: CGFloat = 52
-    static let livesStep: CGFloat = 30
-    /// Air between LEVEL and the first life icon.
-    static let levelLivesGap: CGFloat = 60
-    /// LEVEL never crowds HI, however narrow the window gets.
-    static let levelMinX: CGFloat = 250
+
+    // The left block runs SCORE · HI · lives · LEVEL, in that order, tight
+    // against the left edge. Only LEVEL has any give in it: everything to its
+    // left is a fixed width, and the nav owns the right edge, so LEVEL takes
+    // whatever is between and shortens itself when that is not enough.
+    static let hiX: CGFloat = 120
+    static let livesX: CGFloat = 215
+    static let livesStep: CGFloat = 22
+    /// Cadet gets five (`GameSettings.lives`), so five are built and the unused
+    /// ones hidden. Three were built before, which silently capped the display.
+    static let maxLives = 5
+    /// Air either side of LEVEL.
+    static let levelGap: CGFloat = 24
+    /// Below this, "LEVEL 01" does not fit and it becomes "L 01".
+    static let levelFullWidth: CGFloat = 100
 
     static func navOriginX(forSceneWidth width: CGFloat) -> CGFloat {
         width - navDesignRight - navRightMargin      // 0 at the design width
@@ -192,6 +194,12 @@ final class HUDNode: SKNode {
 
     func updateScore(_ score: Int)   { scoreValue.text  = "\(score)" }
     func updateHiScore(_ score: Int) { hiValue.text     = "\(score)" }
-    func updateLevel(_ level: Int)   { levelLabel.text  = String(format: "LEVEL %02d", level) }
+    /// Set at construction from the width available between the lives and the
+    /// nav, so the level number never lands on either.
+    private var levelIsAbbreviated = false
+
+    func updateLevel(_ level: Int) {
+        levelLabel.text = String(format: levelIsAbbreviated ? "L %02d" : "LEVEL %02d", level)
+    }
     func updateLives(_ count: Int)   { lifeShips.enumerated().forEach { $1.isHidden = $0 >= count } }
 }
