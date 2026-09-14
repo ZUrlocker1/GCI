@@ -573,13 +573,45 @@ That is around 6ms of CPU per 16.7ms frame — comfortable on a desktop, and the
 to carry into the port as the thing to beat, because a phone has nothing like that
 headroom.
 
-**The bloom is the single largest item.** One `SKEffectNode` wraps the whole playfield
-and carries a `CIBloom` at radius 6, intensity 0.9, re-filtered every frame —
-`shouldRasterize` is off because the subtree changes constantly, so the cache would be
-invalidated before it was ever read. A full-screen Core Image pass per frame is exactly
-the kind of thing that throttles a phone and drains its battery, and the glow is most
-of the game's look, so this is the trade-off the port has to make consciously rather
-than discover.
+**The bloom is the largest GPU item, and almost nothing on the CPU.** One
+`SKEffectNode` wraps the whole playfield and carries a `CIBloom` at radius 6, intensity
+0.9, re-filtered every frame — `shouldRasterize` is off because the subtree changes
+constantly, so the cache would be invalidated before it was ever read. Switching
+`NEON GLOW` off moves the CPU figure by **0.5–1%**, measured: the filter runs on the
+GPU, and Activity Monitor's CPU percentage never counted it. A full-screen Core Image
+pass per frame is still exactly the kind of thing that throttles a phone and drains its
+battery, so it remains the trade-off the port has to make consciously — but it is a GPU
+and power question, not a frame-time one, and it has to be measured on device with the
+GPU counters rather than inferred from a process total.
+
+**What the CPU is actually doing is walking the node tree.** With the bloom ruled out
+and the node count flat — 711 on the title screen, 890–920 in play, stable over
+minutes, so nothing is leaking — the remaining per-frame work is SpriteKit's own
+traversal and action evaluation, which scales with how many nodes exist rather than
+with how many are visible. The census is unflattering:
+
+| On the title screen, drawing nothing | Nodes |
+|---|---|
+| Laser pool — 40 rounds × (sprite + rig + 3 rig parts) | 200 |
+| Shatter pool — 14 sprays × (flash + 9 shards) | 154 |
+| Starfield — 3 tiers × 2 tiled copies | ~170 |
+| Explosion pool — 8 bursts × (flash + 8 shards) | 80 |
+| Score pops | 20 |
+| **Total** | **~624 of 711** |
+
+Every one of those is built at launch and hidden until it is needed, and hidden nodes
+are still walked. On macOS this is affordable and was left alone. On a phone it is the
+first thing to look at, and the fix is cheap: park each pool under a container that is
+detached from the scene while the pool is idle and re-attached on first use. One
+`addChild` when glass first flies, and 154 nodes leave every frame that has no glass in
+it — without allocating during play, which is the rule the pools exist to honour.
+
+**Profile before acting on any of this.** Two predictions were made from reading the
+code during the 1.2 pass: that the title screen's per-frame `fontColor` writes were
+expensive (right, and worth 13 points) and that the bloom was the CPU's largest item
+(wrong, by an order of magnitude). Instruments' Time Profiler attaches to a running
+build without disturbing it and would replace the table above with measured
+attribution.
 
 **The switch already exists.** `GameSettings.neonGlow` detaches the filter entirely
 rather than zeroing its intensity, which is what actually skips the offscreen pass —
