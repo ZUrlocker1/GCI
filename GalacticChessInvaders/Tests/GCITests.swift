@@ -529,22 +529,33 @@ final class SceneLayoutTests: XCTestCase {
     /// Extra width goes to the gutters. The board is already limited by height
     /// at the design size, so widening the window must not stretch it.
     func testExtraWidthWidensTheGuttersNotTheBoard() {
+        // 700 tall binds at 64 however wide the window gets.
         let wide = SceneLayout(size: CGSize(width: 1400, height: 700))
         XCTAssertEqual(wide.squareSize, 64)
         XCTAssertEqual(wide.boardOriginX, 444)              // (1400 - 512) / 2
         XCTAssertEqual(wide.gutterCentreX, 222)             // and the gutter follows
     }
 
-    /// A bigger window never gives a bigger board. Letting it grow produced
-    /// 176pt squares at 1900pt wide and the composition fell apart — the type
-    /// and the ship around it stay a fixed size.
-    func testABiggerWindowNeverGrowsTheBoard() {
-        for size in [CGSize(width: 1600, height: 900),
-                     CGSize(width: 1900, height: 1600),
-                     CGSize(width: 3000, height: 2000)] {
-            let l = SceneLayout(size: size)
-            XCTAssertEqual(l.squareSize, 64, "board grew at \(size)")
+    /// A bigger window grows the board, but only to the cap. Uncapped it hit
+    /// 176pt squares at 1900pt wide and the composition fell apart, because the
+    /// type and the ship around it stay a fixed size; capped at the design 64
+    /// it left most of a full-screen laptop black.
+    func testABiggerWindowGrowsTheBoardOnlyToTheCap() {
+        // A laptop in full screen should actually get the extra room.
+        XCTAssertEqual(SceneLayout(size: CGSize(width: 1512, height: 982)).squareSize, 96)
+
+        for size in [CGSize(width: 1900, height: 1600),
+                     CGSize(width: 3000, height: 2000),
+                     CGSize(width: 6000, height: 4000)] {
+            XCTAssertEqual(SceneLayout(size: size).squareSize,
+                           SceneLayout.maxSquareSize, "ran past the cap at \(size)")
         }
+    }
+
+    /// The design canvas is untouched by the cap moving.
+    func testTheDesignCanvasStillProducesTheDesignBoard() {
+        XCTAssertEqual(SceneLayout.design.squareSize, 64)
+        XCTAssertEqual(SceneLayout.design.boardSize, 512)
     }
 
     /// It does shrink, to fit a window smaller than the design canvas.

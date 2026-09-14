@@ -92,22 +92,27 @@ struct SceneLayout {
     /// into a dashed mess; the remainder is given back to the gutters by the
     /// centring below, where nobody can see it.
     ///
-    /// **Never larger than the design square.** Letting the board grow to fill
-    /// a big window was tried and looked wrong: at 1900pt wide the squares came
-    /// out at 176pt and the pieces were enormous, because the chrome around
-    /// them — type and the ship — stays a fixed size and the composition falls
-    /// apart. A bigger window gives you wider gutters and more room around the
-    /// board, not a bigger board. It only ever shrinks, to fit a window smaller
-    /// than the one the game was composed for.
+    /// Capped, but not at the design square.
+    ///
+    /// Letting the board grow without limit was tried and looked wrong — at
+    /// 1900pt wide the squares came out at 176pt and the pieces were enormous,
+    /// because the chrome around them stays a fixed size. Capping at the design
+    /// 64 went too far the other way: a laptop in full screen left most of the
+    /// window black. 96 is one and a half times the design square, which fills
+    /// a full-screen laptop without the chrome looking miniature beside it.
     var squareSize: CGFloat {
         let fromHeight = (size.height - hudBandHeight - shipBandHeight) / 8
         let fromWidth  = (size.width - minGutterWidth - rightMarginWidth) / 8
         let fitted = floor(min(fromHeight, fromWidth))
-        return min(Self.designSquareSize, max(Self.minSquareSize, fitted))
+        return min(Self.maxSquareSize, max(Self.minSquareSize, fitted))
     }
 
-    /// The square the game was composed at, and its ceiling.
+    /// The square the game was composed at. Banners and other chrome measure
+    /// themselves against this, so it stays the reference even though the board
+    /// may now be larger.
     static let designSquareSize: CGFloat = 64
+    /// How large the board may grow. See `squareSize`.
+    static let maxSquareSize: CGFloat = 96
 
     var boardSize: CGFloat { squareSize * 8 }
 

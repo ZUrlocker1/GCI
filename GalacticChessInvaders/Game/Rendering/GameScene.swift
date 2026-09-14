@@ -93,11 +93,23 @@ class GameScene: SKScene {
     ///
     /// PAUSED is 36pt and the rest are 30, fixed, which is right against a
     /// 512pt board and far too loud against a 300pt one — the word ended up
-    /// wider than the board it was covering. Tied to the square rather than to
-    /// the window, so the banners keep their proportion to the thing they sit
-    /// over, and capped at 1 so they never grow.
+    /// wider than the board it was covering. Tied to the square, so the banners
+    /// keep their proportion to the thing they sit over, in both directions:
+    /// the square's own limits (32 to 96) bound this to 0.5 up to 1.5.
     private var bannerScale: CGFloat {
-        min(1, layout.squareSize / SceneLayout.designSquareSize)
+        layout.squareSize / SceneLayout.designSquareSize
+    }
+
+    /// Shrinks a label's type until it fits `maxWidth`, and leaves it alone if
+    /// it already does.
+    ///
+    /// The end-of-wave banners are a fixed 30pt, which "BLACK KING DESTROYED"
+    /// outgrows on any board narrower than about 600pt — it ran off both sides
+    /// and straight through PAUSED. Length varies per message, so a single
+    /// point size cannot be right for all of them.
+    private func fitWidth(_ label: SKLabelNode, to maxWidth: CGFloat) {
+        guard maxWidth > 0, label.frame.width > maxWidth else { return }
+        label.fontSize *= maxWidth / label.frame.width
     }
     /// Squares currently advised, best first — compared to skip redundant work
     /// when the advice has not changed between beats.
@@ -1565,11 +1577,20 @@ class GameScene: SKScene {
         let banner = LevelBannerNode(title: announcement.title,
                                      subtitle: announcement.subtitle,
                                      sceneSize: size)
-        addChild(banner)
-        // Same treatment as PAUSED and GAME OVER: shrinks with the board and
-        // follows a resize. It is laid out against `sceneSize` from the origin,
-        // which is the shape the registry's offset rule already handles.
-        registerCentredOverlay(banner)
+        // A carrier the scene owns, so the banner's own slide-in is free to
+        // animate `position` without the centred-overlay registry fighting it
+        // for the same property. The carrier never moves under its own power,
+        // which is exactly what the registry assumes of everything it holds.
+        let carrier = SKNode()
+        carrier.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        carrier.zPosition = banner.zPosition
+        carrier.addChild(banner)
+        addChild(carrier)
+        registerCentredOverlay(carrier)
+        // The banner removes itself at the end of its sequence; the carrier has
+        // to follow or the scene collects empty nodes.
+        carrier.run(.sequence([.wait(forDuration: LevelBannerNode.totalDuration + 0.1),
+                               .removeFromParent()]))
         // The title alone. The subtitle is on screen at the same moment in
         // 26-point type, so repeating it here only pushed the lines either side
         // of it off the top of the panel.
@@ -2001,6 +2022,9 @@ class GameScene: SKScene {
         label.verticalAlignmentMode   = .center
         label.position = CGPoint(x: size.width / 2, y: size.height / 2)
         label.zPosition = 24
+        // Against the board, not the window: the banner belongs to the board it
+        // covers, and `bannerScale` grows it from here.
+        fitWidth(label, to: layout.boardSize / bannerScale)
         registerCentredOverlay(label)
         label.setScale(0.7)
         label.alpha = 0

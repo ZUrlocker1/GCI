@@ -31,7 +31,12 @@ final class LevelBannerNode: SKNode {
         name = Self.nodeName
         zPosition = 22
 
-        let centre = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
+        // Laid out around this node's own origin, not the scene's centre. The
+        // scene then places the node, which makes it an ordinary centred
+        // overlay with a zero offset — where composing against `sceneSize`
+        // meant its offset depended on the size it happened to be built at,
+        // and a resize mid-announcement left it adrift.
+        let centre = CGPoint.zero
         let ruleWidth: CGFloat = 420
 
         let titleLabel = SKLabelNode(fontNamed: Self.font)
@@ -64,6 +69,11 @@ final class LevelBannerNode: SKNode {
         // Enters from off-screen left. `.easeOut` past the target then settling
         // is what reads as the elastic overshoot §12.11 asks for; a single
         // tween arrives too politely for an escalation announcement.
+        // Off-screen left *within its carrier*, which the scene has placed at
+        // the centre. The banner owns how it arrives; the scene owns where it
+        // lives. Keeping both here was the bug: the slide's target and the
+        // centred-overlay registry fought over `position`, and the registry won
+        // by pinning it to wherever the slide happened to have got to.
         position = CGPoint(x: -sceneSize.width, y: 0)
         let overshoot = SKAction.move(to: CGPoint(x: 18, y: 0), duration: Self.slideIn * 0.75)
         overshoot.timingMode = .easeOut
