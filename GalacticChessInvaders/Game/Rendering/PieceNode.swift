@@ -27,6 +27,7 @@ final class PieceNode: SKSpriteNode {
     private static let armorKey = "armor"
     private static let armorFillName = "armorFill"
     private static let chargeGlowName = "gunnerCharge"
+    static let chargeTickName = "gunnerTick"
     private static let ventName = "vent"
     private static let beamName = "beamIn"
     private static let bobKey = "idleBob"
@@ -780,6 +781,18 @@ final class PieceNode: SKSpriteNode {
             .fadeOut(withDuration: 0.12),
             .removeFromParent(),
         ]))
+    }
+
+    /// Takes down a telegraph that is no longer going to be followed by a shot.
+    ///
+    /// Freezing the fleet pauses `fleetNode`, and these cues are children of
+    /// pieces inside it — so a piece caught mid-telegraph kept its glow lit at
+    /// whatever brightness it had reached, on a board where nothing was about
+    /// to fire. Frozen at full brightness it says the opposite of what the
+    /// freeze means.
+    func cancelChargeCues() {
+        childNode(withName: Self.chargeGlowName)?.removeFromParent()
+        childNode(withName: Self.chargeTickName)?.removeFromParent()
     }
 
     /// A shot bounced off. Used when the player's own laser hits their king,

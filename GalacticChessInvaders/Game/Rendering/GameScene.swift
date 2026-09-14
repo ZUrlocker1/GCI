@@ -1318,14 +1318,25 @@ class GameScene: SKScene {
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         // Sits just under the AUTO MODE slot so both can show at once.
-        label.position = CGPoint(x: layout.gutterCentreX, y: Self.boardBottomY + 30 - Self.gutterDrop)
+        label.setScale(layout.gutterScale)
+        label.position = CGPoint(x: layout.gutterCentreX, y: layout.gutterNoticeY)
         label.zPosition = 12
         bloomNode.addChild(label)
+
+        // This is the slot AUTO CHESS occupies, and the two were being drawn on
+        // top of each other. One line at a time: the notice takes the slot for
+        // as long as it is up, and hands it back.
+        clearGutterNotice(except: label)
+        autoModeLabel?.isHidden = true
         label.run(.sequence([
             .repeat(.sequence([.fadeAlpha(to: 0.35, duration: 0.18),
                                .fadeAlpha(to: 1.00, duration: 0.18)]), count: 3),
             .fadeOut(withDuration: 0.4),
             .removeFromParent(),
+            .run { [weak self] in
+                guard let self else { return }
+                self.autoModeLabel?.isHidden = !self.isAutoMode
+            },
         ]))
     }
 
@@ -2064,8 +2075,9 @@ class GameScene: SKScene {
     }
 
     /// The one-line notice in the left gutter — SKIP LEVEL and its kind.
-    private func clearGutterNotice() {
-        for node in bloomNode.children where node.name == Self.gutterNoticeName {
+    private func clearGutterNotice(except keep: SKNode? = nil) {
+        for node in bloomNode.children
+        where node.name == Self.gutterNoticeName && node !== keep {
             node.removeAllActions()
             node.removeFromParent()
         }
@@ -2696,7 +2708,7 @@ class GameScene: SKScene {
         // narrows with the board — type that stayed 11pt in a 120pt column was
         // the last thing still ignoring the window.
         for node in [turnTimerNode, autoModeLabel, statusNode, hintNode].compactMap({ $0 }) {
-            node.setScale(layout.contentScale)
+            node.setScale(layout.gutterScale)
         }
         turnTimerNode?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
         autoModeLabel?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
@@ -3055,6 +3067,14 @@ class GameScene: SKScene {
         // A Time Freeze that was running when the player paused is still
         // running now — unpausing everything here would end it early and leave
         // its clock ticking against a world that had already resumed.
+        if isTimeFrozen {
+            // Pausing the fleet freezes its pieces' telegraph cues mid-swell,
+            // leaving pawns lit as if about to fire on a board where nothing
+            // can. Take the cues down instead of stopping them.
+            for node in pieceNodes.values where node.piece.color == .black {
+                node.cancelChargeCues()
+            }
+        }
         fleet?.setPaused(isTimeFrozen)
         raiders?.setPaused(isTimeFrozen)
         laserPool?.setPaused(isTimeFrozen, owner: .enemy)
@@ -3426,6 +3446,7 @@ class GameScene: SKScene {
                                 y: -node.size.height * 0.42)
         tick.setScale(0.2)
         tick.alpha = 0
+        tick.name = PieceNode.chargeTickName
         node.addChild(tick)
         tick.run(.sequence([
             .group([.scale(to: 1.0, duration: FleetRules.chargeUpDelay),

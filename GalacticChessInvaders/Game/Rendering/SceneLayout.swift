@@ -154,32 +154,43 @@ struct SceneLayout {
     /// and bounded to 0.5…1.5 by the square's own limits.
     var contentScale: CGFloat { squareSize / Self.designSquareSize }
 
+    /// The gutter's own scale, floored.
+    ///
+    /// `contentScale` reaches 0.5 on the smallest board, which would put the
+    /// alley's 9pt type at 4.5 — smaller than the HUD's, and unreadable. The
+    /// gutter has room to spare on a narrow window anyway: it is the *board*
+    /// that ran out of space, not the column beside it. So it scales, but never
+    /// below the point where its type drops under the HUD's.
+    var gutterScale: CGFloat { max(Self.minGutterScale, contentScale) }
+    /// 9pt of alley type stays at or above 8, which is the HUD's smallest.
+    static let minGutterScale: CGFloat = 0.9
+
     /// Everything from the turn timer down sits this much lower than it used
     /// to, to open a gap between the chess readouts and the power-up block
     /// above them. One constant rather than four edited literals, because the
     /// four move together or the timer's digits land on the transient notice.
-    var gutterDrop: CGFloat { 8 * contentScale }
+    var gutterDrop: CGFloat { 8 * gutterScale }
 
-    var turnTimerY: CGFloat { boardBottomY + 46 * contentScale - gutterDrop }
-    var gutterNoticeY: CGFloat { boardBottomY + 30 * contentScale - gutterDrop }
-    var statusBannerY: CGFloat { boardBottomY - 4 * contentScale - gutterDrop }
+    var turnTimerY: CGFloat { boardBottomY + 46 * gutterScale - gutterDrop }
+    var gutterNoticeY: CGFloat { boardBottomY + 30 * gutterScale - gutterDrop }
+    var statusBannerY: CGFloat { boardBottomY - 4 * gutterScale - gutterDrop }
 
     /// Chess Hints sit above everything else in the gutter, clearing a full
     /// power-up stack.
-    var chessHintY: CGFloat { boardBottomY + 172 * contentScale }
+    var chessHintY: CGFloat { boardBottomY + 172 * gutterScale }
 
     // MARK: - Power-up alley
 
     var powerUpAlleyLines: Int { 3 }
     /// The block stacks *upward* from this floor, so the first line the player
     /// earns stays where they last read it and later ones go above it.
-    var powerUpAlleyBottomY: CGFloat { boardBottomY + 76 * contentScale }
-    var powerUpAlleyStep: CGFloat { 14 * contentScale }   // 9pt of type, 5pt of air
-    var powerUpAlleyFontSize: CGFloat { 9 * contentScale }
-    var powerUpBarWidth: CGFloat { 84 * contentScale }
+    var powerUpAlleyBottomY: CGFloat { boardBottomY + 76 * gutterScale }
+    var powerUpAlleyStep: CGFloat { 14 * gutterScale }   // 9pt of type, 5pt of air
+    var powerUpAlleyFontSize: CGFloat { 9 * gutterScale }
+    var powerUpBarWidth: CGFloat { 84 * gutterScale }
     /// Under the bottom line, which is always the timed effect — it is appended
     /// last and the block grows upward, so the bar never moves.
-    var powerUpBarY: CGFloat { powerUpAlleyBottomY - 7 * contentScale }
+    var powerUpBarY: CGFloat { powerUpAlleyBottomY - 7 * gutterScale }
 
     // MARK: - Raiders
 
