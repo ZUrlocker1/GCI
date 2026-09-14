@@ -373,7 +373,18 @@ class GameScene: SKScene {
 
     /// The playfield's geometry, derived from the size the scene actually has.
     /// Every position in the scene reads from this — see `SceneLayout`.
-    private var layout: SceneLayout { SceneLayout(size: size) }
+    /// The current geometry, remade only when the scene's size actually
+    /// changes. Read several times in a frame — the alley, the ship's lane,
+    /// every banner — and `SceneLayout` does real arithmetic in `init`.
+    private var cachedLayout = SceneLayout.design
+    private var cachedLayoutSize = SceneLayout.designSize
+    private var layout: SceneLayout {
+        if cachedLayoutSize != size {
+            cachedLayoutSize = size
+            cachedLayout = SceneLayout(size: size)
+        }
+        return cachedLayout
+    }
 
     /// The square size the board on screen was actually built at.
     ///
@@ -3509,7 +3520,11 @@ class GameScene: SKScene {
 
     /// 1 through 8, or 0 for a square that does not parse.
     private static func rankIndex(of square: String) -> Int {
-        Int(String(square.suffix(1))) ?? 0
+        // Read off the UTF-8 rather than through `String(square.suffix(1))`,
+        // which allocated a String for every square it was asked about — and
+        // the fleet's rear-rank count asks about sixteen of them.
+        guard let digit = square.utf8.last, digit >= 49, digit <= 56 else { return 0 }
+        return Int(digit) - 48
     }
 
     /// 0 for the a-file through 7 for the h-file.
@@ -3591,23 +3606,17 @@ class GameScene: SKScene {
     ///
     /// One line each, never shared: two statuses on one line read as one.
     private func syncPowerUpAlley() {
-        var lines: [(text: String, color: SKColor)] = []
-
         let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
             - SpaceshipState.baseLaserCap
-        if stacks > 0 {
-            // The name only. The laser cap used to be appended, which turned a
-            // status into a readout the player had to parse — and the number was
-            // never actionable: what matters is that Rapid Fire is up, and the
-            // ship's own hull already brightens with each stack.
-            lines.append((PowerUp.rapidFire.label, NeonPalette.transporterGreen))
-        }
-        if powerUps.hasShield {
-            lines.append((PowerUp.shield.label, PowerUp.shield.tint))
-        }
+        let state = AlleyState(rapidFire: stacks > 0,
+                               shield: powerUps.hasShield,
+                               timed: powerUps.active,
+                               scale: SceneLayout.current.gutterScale,
+                               centreX: layout.gutterCentreX)
+
+        // The bar is the one part that changes every frame — it is a countdown.
         var countdown: (progress: CGFloat, color: SKColor)?
         if let active = powerUps.active, let duration = active.duration {
-            lines.append((active.label, active.tint))
             // §13.2's countdown bar, back now that the block has moved somewhere
             // with a row to spare. A bar rather than the seconds it briefly
             // showed instead: a shrinking length is read without being read,
@@ -3616,21 +3625,9 @@ class GameScene: SKScene {
         }
         syncPowerUpBar(countdown)
 
-        for index in 0..<Self.powerUpAlleyLines {
-            let label = alleyLabel(index)
-            guard index < lines.count else {
-                label.isHidden = true
-                continue
-            }
-            label.isHidden = false
-            label.text = lines[index].text
-            label.fontColor = lines[index].color
-            // Bottom-up from a fixed floor, so the first line the player earns
-            // stays where they last read it and later ones stack above it.
-            label.position = CGPoint(
-                x: layout.gutterCentreX,
-                y: Self.powerUpAlleyBottomY
-                    + CGFloat(lines.count - 1 - index) * Self.powerUpAlleyStep)
+        if state != shownAlley {
+            shownAlley = state
+            redrawPowerUpAlley(state)
         }
 
         // The change is the event; the line itself is the reference.
@@ -3667,10 +3664,71 @@ class GameScene: SKScene {
         }()
         bar.color = countdown.color
         bar.size.width = max(0, Self.powerUpBarWidth * countdown.progress)
+        // Placed every time rather than at creation: two float writes, against
+        // a bar that was otherwise left behind by a resize.
+        bar.position = CGPoint(x: layout.gutterCentreX - Self.powerUpBarWidth / 2,
+                               y: Self.powerUpBarY)
     }
 
-    /// Pooled, because these are rebuilt every frame and a readout is not worth
-    /// a node churn.
+    /// What the alley is currently showing.
+    ///
+    /// `syncPowerUpAlley` runs on every frame; what it draws changes a handful
+    /// of times a wave. Writing `SKLabelNode.text` marks the label for
+    /// re-layout whether or not the string differs, so three of them rewritten
+    /// sixty times a second was the readout's whole cost — for nothing.
+    ///
+    /// The layout figures are part of the state on purpose: a resize has to
+    /// redraw the block, and nothing else does that for the alley. Before this
+    /// the labels kept the font size they were *created* at, so gutter type
+    /// stopped following the window once a power-up was up.
+    private struct AlleyState: Equatable {
+        var rapidFire = false
+        var shield = false
+        var timed: PowerUp?
+        var scale: CGFloat = 0
+        var centreX: CGFloat = 0
+    }
+    private var shownAlley = AlleyState()
+
+    private func redrawPowerUpAlley(_ state: AlleyState) {
+        // At most three, and the order is fixed: standing effects first, the
+        // timed one last so the bar beneath it never moves.
+        var lines: [(text: String, color: SKColor)] = []
+        lines.reserveCapacity(Self.powerUpAlleyLines)
+        if state.rapidFire {
+            // The name only. The laser cap used to be appended, which turned a
+            // status into a readout the player had to parse — and the number was
+            // never actionable: what matters is that Rapid Fire is up, and the
+            // ship's own hull already brightens with each stack.
+            lines.append((PowerUp.rapidFire.label, NeonPalette.transporterGreen))
+        }
+        if state.shield {
+            lines.append((PowerUp.shield.label, PowerUp.shield.tint))
+        }
+        if let timed = state.timed, timed.duration != nil {
+            lines.append((timed.label, timed.tint))
+        }
+
+        for index in 0..<Self.powerUpAlleyLines {
+            let label = alleyLabel(index)
+            guard index < lines.count else {
+                label.isHidden = true
+                continue
+            }
+            label.isHidden = false
+            label.text = lines[index].text
+            label.fontColor = lines[index].color
+            label.fontSize = Self.powerUpAlleyFontSize
+            // Bottom-up from a fixed floor, so the first line the player earns
+            // stays where they last read it and later ones stack above it.
+            label.position = CGPoint(
+                x: state.centreX,
+                y: Self.powerUpAlleyBottomY
+                    + CGFloat(lines.count - 1 - index) * Self.powerUpAlleyStep)
+        }
+    }
+
+    /// Pooled, because a readout is not worth a node churn.
     private func alleyLabel(_ index: Int) -> SKLabelNode {
         let name = "\(Self.powerUpLineName)\(index)"
         if let existing = bloomNode.childNode(withName: name) as? SKLabelNode {
@@ -3693,6 +3751,7 @@ class GameScene: SKScene {
         }
         bloomNode.childNode(withName: Self.powerUpBarName)?.removeFromParent()
         shownRapidFireStacks = 0
+        shownAlley = AlleyState()      // the nodes are gone; redraw from scratch
     }
 
     /// A flashing green warning while anything is about to materialise.
@@ -3750,12 +3809,18 @@ class GameScene: SKScene {
 
     /// How many black pieces still stand on the fleet's rear rank — the gate
     /// early levels hold the scout behind.
+    /// How many of Black's pieces are still on the fleet's back rank.
+    ///
+    /// Counted in place. `allPieces(color:).filter { }.count` built two arrays
+    /// and parsed sixteen squares, and the raider controller asks for this on
+    /// every frame — though only for as long as it still has a scout to send
+    /// (see the `@autoclosure` on its `update`).
     private var rearRankPieces: Int {
         guard let fleet else { return 0 }
         let rear = fleet.rearRank
-        return board.allPieces(color: .black)
-            .filter { Self.rankIndex(of: $0.logicalSquare) == rear }
-            .count
+        return board.countPieces(color: .black) {
+            Self.rankIndex(of: $0.logicalSquare) == rear
+        }
     }
 
     /// §6: "one projectile straight down from its current x-position", acid
@@ -4775,8 +4840,6 @@ class GameScene: SKScene {
     // MARK: - Update
 
     override func update(_ currentTime: TimeInterval) {
-        stateMachine.update(deltaTime: currentTime)
-
         // Clamped. SpriteKit stops calling this while the window is occluded, so
         // coming back from a Command-Tab hands the first frame however many
         // seconds were spent elsewhere — and that number goes straight into
@@ -4848,7 +4911,7 @@ class GameScene: SKScene {
         // once the game is decided.
         if !isBeatSuspended, !isTimeFrozen, stateMachine.currentState is PlayingState {
             raiders?.update(deltaTime: dt, interval: levels.parameters.raiderInterval,
-                            level: levels.level, rearRankPieces: rearRankPieces)
+                            level: levels.level, rearRankPieces: self.rearRankPieces)
         }
 
         if dt > 0, stateMachine.currentState is PlayingState {
@@ -4940,7 +5003,12 @@ class GameScene: SKScene {
             (Double(framesThisInterval) / max(timeThisInterval, 0.0001)).rounded()
         framesThisInterval = 0
         timeThisInterval = 0
-        DiagnosticsLog.shared.nodeCount = countAllNodes()
+        // Only while someone is looking. Walking the whole tree four times a
+        // second is cheap but not free, and the figure is unreadable unless the
+        // panel is open — which is behind Test Mode.
+        if GameSettings.shared.logPanel {
+            DiagnosticsLog.shared.nodeCount = countAllNodes()
+        }
     }
 
     /// Catches a piece that is on the board with no hitbox and no beam-in

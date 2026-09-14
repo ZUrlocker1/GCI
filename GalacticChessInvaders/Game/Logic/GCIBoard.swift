@@ -87,6 +87,12 @@ final class GCIBoard {
         pieces.values.contains { $0.color == color }
     }
 
+    /// How many of `color`'s pieces match, without building the array or the
+    /// filtered copy of it. The update loop asks this too.
+    func countPieces(color: PieceColor, where match: (Piece) -> Bool) -> Int {
+        pieces.values.reduce(0) { $0 + (($1.color == color && match($1)) ? 1 : 0) }
+    }
+
     // MARK: - Chess moves
 
     func legalDestinations(from square: String) -> [String] {

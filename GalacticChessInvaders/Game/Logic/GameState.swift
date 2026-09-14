@@ -61,9 +61,12 @@ class PlayingState: GCIState {
         }
     }
 
-    override func update(deltaTime seconds: TimeInterval) {
-        // Phase 2+: tick fleet controller, turn timer, etc.
-    }
+    // No `update(deltaTime:)`. The fleet, the turn timer and everything else
+    // this state was going to tick are driven from `GameScene.update`, which
+    // is where the frame's own delta and the slow-motion clock live. The empty
+    // override stayed behind for a long time, and the scene was calling it
+    // once a frame with `currentTime` — an absolute timestamp — in the
+    // `deltaTime` slot, which would have been a trap for whoever filled it in.
 }
 
 // MARK: - Paused State

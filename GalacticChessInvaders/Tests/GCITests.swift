@@ -350,6 +350,21 @@ final class GCIBoardTests: XCTestCase {
         XCTAssertEqual(board.turn, .white)
     }
 
+    /// The update loop counts the fleet's back rank on every frame. It used to
+    /// do it by building the colour's array and then a filtered copy of it; the
+    /// counting version has to agree with the one it replaced.
+    func testCountingPiecesAgreesWithFilteringThem() {
+        let board = GCIBoard()
+        board.setupStandardPosition()
+        let onRank8: (Piece) -> Bool = { $0.logicalSquare.hasSuffix("8") }
+
+        XCTAssertEqual(board.countPieces(color: .black, where: onRank8),
+                       board.allPieces(color: .black).filter(onRank8).count)
+        XCTAssertEqual(board.countPieces(color: .black, where: onRank8), 8)
+        // The colour is part of the test, not just the predicate.
+        XCTAssertEqual(board.countPieces(color: .white, where: onRank8), 0)
+    }
+
     func testPieceStartsAtFullHP() {
         let board = GCIBoard()
         board.setupStandardPosition()

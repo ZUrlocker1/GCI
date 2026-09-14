@@ -20,6 +20,10 @@ final class TurnTimerNode: SKNode {
 
     /// Tracked so the pulse is started and stopped once, not every frame.
     private var isPulsing = false
+    /// What the two labels currently say. `refresh` runs on every frame of
+    /// every beat, and the digits change once a second.
+    private var shownSeconds = -1
+    private var shownExtended: Bool?
 
     override init() {
         super.init()
@@ -43,12 +47,22 @@ final class TurnTimerNode: SKNode {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    /// Refreshed from the game loop. Cheap enough to call every frame: the label
-    /// text only changes on whole-second boundaries.
+    /// Refreshed from the game loop, so it is called sixty times a second for
+    /// a readout that changes once. Both labels are written only when what
+    /// they say changes: assigning `SKLabelNode.text` marks the label for
+    /// re-layout whether or not the string differs, and interpolating the
+    /// digits allocated a `String` on every frame of every beat.
     func refresh(from timer: TurnTimer) {
-        digits.text = "\(timer.displaySeconds)"
+        let seconds = timer.displaySeconds
+        if seconds != shownSeconds {
+            shownSeconds = seconds
+            digits.text = String(seconds)
+        }
         // The caption, not the colour, says the beat was extended for check.
-        caption.text = timer.isExtended ? "CHECK" : "YOUR MOVE"
+        if timer.isExtended != shownExtended {
+            shownExtended = timer.isExtended
+            caption.text = timer.isExtended ? "CHECK" : "YOUR MOVE"
+        }
         setPulsing(timer.isWarning)
     }
 

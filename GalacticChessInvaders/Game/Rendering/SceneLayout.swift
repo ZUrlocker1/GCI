@@ -53,6 +53,29 @@ struct SceneLayout {
 
     let size: CGSize
 
+    /// The side of one square, and the root of the whole coordinate system:
+    /// the board is eight of these, piece art is fitted to it, and the fleet
+    /// sweeps in multiples of it.
+    ///
+    /// Whole points, deliberately. A grid line drawn at 63.4pt spacing aliases
+    /// into a dashed mess; the remainder is given back to the gutters by the
+    /// centring, where nobody can see it.
+    ///
+    /// Capped, but not at the design square. Letting the board grow without
+    /// limit was tried and looked wrong — at 1900pt wide the squares came out
+    /// at 176pt and the pieces were enormous, because the chrome around them
+    /// stays a fixed size. Capping at the design 64 went too far the other
+    /// way: a laptop in full screen left most of the window black. 96 is one
+    /// and a half times the design square, which fills a full-screen laptop
+    /// without the chrome looking miniature beside it.
+    ///
+    /// Stored, and computed once in `init`, because everything else here
+    /// derives from it — `boardSize`, `boardOriginX`, `contentScale`, every
+    /// gutter position. As a computed property the fit arithmetic ran several
+    /// times over for a single reading of `boardCentre`, and `applyLayout`
+    /// reads a dozen of these in a row.
+    let squareSize: CGFloat
+
     /// The smallest size the layout will reason about.
     ///
     /// Under `.resizeFill` a scene can be handed a zero size before its view has
@@ -62,8 +85,13 @@ struct SceneLayout {
     static let minimumSize = CGSize(width: 480, height: 360)
 
     init(size: CGSize = SceneLayout.designSize) {
-        self.size = CGSize(width: max(size.width, Self.minimumSize.width),
-                           height: max(size.height, Self.minimumSize.height))
+        let clamped = CGSize(width: max(size.width, Self.minimumSize.width),
+                             height: max(size.height, Self.minimumSize.height))
+        self.size = clamped
+        let fromHeight = (clamped.height - Self.hudBandHeight - Self.shipBandHeight) / 8
+        let fromWidth  = (clamped.width - Self.minGutterWidth - Self.rightMarginWidth) / 8
+        let fitted = floor(min(fromHeight, fromWidth))
+        self.squareSize = min(Self.maxSquareSize, max(Self.minSquareSize, fitted))
     }
 
     // MARK: - Bands
@@ -74,11 +102,14 @@ struct SceneLayout {
     // should shrink because a window got shorter. Only the board flexes.
 
     /// 700 − 632, the gap above the board on the design canvas.
-    var hudBandHeight: CGFloat { 68 }
+    static let hudBandHeight: CGFloat = 68
+    var hudBandHeight: CGFloat { Self.hudBandHeight }
     /// The design `boardBottomY`: everything below the board.
-    var shipBandHeight: CGFloat { 120 }
+    static let shipBandHeight: CGFloat = 120
+    var shipBandHeight: CGFloat { Self.shipBandHeight }
     /// What the left gutter needs for the widest thing it carries.
-    var minGutterWidth: CGFloat { 224 }
+    static let minGutterWidth: CGFloat = 224
+    var minGutterWidth: CGFloat { Self.minGutterWidth }
     /// Breathing room to the right of the board, and nothing more.
     ///
     /// The right-hand space is empty — the board is centred, and everything
@@ -86,36 +117,14 @@ struct SceneLayout {
     /// was costing the board 200pt it did not need to give up, which is why
     /// opening the log sidebar shrank the game far more than the sidebar
     /// actually took.
-    var rightMarginWidth: CGFloat { 24 }
+    static let rightMarginWidth: CGFloat = 24
+    var rightMarginWidth: CGFloat { Self.rightMarginWidth }
 
     /// Never smaller than this, whatever the window does. Below it the pieces
     /// stop being readable and the game stops being playable.
     static let minSquareSize: CGFloat = 32
 
     // MARK: - Board
-
-    /// The side of one square, and the root of the whole coordinate system:
-    /// the board is eight of these, piece art is fitted to it, and the fleet
-    /// sweeps in multiples of it.
-    ///
-    /// Whole points, deliberately. A grid line drawn at 63.4pt spacing aliases
-    /// into a dashed mess; the remainder is given back to the gutters by the
-    /// centring below, where nobody can see it.
-    ///
-    /// Capped, but not at the design square.
-    ///
-    /// Letting the board grow without limit was tried and looked wrong — at
-    /// 1900pt wide the squares came out at 176pt and the pieces were enormous,
-    /// because the chrome around them stays a fixed size. Capping at the design
-    /// 64 went too far the other way: a laptop in full screen left most of the
-    /// window black. 96 is one and a half times the design square, which fills
-    /// a full-screen laptop without the chrome looking miniature beside it.
-    var squareSize: CGFloat {
-        let fromHeight = (size.height - hudBandHeight - shipBandHeight) / 8
-        let fromWidth  = (size.width - minGutterWidth - rightMarginWidth) / 8
-        let fitted = floor(min(fromHeight, fromWidth))
-        return min(Self.maxSquareSize, max(Self.minSquareSize, fitted))
-    }
 
     /// The square the game was composed at. Banners and other chrome measure
     /// themselves against this, so it stays the reference even though the board

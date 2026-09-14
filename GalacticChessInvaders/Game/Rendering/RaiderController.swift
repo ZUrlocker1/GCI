@@ -130,11 +130,14 @@ final class RaiderController {
     /// `rearRankPieces` gates the early levels: the first scout waits until the
     /// player has broken into the fleet's back rank, so it arrives as a reward
     /// for progress rather than as one more thing to parse on a full board.
+    /// `rearRankPieces` is an `@autoclosure` because counting it walks the
+    /// board, this runs on every frame, and the answer is wanted only on the
+    /// early levels and only while a scout is still owed.
     func update(deltaTime: TimeInterval, interval: TimeInterval,
-                level: Int, rearRankPieces: Int) {
+                level: Int, rearRankPieces: @autoclosure () -> Int) {
         guard let offering = remaining.first else { return }
         let blocked = RaiderRules.waitsForThinnedRearRank(level: level)
-            && rearRankPieces > RaiderRules.crowdedRearRank
+            && rearRankPieces() > RaiderRules.crowdedRearRank
         guard schedule.tick(deltaTime, interval: paced(interval),
                             onScreen: onScreen, blocked: blocked),
               let scout = scouts.first(where: { !$0.isCrossing }) else { return }
