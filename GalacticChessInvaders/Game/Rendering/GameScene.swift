@@ -577,6 +577,24 @@ class GameScene: SKScene {
             : nil
     }
 
+    /// Re-applies whichever sky is up. The title's cycle and a wave's static
+    /// look are different enough that applying the wrong one would stop the
+    /// cycle, so the choice lives here rather than at each call site.
+    private func refreshBackdrop() {
+        backgroundColor = stateMachine.currentState is TitleState
+            ? backdropNode.applyTitle()
+            : backdropNode.apply(level: levels.level)
+    }
+
+    /// The size the sky was built for.
+    ///
+    /// Both the stars and the haze are measured against the scene once, and
+    /// under `.resizeFill` that first measurement can be of a 0×0 scene — the
+    /// view has not laid out when `didMove` runs. The star layers guard against
+    /// it and build nothing; the haze sizes itself to nothing. Either way the
+    /// sky is empty and nothing ever rebuilt it, which is exactly what happened.
+    private var skyBuiltSize: CGSize = .zero
+
     private func setupStarfield() {
         // Behind the stars, which are themselves behind bloomNode — the haze
         // must not be bloomed or it smears into a wash.
@@ -604,7 +622,30 @@ class GameScene: SKScene {
         addStarLayer(texture: dot, count: 12, speed: 140, alpha: 0.92,
                      starSize: 3.4, drift: -0.16, twinkleShare: 0.45)   // near, leans left
 
-        DiagnosticsLog.shared.log(.startup, "Starfield: 3 tiers")
+        skyBuiltSize = size
+        DiagnosticsLog.shared.log(.startup,
+            "Starfield: 3 tiers at \(Int(size.width))×\(Int(size.height))")
+    }
+
+    /// Scatters the stars again for a scene of a different size, and re-measures
+    /// the haze behind them. Debounced with the board's own rescale — a window
+    /// drag would otherwise re-seed 84 sprites on every frame of it.
+    private func rebuildSky() {
+        skyBuiltSize = size
+        starfieldNode.removeAllChildren()
+        let dot = Self.makeStarTexture()
+        addStarLayer(texture: dot, count: 46, speed: 20,  alpha: 0.34,
+                     starSize: 1.5, drift:  0.00, twinkleShare: 0.20)
+        addStarLayer(texture: dot, count: 26, speed: 58,  alpha: 0.62,
+                     starSize: 2.4, drift:  0.30, twinkleShare: 0.30)
+        addStarLayer(texture: dot, count: 12, speed: 140, alpha: 0.92,
+                     starSize: 3.4, drift: -0.16, twinkleShare: 0.45)
+        starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
+
+        backdropNode.resize(to: size)
+        refreshBackdrop()
+        DiagnosticsLog.shared.log(.startup,
+            "Sky rebuilt at \(Int(size.width))×\(Int(size.height))")
     }
 
     /// A soft round dot: solid core fading to transparent, drawn once at launch.
@@ -1149,11 +1190,7 @@ class GameScene: SKScene {
     private func applyLiveSettings() {
         applyGlowSetting()
         boardNode?.applyDisplaySettings()
-        // Whichever sky is up: the title's cycle and a wave's static look are
-        // different enough that reapplying the wrong one would stop the cycle.
-        backgroundColor = stateMachine.currentState is TitleState
-            ? backdropNode.applyTitle()
-            : backdropNode.apply(level: levels.level)
+        refreshBackdrop()
         AudioManager.shared.applyMusicSettings()
         // The update loop drives this too, but it does not run while a panel
         // holds the scene paused — so switching Auto Chess on from Settings
@@ -2715,7 +2752,7 @@ class GameScene: SKScene {
         // immediately; remaking the board is not, and the sizes in between the
         // one the player started at and the one they let go at are of no
         // interest to anyone.
-        if layout.squareSize != builtSquareSize {
+        if layout.squareSize != builtSquareSize || size != skyBuiltSize {
             rescaleDueAt = CACurrentMediaTime() + Self.rescaleSettleDelay
         }
 
@@ -4881,6 +4918,7 @@ class GameScene: SKScene {
                 rescaleBoard(to: settled)
                 boardNode?.position = settled.boardOrigin
             }
+            if size != skyBuiltSize { rebuildSky() }
         }
 
         if stateMachine.currentState is PlayingState {

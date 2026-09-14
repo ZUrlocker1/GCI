@@ -40,7 +40,10 @@ final class TitleOverlayNode: SKNode {
             let label = SKLabelNode(fontNamed: Self.titleFont)
             label.text = text
             label.fontSize = fontSize
-            label.fontColor = Self.cyan
+            // White glyphs, tinted. See `colorCycleAction`.
+            label.fontColor = .white
+            label.color = Self.cyan
+            label.colorBlendFactor = 1
             label.horizontalAlignmentMode = .center
             label.verticalAlignmentMode = .center
             label.position = CGPoint(x: 0, y: y)
@@ -51,34 +54,24 @@ final class TitleOverlayNode: SKNode {
         }
     }
 
-    // Cycles fontColor through the neon palette using a custom action.
+    /// Cyan → magenta → cyan, as a tint rather than a new colour.
+    ///
+    /// This used to be a `customAction` that interpolated the colour itself
+    /// and wrote `fontColor` on every frame. Writing `fontColor` re-renders
+    /// the glyphs, so the two largest pieces of type in the game — 60pt and
+    /// 48pt — were being rasterised sixty times a second, inside the bloom
+    /// node, which then had to re-filter them. The title screen cost more CPU
+    /// than the game did.
+    ///
+    /// `colorize` animates `color` instead. The glyph texture is rasterised
+    /// once and tinted at draw time, and the interpolation is SpriteKit's
+    /// rather than a Swift closure called per frame.
     private func colorCycleAction(period: Double) -> SKAction {
-        let colors: [SKColor] = [Self.cyan, Self.magenta, Self.cyan]
-        let stepDuration = period / Double(colors.count - 1)
-        var steps: [SKAction] = []
-        for i in 0..<(colors.count - 1) {
-            let from = colors[i]
-            let to   = colors[i + 1]
-            let tween = SKAction.customAction(withDuration: stepDuration) { node, t in
-                guard let label = node as? SKLabelNode else { return }
-                let progress = CGFloat(t / stepDuration)
-                label.fontColor = Self.lerp(from: from, to: to, t: progress)
-            }
-            steps.append(tween)
-        }
-        return SKAction.repeatForever(SKAction.sequence(steps))
-    }
-
-    private static func lerp(from: SKColor, to: SKColor, t: CGFloat) -> SKColor {
-        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
-        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
-        from.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
-        to.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
-        let clamp = max(0, min(1, t))
-        return SKColor(red: r1 + (r2 - r1) * clamp,
-                       green: g1 + (g2 - g1) * clamp,
-                       blue: b1 + (b2 - b1) * clamp,
-                       alpha: 1)
+        let half = period / 2
+        return .repeatForever(.sequence([
+            .colorize(with: Self.magenta, colorBlendFactor: 1, duration: half),
+            .colorize(with: Self.cyan,    colorBlendFactor: 1, duration: half),
+        ]))
     }
 
     // MARK: - Subtitle

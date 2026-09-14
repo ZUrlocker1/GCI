@@ -114,7 +114,11 @@ final class BackdropNode: SKNode {
         level >= 10 ? 1.35 : 1
     }
 
-    private let sceneSize: CGSize
+    /// Every measurement here is a fraction of this, so it has to follow the
+    /// window. It was a `let`, which meant a backdrop built before the view had
+    /// laid out — a real path under `.resizeFill`, where the first size is
+    /// 0×0 — sized its haze to nothing and stayed that way for the whole run.
+    private(set) var sceneSize: CGSize
     private let blob: SKSpriteNode
 
     init(sceneSize: CGSize) {
@@ -144,6 +148,10 @@ final class BackdropNode: SKNode {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Adopts a new scene size. The caller re-applies the look it wants —
+    /// `applyTitle()` or `apply(level:)` — which is what re-measures the haze.
+    func resize(to newSize: CGSize) { sceneSize = newSize }
 
     private static let cycleKey = "titleCycle"
 
