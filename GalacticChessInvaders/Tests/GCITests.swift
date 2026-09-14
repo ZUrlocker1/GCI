@@ -3869,6 +3869,10 @@ final class FleetControllerTests: XCTestCase {
 @MainActor
 final class LaserPhysicsTests: XCTestCase {
 
+    /// Large enough that the board hits its 96pt cap — exactly 1.5× the design
+    /// square, so the expected sizes are round numbers.
+    static let bigBoard = SceneLayout(size: CGSize(width: 1512, height: 982))
+
     /// `SKColor` equality compares colour *spaces* as well as components, and a
     /// sprite's `color` comes back in device RGB while `.white` and the palette
     /// constants are generic gray / sRGB. Same colour, unequal objects.
@@ -4006,13 +4010,17 @@ final class LaserPhysicsTests: XCTestCase {
     /// a round made on a 64pt board is still in that pool when the window has
     /// grown the board to 96.
     func testRoundsTakeTheBoardsScaleWhenTheyAreFired() {
+        // The layout is a global the whole suite shares, so pin both ends of
+        // the comparison rather than assuming the design canvas is current.
+        let previous = SceneLayout.current
+        defer { SceneLayout.adopt(previous) }
+
+        SceneLayout.adopt(.design)
         let laser = LaserNode(owner: .player)
         laser.fire(from: .zero, damage: 1, speed: 400, travelDistance: 400)
         let atDesign = laser.size
 
-        let previous = LaserNode.contentScale
-        defer { LaserNode.contentScale = previous }
-        LaserNode.contentScale = 1.5
+        SceneLayout.adopt(Self.bigBoard)      // 96pt squares: 1.5× the design
         laser.deactivate()
         laser.fire(from: .zero, damage: 1, speed: 400, travelDistance: 400)
         XCTAssertEqual(laser.size.width, atDesign.width * 1.5, accuracy: 0.01)
@@ -4248,6 +4256,38 @@ final class RaiderTests: XCTestCase {
         case .rank(let rank):
             return Self.boardBottom + (CGFloat(rank) - 0.5) * BoardNode.squareSize
         }
+    }
+
+    /// A scout crosses the board, so it is the board's scale — at 30pt against
+    /// 96pt squares it read as the toy the player ship used to be. The pool is
+    /// built once for the life of the scene, so the size is re-derived on every
+    /// launch rather than baked in at init.
+    func testScoutsTakeTheBoardsScaleWhenTheyLaunch() {
+        let previous = SceneLayout.current
+        defer { SceneLayout.adopt(previous) }
+
+        let scout = RaiderNode()
+        func launch() {
+            scout.cross(fromX: 0, toX: 400, y: 300, firing: false,
+                        powerUp: .rapidFire, flight: .straight,
+                        bounds: Self.bounds)
+        }
+        SceneLayout.adopt(.design)
+        launch()
+        let atDesign = scout.size
+        let designArea = scout.physicsBody?.area ?? 0
+
+        SceneLayout.adopt(LaserPhysicsTests.bigBoard)   // 96pt squares: 1.5×
+        launch()
+        XCTAssertEqual(scout.size.height, atDesign.height * 1.5, accuracy: 0.01)
+        XCTAssertEqual(scout.size.width, atDesign.width * 1.5, accuracy: 0.01)
+        // The hitbox is rebuilt with it — a scout you can visibly miss while
+        // aiming dead centre is the bug this guards.
+        // The hitbox is rebuilt with it — a scout you can visibly miss while
+        // aiming dead centre is the bug this guards. Compared as a ratio: the
+        // body reports its area in physics units, not in points.
+        XCTAssertEqual((scout.physicsBody?.area ?? 0) / designArea, 1.5 * 1.5,
+                       accuracy: 0.01)
     }
 
     // MARK: - The level roster (§13.1)

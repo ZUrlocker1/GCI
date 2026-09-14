@@ -34,6 +34,11 @@ final class RaiderNode: SKSpriteNode {
     /// chess pieces it flies past — wrong for something that is meant to be a
     /// passing bonus rather than part of the fleet.
     private static let displayHeight: CGFloat = 30
+
+    /// The board's scale, so a scout crossing the board stays in proportion to
+    /// the pieces it flies past. Read in `size(for:)`, which runs on every
+    /// launch, so the pool follows a resize without being walked.
+    private static var contentScale: CGFloat { SceneLayout.contentScale }
     private static let crossKey = "cross"
     private static let damagedKey = "damaged"
     private static let hullName = "hull"
@@ -63,9 +68,10 @@ final class RaiderNode: SKSpriteNode {
         // Both multipliers apply to the sprite at the standard height, so the
         // Spread Scout's 1.4 × 0.85 squashes it the way §13.2 asks and the
         // camel's 1.5 × 1.5 simply makes it bigger.
-        let unit = source.height > 0 ? displayHeight / source.height : 1
+        let height = displayHeight * contentScale
+        let unit = source.height > 0 ? height / source.height : 1
         return CGSize(width: source.width * unit * CGFloat(powerUp.widthMultiplier),
-                      height: displayHeight * CGFloat(powerUp.heightMultiplier))
+                      height: height * CGFloat(powerUp.heightMultiplier))
     }
 
     init() {

@@ -29,9 +29,12 @@ final class ExplosionPool {
     /// `scale` is the size of the event: 1.0 for an ordinary piece, larger for
     /// a king. Does nothing if all eight are already burning, which needs eight
     /// destructions inside half a second.
+    /// The board's own scale is applied here rather than by each caller: an
+    /// explosion is the size of the thing that exploded, and every caller
+    /// passing it separately is a caller that can forget to.
     func burst(at position: CGPoint, color: SKColor, scale: CGFloat = 1.0) {
         guard let node = bursts.first(where: { !$0.isBurning }) else { return }
-        node.burst(at: position, color: color, scale: scale)
+        node.burst(at: position, color: color, scale: scale * SceneLayout.contentScale)
     }
 
     func reset() { bursts.forEach { $0.stop() } }
@@ -70,7 +73,8 @@ final class ShatterPool {
     func shatter(at position: CGPoint, color: SKColor, along direction: CGVector,
                  scale: CGFloat = 1) {
         guard let node = sprays.first(where: { !$0.isBusy }) else { return }
-        node.shatter(at: position, color: color, along: direction, scale: scale)
+        node.shatter(at: position, color: color, along: direction,
+                     scale: scale * SceneLayout.contentScale)
     }
 
     func reset() { sprays.forEach { $0.stop() } }

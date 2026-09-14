@@ -39,11 +39,17 @@ struct SceneLayout {
     @MainActor static func adopt(_ layout: SceneLayout) {
         current = layout
         BoardNode.adopt(layout)
-        // Rounds cross the board, so they are the board's scale rather than the
-        // window's. The pool is rebuilt with the playfield, so this only has to
-        // be right before that happens.
-        LaserNode.contentScale = layout.contentScale
     }
+
+    /// How large everything on the playfield is drawn, relative to the canvas
+    /// it was composed against.
+    ///
+    /// Read directly by the things that are pooled for the life of the scene —
+    /// rounds, raiders, score pops, explosions — rather than pushed to them by
+    /// `adopt`. They all re-derive their size each time they are put into play,
+    /// so reading it at that moment resizes the whole pool without anything
+    /// having to walk it, and there is no copy of the number to go stale.
+    @MainActor static var contentScale: CGFloat { current.contentScale }
 
     let size: CGSize
 

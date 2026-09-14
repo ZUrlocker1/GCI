@@ -43,10 +43,13 @@ final class CheckPathNode: SKNode {
 
         addChild(Self.makeLine(origin: origin, delta: delta, length: length,
                               isJump: isJump, color: color, pulses: pulses))
-        addChild(Self.makeMarker(at: origin, radius: 15, color: color,
+        // Drawn on the board, so the rings and the stroke are the board's
+        // scale — at a 96pt square a 15pt ring is a dot on the piece it marks.
+        let scale = BoardNode.scale
+        addChild(Self.makeMarker(at: origin, radius: 15 * scale, color: color,
                                 delay: 0, pulses: pulses))
         // The king's marker lands as the line arrives.
-        addChild(Self.makeMarker(at: king, radius: 19, color: color,
+        addChild(Self.makeMarker(at: king, radius: 19 * scale, color: color,
                                 delay: Self.sweep * 0.8, pulses: pulses))
 
         // Self-cleaning: nothing else has to remember to remove this.
@@ -65,11 +68,12 @@ final class CheckPathNode: SKNode {
         path.move(to: .zero)
         path.addLine(to: CGPoint(x: length, y: 0))
 
+        let scale = BoardNode.scale
         let line = SKShapeNode(path: isJump
-            ? path.copy(dashingWithPhase: 0, lengths: [9, 7])
+            ? path.copy(dashingWithPhase: 0, lengths: [9 * scale, 7 * scale])
             : path)
         line.strokeColor = color
-        line.lineWidth = 2.5
+        line.lineWidth = 2.5 * scale
         line.lineCap = .round
         line.glowWidth = 3
         line.position = origin
@@ -100,7 +104,7 @@ final class CheckPathNode: SKNode {
                                    delay: TimeInterval, pulses: Int) -> SKShapeNode {
         let ring = SKShapeNode(circleOfRadius: radius)
         ring.strokeColor = color
-        ring.lineWidth = 2
+        ring.lineWidth = 2 * BoardNode.scale
         ring.glowWidth = 2
         ring.fillColor = .clear
         ring.position = point

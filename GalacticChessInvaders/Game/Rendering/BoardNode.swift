@@ -30,6 +30,12 @@ final class BoardNode: SKNode {
     private(set) static var squareSize: CGFloat = SceneLayout.design.squareSize
     private(set) static var boardSize: CGFloat = SceneLayout.design.boardSize
 
+    /// The board's size relative to the canvas it was composed against, for the
+    /// details that are drawn *on* it in points rather than in squares — the
+    /// move dots, the coordinate labels, the selection's stroke. Everything
+    /// here is rebuilt by `relayout`, so reading it at build time is enough.
+    static var scale: CGFloat { squareSize / SceneLayout.designSquareSize }
+
     /// Adopt a layout's geometry. Called from `buildPlayfield` before the board
     /// or any piece is constructed.
     static func adopt(_ layout: SceneLayout) {
@@ -53,13 +59,13 @@ final class BoardNode: SKNode {
         let ring: SKShapeNode
 
         init(squareSize: CGFloat) {
-            dot = SKShapeNode(circleOfRadius: 6)
+            dot = SKShapeNode(circleOfRadius: 6 * BoardNode.scale)
             dot.fillColor = BoardNode.cyan.withAlphaComponent(0.6)
             dot.strokeColor = BoardNode.cyan
             dot.lineWidth = 1
             dot.glowWidth = 4
 
-            ring = SKShapeNode(circleOfRadius: squareSize / 2 - 5)
+            ring = SKShapeNode(circleOfRadius: squareSize / 2 - 5 * BoardNode.scale)
             ring.strokeColor = BoardNode.magenta.withAlphaComponent(0.85)
             ring.lineWidth = 2
             ring.glowWidth = 4
@@ -190,13 +196,15 @@ final class BoardNode: SKNode {
     private func buildCoordinates() {
         for index in 0..<8 {
             let file = label(String(UnicodeScalar(97 + index)!), align: .center)
-            file.position = CGPoint(x: (CGFloat(index) + 0.5) * Self.squareSize, y: -16)
+            file.position = CGPoint(x: (CGFloat(index) + 0.5) * Self.squareSize,
+                                    y: -16 * Self.scale)
             addChild(file)
             coordinateNodes.append(file)
 
             let rank = label("\(index + 1)", align: .right)
             rank.verticalAlignmentMode = .center
-            rank.position = CGPoint(x: -12, y: (CGFloat(index) + 0.5) * Self.squareSize)
+            rank.position = CGPoint(x: -12 * Self.scale,
+                                    y: (CGFloat(index) + 0.5) * Self.squareSize)
             addChild(rank)
             coordinateNodes.append(rank)
         }
@@ -205,7 +213,7 @@ final class BoardNode: SKNode {
     private func label(_ text: String, align: SKLabelHorizontalAlignmentMode) -> SKLabelNode {
         let node = SKLabelNode(fontNamed: "PressStart2P-Regular")
         node.text = text
-        node.fontSize = 8
+        node.fontSize = 8 * Self.scale
         node.fontColor = Self.cyan
         node.horizontalAlignmentMode = align
         node.zPosition = -1
@@ -373,9 +381,10 @@ final class BoardNode: SKNode {
     private func buildSelection() {
         let s = Self.squareSize
         selection.path = CGPath(roundedRect: CGRect(x: -s / 2, y: -s / 2, width: s, height: s),
-                                cornerWidth: 4, cornerHeight: 4, transform: nil)
+                                cornerWidth: 4 * Self.scale, cornerHeight: 4 * Self.scale,
+                                transform: nil)
         selection.strokeColor = Self.cyan
-        selection.lineWidth = 2
+        selection.lineWidth = 2 * Self.scale
         selection.fillColor = Self.cyan.withAlphaComponent(0.16)
         selection.zPosition = 2
         selection.isHidden = true

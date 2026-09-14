@@ -51,14 +51,14 @@ final class LaserNode: SKSpriteNode {
     private let missileRig = SKNode()
 
     /// The board's scale, so rounds stay in proportion to the squares they
-    /// cross. Set with the rest of the geometry in `SceneLayout.adopt`.
+    /// cross.
     ///
     /// Read at dressing time rather than baked in at init: the pool is built
     /// once for the life of the scene, so a round made on a 64pt board is
     /// still in that pool when the window has grown the board to 96. Every
     /// shot goes through `applyDressing`, so reading it there is enough to
     /// resize the whole pool without touching it.
-    static var contentScale: CGFloat = 1
+    private static var contentScale: CGFloat { SceneLayout.contentScale }
 
     /// A straight bolt, at the board's current scale. The enemy's is shorter.
     private static func boltSize(for owner: ProjectileState.Owner) -> CGSize {

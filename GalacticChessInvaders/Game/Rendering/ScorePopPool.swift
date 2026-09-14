@@ -13,6 +13,7 @@ import SpriteKit
 final class ScorePopPool {
 
     private static let count = 20
+    private static let fontSize: CGFloat = 11
     private static let font = "PressStart2P-Regular"
     private static let riseKey = "rise"
 
@@ -21,7 +22,7 @@ final class ScorePopPool {
     init(parent: SKNode) {
         labels = (0..<Self.count).map { _ in
             let label = SKLabelNode(fontNamed: Self.font)
-            label.fontSize = 11
+            label.fontSize = Self.fontSize
             label.horizontalAlignmentMode = .center
             label.verticalAlignmentMode = .center
             label.zPosition = 22          // above pieces and lasers, below overlays
@@ -43,6 +44,11 @@ final class ScorePopPool {
         label.fontColor = color
         label.position = position
         label.alpha = 1
+        // The pop belongs to the piece it came off, so it is the board's size
+        // rather than the window's. Set per pop: the pool outlives any one
+        // board size, and the font is only re-measured when a label is used.
+        let scale = SceneLayout.contentScale
+        label.fontSize = Self.fontSize * scale
         label.setScale(0.6)
         label.isHidden = false
         label.removeAction(forKey: Self.riseKey)
@@ -52,7 +58,7 @@ final class ScorePopPool {
             // the label is already half gone by the time it is legible.
             .scale(to: 1.0, duration: 0.12),
             .group([
-                .moveBy(x: 0, y: Juice.popRise, duration: Juice.popDuration),
+                .moveBy(x: 0, y: Juice.popRise * scale, duration: Juice.popDuration),
                 .sequence([.wait(forDuration: Juice.popDuration * 0.45),
                            .fadeOut(withDuration: Juice.popDuration * 0.55)]),
             ]),

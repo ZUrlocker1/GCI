@@ -2209,7 +2209,7 @@ class GameScene: SKScene {
         guard let boardNode, let point = boardNode.center(of: square) else { return }
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
         label.text = "AUTO"
-        label.fontSize = 12
+        label.fontSize = 12 * layout.contentScale
         label.fontColor = NeonPalette.alertOrange
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
@@ -3450,11 +3450,13 @@ class GameScene: SKScene {
         let tint = heavy ? SKColor.white
                  : angled ? NeonPalette.shotPurple : NeonPalette.magenta
 
-        let tick = SKShapeNode(rectOf: CGSize(width: 2.5, height: BoardNode.squareSize * 0.42),
-                               cornerRadius: 1.25)
+        let scale = BoardNode.scale
+        let tick = SKShapeNode(rectOf: CGSize(width: 2.5 * scale,
+                                              height: BoardNode.squareSize * 0.42),
+                               cornerRadius: 1.25 * scale)
         tick.fillColor = tint
         tick.strokeColor = .white
-        tick.lineWidth = 0.75
+        tick.lineWidth = 0.75 * scale
         tick.glowWidth = 4
         tick.zPosition = 2
         // Grows out of the piece's foot, pointing exactly where the round will
@@ -3730,10 +3732,14 @@ class GameScene: SKScene {
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         label.zPosition = 12
+        // Scaled the way the rest of the gutter is, rather than by its own
+        // rule — it shares the column with the turn clock and the hints.
+        label.setScale(layout.gutterScale)
+        let inset = 40 * layout.gutterScale
         label.position = CGPoint(
             x: layout.gutterCentreX,
-            y: side == .black ? Self.boardBottomY + BoardNode.boardSize - 40
-                              : Self.boardBottomY - 40)
+            y: side == .black ? Self.boardBottomY + BoardNode.boardSize - inset
+                              : Self.boardBottomY - inset)
         label.run(.repeatForever(.sequence([
             .fadeAlpha(to: 0.2, duration: 0.28), .fadeAlpha(to: 1.0, duration: 0.28),
         ])))
@@ -4013,7 +4019,7 @@ class GameScene: SKScene {
         let ring = SKShapeNode(circleOfRadius: 1)
         ring.position = point
         ring.fillColor = .clear
-        ring.lineWidth = 3
+        ring.lineWidth = 3 * layout.contentScale
         ring.glowWidth = 6
         ring.zPosition = 14
         bloomNode.addChild(ring)
@@ -4098,7 +4104,7 @@ class GameScene: SKScene {
         path.addLine(to: target)
         let streak = SKShapeNode(path: path)
         streak.strokeColor = NeonPalette.crimson
-        streak.lineWidth = 1.5
+        streak.lineWidth = 1.5 * layout.contentScale
         streak.glowWidth = 3
         streak.alpha = 0
         streak.zPosition = 13
@@ -4109,11 +4115,11 @@ class GameScene: SKScene {
             .removeFromParent(),
         ]))
 
-        let fragment = SKShapeNode(circleOfRadius: 3.5)
+        let fragment = SKShapeNode(circleOfRadius: 3.5 * layout.contentScale)
         fragment.position = origin
         fragment.fillColor = .white
         fragment.strokeColor = NeonPalette.crimson
-        fragment.lineWidth = 1.5
+        fragment.lineWidth = 1.5 * layout.contentScale
         fragment.glowWidth = 4
         fragment.zPosition = 15
         bloomNode.addChild(fragment)
@@ -4161,21 +4167,23 @@ class GameScene: SKScene {
     /// §13.3's type label, flashed at the destroy position for 0.8 seconds.
     private func flashPowerUpLabel(_ powerUp: PowerUp, at point: CGPoint) {
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let scale = layout.contentScale
         label.text = powerUp.label
-        label.fontSize = 14
+        label.fontSize = 14 * scale
         label.fontColor = powerUp.tint
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         // Clamped inward so a scout shot near the edge does not put half the
         // word off-screen — the label is wider than the ship that earned it.
-        let margin = CGFloat(powerUp.label.count) * 7 + 12
+        let margin = (CGFloat(powerUp.label.count) * 7 + 12) * scale
         label.position = CGPoint(x: min(max(point.x, margin), size.width - margin),
                                  y: point.y)
         label.zPosition = 16
         bloomNode.addChild(label)
         label.setScale(0.6)
         label.run(.sequence([
-            .group([.scale(to: 1.15, duration: 0.14), .moveBy(x: 0, y: 12, duration: 0.14)]),
+            .group([.scale(to: 1.15, duration: 0.14),
+                    .moveBy(x: 0, y: 12 * scale, duration: 0.14)]),
             .scale(to: 1.0, duration: 0.1),
             .wait(forDuration: 0.4),
             .fadeOut(withDuration: 0.16),
@@ -4345,7 +4353,11 @@ class GameScene: SKScene {
             bloomNode.position = .zero      // always land back on true centre
             return
         }
-        let (offset, angle) = Juice.offset(amplitude: amplitude, lastAngle: shakeAngle)
+        // Against the board: 30pt of displacement is half a square at the
+        // design size and a third of one at 96, so an unscaled shake quietly
+        // loses its punch exactly as the board gets big enough to notice.
+        let (offset, angle) = Juice.offset(amplitude: amplitude * layout.contentScale,
+                                           lastAngle: shakeAngle)
         shakeAngle = angle
         bloomNode.position = offset
     }
