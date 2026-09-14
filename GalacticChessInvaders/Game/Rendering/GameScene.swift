@@ -1602,10 +1602,6 @@ class GameScene: SKScene {
         // animate `position` without the centred-overlay registry fighting it
         // for the same property. The carrier never moves under its own power,
         // which is exactly what the registry assumes of everything it holds.
-        // Whatever is still on screen from the last wave goes first — V skips
-        // levels faster than a banner's own lifetime.
-        dismissLevelBanner()
-
         let carrier = SKNode()
         carrier.name = LevelBannerNode.carrierName
         carrier.position = CGPoint(x: size.width / 2, y: size.height / 2)
