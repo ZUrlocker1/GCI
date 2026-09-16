@@ -648,6 +648,35 @@ class GameScene: SKScene {
             "Sky rebuilt at \(Int(size.width))×\(Int(size.height))")
     }
 
+    /// The shockwave's ring, drawn once and scaled for every blast after.
+    ///
+    /// A hollow annulus in white, so the sprite can be tinted. The edges fall
+    /// off over a couple of pixels; at the sizes this is scaled to, a hard edge
+    /// would alias into a dotted circle.
+    static let shockwaveTexture: SKTexture = {
+        let side = 256
+        let space = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: nil, width: side, height: side, bitsPerComponent: 8,
+            bytesPerRow: 0, space: space,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return SKTexture() }
+        let c = CGFloat(side) / 2
+        // Stroked just inside the edge so the glow has somewhere to go.
+        context.setStrokeColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        context.setLineWidth(5)
+        context.addArc(center: CGPoint(x: c, y: c), radius: c - 6,
+                       startAngle: 0, endAngle: .pi * 2, clockwise: false)
+        context.strokePath()
+        context.setStrokeColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.35))
+        context.setLineWidth(11)
+        context.addArc(center: CGPoint(x: c, y: c), radius: c - 6,
+                       startAngle: 0, endAngle: .pi * 2, clockwise: false)
+        context.strokePath()
+        guard let image = context.makeImage() else { return SKTexture() }
+        return SKTexture(cgImage: image)
+    }()
+
     /// A soft round dot: solid core fading to transparent, drawn once at launch.
     /// Additive blending then makes overlapping stars brighten naturally.
     private static func makeStarTexture(diameter: CGFloat = 16) -> SKTexture {
@@ -1527,7 +1556,8 @@ class GameScene: SKScene {
         bloomNode.addChild(player)
         ship = player
 
-        let raiderController = RaiderController(parent: bloomNode, sceneWidth: size.width,
+        let raiderController = RaiderController(parent: bloomNode,
+                                                lane: layout.playfieldMinX...layout.playfieldMaxX,
                                                 boardBottomY: Self.boardBottomY)
         raiderController.onScoutFire = { [weak self] point in self?.fireScoutShot(from: point) }
         raiderController.onExit = { [weak self] node, destroyed in
@@ -2774,12 +2804,17 @@ class GameScene: SKScene {
         // The power-up alley is rebuilt from the layout every frame by
         // `syncPowerUpAlley`, so it needs nothing here.
 
+        // Both cross the playfield rather than the window, so both have to be
+        // told when the window changes what the playfield is.
+        raiders?.adopt(lane: layout.playfieldMinX...layout.playfieldMaxX)
+
         if let ship {
             // The ship belongs to the board's scale, not the window's — it sits
             // under the board and is read against the squares.
             ship.adopt(scale: layout.contentScale)
+            let lane = layout.shipLane
             ship.position = CGPoint(
-                x: min(max(ship.position.x, layout.shipMargin), size.width - layout.shipMargin),
+                x: min(max(ship.position.x, lane.lowerBound), lane.upperBound),
                 y: layout.shipLaneY)
         }
 
@@ -4113,33 +4148,44 @@ class GameScene: SKScene {
     /// from cause to effect, which is the whole difference.
     private func detonate(at point: CGPoint) {
         beginSlowMotion()
-        let reach = (size.width * size.width + size.height * size.height).squareRoot()
+        // The arena's diagonal, not the window's. On a wide monitor the ring
+        // spent most of its 0.85s crossing empty margin, and it was doing it
+        // the expensive way — see below.
+        let w = layout.playfieldWidth, h = size.height
+        let reach = (w * w + h * h).squareRoot()
         // Twice the 0.4s it opened at, and then the slow-motion clock stretches
         // it again — a shockwave that crosses the board in a third of a second
         // is over before the eye has found it.
         let duration: TimeInterval = 0.85
-        let ring = SKShapeNode(circleOfRadius: 1)
+        // A sprite, not an `SKShapeNode`.
+        //
+        // The ring used to rebuild its `CGPath` on every frame of the blast and
+        // let SpriteKit re-stroke it — which is CPU path work that scales with
+        // the circle, so the bigger the screen the more it cost, and it landed
+        // in the middle of the one moment the game is already asking the most
+        // of itself. A texture drawn once and scaled up is free by comparison:
+        // scaling a sprite is a transform, not a redraw.
+        let ring = SKSpriteNode(texture: Self.shockwaveTexture)
         ring.position = point
-        ring.fillColor = .clear
-        ring.lineWidth = 3 * layout.contentScale
-        ring.glowWidth = 6
+        ring.colorBlendFactor = 1
         ring.zPosition = 14
+        ring.size = CGSize(width: 2, height: 2)
         bloomNode.addChild(ring)
 
+        let unit = Self.shockwaveTexture.size().width
         ring.run(.sequence([
             .customAction(withDuration: duration) { [weak self] node, elapsed in
-                guard let self, let shape = node as? SKShapeNode else { return }
+                guard let self, let sprite = node as? SKSpriteNode else { return }
                 let progress = min(1, CGFloat(elapsed) / CGFloat(duration))
-                let radius = reach * progress
-                shape.path = CGPath(ellipseIn: CGRect(x: -radius, y: -radius,
-                                                      width: radius * 2,
-                                                      height: radius * 2),
-                                    transform: nil)
+                let radius = max(1, reach * progress)
+                // The texture is a ring drawn at its own size; scaling it to
+                // the wanted diameter is one transform per frame.
+                sprite.setScale(radius * 2 / unit)
                 // §13.2's magenta → white → transparent, so the wave reads as
                 // energy leaving rather than as a circle being drawn.
-                shape.strokeColor = NeonPalette.magenta.blended(toward: .white,
-                                                               by: progress)
-                shape.alpha = 1 - progress * progress
+                sprite.color = NeonPalette.magenta.blended(toward: .white,
+                                                           by: progress)
+                sprite.alpha = 1 - progress * progress
                 self.clearEnemyRounds(within: radius, of: point)
             },
             .removeFromParent(),
@@ -4956,8 +5002,7 @@ class GameScene: SKScene {
             // Held still while a banner is up or the game is decided; §12.11
             // has gameplay beginning once the announcement leaves.
             if !isBeatSuspended, !isShipDown {
-                let lane = Self.shipMargin...(size.width - Self.shipMargin)
-                ship?.update(deltaTime: dt, bounds: lane)
+                ship?.update(deltaTime: dt, bounds: layout.shipLane)
             }
             shipState?.update(deltaTime: dt)
             if isShipDown {

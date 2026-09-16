@@ -30,13 +30,12 @@ clock and comes apart as you play it.
 
 Current release: `1.2` (build 9). Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
-Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)). 
+Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
 
 **What's new in v1.2** — the release that prepares the Mac game for iPad and iPhone:
 
 - **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. Everything on the playfield — the ship, the lasers, the raiders, the explosions — is sized against the board rather than staying as drawn.
 - **Lighter on the CPU.** Readouts redraw when they change rather than on every frame, and the title screen no longer re-renders its own type sixty times a second — that alone took it from 53% CPU to under 40%. Steady 60fps throughout.
-- **Fixed:** the starfield and nebula could fail to appear at all, depending on how quickly the window was ready at launch.
 - **The log panel moved behind Test Mode.** Press `⌘T`, then `L`.
 - Groundwork for the iPad and iPhone port — see [IOS-Port.md](docs/IOS-Port.md).
 
@@ -45,10 +44,10 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 - **Cadet is now the default difficulty**, and the harder mode is **Ace**.
   Chess Hints are on for Cadet, off for Ace by default, but can be changed.
 - **Chess Hints** — the pieces worth moving glow, and the gutter names them:
-  `MOVE A PAWN`, or `MOVE A PAWN / OR KNIGHT` etc. 
+  `MOVE A PAWN`, or `MOVE A PAWN / OR KNIGHT` etc.
 - **Arcade Hints** — Similarly a message is displayed if the user goes 3 moves
   without firing, or does not use the arrow keys. A message is also displayed
-  in red if they hit their own piece a second time. Hints rearm at each level. 
+  in red if they hit their own piece a second time. Hints rearm at each level.
 
 **What's new in v1.0:**
 

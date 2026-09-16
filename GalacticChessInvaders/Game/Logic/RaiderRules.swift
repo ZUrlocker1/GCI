@@ -115,9 +115,12 @@ enum RaiderRules {
 
     /// How long one crossing takes, entry to exit, including the off-screen
     /// margin at both ends.
-    static func crossingDuration(sceneWidth: CGFloat, scoutWidth: CGFloat,
+    /// `span` is the width a scout crosses — the playfield box, not the
+    /// window. It was the scene's width until a 2560pt monitor made every
+    /// crossing take 2.6× as long as the tuning assumed.
+    static func crossingDuration(span: CGFloat, scoutWidth: CGFloat,
                                  speedMultiplier: Double = 1) -> TimeInterval {
-        TimeInterval((sceneWidth + scoutWidth * 2) / (scoutSpeed * CGFloat(speedMultiplier)))
+        TimeInterval((span + scoutWidth * 2) / (scoutSpeed * CGFloat(speedMultiplier)))
     }
 
     // MARK: - Flight paths (§6.3)

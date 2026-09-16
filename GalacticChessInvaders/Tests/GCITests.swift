@@ -548,7 +548,45 @@ final class SceneLayoutTests: XCTestCase {
         let wide = SceneLayout(size: CGSize(width: 1400, height: 700))
         XCTAssertEqual(wide.squareSize, 64)
         XCTAssertEqual(wide.boardOriginX, 444)              // (1400 - 512) / 2
-        XCTAssertEqual(wide.gutterCentreX, 222)             // and the gutter follows
+        // The gutter's *column* stays with the board rather than drifting out
+        // to the middle of the window: 224 of playfield margin, halved.
+        XCTAssertEqual(wide.gutterCentreX, 444 - 112)
+    }
+
+    /// The arena, as distinct from the window. The board plus one gutter each
+    /// side, which is exactly the canvas the game was composed on — and it
+    /// stops growing when the square hits its cap, so a big monitor gets
+    /// margin rather than a wider game.
+    func testThePlayfieldBoxIsTheOldCanvas() {
+        let design = SceneLayout.design
+        XCTAssertEqual(design.playfieldWidth, 960)
+        XCTAssertEqual(design.playfieldMinX, 0)
+        XCTAssertEqual(design.playfieldMaxX, 960)
+        // 30…930, which is what the fixed canvas gave the ship.
+        XCTAssertEqual(design.shipLane.lowerBound, 30)
+        XCTAssertEqual(design.shipLane.upperBound, 930)
+    }
+
+    /// The bug this fixes: on a 2560pt monitor the ship could fly nine squares
+    /// past the board, against three on the design canvas.
+    func testTheShipCannotRunAwayOnALargeMonitor() {
+        let big = SceneLayout(size: CGSize(width: 2560, height: 1600))
+        XCTAssertEqual(big.squareSize, 96)                  // capped
+        let reachInSquares = (big.shipLane.upperBound - big.boardTopX) / big.squareSize
+        XCTAssertEqual(reachInSquares, 3.06, accuracy: 0.2,
+                       "the ship should still fly about three squares past the board")
+        XCTAssertGreaterThan(big.playfieldMinX, 0, "and the arena is inset, not the window")
+        XCTAssertLessThan(big.playfieldMaxX, big.size.width)
+    }
+
+    /// Never wider than the window it is drawn in, however narrow that gets.
+    func testThePlayfieldNeverLeavesTheWindow() {
+        for width in stride(from: 480.0, through: 2600.0, by: 17.0) {
+            let l = SceneLayout(size: CGSize(width: width, height: 900))
+            XCTAssertGreaterThanOrEqual(l.playfieldMinX, 0, "at \(width)")
+            XCTAssertLessThanOrEqual(l.playfieldMaxX, l.size.width, "at \(width)")
+            XCTAssertLessThanOrEqual(l.shipLane.lowerBound, l.shipLane.upperBound, "at \(width)")
+        }
     }
 
     /// A bigger window grows the board, but only to the cap. Uncapped it hit
@@ -4596,7 +4634,7 @@ final class RaiderTests: XCTestCase {
     /// Every level gets clear sky between crossings, and the gap tightens only
     /// where the level is offering more than one power-up.
     func testThereIsAlwaysClearSkyBetweenScouts() {
-        let crossing = RaiderRules.crossingDuration(sceneWidth: 960, scoutWidth: 58)
+        let crossing = RaiderRules.crossingDuration(span: 960, scoutWidth: 58)
         for level in 1...LevelManager.finalLevel {
             let table = LevelManager.parameters(for: level).raiderInterval
             let count = PowerUps.roster(forLevel: level).count
@@ -4631,7 +4669,7 @@ final class RaiderTests: XCTestCase {
     /// A wave should see a handful of crossings, not a stream — and the first
     /// has to arrive early enough that the power-up is actually offered.
     func testAWaveSeesAFewCrossingsAndTheFirstArrivesEarly() {
-        let crossing = RaiderRules.crossingDuration(sceneWidth: 960, scoutWidth: 45)
+        let crossing = RaiderRules.crossingDuration(span: 960, scoutWidth: 45)
         let gap = RaiderRules.interval(forLevel: 20, crossing: crossing)
         let first = gap * RaiderRules.openingLead
 

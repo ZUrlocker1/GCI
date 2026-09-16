@@ -64,3 +64,6 @@ Tempest 2000 OST/
 # ~360MB of Abstraction / Tallbeard loop packs that nothing in the game uses;
 # they were tracked once and pushed, which is why the history is large.
 assets/music/music-loop-bundle-*/
+
+# Kept release builds, restored from history for comparison. Local only.
+archive/

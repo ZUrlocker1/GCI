@@ -23,7 +23,11 @@ final class RaiderController {
     var onScoutFire: FireHandler?
 
     private let parent: SKNode
-    private let sceneWidth: CGFloat
+    /// Where a crossing starts and ends: the playfield box, not the window.
+    /// `crossingDuration` is measured in points, so a wide window used to make
+    /// every scout take longer and thin the raider cadence to match.
+    private var lane: ClosedRange<CGFloat>
+    private var laneWidth: CGFloat { lane.upperBound - lane.lowerBound }
     private let boardBottomY: CGFloat
     private var scouts: [RaiderNode] = []
     private var schedule = RaiderSchedule()
@@ -35,9 +39,9 @@ final class RaiderController {
         (boardBottomY - 10)...(boardBottomY + BoardNode.boardSize + 20)
     }
 
-    init(parent: SKNode, sceneWidth: CGFloat, boardBottomY: CGFloat) {
+    init(parent: SKNode, lane: ClosedRange<CGFloat>, boardBottomY: CGFloat) {
         self.parent = parent
-        self.sceneWidth = sceneWidth
+        self.lane = lane
         self.boardBottomY = boardBottomY
         scouts = (0..<RaiderRules.maxOnScreen).map { _ in
             let node = RaiderNode()
@@ -112,10 +116,14 @@ final class RaiderController {
         let width = scouts.first?.size.width ?? 0
         return RaiderRules.interval(
             forLevel: levelInterval,
-            crossing: RaiderRules.crossingDuration(sceneWidth: sceneWidth,
+            crossing: RaiderRules.crossingDuration(span: laneWidth,
                                                    scoutWidth: width),
             rosterCount: rosterCount)
     }
+
+    /// Adopts a new playfield after a resize. A crossing already in the air
+    /// keeps the path it launched with; the next one uses the new lane.
+    func adopt(lane: ClosedRange<CGFloat>) { self.lane = lane }
 
     /// Removes the raiders from the scene. The controller is rebuilt per level,
     /// so without this each level left two more nodes parented and forgotten.
@@ -149,8 +157,8 @@ final class RaiderController {
         // appearing at the edge.
         let margin = scout.size.width
         let leftToRight = Bool.random()
-        let fromX = leftToRight ? -margin : sceneWidth + margin
-        let toX = leftToRight ? sceneWidth + margin : -margin
+        let fromX = leftToRight ? lane.lowerBound - margin : lane.upperBound + margin
+        let toX = leftToRight ? lane.upperBound + margin : lane.lowerBound - margin
 
         let bounds = flightBounds
         let entryY: CGFloat

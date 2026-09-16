@@ -157,6 +157,36 @@ struct SceneLayout {
         CGPoint(x: boardOriginX + boardSize / 2, y: boardBottomY + boardSize / 2)
     }
 
+    // MARK: - The playfield box
+    //
+    // The arena the game is played in, as distinct from the window it is drawn
+    // in. Extra height already becomes margin rather than board; this makes
+    // extra width behave the same way.
+
+    /// How far past the board the playfield extends on each side: one gutter,
+    /// scaled with the board.
+    ///
+    /// The number reproduces the canvas the game was composed on. At the design
+    /// size the box is 512 + 2×224 = 960 — exactly the old fixed canvas — and it
+    /// stops growing once the square hits its 96pt cap.
+    var playfieldMargin: CGFloat { Self.minGutterWidth * contentScale }
+
+    /// Centred on the board, and never outside the window.
+    ///
+    /// Under the old fixed canvas the ship could fly 194pt — three squares —
+    /// past each edge of the board, because that is all the room there was. On
+    /// a 2560pt monitor the same code let it fly 866pt, nine squares, out into
+    /// empty space, and raiders crossed the whole monitor: `crossingDuration`
+    /// is measured in points, so a wide window quietly made every scout take
+    /// 2.6× as long and thinned the raider cadence to match. The box puts both
+    /// back where they were composed.
+    var playfieldMinX: CGFloat { max(0, boardOriginX - playfieldMargin) }
+    var playfieldMaxX: CGFloat { min(size.width, boardTopX + playfieldMargin) }
+    var playfieldWidth: CGFloat { playfieldMaxX - playfieldMinX }
+
+    /// The board's right edge.
+    var boardTopX: CGFloat { boardOriginX + boardSize }
+
     // MARK: - Ship lane
 
     /// Just below the board, so the ship stays with it rather than pinned to
@@ -165,15 +195,28 @@ struct SceneLayout {
     /// How close to the wall the ship may get.
     var shipMargin: CGFloat { 30 }
 
+    /// Where the ship may fly: the playfield box, inset by its own margin.
+    /// 30…930 at the design size, which is exactly what the fixed canvas gave.
+    var shipLane: ClosedRange<CGFloat> {
+        let low = playfieldMinX + shipMargin
+        return low...max(low, playfieldMaxX - shipMargin)
+    }
+
     // MARK: - Left gutter
     //
     // The column left of the board carrying the turn clock, the check banner,
     // the power-up alley and the Chess and Arcade Hints. In portrait on a phone
     // there is no room for it at all — see docs/IOS-Port.md §5.
 
-    /// The middle of the space left of the board, so the column follows the
-    /// board rather than sitting at a fixed x and colliding with it.
-    var gutterCentreX: CGFloat { boardOriginX / 2 }
+    /// The middle of the gutter — measured inside the playfield box, not inside
+    /// the window.
+    ///
+    /// x=112 at the design size, which is the figure every comment in this file
+    /// and every alley test is measured against. Against the window instead, a
+    /// 2560pt monitor put it at 448 and the turn clock drifted hundreds of
+    /// points away from the board it belongs to. Inside the box the column
+    /// keeps a constant distance from the board's edge at any size.
+    var gutterCentreX: CGFloat { (playfieldMinX + boardOriginX) / 2 }
 
     /// How much to scale everything that is not the board itself: the gutter
     /// readouts, and the centred banners.

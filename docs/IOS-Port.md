@@ -234,8 +234,6 @@ Mac release ever needs the safe path in a hurry.
 
 ## 3a. Original plan
 
-
-
 Everything else depends on this, so it comes first and it is worth doing properly.
 
 **Replace the fixed canvas with a scene that lays itself out.** Set
@@ -455,10 +453,128 @@ change in logic. Two things need attention:
 
 ### What becomes unreachable
 
-`⌘T` Test Mode and the `L` diagnostics panel are keyboard-only. On a device without a
-keyboard they are gone. That is arguably fine for Test Mode. The diagnostics log is more
-useful than it sounds for tester reports, so it wants a gesture — a three-finger tap, or
-a long press on the title screen.
+Every hotkey in the game is an `NSEvent` in `GameScene.keyDown` or `InputHandler`. On a
+phone there is no keyboard at all; on an iPad there may or may not be one. Three
+separate problems, and they want different answers.
+
+#### 1. The player-facing hotkeys, and the promises the UI makes about them
+
+| Binding | What it does | On iOS |
+|---|---|---|
+| `S` | Settings | Button exists; **drop the hotkey affordance** |
+| `I`, `⌘I`, `?` | How To Play | Button exists; **drop the affordance** |
+| `M` | Mute music | Needs a Settings row — it already has one |
+| `Escape` | Pause | Needs a touch target |
+| `Q` | Leave the run | Needs a touch target |
+| `Return` / any key | Start, dismiss, continue | Tap anywhere already works for most of these |
+| `Y` / `N` | Quit prompt, new game | On-screen buttons |
+| `Space`, `←` `→`, `A` `D` | Fire and steer | §4's virtual controller |
+
+**Decided: the handlers stay, the affordances go.** Every `keyDown` path is kept, so an
+iPad in a Magic Keyboard behaves exactly as the Mac does today — including `⌘T` and the
+test keys. What does not survive is the *advertising*: the underlined hotkey letter in
+`SET` and `INFO` comes off on iOS unconditionally, not conditionally, because a button
+that sometimes claims a shortcut and sometimes does not is worse than one that never
+does. `GCKeyboard.coalesced` (iOS 14+, with connect/disconnect notifications) is still
+worth knowing about for the *copy* below, but the underlines are simply gone.
+
+**The copy has to change, because it names keys.** Every string, and what it should say
+on a touch device:
+
+| Where | Today | On iOS |
+|---|---|---|
+| `TitleOverlayNode` | `PRESS ANY KEY TO START` | `TAP TO START` |
+| `GameScene.showPausedOverlay` | `PRESS ANY KEY TO RESUME` | `TAP TO RESUME` |
+| `HowToPlayNode`, `SettingsNode` | `PRESS ANY KEY TO RESUME GAME` | `TAP BACK TO RESUME` |
+| `GameOverNode` | `PRESS ANY KEY  ·  LEVEL n` | `TAP FOR LEVEL n` |
+| `GameOverNode` | `NEW GAME?   Y / N` | `NEW GAME?` with two buttons |
+| `GameScene` quit prompt | `Y / N` | two buttons — `QUIT` / `KEEP PLAYING` |
+| Arcade Hint, fire | `PRESS SPACE` / `TO FIRE!` | `TAP THE` / `FIRE BUTTON!` |
+| Arcade Hint, steer | `USE ARROWS` / `TO MOVE!` | `DRAG TO` / `MOVE SHIP!` |
+| `HighScoreEntryNode` | `RETURN WHEN DONE  ·  UP TO 3 CHARACTERS` | `DONE  ·  UP TO 3 CHARACTERS` |
+| How To Play, controls | chips `← →` / `SPACE` / `CLICK` / `ESC` | `DRAG` / `FIRE` / `TAP` / `PAUSE`, naming the on-screen controls |
+| `SettingsNode`, log row | `SAME AS THE L KEY` | drop the line |
+| Test Mode gate | `⌘T FIRST` | `TEST MODE FIRST` |
+
+Two notes on that table. The Arcade Hints are the constrained ones —
+`ChessHintNode.ControlPrompt` returns two lines and the column fits about eleven
+characters at 9pt, which the suggestions above respect. And where a keyboard *is*
+attached, the Mac wording is still the better wording, so these want to be a
+`GCKeyboard`-aware lookup rather than a hard swap — one function returning either
+string, not two code paths.
+
+#### 2. Getting into Test Mode without `⌘T`
+
+`⌘T` is deliberately Command-modified so it cannot collide with gameplay, and it is
+per-session so nobody leaves it on. Neither property survives onto a touch device.
+
+**Decided: a long press on the version label, and Test Mode ships.** On iOS the version
+moves out of the Settings screen — where it sits today, `SettingsNode` line 277 — and
+onto the play screen, bottom-left corner, small and dim. That earns its place twice
+over: a tester reporting a bug can read the build number straight off the screen, and it
+gives the gesture something real to aim at.
+
+A **single ~1.5-second press** on it, rather than a tap count. Counted taps were the
+first idea — seven is the Android developer-mode convention — but seven is slow, gives
+no feedback while you are doing it, and feels broken until it suddenly works. A long
+press is one deliberate action, impossible to trigger by accident in a corner nothing
+else uses, and it can show its own progress: dim the label up to full brightness over
+the hold, so the gesture explains itself halfway through. The confirmation already
+exists — `flashGutterNotice("TEST MODE ON")`.
+
+The other conventions considered, and why not:
+
+1. **Seven taps on the version.** Slow, no feedback mid-gesture. The convention people
+   know, but the worse interaction.
+2. **Two- or three-finger long press anywhere.** No accidental triggers, but nothing on
+   screen to aim at, so nobody finds it without being told.
+3. **A shake gesture.** The classic debug trigger, and wrong for this game — it is
+   played in motion and would fire by accident.
+4. **A visible Settings row.** Rejected once already: 1.2 moved the log panel *behind*
+   Test Mode precisely because players opened it by accident and had no idea what they
+   were looking at. Putting the gate itself in plain sight undoes that.
+5. **A Konami-style sequence on the virtual stick** — ↑↑↓↓←→←→ and fire. Thematically
+   perfect for an arcade game, and genuinely tempting given what Test Mode now is, but
+   fiddly on a thumbstick and slow to enter. Worth keeping in the back pocket as an
+   easter egg rather than as the only door.
+6. **A URL scheme, `gci://testmode`.** Not a substitute for a gesture, but worth adding
+   alongside one: it is the easiest thing to put in a TestFlight email, and it gives
+   automation a way in.
+
+**`⌘T` stays** wherever a keyboard is attached, and all routes land in the same
+`testMode.toggle()`.
+
+**Test Mode ships in the release build.** This is a decision, not an open question: on
+iOS it doubles as a cheat code. A player stuck on a wave can skip it rather than put the
+game down, and `V` is a better answer to frustration than a difficulty setting. That
+changes how findable it should be — an undocumented gesture nobody discovers helps
+nobody — so the sequence worth considering is: silent at first, then a one-line nudge
+after the player loses the same level three times. App Review sees whatever is behind
+the gesture either way, which is an argument for it being a cheat code rather than a
+developer tool.
+
+#### 3. The debug keys themselves — `L`, `A`, `P`, `R`, `V`
+
+These split cleanly by kind, and the split is the design:
+
+- **Toggles** — `L` (diagnostics panel) and `A` (Auto Chess) are states that persist.
+  They belong in **Settings rows shown only in Test Mode**, which is exactly how the log
+  row already works (`SettingsNode(showsLogRow: testMode)`). Auto Chess joins it.
+- **Momentary actions** — `P` (grant the next power-up), `R` (send a raider now) and
+  `V` (skip the level) all fire *during play* and are meaningless from a modal panel: by
+  the time you have closed Settings, the thing you wanted to observe has moved on. They
+  need to be reachable with the game running, which means a **Test Mode strip on the
+  playfield**: a compact row of small buttons — `PWR · RAID · SKIP` — drawn only while
+  Test Mode is on, and therefore never seen by a player.
+
+Two placement constraints for that strip. The left gutter is gone in portrait on a phone
+(§5, Pass 4), so it cannot live there; and the diagnostics panel is landscape-only for
+the same reason, so `L` should be hidden outright in portrait rather than offered and
+then disappointing. The ship's lane along the bottom is the one band that survives every
+orientation, which makes it the likely home — or a single `⚙` that expands, on a phone.
+
+The keyboard path stays for all five on an iPad with a keyboard, so nothing here is a
+regression for the way the game is tested today.
 
 ---
 
@@ -584,11 +700,77 @@ battery, so it remains the trade-off the port has to make consciously — but it
 and power question, not a frame-time one, and it has to be measured on device with the
 GPU counters rather than inferred from a process total.
 
-**What the CPU is actually doing is walking the node tree.** With the bloom ruled out
-and the node count flat — 711 on the title screen, 890–920 in play, stable over
-minutes, so nothing is leaking — the remaining per-frame work is SpriteKit's own
-traversal and action evaluation, which scales with how many nodes exist rather than
-with how many are visible. The census is unflattering:
+**Measured, not inferred.** A 60-second Time Profiler run of the Release build on a
+MacBook Air (fanless), Blitz with Rapid Fire, thermal state Nominal throughout —
+`Documents/GCI 09-14-26.trace`:
+
+| | CPU over 60s | Share |
+|---|---|---|
+| **Everything** | 24.25s | 40% of one core — matches Activity Monitor |
+| Main thread | 12.46s | 21% of one core |
+| &nbsp;&nbsp;→ in the kernel, `mach_msg2_trap` from IOKit | 4.37s | **35% of the main thread** |
+| &nbsp;&nbsp;→ kernel time with CoreImage on the stack | 4.23s | 34% |
+| &nbsp;&nbsp;→ SpriteKit, self | 1.06s | 8.5% |
+| GPU submission thread, `iokit_user_client_trap` | 2.38s | 10% of all CPU |
+| SwiftUI + AttributeGraph, self — **the log panel** | 0.09s | 0.7% |
+| Our own Swift, self | ~0 | below the sampling floor |
+
+**The game is GPU-bound, and the bloom is why.** Over a third of the main thread is
+spent in an IOKit trap with CoreImage on the stack — the CPU submitting the filter and
+waiting on the driver — and a second thread spends 2.38s more in GPU submission traps.
+That is what the frame rate is paying for, and it is why a 60-second capture on a
+fanless Air shows fps dipping toward 28 while the CPU sits at a comfortable 40%.
+
+**It also explains why switching `NEON GLOW` off barely moved Activity Monitor.** The
+work is GPU work; the CPU's share of it is *waiting*. Remove the bloom and the main
+thread waits on vsync instead of on the driver — the wait moves, the percentage does
+not. Any future measurement of this has to be frame time or GPU counters. A process
+CPU total cannot see it, and reading one is what produced two wrong calls during 1.2.
+
+**Our own code does not appear.** No function we wrote has measurable self time. The
+largest inclusive entries are `AudioManager.play` at 0.48s (3.9% of the main thread —
+Blitz fires a great many laser sounds), `GameScene.update` at 0.30s (2.4%) and
+`CollisionHandler.didBegin` at 0.28s (2.2%). The loop work done for 1.2 was worth
+doing and is worth keeping, but it was never where the time was.
+
+**The log panel is not expensive**, at 0.7% of the main thread — measured, because it
+was assumed otherwise.
+
+**Everything else the trace turned up, ranked.** All of it is small, because the
+machine is not CPU-bound — but a phone core is slower, so the order is worth keeping:
+
+1. **`SKCShapeNode::getBoundingBox()` — 0.40s, 3.2% of the main thread.** The largest
+   identifiable non-GPU item. SpriteKit re-measures a shape node's path on the CPU, and
+   the scene holds roughly seventy `SKShapeNode`s all the time: the legal-move marker
+   pool alone is 32 markers × (dot + ring) = 64, plus the grid, the selection ring and
+   the deployment bands. The fix is the trick the starfield already uses — draw the dot
+   and ring once into a texture and use sprites — or detach the marker pool while
+   nothing is selected. Another 0.45s of main-thread `malloc` sits mostly underneath
+   this, building `CG::Path` point vectors.
+2. **`AudioManager` — 0.71s, 5.7%, but weaker evidence.** The leaves are `__open`,
+   `pread`, `__sysctl` and `AudioComponentMgr_Base::match`, which is what re-priming an
+   `AVAudioPlayer` looks like: the pool reuses players, but `currentTime = 0` followed
+   by `play()` makes AVFoundation re-buffer from the file. Calling `prepareToPlay()` on
+   a finished player would move that off the frame. Some of the attribution is to
+   unresolved binaries, so confirm before acting.
+3. **`SKCLabelNode::rebuildText()` — 0.05s.** Down from being the most expensive thing
+   in the game before the title fix. Nothing left to take.
+
+**Zero hangs and zero hang risks in 60 seconds**, which matches playing it: the frame
+rate dips without the game ever stuttering, because it is GPU-paced rather than
+stalling.
+
+**What this means for the port.** The single decision that matters on a phone is the
+bloom, and it should be made on measured frame time on the device, not on a CPU
+percentage. If a fanless MacBook Air cannot hold 60fps with it on at Blitz, an iPhone
+will not either. Options 1–3 above stand; option 2 — glow off by default on a phone —
+now looks less like a power optimisation and more like the thing that makes the frame
+rate.
+
+**Node count is a second-order concern.** The census below is still worth knowing,
+because traversal is CPU work that a slower core will feel more than this Air did, but
+the profile puts SpriteKit's self time at 8.5% of the main thread against the bloom's
+35%. Fix the glow first; only then is this worth touching.
 
 | On the title screen, drawing nothing | Nodes |
 |---|---|
@@ -599,19 +781,11 @@ with how many are visible. The census is unflattering:
 | Score pops | 20 |
 | **Total** | **~624 of 711** |
 
-Every one of those is built at launch and hidden until it is needed, and hidden nodes
-are still walked. On macOS this is affordable and was left alone. On a phone it is the
-first thing to look at, and the fix is cheap: park each pool under a container that is
-detached from the scene while the pool is idle and re-attached on first use. One
-`addChild` when glass first flies, and 154 nodes leave every frame that has no glass in
-it — without allocating during play, which is the rule the pools exist to honour.
-
-**Profile before acting on any of this.** Two predictions were made from reading the
-code during the 1.2 pass: that the title screen's per-frame `fontColor` writes were
-expensive (right, and worth 13 points) and that the bloom was the CPU's largest item
-(wrong, by an order of magnitude). Instruments' Time Profiler attaches to a running
-build without disturbing it and would replace the table above with measured
-attribution.
+All of those are built at launch and hidden until needed, and hidden nodes are still
+walked. The cheap fix, if a phone needs it: park each pool under a container that is
+detached while the pool is idle and re-attached on first use — one `addChild` when
+glass first flies, and 154 nodes leave every frame that has no glass in it, without
+allocating during play.
 
 **The switch already exists.** `GameSettings.neonGlow` detaches the filter entirely
 rather than zeroing its intensity, which is what actually skips the offscreen pass —
@@ -756,3 +930,11 @@ Phase 0 is the one that is easy to skip and expensive to skip.
 2. **One app or two?** A universal bundle means one listing, one set of reviews, and
    users get every platform. A separate iOS app versions independently. Zudio is a third
    model — one project, separate targets, one App Store record.
+3. ~~**A version label on the title screen.**~~ **Decided: the play screen, bottom-left
+   corner.** It moves off the Settings panel on iOS and becomes the long-press target
+   for Test Mode (§4). It shares that corner with the `ERROR - SEE LOG` flag, which sits
+   at (50, 30) today — one of the two has to move, and that is a Pass 1 layout detail.
+4. ~~**Does a Test Mode strip ship at all?**~~ **Decided: yes.** On iOS Test Mode is
+   also a cheat code — see §4 — so it belongs in the shipping binary rather than in a
+   separate configuration testers cannot report against. What remains open is only
+   *how findable* the gesture should be.
