@@ -1,11 +1,5 @@
 # Galactic Chess Invaders Change Log
 
-## Unreleased
-
-- **The Nuke shake** — The blast had no shake of its own: it borrowed whatever its victims produced, and of the pieces it can take only a queen produces any. It shakes on its own account now, on real time rather than stretched thin across the slow motion, and the world no longer snaps as it comes back up to speed.
-
----
-
 ## V 1.2 (Build 9)  Better Screen Resizing
 
 *The release that gets the Mac game ready for iPad and iPhone. Most of the work is underneath: the playfield is laid out rather than scaled, everything drawn on it is sized against the board, and the game loop stopped doing several things sixty times a second that only needed doing when they changed.*
@@ -13,6 +7,7 @@
 - **Better resizing** — The game used to be a fixed 960×700 canvas scaled into whatever space was available, with black bars around it. It now lays itself out from the size it actually has: the board is centred, the gutters take up the slack, and a smaller window shrinks the board to fit rather than letting it run off the edge.
 - **"SHOOT SOMETHING!"** — Three beats without firing *and* four hits on your pieces from Black in that time raises a red reminder in the gutter. Both conditions, so it only speaks when going quiet is actually costing you. Aimed at the later levels, where it is tempting to play only the chess half and let the fleet take the board apart.
 - **`M` mutes the music**, from anywhere. It always did; it was never written down. Now on the How To Play screen beside pause and quit.
+- **The Nuke shake** — The blast had no shake of its own: it borrowed whatever its victims produced, and of the pieces it can take only a queen produces any. So a Nuke that cleared four pawns left the board perfectly still while the world ran slow around it, which read as a drift rather than a hit. It shakes on its own account now, on real time rather than stretched thin across the slow motion, and the ramp back to normal speed no longer snaps.
 - **The log panel is now a Test Mode feature** — `L` and the Settings row both require ⌘T first. It is a developer readout, and a player who opened it by accident had no idea what they were looking at. Leaving Test Mode closes it. Settings closes the gap where the row was.
 - **Everything on the playfield scales with the board.** The ship, laser rounds, raider scouts, score pops, explosions, the move dots and the screen shake all follow the squares now, rather than staying the size they were drawn at on a 960×700 canvas.
 - **A pass over the game loop.** Several readouts were being redrawn sixty times a second to say what they already said — the turn clock, the power-up alley — and the fleet's back rank was being counted from scratch on every frame. They are all driven by change now.

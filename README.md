@@ -36,6 +36,7 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 
 - **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. Everything on the playfield — the ship, the lasers, the raiders, the explosions — is sized against the board rather than staying as drawn.
 - **Lighter on the CPU.** Readouts redraw when they change rather than on every frame, and the title screen no longer re-renders its own type sixty times a second — that alone took it from 53% CPU to under 40%. Steady 60fps throughout.
+- **The Nuke hits harder.** The blast never shook the board on its own account — it borrowed whatever its victims produced, and most pieces produce nothing — so clearing a row of pawns left the screen still while the world ran slow around it. It has its own shake now, and the world stops snapping as it comes back up to speed.
 - **The log panel moved behind Test Mode.** Press `⌘T`, then `L`.
 - Groundwork for the iPad and iPhone port — see [IOS-Port.md](docs/IOS-Port.md).
 

@@ -35,8 +35,11 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.zurlocker.GalacticChessInvaders
         INFOPLIST_FILE: GalacticChessInvaders/Info.plist
-        CURRENT_PROJECT_VERSION: "6"
-        MARKETING_VERSION: "0.6"
+        # Kept in step with the .xcodeproj by hand. These drifted three releases
+        # behind it — 0.6/6 here against 1.2/9 shipping — and regenerating the
+        # project from this file would have quietly reset the shipping version.
+        CURRENT_PROJECT_VERSION: "9"
+        MARKETING_VERSION: "1.2"
         SWIFT_STRICT_CONCURRENCY: complete
         # Signing, set up the way Zudio is. `DEVELOPMENT_TEAM` is the piece that
         # was missing: without it an archive carries no team and Xcode refuses to
