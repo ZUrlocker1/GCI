@@ -648,35 +648,6 @@ class GameScene: SKScene {
             "Sky rebuilt at \(Int(size.width))×\(Int(size.height))")
     }
 
-    /// The shockwave's ring, drawn once and scaled for every blast after.
-    ///
-    /// A hollow annulus in white, so the sprite can be tinted. The edges fall
-    /// off over a couple of pixels; at the sizes this is scaled to, a hard edge
-    /// would alias into a dotted circle.
-    static let shockwaveTexture: SKTexture = {
-        let side = 256
-        let space = CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(
-            data: nil, width: side, height: side, bitsPerComponent: 8,
-            bytesPerRow: 0, space: space,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return SKTexture() }
-        let c = CGFloat(side) / 2
-        // Stroked just inside the edge so the glow has somewhere to go.
-        context.setStrokeColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        context.setLineWidth(5)
-        context.addArc(center: CGPoint(x: c, y: c), radius: c - 6,
-                       startAngle: 0, endAngle: .pi * 2, clockwise: false)
-        context.strokePath()
-        context.setStrokeColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.35))
-        context.setLineWidth(11)
-        context.addArc(center: CGPoint(x: c, y: c), radius: c - 6,
-                       startAngle: 0, endAngle: .pi * 2, clockwise: false)
-        context.strokePath()
-        guard let image = context.makeImage() else { return SKTexture() }
-        return SKTexture(cgImage: image)
-    }()
-
     /// A soft round dot: solid core fading to transparent, drawn once at launch.
     /// Additive blending then makes overlapping stars brighten naturally.
     private static func makeStarTexture(diameter: CGFloat = 16) -> SKTexture {
@@ -3026,8 +2997,13 @@ class GameScene: SKScene {
         }
 
         if next != lastControlPrompt {
-            if let next {
-                DiagnosticsLog.shared.log(.info, "control prompt: \(next)")
+            switch next {
+            // Friendly fire already logged itself when the notice went up, and
+            // the raw enum prints the module-qualified piece type with it —
+            // two long lines for one event.
+            case .friendlyFire, .none: break
+            case .some(let prompt):
+                DiagnosticsLog.shared.log(.info, "control prompt: \(prompt)")
             }
             lastControlPrompt = next
         }
@@ -3042,7 +3018,7 @@ class GameScene: SKScene {
         hasShownFriendlyFireNotice = true
         friendlyFireKind = kind
         friendlyFireRemaining = Self.friendlyFireNoticeDuration
-        DiagnosticsLog.shared.log(.info, "friendly fire notice — \(friendlyFireHits) hits")
+        DiagnosticsLog.shared.log(.info, "friendly fire notice")
         refreshControlPrompt()
     }
 
@@ -3923,7 +3899,7 @@ class GameScene: SKScene {
         refreshHUD()
         activate(powerUp, at: at)
         DiagnosticsLog.shared.log(.raider,
-            "\(powerUp.shipName) scout destroyed (\(points))")
+            "\(powerUp.shipName) scout hit (\(points))")
     }
 
     // MARK: - Power-ups (§13)
@@ -4157,35 +4133,33 @@ class GameScene: SKScene {
         // it again — a shockwave that crosses the board in a third of a second
         // is over before the eye has found it.
         let duration: TimeInterval = 0.85
-        // A sprite, not an `SKShapeNode`.
-        //
-        // The ring used to rebuild its `CGPath` on every frame of the blast and
-        // let SpriteKit re-stroke it — which is CPU path work that scales with
-        // the circle, so the bigger the screen the more it cost, and it landed
-        // in the middle of the one moment the game is already asking the most
-        // of itself. A texture drawn once and scaled up is free by comparison:
-        // scaling a sprite is a transform, not a redraw.
-        let ring = SKSpriteNode(texture: Self.shockwaveTexture)
+        // A shape node, rebuilding its path each frame. That is CPU work that
+        // grows with the circle, and it was tried as a scaled sprite instead —
+        // cheaper, but the stroke thickens as the ring grows and the look is
+        // not the same. The look is the point of this power-up, so it stays.
+        // The arena-sized `reach` above is what keeps the cost in hand.
+        let ring = SKShapeNode(circleOfRadius: 1)
         ring.position = point
-        ring.colorBlendFactor = 1
+        ring.fillColor = .clear
+        ring.lineWidth = 3 * layout.contentScale
+        ring.glowWidth = 6
         ring.zPosition = 14
-        ring.size = CGSize(width: 2, height: 2)
         bloomNode.addChild(ring)
 
-        let unit = Self.shockwaveTexture.size().width
         ring.run(.sequence([
             .customAction(withDuration: duration) { [weak self] node, elapsed in
-                guard let self, let sprite = node as? SKSpriteNode else { return }
+                guard let self, let shape = node as? SKShapeNode else { return }
                 let progress = min(1, CGFloat(elapsed) / CGFloat(duration))
-                let radius = max(1, reach * progress)
-                // The texture is a ring drawn at its own size; scaling it to
-                // the wanted diameter is one transform per frame.
-                sprite.setScale(radius * 2 / unit)
+                let radius = reach * progress
+                shape.path = CGPath(ellipseIn: CGRect(x: -radius, y: -radius,
+                                                      width: radius * 2,
+                                                      height: radius * 2),
+                                    transform: nil)
                 // §13.2's magenta → white → transparent, so the wave reads as
                 // energy leaving rather than as a circle being drawn.
-                sprite.color = NeonPalette.magenta.blended(toward: .white,
-                                                           by: progress)
-                sprite.alpha = 1 - progress * progress
+                shape.strokeColor = NeonPalette.magenta.blended(toward: .white,
+                                                               by: progress)
+                shape.alpha = 1 - progress * progress
                 self.clearEnemyRounds(within: radius, of: point)
             },
             .removeFromParent(),
@@ -4868,7 +4842,7 @@ class GameScene: SKScene {
             ship?.removeShield(absorbed: true)
             AudioManager.shared.play(.shieldAbsorbsHit)
             AudioManager.shared.play(.shieldShatters)
-            DiagnosticsLog.shared.log(.raider, "shield absorbed the hit")
+            DiagnosticsLog.shared.log(.raider, "shield absorbed")
             return
         }
         guard shipState.loseLife() else { return }

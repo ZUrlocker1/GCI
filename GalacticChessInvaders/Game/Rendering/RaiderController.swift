@@ -199,7 +199,7 @@ final class RaiderController {
             if destroyed, let index = self.remaining.firstIndex(of: powerUp) {
                 self.remaining.remove(at: index)
                 DiagnosticsLog.shared.log(.raider, self.remaining.isEmpty
-                    ? "raids over for this level"
+                    ? "raids over"
                     : "next up: \(self.remaining[0].shipName) scout")
             }
             self.onExit?(scout, destroyed)
