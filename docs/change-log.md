@@ -1,5 +1,11 @@
 # Galactic Chess Invaders Change Log
 
+## Unreleased
+
+- **The Nuke shake** — The blast had no shake of its own: it borrowed whatever its victims produced, and of the pieces it can take only a queen produces any. It shakes on its own account now, on real time rather than stretched thin across the slow motion, and the world no longer snaps as it comes back up to speed.
+
+---
+
 ## V 1.2 (Build 9)  Better Screen Resizing
 
 *The release that gets the Mac game ready for iPad and iPhone. Most of the work is underneath: the playfield is laid out rather than scaled, everything drawn on it is sized against the board, and the game loop stopped doing several things sixty times a second that only needed doing when they changed.*
