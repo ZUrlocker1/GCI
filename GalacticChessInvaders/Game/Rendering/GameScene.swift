@@ -268,15 +268,28 @@ class GameScene: SKScene {
         let hold = slowMoDuration * slowMoHold
         guard elapsed > hold else { return slowMoFloor }
         let progress = (elapsed - hold) / (slowMoDuration - hold)
-        return slowMoFloor + (1 - slowMoFloor) * progress * progress
+        // Smoothstep, not `progress * progress`.
+        //
+        // A squared ramp is an ease-*in*, which puts all of the acceleration at
+        // the end: the scale was still climbing at 1.93 per second on the last
+        // frame of the window and then went flat, a jerk discontinuity right at
+        // the boundary. Held flat for 585ms and then whipped back, the blast
+        // read as a drift that snapped rather than as slow motion — and the
+        // shockwave ring, which runs on this clock, visibly sped up as it
+        // expanded, which is backwards for a shockwave.
+        //
+        // Smoothstep leaves the floor and arrives at 1 with zero slope at both
+        // ends, so nothing changes gear on a single frame.
+        return slowMoFloor + (1 - slowMoFloor) * progress * progress * (3 - 2 * progress)
     }
 
     /// The clock everything else runs on: 1 normally, less during a blast.
     ///
-    /// Holds at the floor and then accelerates back rather than easing out of
-    /// it. Coming *out* of slow motion is the part that sells it — a linear
-    /// return reads as the game recovering from a stall, where lingering low and
-    /// then snapping back reads as a decision.
+    /// Holds at the floor, then eases back to speed at both ends. Coming *out*
+    /// of slow motion is the part that sells it, and what sells it is that the
+    /// recovery is never visible as an event: the moment the world audibly
+    /// changes gear is the moment it reads as a stall being recovered from
+    /// rather than as an effect ending.
     private var timeScale: Double {
         guard slowMoRemaining > 0 else { return 1 }
         return Self.slowMoScale(elapsed: Self.slowMoDuration - slowMoRemaining)
@@ -4124,6 +4137,9 @@ class GameScene: SKScene {
     /// from cause to effect, which is the whole difference.
     private func detonate(at point: CGPoint) {
         beginSlowMotion()
+        // Before the ring, not after: the hit is the frame the world drops to
+        // 0.3x, and the shake has to land on that frame to be read as its cause.
+        startShake(Juice.blast)
         // The arena's diagonal, not the window's. On a wide monitor the ring
         // spent most of its 0.85s crossing empty margin, and it was doing it
         // the expensive way — see below.
@@ -4927,7 +4943,17 @@ class GameScene: SKScene {
             }
             return
         }
-        advanceShake(dt)
+        // Real time, not the scaled clock. A shake is what the impact does to
+        // the viewer, not an event inside the world, so slow motion must not
+        // reach it — this node stands in for a camera (see the `shake` property)
+        // and bullet time does not slow the lens.
+        //
+        // It was on `dt`, which stretched Juice.blast's 0.45s envelope across
+        // roughly the whole 1.3s slow-motion window. Same oscillation, three
+        // times the duration, amplitude decayed to a couple of points for most
+        // of it: a long low buzz instead of a hit. Sharp shake over a slow world
+        // is the contrast the effect is built on.
+        advanceShake(realDt)
         if !isBeatSuspended, !isTimeFrozen, stateMachine.currentState is PlayingState {
             advanceRegeneration(dt)
         }

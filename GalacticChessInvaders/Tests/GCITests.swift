@@ -5002,6 +5002,27 @@ final class JuiceTests: XCTestCase {
         // §24.1's durations.
         XCTAssertEqual(Juice.shake(forDestroying: .king).duration, 0.6)
         XCTAssertEqual(Juice.shipDestroyed.duration, 0.4)
+    }
+
+    /// The Nuke shakes on its own account, and is over before the world starts
+    /// coming back.
+    ///
+    /// It used to have no shake at all: it leaned on `shake(forDestroying:)`
+    /// firing for its victims, which is `.none` for everything but the queen and
+    /// the king, and the blast spares the king. A Nuke that took only pawns left
+    /// the world sliding at 0.3x with nothing marking the hit, which reads as a
+    /// drift. The two halves are a pair — the shake is what says *impact*, the
+    /// slow motion is what says *aftermath* — so they must not overlap for long.
+    func testTheBlastShakesAndClearsBeforeTheWorldRecovers() {
+        XCTAssertFalse(Juice.blast.isSilent, "the Nuke must shake on its own")
+        XCTAssertEqual(Juice.blast.amplitude, Juice.heavy.amplitude,
+                       "it is the biggest thing the player can do")
+        // The shake runs on real time and the hold is real seconds, so these are
+        // directly comparable — and the shake has to be spent before the ramp
+        // back begins, or the two effects blur into one long wobble.
+        let hold = GameScene.slowMoDuration * GameScene.slowMoHold
+        XCTAssertLessThan(Juice.blast.duration, hold,
+                          "the shake must finish inside the slow-motion hold")
         // Ordered, so "heavy" is always felt as more than "light".
         let tiers = [Juice.light, Juice.medium, Juice.heavy]
         for pair in zip(tiers, tiers.dropFirst()) {
@@ -5960,16 +5981,38 @@ final class PowerUpTests: XCTestCase {
         }
     }
 
-    /// Accelerating back rather than easing out: the second half of the ramp has
-    /// to cover more ground than the first, or it reads as the game recovering
-    /// from a stall instead of as a decision.
-    func testTheRampAcceleratesRatherThanEases() {
+    /// The ramp has to *arrive*, not stop.
+    ///
+    /// This replaces a test asserting the opposite — that the second half of the
+    /// ramp covered more ground than the first, on the reasoning that
+    /// accelerating back read as a decision where easing out read as a stall.
+    /// It measured the wrong end. A squared ramp is an ease-in, so the scale was
+    /// still climbing at 1.93 per second on the final frame and then went flat,
+    /// and that discontinuity is what players actually saw: a drift that snapped
+    /// back. What matters is the slope where the effect ends.
+    func testTheRampArrivesWithoutSnapping() {
+        let step = 0.001
+        func slope(at t: TimeInterval) -> Double {
+            (GameScene.slowMoScale(elapsed: t + step)
+             - GameScene.slowMoScale(elapsed: t - step)) / (2 * step)
+        }
+        // Per second of scale, against a span of 0.7 recovered over ~0.7s — so
+        // the ramp's own average rate is about 1.0 and anything approaching that
+        // at the boundary is a gear change on one frame.
+        XCTAssertLessThan(slope(at: GameScene.slowMoDuration * 0.99), 0.25,
+                          "the world must not still be accelerating as it ends")
+
         let hold = GameScene.slowMoDuration * GameScene.slowMoHold
+        XCTAssertLessThan(slope(at: hold * 1.01), 0.25,
+                          "nor lurch out of the hold")
+
+        // Still a hold-then-recover shape, not a linear crossfade: the middle of
+        // the ramp is where the speed comes back.
         let midpoint = hold + (GameScene.slowMoDuration - hold) / 2
-        let halfway = GameScene.slowMoScale(elapsed: midpoint)
-        let span = 1 - GameScene.slowMoFloor
-        XCTAssertLessThan(halfway - GameScene.slowMoFloor, span / 2,
-                          "less than half the recovery by the halfway point")
+        // The ramp's own average rate is 0.7 over 0.715s, near enough 1.0, and
+        // smoothstep peaks at 1.47 here — comfortably steeper than a crossfade.
+        XCTAssertGreaterThan(slope(at: midpoint), 1.3,
+                             "the recovery should happen in the middle")
     }
 
     /// A blast is a moment, not an interlude — and the world has to be running

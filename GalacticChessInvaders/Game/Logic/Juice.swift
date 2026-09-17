@@ -39,6 +39,19 @@ enum Juice {
     static let heavy  = Shake(amplitude: 30.0, duration: 0.60)
 
     static let shipDestroyed = medium
+
+    /// §13.2's Nuke, which had no shake of its own for its whole life.
+    ///
+    /// It was relying on `shake(forDestroying:)` firing for whatever it killed,
+    /// and that returns `.none` for every piece but the queen and the king —
+    /// while the blast deliberately spares the king. So a Nuke that vaporised
+    /// four pawns shook the board not at all, and the only thing left moving was
+    /// the world at 0.3x, which reads as a drift rather than as an impact.
+    ///
+    /// Heavy's amplitude, but shorter than its 0.6s: the slow motion runs for
+    /// 1.3s afterwards and carries the weight on its own. A long shake laid over
+    /// a slow world is the drift this is meant to fix.
+    static let blast = Shake(amplitude: heavy.amplitude, duration: 0.45)
     /// §24.1 gives the flagship medium at a shorter 0.3s. Not built yet.
     static let flagshipDestroyed = Shake(amplitude: medium.amplitude, duration: 0.30)
 
