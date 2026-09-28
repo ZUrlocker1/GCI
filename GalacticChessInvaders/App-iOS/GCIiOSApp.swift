@@ -133,7 +133,9 @@ enum Lifecycle {
 struct GameView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> SKView {
-        let view = SKView()
+        // Not a plain `SKView`: this one claims the keyboard and routes what
+        // it gets to the scene. See `KeyboardFocusedSKView`.
+        let view = KeyboardFocusedSKView()
         view.ignoresSiblingOrder = true
         // Off in a shipping build. They are the first thing a reviewer would
         // photograph, and the diagnostics panel carries the same figures.

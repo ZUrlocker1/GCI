@@ -8,26 +8,44 @@
 // `KeyPress`, this turns a `UIKey` into the same thing, and the scene cannot
 // tell which happened.
 //
-// **`UIPress`, not `GCKeyboard`.** This was written against `GCKeyboard`
-// first, and the keys worked while the system *also* acted on them: Space
-// opened Spotlight search over the game. `GCKeyboard` observes the keyboard,
-// it does not claim it, so every press fell through to iPadOS as well.
-// Overriding `pressesBegan`/`pressesEnded` and not calling `super` for a key
-// the game reads is what consumes it.
+// Two false starts, both worth recording because each looked right:
 //
-// `UIKey` is also a closer match than `GCKeyCode` was: it carries
-// `charactersIgnoringModifiers`, `characters` and `modifierFlags`, which is
-// exactly the shape `NSEvent` has and exactly what `KeyPress` wants. The
-// hand-written key-code-to-character table the first version needed is gone.
+// **`GCKeyboard` observes a keyboard; it does not claim it.** The keys worked
+// and the system acted on them as well — Space opened Spotlight search over
+// the game. Consuming a key means being in the responder chain and declining
+// to pass it on, which `GCKeyboard` has no way to do.
+//
+// **`SKScene` is a `UIResponder`, but it is not in that chain.** Overriding
+// `pressesBegan` on the scene therefore did nothing at all: SpriteKit
+// forwards touches to the scene explicitly and presses not at all. The view
+// is what the window talks to, so the view is where this has to live — which
+// is also where macOS puts it, in `KeyboardFocusedSKView`, whose comment
+// describes this exact symptom from the other side.
 
 import SpriteKit
 
 #if os(iOS)
 import UIKit
 
-extension GameScene {
+/// An `SKView` that claims the keyboard as soon as it has a window, and turns
+/// what it receives into the same `KeyPress` the Mac produces.
+///
+/// The iOS twin of `KeyboardFocusedSKView` in the AppKit shell, down to the
+/// name and the reason for it.
+final class KeyboardFocusedSKView: SKView {
 
-    open override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+    override var canBecomeFirstResponder: Bool { true }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        // Without this nothing is first responder and no key event is routed
+        // anywhere — the title screen ignores every key, and the game only
+        // starts answering the keyboard after some other control has taken
+        // focus, which is exactly how this was first noticed.
+        if window != nil { becomeFirstResponder() }
+    }
+
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         guard let press = presses.first.flatMap(KeyPress.init) else {
             // Not a key the game reads — let the system have it.
             super.pressesBegan(presses, with: event)
@@ -35,27 +53,29 @@ extension GameScene {
         }
         // Deliberately no `super`. That is what stops Space reaching iPadOS
         // and opening search on top of the game.
-        handle(key: press)
+        gameScene?.handle(key: press)
     }
 
-    open override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+    override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         guard let press = presses.first.flatMap(KeyPress.init) else {
             super.pressesEnded(presses, with: event)
             return
         }
-        handle(keyUp: press)
+        gameScene?.handle(keyUp: press)
     }
 
     /// A press the system takes away — the app losing focus mid-hold. It has
     /// to read as a release, or the ship keeps moving after the keyboard has
     /// stopped talking to us.
-    open override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+    override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         if let press = presses.first.flatMap(KeyPress.init) {
-            handle(keyUp: press)
+            gameScene?.handle(keyUp: press)
         } else {
             super.pressesCancelled(presses, with: event)
         }
     }
+
+    private var gameScene: GameScene? { scene as? GameScene }
 }
 
 // MARK: - UIPress → KeyPress
@@ -85,7 +105,7 @@ extension KeyPress {
         }
 
         let unshifted = key.charactersIgnoringModifiers.lowercased().first
-        // A modifier on its own reports no characters and no useful code.
+        // A modifier held on its own reports no characters and no useful code.
         if code == .character, unshifted == nil { return nil }
 
         self.init(code: code,
@@ -95,8 +115,7 @@ extension KeyPress {
                   // `UIPress` does not report auto-repeat. Holding a key
                   // therefore re-fires rather than being ignored, which the
                   // movement keys do not mind — they are down/up — and which
-                  // nothing else in the game is held down long enough to
-                  // notice.
+                  // nothing else is held long enough to notice.
                   isRepeat: false)
     }
 }
