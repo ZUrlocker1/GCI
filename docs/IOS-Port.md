@@ -887,7 +887,7 @@ this work starts, so that a port failure is never confused with a coin flip.
 | Phase | Work | Ships? |
 |---|---|---|
 | 0 | `SceneLayout` refactor, validated on macOS at the existing size | macOS 1.2 |
-| 1 | iOS target, audio session, lifecycle, `GCVirtualController`, touch chess | — |
+| 1 | iOS target, audio session, lifecycle, `GCVirtualController`, touch chess | **mostly done** |
 | 2 | iPad landscape, all four sizes + physical mini | TestFlight |
 | 3 | iPad portrait | TestFlight |
 | 4 | How To Play and Settings restructure | — |
@@ -897,12 +897,29 @@ this work starts, so that a port failure is never confused with a coin flip.
 
 Phase 0 is the one that is easy to skip and expensive to skip.
 
+**Where Phase 1 actually got to.** The target exists and the game plays on an iPad
+simulator by touch — tap to start, tap a piece, tap its destination, the panels and the
+Settings sliders. `AVAudioSession`, the interruption path and `scenePhase` are in.
+A hardware keyboard drives every key the Mac reads, through `KeyboardInputAdapter`.
+Three things in `Game/` that were quietly macOS-only — the notification names, an
+`NSFont`, one `invalidateCursorRects` — are not any more.
+
+What is left of Phase 1 is **the ship**: `GCVirtualController` for steering and firing.
+Until that lands the chess half is playable on iPad and the arcade half is not, which
+also means the two Arcade Hints still name keys — "PRESS SPACE TO FIRE!" — because
+there is no button yet to point at instead.
+
 ---
 
 ## Decisions taken
 
-- **Minimum iOS 15.** Clears `GCVirtualController` (15) and `GCKeyboard` (14) with no
-  availability checks.
+- **Minimum iOS 17**, not the 15 first planned. `DiagnosticsLog` is `@Observable`,
+  which is 17+, and shimming it back to `ObservableObject` is the only thing standing
+  between the two — nothing else in the codebase needed an availability check at 17.
+  iOS 17 is from September 2023, three releases back; it reaches iPhone XS and iPad
+  mini 5, so the hardware it excludes is 2015–2017 and would struggle with the bloom
+  anyway. Zack's own test iPad is a mini 5 on iOS 18. Still clears
+  `GCVirtualController` (15) and `GCKeyboard` (14) with room to spare.
 - **Free on iOS**, as on the Mac.
 - **Drag-to-move for chess pieces**, as the default, with tap-then-tap still
   working. Combined with drag-to-move for the ship, the rule on iOS is that you

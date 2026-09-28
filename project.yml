@@ -84,8 +84,9 @@ targets:
 
   # The iOS build. Shares every line of Game/ with the Mac app and swaps the
   # shell: App/ is the AppKit one, App-iOS/ the UIKit one, and neither target
-  # sees the other's. iOS 15 is the floor because `GCVirtualController` needs
-  # it — see docs/IOS-Port.md §4.
+  # sees the other's. iOS 17 is the floor: `DiagnosticsLog` is `@Observable`,
+  # which is 17+, and nothing else in the codebase needed an availability
+  # check there — see docs/IOS-Port.md, Decisions taken.
   #
   # The bundle identifier is deliberately the *same* as the Mac app's, which
   # is how Zudio does it (`com.zudio.app` on both): one App Store record,
