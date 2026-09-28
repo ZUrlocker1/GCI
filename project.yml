@@ -35,9 +35,11 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.zurlocker.GalacticChessInvaders
         INFOPLIST_FILE: GalacticChessInvaders/Info.plist
-        # Kept in step with the .xcodeproj by hand. These drifted three releases
-        # behind it — 0.6/6 here against 1.2/9 shipping — and regenerating the
-        # project from this file would have quietly reset the shipping version.
+        # In step with the .xcodeproj, and now verified rather than hoped:
+        # `xcodegen generate` reproduces every build setting in every config
+        # byte for byte. This file is the source of truth again, which is what
+        # makes adding the iOS target a reviewable diff rather than surgery on
+        # a 900-line pbxproj.
         CURRENT_PROJECT_VERSION: "9"
         MARKETING_VERSION: "1.2"
         SWIFT_STRICT_CONCURRENCY: complete
@@ -59,10 +61,19 @@ targets:
           CODE_SIGNING_REQUIRED: NO
           ENABLE_HARDENED_RUNTIME: NO
           CODE_SIGN_ENTITLEMENTS: GalacticChessInvaders-Debug.entitlements
-        # Developer ID for anything that leaves this machine, and the hardened
-        # runtime with it: notarization requires it.
+        # Automatic signing, and the hardened runtime with it: notarization
+        # requires the runtime, and automatic signing is what lets one archive
+        # produce both the notarized DMG and an App Store build.
+        #
+        # Deliberately NO `CODE_SIGN_IDENTITY`. Pinning it to "Developer ID
+        # Application" is what this file used to say, and it is wrong twice
+        # over: it contradicts `CODE_SIGN_STYLE: Automatic`, and it forces the
+        # Developer ID certificate onto an App Store archive, which needs
+        # Apple Distribution instead. Both were fixed in the .xcodeproj for
+        # 1.0 and never written back here — so regenerating would have undone
+        # the signing that got GCI onto the store.
         Release:
-          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_STYLE: Automatic
           CODE_SIGNING_REQUIRED: YES
           ENABLE_HARDENED_RUNTIME: YES
           CODE_SIGN_ENTITLEMENTS: GalacticChessInvaders.entitlements
