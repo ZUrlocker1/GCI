@@ -145,13 +145,26 @@ final class HowToPlayNode: SKNode {
                   size: 12, maxW: Self.lw, x: x, y: 548)
 
         // — CONTROLS —
+        //
+        // The keys are listed on iOS too, and deliberately. A hardware
+        // keyboard drives every one of them there — see `KeyboardInputAdapter`
+        // — and this screen is where someone who has plugged one in will look
+        // for them. The prompts elsewhere stay simple and say "tap"; this is
+        // the one place that carries the detail.
         heading("CONTROLS", Self.cyan, x: x, y: 408)
-        chip("← →",   "Arrows or A / D move the ship",     x: x, y: 388)
-        chip("SPACE",  "Fire laser",                        x: x, y: 344)
+        #if os(macOS)
+        chip("← →",    "Arrows or A / D move the ship",      x: x, y: 388)
+        chip("SPACE",  "Fire laser",                         x: x, y: 344)
         chip("CLICK",  "Pick piece, then new square",        x: x, y: 300)
         // Two keys on one row: a fifth chip would run into the HISTORY heading
         // below, and 25 characters at 12pt still clears the column.
         chip("ESC",    "Pause  ·  Q quits  ·  M mutes",      x: x, y: 256)
+        #else
+        chip("TAP",    "Pick piece, then new square",        x: x, y: 388)
+        chip("← →",    "Arrows or A / D move the ship",      x: x, y: 344)
+        chip("SPACE",  "Fire laser",                         x: x, y: 300)
+        chip("KEYS",   "A keyboard works: ESC, Q, M, S, I",  x: x, y: 256)
+        #endif
 
         // — HISTORY —
         heading("HISTORY", Self.magenta, x: x, y: 203)
@@ -277,7 +290,7 @@ final class HowToPlayNode: SKNode {
         addChild(hline(x: 40, y: 70, w: w - 80))
 
         // BACK has moved to the top right, so the footer starts at the margin.
-        let hint = label("PRESS ANY KEY TO RESUME GAME", 10, Self.cyan.withAlphaComponent(0.65), .left)
+        let hint = label(InputPrompts.resumeFromPanel, 10, Self.cyan.withAlphaComponent(0.65), .left)
         hint.verticalAlignmentMode = .center
         hint.position = CGPoint(x: Self.lx, y: 39)
         addChild(hint)

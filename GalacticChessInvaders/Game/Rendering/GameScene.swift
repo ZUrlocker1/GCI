@@ -3119,7 +3119,7 @@ class GameScene: SKScene {
         // is not discoverable otherwise.
         let hint = SKLabelNode(fontNamed: "PressStart2P-Regular")
         hint.name = "pausedLabel"
-        hint.text = "PRESS ANY KEY TO RESUME"
+        hint.text = InputPrompts.resume
         hint.fontSize = 11
         hint.fontColor = NeonPalette.cyan
         hint.horizontalAlignmentMode = .center

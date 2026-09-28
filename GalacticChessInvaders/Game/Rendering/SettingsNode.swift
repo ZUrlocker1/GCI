@@ -300,7 +300,7 @@ final class SettingsNode: SKNode {
         lbl.name = "backButton"
         nav.addChild(lbl)
 
-        let hint = label("PRESS ANY KEY TO RESUME GAME", 10,
+        let hint = label(InputPrompts.resumeFromPanel, 10,
                          Self.cyan.withAlphaComponent(0.65), .left)
         hint.verticalAlignmentMode = .center
         hint.position = CGPoint(x: Self.lx, y: 39)

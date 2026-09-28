@@ -54,7 +54,7 @@ final class GameOverNode: SKNode {
 
         var prompt: String {
             switch self {
-            case .waveCleared(let next): return "PRESS ANY KEY  ·  LEVEL \(next)"
+            case .waveCleared(let next): return InputPrompts.nextLevel(next)
             default:                     return "NEW GAME?   Y / N"
             }
         }

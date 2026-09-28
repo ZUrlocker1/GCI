@@ -127,7 +127,7 @@ final class TitleOverlayNode: SKNode {
 
     private func setupPressStart() {
         let label = SKLabelNode(fontNamed: Self.titleFont)
-        label.text = "PRESS ANY KEY TO START"
+        label.text = InputPrompts.start
         label.fontSize = 16
         label.fontColor = .white
         label.horizontalAlignmentMode = .center

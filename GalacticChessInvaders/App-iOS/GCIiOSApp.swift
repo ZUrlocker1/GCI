@@ -23,6 +23,10 @@ struct GCIiOSApp: App {
 
     init() {
         AudioSession.configure()
+        // A hardware keyboard drives the same keys the Mac does. Started here
+        // so a keyboard already attached at launch is noticed — no
+        // notification is posted for one that was there all along.
+        MainActor.assumeIsolated { KeyboardInputAdapter.start() }
     }
 
     var body: some Scene {

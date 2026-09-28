@@ -67,6 +67,7 @@
 		3D123DD84E9772D4FA235EA8 /* chess-w-rook.png in Resources */ = {isa = PBXBuildFile; fileRef = 14C2C8B3CAA40DB1FA83AA1E /* chess-w-rook.png */; };
 		3D8737E689E8D78A3C2D0D04 /* ChessFEN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416A804FC2359078E164449E /* ChessFEN.swift */; };
 		3FA62CFAF95FC4F67EE77C69 /* chess-w-pawn.png in Resources */ = {isa = PBXBuildFile; fileRef = E37A639E8F519FBD10D5FD89 /* chess-w-pawn.png */; };
+		3FBB4038E5A5366F3A6CBE7F /* InputPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2AE39FA6875082A7D1BC5A /* InputPrompts.swift */; };
 		422288F6A65E04F4E8F75D25 /* RaiderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4C7B6130F1ECEECE00289 /* RaiderNode.swift */; };
 		452008C69273C0B918DFAA99 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7548E55F1B1E37D9A6AA88 /* GameState.swift */; };
 		456435234471D2982DBDDA74 /* GCITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E88C786A6B62EF1391252D /* GCITests.swift */; };
@@ -81,6 +82,7 @@
 		4C040B89FB74C51B33E68B8A /* music in Resources */ = {isa = PBXBuildFile; fileRef = 434106FC1B4B61FF73D33D6D /* music */; };
 		4DE75B382B1C797060820072 /* TitleScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DB4E6155700677F3736099 /* TitleScene.swift */; };
 		501B3D6BAA54B7D6543315E0 /* chess-b-pawn-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */; };
+		50B2F42115E0AC209B961272 /* TouchInputAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31680B5E066A40DE4421288 /* TouchInputAdapter.swift */; };
 		50B3DF7EFFCB6605C8A5E7AC /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533060B476CEB068D8FE3931 /* AudioManager.swift */; };
 		51DBACEE06DE99EE2BCD7260 /* SettingsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */; };
 		53CF61C8C877C422EB4BE355 /* chess-b-king-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E7E3382582F0A404A28305F /* chess-b-king-d1.png */; };
@@ -100,12 +102,14 @@
 		6395169375D2CD8541C11AFA /* BackdropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */; };
 		648B321D121DCAF09D992839 /* chess-b-knight-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = C85D5AC26FD4179831878F66 /* chess-b-knight-d1.png */; };
 		677F6E508B13C2AF380A4663 /* BackdropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */; };
+		686340DF574D88D52CF422F3 /* KeyboardInputAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBEEDFCF2C7B25C534D69FB8 /* KeyboardInputAdapter.swift */; };
 		68F50FA3CDA0B3307474CA56 /* SpaceshipNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */; };
 		6C05015BBF9B614E172EA3BF /* ship-scout.png in Resources */ = {isa = PBXBuildFile; fileRef = 2B2151BC597FBC6006588FF8 /* ship-scout.png */; };
 		6CEB1B9161FCB29DC4C0DAF6 /* RaiderRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D52D7B60FB53896B80DB403D /* RaiderRules.swift */; };
 		6E68EDE0BFEE0BC6E2899B6F /* chess-w-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */; };
 		6F91DE073D013E6683627559 /* CollisionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */; };
 		72D2115FAB465E7CCE18AE4E /* GameOverNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */; };
+		75E7AD5D7B8013F85C756947 /* InputPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2AE39FA6875082A7D1BC5A /* InputPrompts.swift */; };
 		760602011486A974F4A2883F /* FleetFiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */; };
 		761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */; };
 		766294C88A894097F275D4D2 /* AppNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC12639BFEED781126E1774 /* AppNotifications.swift */; };
@@ -117,6 +121,7 @@
 		7B642189B3FC586C84C9A534 /* InputHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089693DE6C70095463C9E308 /* InputHandler.swift */; };
 		7F0384B71B4EABB4F3C3C5B0 /* PieceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86607BAC135182D9E5F8BD4 /* PieceNode.swift */; };
 		8045F16B75DCA226FEFC2848 /* ProjectileState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0C0E6B6868C3ACDC346F91 /* ProjectileState.swift */; };
+		807BD5108B03FF0D9087A2DE /* KeyboardInputAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBEEDFCF2C7B25C534D69FB8 /* KeyboardInputAdapter.swift */; };
 		80EAC4FC0915CDAD80100569 /* chess-w-pawn-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 5E03F189843B523D7688AFA1 /* chess-w-pawn-d2.png */; };
 		810F0928A47208EA127E979E /* PieceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86607BAC135182D9E5F8BD4 /* PieceNode.swift */; };
 		82FBE8F0FE17EC1EED7ECC03 /* GameOverNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */; };
@@ -149,6 +154,7 @@
 		A504046DA183FD217143DACE /* LevelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3958B7024DAADC15E5C557B9 /* LevelManager.swift */; };
 		A5723D032739FA8C59CB6091 /* CheckPathNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741746F275F1126EB8D73A8C /* CheckPathNode.swift */; };
 		A764C04DC3690425E3EF6489 /* chess-w-knight.png in Resources */ = {isa = PBXBuildFile; fileRef = 5FA8B7A8AB84F18A8F1496EB /* chess-w-knight.png */; };
+		A87C86625128BF86EB1F27B9 /* TouchInputAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31680B5E066A40DE4421288 /* TouchInputAdapter.swift */; };
 		A93CD0610E8D9553C3EF93D6 /* HowToPlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */; };
 		A976B8402105EF0B3ECAEFD2 /* GCIiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34882D7861C40C7EF778334D /* GCIiOSApp.swift */; };
 		AA42BB90D142078098CEC2C0 /* MacInputAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F41233D63B1F66EE664E87 /* MacInputAdapter.swift */; };
@@ -288,6 +294,7 @@
 		5FA8B7A8AB84F18A8F1496EB /* chess-w-knight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-knight.png"; sourceTree = "<group>"; };
 		6804169215469385E2B6893E /* chess-w-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-bishop-d1.png"; sourceTree = "<group>"; };
 		69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToPlayNode.swift; sourceTree = "<group>"; };
+		6A2AE39FA6875082A7D1BC5A /* InputPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputPrompts.swift; sourceTree = "<group>"; };
 		6C6795B9E4AFFF2BBDB8847B /* chess-b-pawn-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-pawn-d2.png"; sourceTree = "<group>"; };
 		6E7E3382582F0A404A28305F /* chess-b-king-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-king-d1.png"; sourceTree = "<group>"; };
 		6F42DE810C8534D684F0CBC0 /* KeyPress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPress.swift; sourceTree = "<group>"; };
@@ -316,6 +323,7 @@
 		9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCIBoard.swift; sourceTree = "<group>"; };
 		A00359D531409FD8FEF80590 /* ChessEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessEngine.swift; sourceTree = "<group>"; };
 		A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PressStart2P-Regular.ttf"; sourceTree = "<group>"; };
+		A31680B5E066A40DE4421288 /* TouchInputAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchInputAdapter.swift; sourceTree = "<group>"; };
 		A56497B49CFE839D85ABCC3A /* HUDNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDNode.swift; sourceTree = "<group>"; };
 		ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverScene.swift; sourceTree = "<group>"; };
 		B1C4ECE6D9D8E3925073ACFE /* chess-w-king-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-king-d2.png"; sourceTree = "<group>"; };
@@ -351,6 +359,7 @@
 		F86607BAC135182D9E5F8BD4 /* PieceNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieceNode.swift; sourceTree = "<group>"; };
 		F8CB7404F3713FE581B43A87 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F9BCEF5A958D912F3D3834BC /* GameAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAction.swift; sourceTree = "<group>"; };
+		FBEEDFCF2C7B25C534D69FB8 /* KeyboardInputAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputAdapter.swift; sourceTree = "<group>"; };
 		FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStatusNode.swift; sourceTree = "<group>"; };
 		FF11C903C797D394A807E396 /* Chess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chess.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -572,8 +581,11 @@
 			children = (
 				F9BCEF5A958D912F3D3834BC /* GameAction.swift */,
 				089693DE6C70095463C9E308 /* InputHandler.swift */,
+				6A2AE39FA6875082A7D1BC5A /* InputPrompts.swift */,
+				FBEEDFCF2C7B25C534D69FB8 /* KeyboardInputAdapter.swift */,
 				6F42DE810C8534D684F0CBC0 /* KeyPress.swift */,
 				25F41233D63B1F66EE664E87 /* MacInputAdapter.swift */,
+				A31680B5E066A40DE4421288 /* TouchInputAdapter.swift */,
 			);
 			path = Input;
 			sourceTree = "<group>";
@@ -599,28 +611,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_35AAD8B2-386E-4793-B6B7-3DFBEDBEA11F" /* .claude */ = {
+		"TEMP_0842FB95-CF69-4256-8CCD-97BDF7AD354A" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_51D4559C-E501-4D28-9498-8D6168873E20" /* .claude */ = {
+		"TEMP_E27E9C7B-0B21-4BBA-935D-2369FA754E59" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_811C402A-F097-4A54-9021-78B83199654D" /* .claude */ = {
+		"TEMP_F0FBB0B8-9E0A-4C16-AFAA-E387B10F52E5" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_D052FABC-3C83-4D75-9B43-088423BCF8F3" /* .claude */ = {
+		"TEMP_F9237BA6-8214-4505-8D74-6234A52FABB0" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -878,8 +890,10 @@
 				E22CBB20BA38A80B327C715F /* HighScoreEntryNode.swift in Sources */,
 				2D6AEAFFDB4E3817A7AA8A3F /* HowToPlayNode.swift in Sources */,
 				7B642189B3FC586C84C9A534 /* InputHandler.swift in Sources */,
+				75E7AD5D7B8013F85C756947 /* InputPrompts.swift in Sources */,
 				B13EF8E180EE359E19DA52C3 /* Juice.swift in Sources */,
 				0D33DD3B5B6669FDE09BA2C8 /* KeyPress.swift in Sources */,
+				686340DF574D88D52CF422F3 /* KeyboardInputAdapter.swift in Sources */,
 				E05E089FE48382AC59AD93BD /* LaserNode.swift in Sources */,
 				8916FC9528C763093B5D18BE /* LaserPool.swift in Sources */,
 				219A018777664526318593BD /* LevelBannerNode.swift in Sources */,
@@ -909,6 +923,7 @@
 				BF65DE6B34BC76D86E140734 /* StarfieldTiling.swift in Sources */,
 				F85FF93C6997AF4868C1CBC3 /* TitleOverlayNode.swift in Sources */,
 				1840BB4464E1128BE071D44C /* TitleScene.swift in Sources */,
+				50B2F42115E0AC209B961272 /* TouchInputAdapter.swift in Sources */,
 				F9CA99676598CF676A718B8D /* TurnTimer.swift in Sources */,
 				E33C887F2ABFADD773CD302C /* TurnTimerNode.swift in Sources */,
 			);
@@ -948,8 +963,10 @@
 				F6CA92FE0D8631965A645E24 /* HighScoreEntryNode.swift in Sources */,
 				A93CD0610E8D9553C3EF93D6 /* HowToPlayNode.swift in Sources */,
 				5D74958439CB3E0E9B615A4D /* InputHandler.swift in Sources */,
+				3FBB4038E5A5366F3A6CBE7F /* InputPrompts.swift in Sources */,
 				CD1874C4485A026E0CF6E5D5 /* Juice.swift in Sources */,
 				0A446AFBF0B0226CBCD251C8 /* KeyPress.swift in Sources */,
+				807BD5108B03FF0D9087A2DE /* KeyboardInputAdapter.swift in Sources */,
 				1CEBD50D8F22785E804BC48E /* LaserNode.swift in Sources */,
 				89730601CC9CA7965495F732 /* LaserPool.swift in Sources */,
 				5CD2378E73FBA9A0396D70D7 /* LevelBannerNode.swift in Sources */,
@@ -978,6 +995,7 @@
 				19D40CAC178E01C71D28135C /* StarfieldTiling.swift in Sources */,
 				E03642468B53404E29D22B4E /* TitleOverlayNode.swift in Sources */,
 				4DE75B382B1C797060820072 /* TitleScene.swift in Sources */,
+				A87C86625128BF86EB1F27B9 /* TouchInputAdapter.swift in Sources */,
 				CEF1339609D23361DC412BCB /* TurnTimer.swift in Sources */,
 				1166A0AA196EDA9E5CAED95E /* TurnTimerNode.swift in Sources */,
 			);
