@@ -94,7 +94,7 @@ targets:
   GalacticChessInvadersiOS:
     type: application
     platform: iOS
-    deploymentTarget: "17.0"
+    deploymentTarget: "15.0"
     sources:
       - path: GalacticChessInvaders
         excludes:
@@ -110,7 +110,7 @@ targets:
     settings:
       base:
         SWIFT_VERSION: 6.0
-        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.zurlocker.GalacticChessInvaders
         INFOPLIST_FILE: GalacticChessInvaders/Info-iOS.plist
         CURRENT_PROJECT_VERSION: "9"

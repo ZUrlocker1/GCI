@@ -1056,7 +1056,9 @@ class GameScene: SKScene {
     /// every path that opens or closes the info panel has to say so.
     private func refreshCursorRects() {
         guard let view else { return }
+        #if os(macOS)
         view.window?.invalidateCursorRects(for: view)
+        #endif
     }
 
     func showHowToPlay() {

@@ -123,12 +123,6 @@ final class KeyboardFocusedSKView: SKView {
     }
 }
 
-extension Notification.Name {
-    static let gciSidebarChanged = Notification.Name("gciSidebarChanged")
-    /// Posted when ⌘T turns Test Mode on or off, so the sidebar's collapsed tab
-    /// can appear and disappear with it.
-    static let gciTestModeChanged = Notification.Name("gciTestModeChanged")
-}
 
 // MARK: - Diagnostics Sidebar
 

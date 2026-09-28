@@ -1,8 +1,11 @@
 import SpriteKit
 #if os(macOS)
 import AppKit
+/// SpriteKit ships `SKColor` for exactly this reason, but no font equivalent.
+private typealias PlatformFont = NSFont
 #else
 import UIKit
+private typealias PlatformFont = UIFont
 #endif
 
 final class HowToPlayNode: SKNode {
@@ -361,7 +364,8 @@ final class HowToPlayNode: SKNode {
         let style = NSMutableParagraphStyle()
         style.lineSpacing = 4.0
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont(name: Self.font, size: size) ?? NSFont.monospacedSystemFont(ofSize: size, weight: .regular),
+            .font: PlatformFont(name: Self.font, size: size)
+                ?? PlatformFont.monospacedSystemFont(ofSize: size, weight: .regular),
             .foregroundColor: SKColor.white.withAlphaComponent(0.85),
             .paragraphStyle: style
         ]
