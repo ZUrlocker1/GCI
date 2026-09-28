@@ -42,7 +42,7 @@ struct GCIiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            GameView()
+            RootView()
                 // The board is black to the edges; a white letterbox under the
                 // home indicator would be the first thing anyone noticed.
                 .ignoresSafeArea()
@@ -114,6 +114,9 @@ enum Lifecycle {
         case .active:
             AudioSession.reactivate()
             scene.isPaused = false
+            // Coming back from the background, the keyboard has to be claimed
+            // again — the app was not first responder while it was away.
+            (scene.view as? KeyboardFocusedSKView)?.claimKeyboard()
             DiagnosticsLog.shared.log(.info, "foreground")
         case .inactive, .background:
             // Pause the scene rather than the game's own pause state: this is
@@ -124,6 +127,39 @@ enum Lifecycle {
             DiagnosticsLog.shared.log(.info, "background")
         @unknown default:
             break
+        }
+    }
+}
+
+// MARK: - Root
+
+/// The game, and the diagnostics panel beside it when it is open.
+///
+/// Side by side rather than overlaid, which is what the Mac does — the SKView
+/// simply gets narrower and `SceneLayout` lays the game out in what is left.
+/// That is the responsive work from 1.2 earning its keep twice: the panel
+/// costs no special handling, it is just a smaller scene.
+struct RootView: View {
+
+    @State private var showLog = GameSettings.shared.logPanel
+
+    var body: some View {
+        GeometryReader { geometry in
+            // Landscape only — a decision, not a shortcut. See `LogPanelView`.
+            let isLandscape = geometry.size.width > geometry.size.height
+            HStack(spacing: 0) {
+                GameView()
+                if showLog && isLandscape {
+                    LogPanelView()
+                        .frame(width: min(320, geometry.size.width * 0.32))
+                }
+            }
+        }
+        // Re-reads rather than flips, so setting the switch to the state it
+        // is already in cannot close the panel.
+        .onReceive(NotificationCenter.default.publisher(for: .gciSidebarChanged)) { _ in
+            guard showLog != GameSettings.shared.logPanel else { return }
+            showLog = GameSettings.shared.logPanel
         }
     }
 }
@@ -146,6 +182,11 @@ struct GameView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: SKView, context: Context) {
+        // Asked again on every update, not just at creation: the window is
+        // often not key yet when the view first appears, and a press that
+        // arrives before the game holds the keyboard goes to iPadOS instead —
+        // which is Space opening Spotlight over the title screen.
+        (view as? KeyboardFocusedSKView)?.claimKeyboard()
         guard view.scene == nil else { return }
         let scene = GameScene.shared
         // `.resizeFill` on both platforms: the scene *is* the view, and

@@ -38,11 +38,44 @@ final class KeyboardFocusedSKView: SKView {
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
-        // Without this nothing is first responder and no key event is routed
-        // anywhere — the title screen ignores every key, and the game only
-        // starts answering the keyboard after some other control has taken
-        // focus, which is exactly how this was first noticed.
-        if window != nil { becomeFirstResponder() }
+        claimKeyboard()
+    }
+
+    /// Asks for the keyboard, and keeps asking.
+    ///
+    /// One call in `didMoveToWindow` is not enough, which is the bug behind
+    /// "space still opens Spotlight when gameplay first starts". At that
+    /// moment the view has a window but the window is not yet key, so
+    /// `becomeFirstResponder` returns false and the press goes to iPadOS
+    /// instead — and SwiftUI may hand focus elsewhere while it settles. Every
+    /// route back into the app asks again:
+    ///
+    ///   · the view gaining a window
+    ///   · the next run-loop turn, by which time the window is key
+    ///   · `updateUIView`, which SwiftUI calls as state settles
+    ///   · the app returning to the foreground
+    ///
+    /// Cheap, because `becomeFirstResponder` on the current first responder
+    /// is a no-op.
+    func claimKeyboard() {
+        guard window != nil, !isFirstResponder else { return }
+        if !becomeFirstResponder() {
+            // Not an error worth a red line — the retries below are expected
+            // to be the ones that land.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil, !self.isFirstResponder else { return }
+                if self.becomeFirstResponder() {
+                    DiagnosticsLog.shared.log(.input, "keyboard focus (deferred)")
+                }
+            }
+            return
+        }
+        DiagnosticsLog.shared.log(.input, "keyboard focus")
+    }
+
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        claimKeyboard()
     }
 
     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
