@@ -91,33 +91,32 @@ final class HighScoreEntryNode: SKNode {
 
     // MARK: - Key handling
 
-    /// Returns true if the event was consumed.
+    /// Returns true if the press was consumed.
     @discardableResult
-    func handleKey(_ event: NSEvent) -> Bool {
-        switch event.keyCode {
-        case 36, 76:                                   // Return, numpad Enter
+    func handleKey(_ key: KeyPress) -> Bool {
+        switch key.code {
+        case .enter:
             let trimmed = enteredName.trimmingCharacters(in: .whitespaces)
             onSubmit?(trimmed.isEmpty ? "PLAYER" : trimmed)
             return true
-        case 51:                                       // Delete
+        case .delete:
             if !enteredName.isEmpty { enteredName.removeLast(); refresh() }
             return true
-        case 53:                                       // Escape — record the entry with a blank name
+        case .escape:                                  // record the entry with a blank name
             onSubmit?("")
             return true
-        default:
+        case .left, .right, .space, .character:
             break
         }
 
-        // `characters`, not `charactersIgnoringModifiers`: the latter reports the
-        // unshifted key, so ⇧1 would arrive as "1" instead of "!".
+        // `typed`, not `character`: the latter is the unshifted key, so ⇧1
+        // would arrive as "1" instead of "!".
         //
         // Accepts anything printable in ASCII — letters, digits, space and
         // symbols — which is also exactly what Press Start 2P has glyphs for.
         guard enteredName.count < Self.maxLength,
-              let typed = event.characters?.uppercased(),
-              typed.count == 1,
-              let character = typed.first,
+              let typed = key.typed,
+              let character = String(typed).uppercased().first,
               let scalar = character.unicodeScalars.first,
               (0x20...0x7E).contains(scalar.value)
         else { return true }

@@ -1,13 +1,12 @@
 // InputHandler.swift
-// Translates macOS keyboard/mouse events into GameAction values.
-// iOS touch events will have a separate implementation in Phase 10.
-// Game logic consumes GameAction only — never raw NSEvent.
+// Turns a `KeyPress` or a click into a `GameAction`.
+//
+// No `NSEvent` here any more, and no `#if os(macOS)` either: the platform
+// translation moved to `MacInputAdapter`, and this file now compiles unchanged
+// on iOS. Game logic still consumes `GameAction` only.
 
 import Foundation
 import SpriteKit
-
-#if os(macOS)
-import AppKit
 
 @MainActor
 final class InputHandler {
@@ -17,8 +16,8 @@ final class InputHandler {
     // GameScene sets this to route actions into the state machine
     var actionHandler: ((GameAction) -> Void)?
 
-    func handleKeyDown(_ event: NSEvent, inTitleScreen: Bool = false) {
-        guard !event.isARepeat else { return }
+    func handleKeyDown(_ key: KeyPress, inTitleScreen: Bool = false) {
+        guard !key.isRepeat else { return }
 
         // I · ⌘I · ? open How To Play (§9). Matched on characters rather than
         // key code so "?" works regardless of keyboard layout.
@@ -26,7 +25,7 @@ final class InputHandler {
         // Tested before the title screen's any-key-starts rule, or the one place
         // a new player most wants the instructions is the one place they cannot
         // reach them.
-        if isInfoShortcut(event) {
+        if key.isInfoShortcut {
             DiagnosticsLog.shared.log(.input, "Info shortcut → showInfo")
             dispatch(.showInfo)
             return
@@ -38,26 +37,10 @@ final class InputHandler {
             return
         }
 
-        let action = gameAction(for: event.keyCode, isDown: true)
-        if let action {
-            DiagnosticsLog.shared.log(.input, "KeyDown \(event.keyCode) → \(action)")
+        if let action = gameAction(for: key, isDown: true) {
+            DiagnosticsLog.shared.log(.input, "KeyDown \(key.code) → \(action)")
             dispatch(action)
         }
-    }
-
-    /// True for I, ⌘I or ?. Exposed so the scene can honour the Info shortcut
-    /// ahead of its own state-specific key handling — while paused, any key
-    /// resumes, and Info has to be tested first or it can never fire there.
-    func isInfoShortcut(_ event: NSEvent) -> Bool {
-        // charactersIgnoringModifiers so ⇧/ reports "?" and ⌘I reports "i".
-        guard let characters = event.charactersIgnoringModifiers?.lowercased() else { return false }
-        if characters == "?" { return true }
-        if characters == "i" {
-            // Plain I, or ⌘I. Ignore other modifier combinations.
-            let relevant = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            return relevant.isEmpty || relevant == .command
-        }
-        return false
     }
 
     /// Any key dismisses the How To Play overlay and resumes play (§10).
@@ -65,9 +48,8 @@ final class InputHandler {
         dispatch(.dismissOverlay)
     }
 
-    func handleKeyUp(_ event: NSEvent) {
-        let action = gameAction(for: event.keyCode, isDown: false)
-        if let action { dispatch(action) }
+    func handleKeyUp(_ key: KeyPress) {
+        if let action = gameAction(for: key, isDown: false) { dispatch(action) }
     }
 
     func handleMouseDown(at location: CGPoint, in scene: SKScene, inTitleScreen: Bool = false) {
@@ -91,40 +73,42 @@ final class InputHandler {
 
     // MARK: - Key Mapping
 
-    /// The key-code mapping, for tests. A and D have been on and off this table
+    /// The mapping, exposed for tests. A and D have been on and off this table
     /// once already; pinning it is cheaper than finding out from a player.
-    func actionForTesting(keyCode: UInt16, isDown: Bool) -> GameAction? {
-        gameAction(for: keyCode, isDown: isDown)
+    func actionForTesting(_ key: KeyPress, isDown: Bool) -> GameAction? {
+        gameAction(for: key, isDown: isDown)
     }
 
-    private func gameAction(for keyCode: UInt16, isDown: Bool) -> GameAction? {
-        switch keyCode {
+    private func gameAction(for key: KeyPress, isDown: Bool) -> GameAction? {
         // Arrows and A / D, as §8.1 asks: arrows for an external keyboard, the
         // letters for a laptop where the left hand stays near the trackpad.
         //
         // A and D were dropped for a while because A was the Auto Mode toggle
         // and the scene reads hotkeys ahead of movement, so the letter could
-        // not do both. Auto Mode now needs Command-T first, which gives the
+        // not do both. Auto Mode now needs Test Mode first, which gives the
         // letters back.
-        case 123, 0:    // ← arrow, A
-            return isDown ? .moveLeft : .stopMoving
-        case 124, 2:    // → arrow, D
-            return isDown ? .moveRight : .stopMoving
-        case 49:        // Space
-            return isDown ? .fireLaser : .stopFiring
+        //
+        // The arrows come through as codes and the letters as characters,
+        // which is the whole reason `KeyPress` carries both.
+        switch key.code {
+        case .left:  return isDown ? .moveLeft : .stopMoving
+        case .right: return isDown ? .moveRight : .stopMoving
+        case .space: return isDown ? .fireLaser : .stopFiring
         // Escape only. §5 gives pause both Escape and P; P is now the hidden
         // power-up test key, and the scene's handler claims it ahead of this
         // one. Escape is the sole pause key, so it always pauses rather than
         // first cancelling a chess selection as §5 suggests — a pause key that
         // sometimes needs two presses is worse than one that never does.
-        case 53:        // Escape
-            return isDown ? .pause : nil
-        case 36, 76:    // Return, numpad Enter
-            return isDown ? .confirmStart : nil
-        case 37:        // L — toggle diagnostics sidebar
-            return isDown ? .toggleDiagnostics : nil
-        default:
-            return nil
+        case .escape: return isDown ? .pause : nil
+        case .enter:  return isDown ? .confirmStart : nil
+        case .delete, .character: break
+        }
+
+        switch key.character {
+        case "a": return isDown ? .moveLeft : .stopMoving
+        case "d": return isDown ? .moveRight : .stopMoving
+        case "l": return isDown ? .toggleDiagnostics : nil   // diagnostics sidebar
+        default:  return nil
         }
     }
 
@@ -132,13 +116,3 @@ final class InputHandler {
         actionHandler?(action)
     }
 }
-
-#else
-// iOS stub — full implementation in Phase 10
-@MainActor
-final class InputHandler {
-    static let shared = InputHandler()
-    private init() {}
-    var actionHandler: ((GameAction) -> Void)?
-}
-#endif

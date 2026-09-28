@@ -1557,15 +1557,43 @@ final class TestModeGateTests: XCTestCase {
     /// movement duty precisely because the scene read it as a hotkey first, and
     /// §8.1 asks for A / D alongside the arrows.
     func testAAndDMoveTheShip() {
-        for (code, expected) in [(UInt16(0), GameAction.moveLeft),
-                                 (UInt16(2), GameAction.moveRight),
-                                 (UInt16(123), GameAction.moveLeft),
-                                 (UInt16(124), GameAction.moveRight)] {
-            XCTAssertEqual(InputHandler.shared.actionForTesting(keyCode: code, isDown: true),
-                           expected, "key code \(code)")
-            XCTAssertEqual(InputHandler.shared.actionForTesting(keyCode: code, isDown: false),
-                           .stopMoving, "key code \(code) release")
+        // The arrows arrive as codes and the letters as characters, which is
+        // why `KeyPress` carries both.
+        let keys: [(KeyPress, GameAction)] = [
+            (KeyPress(character: "a"), .moveLeft),
+            (KeyPress(character: "d"), .moveRight),
+            (KeyPress(code: .left),    .moveLeft),
+            (KeyPress(code: .right),   .moveRight),
+        ]
+        for (key, expected) in keys {
+            XCTAssertEqual(InputHandler.shared.actionForTesting(key, isDown: true),
+                           expected, "\(key)")
+            XCTAssertEqual(InputHandler.shared.actionForTesting(key, isDown: false),
+                           .stopMoving, "\(key) release")
         }
+    }
+
+    /// Space, Escape and Return come through as codes on every platform.
+    func testTheNonPrintingKeysMap() {
+        XCTAssertEqual(InputHandler.shared.actionForTesting(KeyPress(code: .space), isDown: true),
+                       .fireLaser)
+        XCTAssertEqual(InputHandler.shared.actionForTesting(KeyPress(code: .space), isDown: false),
+                       .stopFiring)
+        XCTAssertEqual(InputHandler.shared.actionForTesting(KeyPress(code: .escape), isDown: true),
+                       .pause)
+        XCTAssertEqual(InputHandler.shared.actionForTesting(KeyPress(code: .enter), isDown: true),
+                       .confirmStart)
+        XCTAssertEqual(InputHandler.shared.actionForTesting(KeyPress(character: "l"), isDown: true),
+                       .toggleDiagnostics)
+    }
+
+    /// `?`, plain I and ⌘I — and nothing else.
+    func testTheInfoShortcutIsThreeKeysAndNoOthers() {
+        XCTAssertTrue(KeyPress(character: "?").isInfoShortcut)
+        XCTAssertTrue(KeyPress(character: "i").isInfoShortcut)
+        XCTAssertTrue(KeyPress(character: "i", modifiers: .command).isInfoShortcut)
+        XCTAssertFalse(KeyPress(character: "i", modifiers: .shift).isInfoShortcut)
+        XCTAssertFalse(KeyPress(character: "j").isInfoShortcut)
     }
 }
 
@@ -2256,13 +2284,11 @@ final class TestModeTests: XCTestCase {
 @MainActor
 final class HighScoreEntryTests: XCTestCase {
 
-    private func press(_ node: HighScoreEntryNode, _ keyCode: UInt16, _ characters: String) {
-        guard let event = NSEvent.keyEvent(
-            with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
-            windowNumber: 0, context: nil, characters: characters,
-            charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)
-        else { return XCTFail("could not synthesise a key event") }
-        node.handleKey(event)
+    private func press(_ node: HighScoreEntryNode, _ code: KeyPress.Code,
+                       _ characters: String) {
+        node.handleKey(KeyPress(code: code,
+                                character: characters.lowercased().first,
+                                typed: characters.first))
     }
 
     private func makeEntry() -> HighScoreEntryNode {
@@ -2271,15 +2297,15 @@ final class HighScoreEntryTests: XCTestCase {
 
     func testTypingUppercasesAndDeleteWorks() {
         let entry = makeEntry()
-        for character in "zack" { press(entry, 0, String(character)) }
+        for character in "zack" { press(entry, .character, String(character)) }
         XCTAssertEqual(entry.enteredName, "ZACK")
-        press(entry, 51, "")
+        press(entry, .delete, "")
         XCTAssertEqual(entry.enteredName, "ZAC")
     }
 
     func testNameIsCappedAtEightCharacters() {
         let entry = makeEntry()
-        for character in "zackurlocker" { press(entry, 0, String(character)) }
+        for character in "zackurlocker" { press(entry, .character, String(character)) }
         XCTAssertEqual(entry.enteredName.count, HighScoreEntryNode.maxLength)
         XCTAssertEqual(entry.enteredName, "ZACKURLO")
     }
@@ -2287,7 +2313,7 @@ final class HighScoreEntryTests: XCTestCase {
     func testDigitsAndSymbolsAreAccepted() {
         for name in ["R2-D2", "ZACK!", "#1", "*@%", "$100"] {
             let entry = makeEntry()
-            for character in name { press(entry, 0, String(character)) }
+            for character in name { press(entry, .character, String(character)) }
             XCTAssertEqual(entry.enteredName, name.uppercased())
         }
     }
@@ -2296,18 +2322,13 @@ final class HighScoreEntryTests: XCTestCase {
     /// reports the unshifted key, so it would turn ⇧1 into "1" rather than "!".
     func testShiftedKeysArriveAsSymbols() {
         let entry = makeEntry()
-        guard let event = NSEvent.keyEvent(
-            with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
-            windowNumber: 0, context: nil, characters: "!",
-            charactersIgnoringModifiers: "1", isARepeat: false, keyCode: 0)
-        else { return XCTFail("could not synthesise a key event") }
-        entry.handleKey(event)
+        entry.handleKey(KeyPress(character: "1", typed: "!"))
         XCTAssertEqual(entry.enteredName, "!")
     }
 
     func testNonASCIIIsRejected() {
         let entry = makeEntry()
-        for character in "åé★" { press(entry, 0, String(character)) }
+        for character in "åé★" { press(entry, .character, String(character)) }
         XCTAssertTrue(entry.enteredName.isEmpty)
     }
 
@@ -2317,8 +2338,8 @@ final class HighScoreEntryTests: XCTestCase {
             let entry = makeEntry()
             var submitted: String?
             entry.onSubmit = { submitted = $0 }
-            for character in name { press(entry, 0, String(character)) }
-            press(entry, 36, "\r")
+            for character in name { press(entry, .character, String(character)) }
+            press(entry, .enter, "")
             XCTAssertEqual(submitted, name, "\(name.count)-character name should submit")
         }
     }
@@ -2327,14 +2348,14 @@ final class HighScoreEntryTests: XCTestCase {
         let typed = makeEntry()
         var result: String?
         typed.onSubmit = { result = $0 }
-        for character in "woz" { press(typed, 0, String(character)) }
-        press(typed, 36, "\r")
+        for character in "woz" { press(typed, .character, String(character)) }
+        press(typed, .enter, "")
         XCTAssertEqual(result, "WOZ")
 
         let blank = makeEntry()
         var blankResult: String?
         blank.onSubmit = { blankResult = $0 }
-        press(blank, 36, "\r")
+        press(blank, .enter, "")
         XCTAssertEqual(blankResult, "PLAYER", "an empty name still needs a label")
     }
 }

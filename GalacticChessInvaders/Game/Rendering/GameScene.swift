@@ -5223,19 +5223,21 @@ class GameScene: SKScene {
 
     // MARK: - Input Forwarding (macOS)
 
-    override func keyDown(with event: NSEvent) {
-        let key = event.charactersIgnoringModifiers?.lowercased()
+    /// Every key the game reads, in one place, with no platform type in it.
+    /// `MacInputAdapter` calls this from `keyDown`; the iOS build will call it
+    /// from a `GCKeyboard` handler.
+    func handle(key: KeyPress) {
 
         // The prompt owns the keyboard while it is up: Y leaves, anything else
         // goes back. Ahead of everything, including X.
         if quitPrompt != nil {
-            dismissQuitPrompt(quitting: key == "y")
+            dismissQuitPrompt(quitting: key.is("y"))
             return
         }
 
         // Command-T arms the test keys. Command-modified so it cannot collide
         // with anything the game reads, and per session so nobody leaves it on.
-        if key == "t", event.modifierFlags.contains(.command) {
+        if key.isCommand("t") {
             testMode.toggle()
             NotificationCenter.default.post(name: .gciTestModeChanged, object: testMode)
             // Otherwise the panel is stranded: open, and with no way to close
@@ -5257,8 +5259,10 @@ class GameScene: SKScene {
         // a view, so this branch is a backstop — but it is also where the split
         // is written down, so nobody later "fixes" the guard below by removing
         // it and quietly turns the system shortcut into a game prompt.
-        if key == "q", event.modifierFlags.contains(.command) {
+        if key.isCommand("q") {
+            #if os(macOS)
             NSApp.terminate(nil)
+            #endif
             return
         }
 
@@ -5266,7 +5270,7 @@ class GameScene: SKScene {
         //
         // Not from the title, where there is no game to leave, and not during
         // name entry, where a Q belongs in the player's initials.
-        if key == "q",
+        if key.is("q"),
            highScoreEntry == nil,
            !(stateMachine.currentState is TitleState) {
             showQuitPrompt()
@@ -5284,7 +5288,7 @@ class GameScene: SKScene {
         if howToPlayNode != nil
             || stateMachine.currentState is PausedState
             || stateMachine.currentState is PlayingState,
-           event.charactersIgnoringModifiers?.lowercased() == "x" {
+           key.is("x") {
             ScoreManager.shared.clearHighScores()
             // A clean slate includes the soundtrack: the player has to reach
             // Level 3 again before the alternates come back into play.
@@ -5309,14 +5313,14 @@ class GameScene: SKScene {
 
         // Name entry owns the keyboard while it is up.
         if let highScoreEntry {
-            highScoreEntry.handleKey(event)
+            highScoreEntry.handleKey(key)
             return
         }
 
         // S opens Settings from anywhere. Its own key rather than a menu, in
         // the same spirit as `I` — and §12.9 is explicit that pause must never
         // become a settings menu.
-        if event.charactersIgnoringModifiers?.lowercased() == "s" {
+        if key.is("s") {
             showSettings()
             return
         }
@@ -5325,7 +5329,7 @@ class GameScene: SKScene {
         // "any key continues" branches below on purpose — reaching for the
         // volume should never also advance the game. Below name entry, though,
         // so a player with an M in their name can still type it.
-        if event.charactersIgnoringModifiers?.lowercased() == "m" {
+        if key.is("m") {
             AudioManager.shared.toggleMusic()
             return
         }
@@ -5342,7 +5346,7 @@ class GameScene: SKScene {
         // To Play, and `X` (handled above), which restarts. Info has to be
         // tested before the catch-all or it could never fire while paused.
         if stateMachine.currentState is PausedState {
-            if InputHandler.shared.isInfoShortcut(event) {
+            if key.isInfoShortcut {
                 showHowToPlay()
             } else {
                 stateMachine.enter(PlayingState.self)
@@ -5353,7 +5357,7 @@ class GameScene: SKScene {
         // Auto Mode: A plays White automatically on a very short beat. Behind
         // the gate, so a bare A still moves the ship.
         if testMode, stateMachine.currentState is PlayingState,
-           event.charactersIgnoringModifiers?.lowercased() == "a" {
+           key.is("a") {
             toggleAutoMode()
             return
         }
@@ -5364,28 +5368,28 @@ class GameScene: SKScene {
         // note the handler order, since this runs *ahead* of `InputHandler` and
         // would shadow the pause key silently if that binding were still there.
         if testMode, stateMachine.currentState is PlayingState,
-           event.charactersIgnoringModifiers?.lowercased() == "p" {
+           key.is("p") {
             grantNextPowerUp()
             return
         }
 
         // R sends the level's next raider in now, for testing.
         if testMode, stateMachine.currentState is PlayingState,
-           event.charactersIgnoringModifiers?.lowercased() == "r" {
+           key.is("r") {
             summonRaider()
             return
         }
 
         // V skips to the next level, mid-game, with no fanfare.
         if testMode, stateMachine.currentState is PlayingState,
-           event.charactersIgnoringModifiers?.lowercased() == "v" {
+           key.is("v") {
             skipLevel()
             return
         }
 
         // Game over: Y starts a fresh game, anything else returns to the title.
         if stateMachine.currentState is GameOverState {
-            if event.charactersIgnoringModifiers?.lowercased() == "y" {
+            if key.is("y") {
                 startNewGame()
             } else {
                 resetToTitle()
@@ -5394,25 +5398,24 @@ class GameScene: SKScene {
         }
 
         let inTitle = stateMachine.currentState is TitleState
-        InputHandler.shared.handleKeyDown(event, inTitleScreen: inTitle)
+        InputHandler.shared.handleKeyDown(key, inTitleScreen: inTitle)
     }
 
-    override func mouseDragged(with event: NSEvent) {
+    func pointerDragged(to location: CGPoint) {
         if let settingsNode {
-            settingsNode.handleDrag(at: settingsNode.convert(event.location(in: self), from: self))
+            settingsNode.handleDrag(at: settingsNode.convert(location, from: self))
         }
     }
 
-    override func mouseUp(with event: NSEvent) {
+    func pointerUp() {
         settingsNode?.endDrag()
     }
 
-    override func keyUp(with event: NSEvent) {
-        InputHandler.shared.handleKeyUp(event)
+    func handle(keyUp key: KeyPress) {
+        InputHandler.shared.handleKeyUp(key)
     }
 
-    override func mouseDown(with event: NSEvent) {
-        let location = event.location(in: self)
+    func pointerDown(at location: CGPoint) {
 
         // Settings intercepts all clicks: BACK first, then its own controls.
         if let panel = settingsNode {
