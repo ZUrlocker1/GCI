@@ -23,10 +23,21 @@ struct GCIiOSApp: App {
 
     init() {
         AudioSession.configure()
-        // A hardware keyboard drives the same keys the Mac does. Started here
-        // so a keyboard already attached at launch is noticed — no
-        // notification is posted for one that was there all along.
-        MainActor.assumeIsolated { KeyboardInputAdapter.start() }
+        // Everything the Mac shell does at launch that is not AppKit.
+        //
+        // `App/GalacticChessInvadersApp.swift` is excluded from this target,
+        // and `preloadAll` was the line in it that mattered: every SFX player
+        // is built and prepared there so gameplay never touches the
+        // filesystem (§18). Without it the pools are empty and `play` returns
+        // silently — which is exactly what shipped in the first iOS build,
+        // music playing and not one sound effect.
+        //
+        // The font needs no equivalent: `UIAppFonts` in Info-iOS.plist does
+        // what `registerBundledFonts()` does over there.
+        MainActor.assumeIsolated {
+            DiagnosticsLog.shared.log(.startup, "Test Mode ⌘T  A, P, R, V")
+            AudioManager.shared.preloadAll()
+        }
     }
 
     var body: some Scene {

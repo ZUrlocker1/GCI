@@ -1,149 +1,103 @@
 // KeyboardInputAdapter.swift
 // A hardware keyboard on iOS, driving exactly the same keys as the Mac.
 //
-// An iPad in a Magic Keyboard has every key the Mac build reads, so it should
-// play the same: arrows and A/D to steer, Space to fire, S, M, I, Q, X, the
-// Test Mode gate and its four keys, and typing a high-score name. None of
-// that needed writing twice — `MacInputAdapter` turns an `NSEvent` into a
-// `KeyPress` and this turns a `GCKeyCode` into the same thing, and the scene
-// cannot tell which happened.
+// An iPad in a Magic Keyboard has every key the Mac build reads, so it plays
+// the same: arrows and A/D to steer, Space to fire, S, M, I, Q, X, the Test
+// Mode gate and its four keys, and typing a high-score name. None of that
+// needed writing twice — `MacInputAdapter` turns an `NSEvent` into a
+// `KeyPress`, this turns a `UIKey` into the same thing, and the scene cannot
+// tell which happened.
 //
-// `GCKeyCode` is a *physical* key, like the macOS virtual key codes it
-// replaces — `.keyA` is the key where A sits on a US layout regardless of
-// what it types. That is the same behaviour the Mac had before `KeyPress`,
-// and it is why the table below maps codes to characters rather than asking
-// the system what the key would type.
+// **`UIPress`, not `GCKeyboard`.** This was written against `GCKeyboard`
+// first, and the keys worked while the system *also* acted on them: Space
+// opened Spotlight search over the game. `GCKeyboard` observes the keyboard,
+// it does not claim it, so every press fell through to iPadOS as well.
+// Overriding `pressesBegan`/`pressesEnded` and not calling `super` for a key
+// the game reads is what consumes it.
+//
+// `UIKey` is also a closer match than `GCKeyCode` was: it carries
+// `charactersIgnoringModifiers`, `characters` and `modifierFlags`, which is
+// exactly the shape `NSEvent` has and exactly what `KeyPress` wants. The
+// hand-written key-code-to-character table the first version needed is gone.
 
-import Foundation
-import GameController
+import SpriteKit
 
 #if os(iOS)
+import UIKit
 
-@MainActor
-enum KeyboardInputAdapter {
+extension GameScene {
 
-    /// Whether a hardware keyboard is attached right now. `InputPrompts` asks,
-    /// so an iPad with a keyboard is told to press a key and one without is
-    /// told to tap.
-    static var isAttached: Bool { GCKeyboard.coalesced != nil }
-
-    private static var observers: [NSObjectProtocol] = []
-
-    /// Called once at launch. Keyboards come and go while the app runs — a
-    /// Magic Keyboard is a case the iPad is attached to and detached from
-    /// constantly — so this watches rather than checking once.
-    static func start() {
-        guard observers.isEmpty else { return }
-        let centre = NotificationCenter.default
-        // `GCKeyboard.coalesced` rather than the notification's object: a
-        // `Notification` is not `Sendable`, and coalesced is the one the rest
-        // of this file reads anyway — it merges every attached keyboard.
-        observers.append(centre.addObserver(forName: .GCKeyboardDidConnect,
-                                            object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated {
-                attach(GCKeyboard.coalesced)
-                DiagnosticsLog.shared.log(.input, "keyboard connected")
-            }
-        })
-        observers.append(centre.addObserver(forName: .GCKeyboardDidDisconnect,
-                                            object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated {
-                DiagnosticsLog.shared.log(.input, "keyboard disconnected")
-            }
-        })
-        // One may already be attached at launch, in which case no notification
-        // is ever posted.
-        attach(GCKeyboard.coalesced)
+    open override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        guard let press = presses.first.flatMap(KeyPress.init) else {
+            // Not a key the game reads — let the system have it.
+            super.pressesBegan(presses, with: event)
+            return
+        }
+        // Deliberately no `super`. That is what stops Space reaching iPadOS
+        // and opening search on top of the game.
+        handle(key: press)
     }
 
-    private static func attach(_ keyboard: GCKeyboard?) {
-        guard let input = keyboard?.keyboardInput else { return }
-        input.keyChangedHandler = { input, _, keyCode, pressed in
-            MainActor.assumeIsolated {
-                guard let press = KeyPress(keyCode, input: input) else { return }
-                if pressed {
-                    GameScene.shared.handle(key: press)
-                } else {
-                    GameScene.shared.handle(keyUp: press)
-                }
-            }
+    open override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        guard let press = presses.first.flatMap(KeyPress.init) else {
+            super.pressesEnded(presses, with: event)
+            return
+        }
+        handle(keyUp: press)
+    }
+
+    /// A press the system takes away — the app losing focus mid-hold. It has
+    /// to read as a release, or the ship keeps moving after the keyboard has
+    /// stopped talking to us.
+    open override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        if let press = presses.first.flatMap(KeyPress.init) {
+            handle(keyUp: press)
+        } else {
+            super.pressesCancelled(presses, with: event)
         }
     }
 }
 
-// MARK: - GCKeyCode → KeyPress
+// MARK: - UIPress → KeyPress
 
 extension KeyPress {
 
-    /// `nil` for a key the game has no use for — including the modifiers
-    /// themselves, which are read off the keyboard rather than delivered.
-    init?(_ keyCode: GCKeyCode, input: GCKeyboardInput) {
+    /// `nil` for a press with no key, or a key the game has no use for.
+    init?(_ press: UIPress) {
+        guard let key = press.key else { return nil }
+
         var modifiers: Modifiers = .none
-        func held(_ codes: GCKeyCode...) -> Bool {
-            codes.contains { input.button(forKeyCode: $0)?.isPressed == true }
-        }
-        if held(.leftGUI, .rightGUI)          { modifiers.insert(.command) }
-        if held(.leftShift, .rightShift)      { modifiers.insert(.shift) }
-        if held(.leftAlt, .rightAlt)          { modifiers.insert(.option) }
-        if held(.leftControl, .rightControl)  { modifiers.insert(.control) }
+        if key.modifierFlags.contains(.command)   { modifiers.insert(.command) }
+        if key.modifierFlags.contains(.shift)     { modifiers.insert(.shift) }
+        if key.modifierFlags.contains(.alternate) { modifiers.insert(.option) }
+        if key.modifierFlags.contains(.control)   { modifiers.insert(.control) }
 
-        let shifted = modifiers.contains(.shift)
-
-        // The keys with no character first.
-        let code: Code?
-        switch keyCode {
-        case .leftArrow:                   code = .left
-        case .rightArrow:                  code = .right
-        case .spacebar:                    code = .space
-        case .escape:                      code = .escape
-        case .returnOrEnter, .keypadEnter: code = .enter
-        case .deleteOrBackspace:           code = .delete
-        default:                           code = nil
-        }
-        if let code {
-            self.init(code: code, character: nil, typed: nil, modifiers: modifiers)
-            return
+        let code: Code
+        switch key.keyCode {
+        case .keyboardLeftArrow:         code = .left
+        case .keyboardRightArrow:        code = .right
+        case .keyboardSpacebar:          code = .space
+        case .keyboardEscape:            code = .escape
+        case .keyboardReturnOrEnter,
+             .keypadEnter:               code = .enter
+        case .keyboardDeleteOrBackspace: code = .delete
+        default:                         code = .character
         }
 
-        guard let character = Self.character(for: keyCode) else { return nil }
-        // `?` is the one symbol the game reads, and it is Shift-/.
-        let typed: Character
-        if keyCode == .slash, shifted {
-            typed = "?"
-        } else {
-            typed = shifted ? Character(String(character).uppercased()) : character
-        }
-        // `character` is the unshifted key, the way `charactersIgnoringModifiers`
-        // reports it — except for "?", which the shortcut matches on directly.
-        self.init(code: .character,
-                  character: typed == "?" ? "?" : character,
-                  typed: typed,
-                  modifiers: modifiers)
-    }
+        let unshifted = key.charactersIgnoringModifiers.lowercased().first
+        // A modifier on its own reports no characters and no useful code.
+        if code == .character, unshifted == nil { return nil }
 
-    /// The unshifted character each physical key types on a US layout.
-    ///
-    /// Letters and digits cover the shortcuts and the high-score name entry
-    /// between them; the handful of symbols are the ones the name entry's
-    /// ASCII range would accept and a player might reach for.
-    private static func character(for keyCode: GCKeyCode) -> Character? {
-        switch keyCode {
-        case .keyA: return "a"; case .keyB: return "b"; case .keyC: return "c"
-        case .keyD: return "d"; case .keyE: return "e"; case .keyF: return "f"
-        case .keyG: return "g"; case .keyH: return "h"; case .keyI: return "i"
-        case .keyJ: return "j"; case .keyK: return "k"; case .keyL: return "l"
-        case .keyM: return "m"; case .keyN: return "n"; case .keyO: return "o"
-        case .keyP: return "p"; case .keyQ: return "q"; case .keyR: return "r"
-        case .keyS: return "s"; case .keyT: return "t"; case .keyU: return "u"
-        case .keyV: return "v"; case .keyW: return "w"; case .keyX: return "x"
-        case .keyY: return "y"; case .keyZ: return "z"
-        case .one: return "1"; case .two: return "2"; case .three: return "3"
-        case .four: return "4"; case .five: return "5"; case .six: return "6"
-        case .seven: return "7"; case .eight: return "8"; case .nine: return "9"
-        case .zero: return "0"
-        case .hyphen: return "-"; case .slash: return "/"; case .period: return "."
-        default: return nil
-        }
+        self.init(code: code,
+                  character: unshifted,
+                  typed: key.characters.first,
+                  modifiers: modifiers,
+                  // `UIPress` does not report auto-repeat. Holding a key
+                  // therefore re-fires rather than being ignored, which the
+                  // movement keys do not mind — they are down/up — and which
+                  // nothing else in the game is held down long enough to
+                  // notice.
+                  isRepeat: false)
     }
 }
 #endif

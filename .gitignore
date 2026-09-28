@@ -67,3 +67,6 @@ assets/music/music-loop-bundle-*/
 
 # Kept release builds, restored from history for comparison. Local only.
 archive/
+
+# Simulator build output from iOS verification runs. Local only.
+.ddios/
