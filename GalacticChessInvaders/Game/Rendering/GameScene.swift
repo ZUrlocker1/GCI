@@ -355,8 +355,8 @@ class GameScene: SKScene {
     var shipDragTouch: ObjectIdentifier?
     var fireTouch: ObjectIdentifier?
     /// The version string, top-left, and the only way into Test Mode on a
-    /// device with no keyboard. See `setupVersionLabel`.
-    var versionLabel: SKLabelNode?
+    /// device with no keyboard. See `setupVersionBadge`.
+    var versionBadge: VersionBadgeNode?
     /// `P`, `R` and `V` as buttons, under the version label. Exists only
     /// while Test Mode is on. `L` and `A` are Settings rows and stay there.
     var testStrip: TestModeStripNode?
@@ -549,7 +549,7 @@ class GameScene: SKScene {
         setupPools()
         setupStarfield()
         #if os(iOS)
-        setupVersionLabel()
+        setupVersionBadge()
         #endif
     }
 
@@ -941,7 +941,7 @@ class GameScene: SKScene {
         // the only one that could still be pressed through it.
         syncFireButtonVisibility()
         let panelUp = settingsNode != nil || howToPlayNode != nil
-        versionLabel?.isHidden = panelUp
+        versionBadge?.isHidden = panelUp
         testStrip?.isHidden = panelUp
         syncTestStripState()
         #endif
@@ -1238,8 +1238,8 @@ class GameScene: SKScene {
     //
     // Counted taps were the first idea and are worse: seven is the Android
     // convention, but it is slow and silent until it suddenly works. A press
-    // can show its own progress — the label brightens over the hold — so the
-    // gesture explains itself halfway through.
+    // can show its own progress — `VersionBadgeNode` sweeps a bar across
+    // itself over the hold — so the gesture explains itself halfway through.
     //
     // **Top-left, not the bottom-left corner the plan first chose.** Three
     // things are wrong with the bottom. `isInShipLane` claims *every* touch
@@ -1252,49 +1252,31 @@ class GameScene: SKScene {
     // always a clear strip above the board, and the left gutter is empty from
     // the Chess Hint up.
 
-    /// Readable, not hidden. This is a label a tester reads off the screen
-    /// into a bug report, and the first cut at 8pt and 0.3 alpha was a
-    /// watermark — legible only if you already knew it was there.
-    private static let versionRestAlpha: CGFloat = 0.6
     /// Long enough not to happen by accident, short enough that nobody lets
     /// go first.
     private static let testModeHold: TimeInterval = 1.5
-    private static let testModeHoldKey = "testModeHold"
 
-    private func setupVersionLabel() {
-        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
-        // Spelled out rather than abbreviated. It costs nothing — the band
-        // it sits in is empty for the full width of the scene — and "GCI iOS"
-        // is the part that tells a bug report which build of which app it is
+    private func setupVersionBadge() {
+        // Spelled out rather than abbreviated. It costs nothing — the band it
+        // sits in is empty for the full width of the scene — and "GCI iOS" is
+        // the part that tells a bug report which build of which app it is
         // looking at.
-        label.text = "GCI iOS V\(Bundle.main.appVersion)  Build \(Bundle.main.appBuild)"
-        label.fontSize = 10
-        label.horizontalAlignmentMode = .left
-        label.verticalAlignmentMode = .center
-        // Above the playfield, below the panels — and below the game-over
-        // scrim, deliberately. The error flag sits at 26 so it outlasts that
-        // scrim, because a run that went wrong has to say so; a build number
-        // does not.
-        label.zPosition = 11
-        addChild(label)
-        versionLabel = label
-        refreshVersionLabel()
-        layOutVersionLabel()
+        let badge = VersionBadgeNode(
+            text: "GCI iOS V\(Bundle.main.appVersion)  Build \(Bundle.main.appBuild)")
+        addChild(badge)
+        versionBadge = badge
+        badge.setTestMode(testMode)
+        layOutVersionBadge()
     }
 
     /// Left-aligned with SCORE, centred in the band under the HUD bar.
-    func layOutVersionLabel() {
-        versionLabel?.position = CGPoint(x: 10, y: size.height - HUDNode.height - 16)
-    }
-
-    /// Dim and cyan normally; lit and orange while Test Mode is on, so the
-    /// state is legible without opening anything. The gutter notice says it
-    /// once; this keeps saying it.
-    private func refreshVersionLabel() {
-        guard let versionLabel else { return }
-        versionLabel.removeAction(forKey: Self.testModeHoldKey)
-        versionLabel.fontColor = testMode ? NeonPalette.alertOrange : NeonPalette.cyan
-        versionLabel.alpha = testMode ? 1.0 : Self.versionRestAlpha
+    ///
+    /// The badge is 24pt tall against a 32pt band — `hudBandHeight` 68 less
+    /// the 36pt bar — so it clears `boardTopY` by 4pt and the board never has
+    /// to make room for it. Its width is unconstrained for the same reason:
+    /// the band is empty all the way across.
+    func layOutVersionBadge() {
+        versionBadge?.position = CGPoint(x: 10, y: size.height - HUDNode.height - 16)
     }
 
     // MARK: - The test strip
@@ -1318,9 +1300,12 @@ class GameScene: SKScene {
         }
     }
 
-    /// Directly under the version label, which is the whole point of it.
+    /// Directly under the version badge, which is the whole point of it.
     ///
-    /// Anchored to the label rather than to `boardTopY`. The board's top edge
+    /// Hung off the badge's *bottom edge* rather than its centre, so it stays
+    /// clear as the badge grows — it is a box now, not a baseline.
+    ///
+    /// Anchored to the badge rather than to `boardTopY`. The board's top edge
     /// was the first attempt and it is wrong in portrait: the board is
     /// centred in whatever height is left over, so its top sits nearly 300pt
     /// below the HUD and the strip went with it, stranded in the middle of
@@ -1332,8 +1317,9 @@ class GameScene: SKScene {
     /// The gutter's own topmost item, the Chess Hint, sits hundreds of points
     /// lower.
     func layOutTestStrip() {
-        guard let testStrip, let versionLabel else { return }
-        testStrip.position = CGPoint(x: 10, y: versionLabel.position.y - 14)
+        guard let testStrip, let versionBadge else { return }
+        testStrip.position = CGPoint(
+            x: 10, y: versionBadge.position.y - VersionBadgeNode.height / 2 - 6)
     }
 
     /// All three are dead outside play, exactly as the keys are — every one
@@ -1355,40 +1341,22 @@ class GameScene: SKScene {
         syncTestStripState()
     }
 
-    /// A generous target, but not so generous that it reaches the chips.
-    ///
-    /// Padded less vertically than horizontally: the strip sits 14pt below
-    /// and the label would otherwise cover its top row. Horizontally there is
-    /// nothing to collide with, and the label is 21 characters wide now, so
-    /// it is a large target either way.
-    func versionLabelContains(_ point: CGPoint) -> Bool {
-        guard let versionLabel, !versionLabel.isHidden else { return false }
-        return versionLabel.frame.insetBy(dx: -16, dy: -7).contains(point)
+    func versionBadgeContains(_ point: CGPoint) -> Bool {
+        versionBadge?.contains(scenePoint: point) ?? false
     }
 
-    /// Starts the hold. The brightening *is* the progress indicator, so the
-    /// fade and the toggle are one group under one key and are cancelled
-    /// together — a finger lifted early takes the toggle with it.
+    /// Starts the hold. The badge owns the feedback and the timing; all this
+    /// supplies is what happens if the finger stays down.
     func beginVersionPress() {
-        guard let versionLabel else { return }
-        versionLabel.removeAction(forKey: Self.testModeHoldKey)
-        versionLabel.run(.group([
-            .fadeAlpha(to: 1.0, duration: Self.testModeHold),
-            .sequence([
-                .wait(forDuration: Self.testModeHold),
-                .run { [weak self] in self?.toggleTestMode() },
-            ]),
-        ]), withKey: Self.testModeHoldKey)
+        versionBadge?.beginPress(duration: Self.testModeHold) { [weak self] in
+            self?.toggleTestMode()
+        }
     }
 
-    /// Lifted, or slid off. Either way the hold is off and the label settles
-    /// back to whatever Test Mode's current state looks like.
+    /// Lifted, or slid off. Cancelling takes the callback with it, so a press
+    /// let go early toggles nothing.
     func endVersionPress() {
-        guard let versionLabel,
-              versionLabel.action(forKey: Self.testModeHoldKey) != nil else { return }
-        versionLabel.removeAction(forKey: Self.testModeHoldKey)
-        versionLabel.run(.fadeAlpha(to: testMode ? 1.0 : Self.versionRestAlpha,
-                                    duration: 0.2))
+        _ = versionBadge?.cancelPress()
     }
     #endif
 
@@ -3144,8 +3112,8 @@ class GameScene: SKScene {
 
         #if os(iOS)
         layOutFireButton()
-        layOutVersionLabel()
-        layOutTestStrip()      // hangs off the label, so it follows it
+        layOutVersionBadge()
+        layOutTestStrip()      // hangs off the badge, so it follows it
         #endif
 
         if let ship {
@@ -3568,7 +3536,7 @@ class GameScene: SKScene {
             NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
         }
         #if os(iOS)
-        refreshVersionLabel()
+        versionBadge?.setTestMode(testMode)
         syncTestStripPresence()
         #endif
         flashGutterNotice(testMode ? "TEST MODE ON" : "TEST MODE OFF")
@@ -5790,7 +5758,7 @@ class GameScene: SKScene {
         // Slid off the label: a hold that has wandered is not a hold. Cheap
         // to check, and it stops a drag that happens to begin in the corner
         // from arming Test Mode on the way past.
-        if !versionLabelContains(location) { endVersionPress() }
+        if !versionBadgeContains(location) { endVersionPress() }
         #endif
     }
 
@@ -5847,7 +5815,7 @@ class GameScene: SKScene {
             runTestAction(action)
             return
         }
-        if versionLabelContains(location) {
+        if versionBadgeContains(location) {
             beginVersionPress()
             return
         }

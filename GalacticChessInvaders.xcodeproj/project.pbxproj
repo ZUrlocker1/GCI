@@ -190,6 +190,7 @@
 		CEF1339609D23361DC412BCB /* TurnTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAF566BD8F26FECE2DB1C25 /* TurnTimer.swift */; };
 		D02903B4E945780B3AD0799F /* ScoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */; };
 		D1BB2517A8A227513725C551 /* GameStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */; };
+		D1F4BE65D4B71FA6FA2D2B18 /* VersionBadgeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E3C304E0FE24C01DCBA828 /* VersionBadgeNode.swift */; };
 		D3641D21830DBEB3CE620C6B /* PressStart2P-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */; };
 		D477CF6B0AFD3C76AFD9963A /* chess-b-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = B827AD2407AC5D571712932D /* chess-b-knight-d2.png */; };
 		D68DE2D84BFE8383EE410391 /* chess-w-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = C6065939A740086FDEF2B63B /* chess-w-queen-d1.png */; };
@@ -218,6 +219,7 @@
 		F09EC490E3C28D31771DC570 /* SettingsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9ACD0F7934C6E656FCD459B /* SettingsNode.swift */; };
 		F103B3B733CE7CCE6C8D1944 /* ship-camel-b.png in Resources */ = {isa = PBXBuildFile; fileRef = C9811D7E64799129FF1929B9 /* ship-camel-b.png */; };
 		F16167CD5B548B86C6C1F21D /* PressStart2P-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */; };
+		F28B706B8AC3C2EFAC8481CC /* VersionBadgeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E3C304E0FE24C01DCBA828 /* VersionBadgeNode.swift */; };
 		F53A8FD80E91731A2F3B94DF /* chess-b-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */; };
 		F5E7E86A0D475BA04EA0BB23 /* chess-b-queen.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DD23AB303F49EBE6977A6D4 /* chess-b-queen.png */; };
 		F6CA92FE0D8631965A645E24 /* HighScoreEntryNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6BD913BC0D0EB5692D30572 /* HighScoreEntryNode.swift */; };
@@ -290,6 +292,7 @@
 		470EE873AFB093DAA09877AD /* GCITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GCITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		48DB4E6155700677F3736099 /* TitleScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleScene.swift; sourceTree = "<group>"; };
 		49DEBFD146DE24F4E7A38593 /* ship-camel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel.png"; sourceTree = "<group>"; };
+		49E3C304E0FE24C01DCBA828 /* VersionBadgeNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionBadgeNode.swift; sourceTree = "<group>"; };
 		4B58B64ABA847AF8604BB2BF /* Regeneration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Regeneration.swift; sourceTree = "<group>"; };
 		5308FEB0B1858AC43F451354 /* LaserNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaserNode.swift; sourceTree = "<group>"; };
 		533060B476CEB068D8FE3931 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
@@ -585,6 +588,7 @@
 				2F6F6FE655D52A6DFE615827 /* TestModeStripNode.swift */,
 				E5479162403C3F6B963DA628 /* TitleOverlayNode.swift */,
 				0DD287E9A35A46D7482B9AE4 /* TurnTimerNode.swift */,
+				49E3C304E0FE24C01DCBA828 /* VersionBadgeNode.swift */,
 			);
 			path = Rendering;
 			sourceTree = "<group>";
@@ -624,28 +628,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_0769F8DF-06F0-4418-92AF-BC78637C36D9" /* .claude */ = {
+		"TEMP_809E20B6-13DF-41C5-8AC0-20D86621CCBE" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_285FFAA4-F3F2-4F00-B9C5-B38E25A93315" /* .claude */ = {
+		"TEMP_9315542B-9DFB-4BFE-B09F-60DF5E5D062D" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_48AF3843-EF53-42D3-B79D-91B9684DD3E1" /* .claude */ = {
+		"TEMP_94C8715B-97ED-475D-AE60-A26336DD807F" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_9510FD9C-C9C7-4E90-B368-4BB5EE69377A" /* .claude */ = {
+		"TEMP_FE28BFBF-8A92-4A1C-8F9A-819CCC2B9B61" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -941,6 +945,7 @@
 				50B2F42115E0AC209B961272 /* TouchInputAdapter.swift in Sources */,
 				F9CA99676598CF676A718B8D /* TurnTimer.swift in Sources */,
 				E33C887F2ABFADD773CD302C /* TurnTimerNode.swift in Sources */,
+				D1F4BE65D4B71FA6FA2D2B18 /* VersionBadgeNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1016,6 +1021,7 @@
 				A87C86625128BF86EB1F27B9 /* TouchInputAdapter.swift in Sources */,
 				CEF1339609D23361DC412BCB /* TurnTimer.swift in Sources */,
 				1166A0AA196EDA9E5CAED95E /* TurnTimerNode.swift in Sources */,
+				F28B706B8AC3C2EFAC8481CC /* VersionBadgeNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
