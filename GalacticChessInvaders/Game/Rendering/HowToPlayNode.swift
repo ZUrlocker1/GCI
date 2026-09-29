@@ -163,7 +163,7 @@ final class HowToPlayNode: SKNode {
         chip("TAP",    "Pick piece, then new square",        x: x, y: 388)
         chip("← →",    "Arrows or A / D move the ship",      x: x, y: 344)
         chip("SPACE",  "Fire laser",                         x: x, y: 300)
-        chip("KEYS",   "Optional Keyboard: ESC, Q, M, S, I", x: x, y: 256)
+        chip("KEYS",   "Optional: ESC, Q, M, S, I",          x: x, y: 256)
         #endif
 
         // — HISTORY —

@@ -1326,8 +1326,8 @@ class GameScene: SKScene {
     /// below the HUD and the strip went with it, stranded in the middle of
     /// the gutter.
     ///
-    /// Nothing has to dodge the board. At x=10 the widest row reaches about
-    /// 152, and `boardOriginX` is never less than `minGutterWidth` — 224 —
+    /// Nothing has to dodge the board. At x=10 the row reaches about 176,
+    /// and `boardOriginX` is never less than `minGutterWidth` — 224 —
     /// so the strip is left of the squares at every size and orientation.
     /// The gutter's own topmost item, the Chess Hint, sits hundreds of points
     /// lower.

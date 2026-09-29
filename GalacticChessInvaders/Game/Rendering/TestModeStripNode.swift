@@ -11,13 +11,13 @@
 // watch land has landed. So they need to be reachable with the game running,
 // which is what this is.
 //
-//   PWR · RAID · SKIP
+//   POWER · RAID · LEVEL
 //
 // **Top of the left gutter, under the version label**, which is also the
 // Test Mode switch — indicator and controls in one place. The 32pt band
 // beneath the HUD bar holds one line and the version label has it; below that
 // the board begins, but only from `boardOriginX` rightward, and this row is
-// about 142pt wide against a gutter that is never narrower than 224. So the
+// about 166pt wide against a gutter that is never narrower than 224. So the
 // chips sit beside the board at every size, never over it.
 //
 // Not in the ship's lane, though §4 suggested it as the band that survives
@@ -34,10 +34,14 @@ import SpriteKit
 final class TestModeStripNode: SKNode {
 
     /// What a chip does. The raw value is the label.
+    ///
+    /// Spelled out rather than abbreviated. The row costs 166pt at these
+    /// lengths against a gutter that is never narrower than 224, so the
+    /// space was there and `PWR`/`SKIP` were saving nothing with it.
     enum Action: String, CaseIterable {
-        case power  = "PWR"
+        case power  = "POWER"
         case raider = "RAID"
-        case skip   = "SKIP"
+        case skip   = "LEVEL"
     }
 
     private static let fontSize: CGFloat = 8
