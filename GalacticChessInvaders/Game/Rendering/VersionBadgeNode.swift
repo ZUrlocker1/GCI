@@ -15,6 +15,12 @@
 // feels broken right up until it works, which is the same objection that
 // ruled out counted taps; a bar that fills says both "this is happening" and
 // "this is how much longer".
+//
+// **In and out are not symmetric, deliberately.** The hold exists to stop a
+// player stumbling into Test Mode, and that argument is spent the moment
+// they are in it: anyone looking at an orange badge has already found the
+// control and knows what it does. So leaving is a plain tap — `beginTap()`
+// rather than `beginPress` — and only the way in is guarded.
 
 import SpriteKit
 
@@ -86,12 +92,17 @@ final class VersionBadgeNode: SKNode {
         restyle()
     }
 
+    /// Quiet at rest. The box made it far more present than the bare label
+    /// was, and this is chrome a player should be able to ignore — so the
+    /// resting weight came back down once the frame was there to carry it.
+    /// Test Mode and the press both still read at a glance.
     private func restyle() {
         let colour = isPressed ? SKColor.white
             : (isTestMode ? NeonPalette.alertOrange : NeonPalette.cyan)
-        box.strokeColor = colour.withAlphaComponent(isPressed ? 1.0 : 0.6)
-        box.fillColor = colour.withAlphaComponent(isTestMode ? 0.14 : 0.07)
-        label.fontColor = colour.withAlphaComponent(isPressed || isTestMode ? 1.0 : 0.85)
+        box.strokeColor = colour.withAlphaComponent(isPressed ? 1.0 : 0.38)
+        box.fillColor = colour.withAlphaComponent(isTestMode ? 0.10 : 0.04)
+        label.fontColor = colour.withAlphaComponent(
+            isPressed ? 1.0 : (isTestMode ? 0.9 : 0.62))
     }
 
     // MARK: - The hold
@@ -112,7 +123,21 @@ final class VersionBadgeNode: SKNode {
         ]), withKey: Self.sweepKey)
     }
 
-    /// Lifted, or slid off.
+    /// Down, with nothing to wait for — the caller acts on the lift instead.
+    /// Fills at once rather than sweeping: a bar that completes instantly is
+    /// a flicker, and there is no duration here to describe.
+    func beginTap() {
+        isPressed = true
+        restyle()
+        fill.removeAllActions()
+        fill.xScale = 1
+        fill.alpha = 0.3
+    }
+
+    /// Lifted, or slid off. `true` if a press really was in progress, which
+    /// is what tells the caller a lift is a completed tap rather than a
+    /// stray touch ending somewhere else.
+    @discardableResult
     func cancelPress() -> Bool {
         guard isPressed else { return false }
         isPressed = false

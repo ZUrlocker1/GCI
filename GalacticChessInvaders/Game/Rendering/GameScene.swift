@@ -1345,18 +1345,46 @@ class GameScene: SKScene {
         versionBadge?.contains(scenePoint: point) ?? false
     }
 
-    /// Starts the hold. The badge owns the feedback and the timing; all this
-    /// supplies is what happens if the finger stays down.
+    /// Decided at touch-down, not at lift.
+    ///
+    /// Reading `testMode` on release instead would turn Test Mode straight
+    /// back off: the hold fires at 1.5s while the finger is still down, so
+    /// by the time it lifts the flag has already flipped and the lift would
+    /// undo it. This records which direction the touch started in.
+    private var versionTapExits = false
+
+    /// Getting in is a hold; getting out is a tap.
+    ///
+    /// The hold exists to stop a player stumbling into Test Mode, and that
+    /// argument is spent once they are in it — an orange badge belongs to
+    /// someone who already knows what it is. Making them hold it again to
+    /// leave is ceremony with nothing left to protect.
     func beginVersionPress() {
-        versionBadge?.beginPress(duration: Self.testModeHold) { [weak self] in
-            self?.toggleTestMode()
+        guard let versionBadge else { return }
+        versionTapExits = testMode
+        if versionTapExits {
+            versionBadge.beginTap()
+        } else {
+            versionBadge.beginPress(duration: Self.testModeHold) { [weak self] in
+                self?.toggleTestMode()
+            }
         }
     }
 
-    /// Lifted, or slid off. Cancelling takes the callback with it, so a press
-    /// let go early toggles nothing.
+    /// Lifted on the badge. A tap that started in Test Mode leaves it here;
+    /// a hold that did not reach 1.5s did its own cancelling and toggles
+    /// nothing.
     func endVersionPress() {
-        _ = versionBadge?.cancelPress()
+        guard let versionBadge, versionBadge.cancelPress() else { return }
+        if versionTapExits { toggleTestMode() }
+        versionTapExits = false
+    }
+
+    /// Slid off the badge. Never commits — a touch that wandered is not a
+    /// tap, and the same rule already governs the hold.
+    func cancelVersionPress() {
+        versionTapExits = false
+        versionBadge?.cancelPress()
     }
     #endif
 
@@ -5758,7 +5786,7 @@ class GameScene: SKScene {
         // Slid off the label: a hold that has wandered is not a hold. Cheap
         // to check, and it stops a drag that happens to begin in the corner
         // from arming Test Mode on the way past.
-        if !versionBadgeContains(location) { endVersionPress() }
+        if !versionBadgeContains(location) { cancelVersionPress() }
         #endif
     }
 

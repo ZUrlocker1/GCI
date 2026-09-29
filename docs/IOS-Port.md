@@ -587,6 +587,14 @@ part that earns its keep. A brightening fade was the first cut and it reads as a
 rather than as progress, which is the objection that ruled out counted taps to begin
 with. The confirmation already exists too — `flashGutterNotice("TEST MODE ON")`.
 
+**Leaving is a plain tap, not another hold.** The hold exists to stop a player
+stumbling into Test Mode, and that argument is spent the moment they are in it —
+an orange badge belongs to someone who has already found the control and knows what it
+does. Asking them to hold it again on the way out is ceremony with nothing left to
+protect. Note that the direction has to be read at *touch-down*: the hold fires at 1.5s
+while the finger is still down, so a lift that re-read the flag would turn Test Mode
+straight back off.
+
 The other conventions considered, and why not:
 
 1. **Seven taps on the version.** Slow, no feedback mid-gesture. The convention people
