@@ -923,6 +923,11 @@ class GameScene: SKScene {
     private func syncPanelChrome() {
         syncTitleNavVisibility()
         layOutPanels()
+        #if os(iOS)
+        // The FIRE button is the third piece of chrome a panel covers, and
+        // the only one that could still be pressed through it.
+        syncFireButtonVisibility()
+        #endif
     }
 
     private func syncTitleNavVisibility() {
@@ -1079,6 +1084,30 @@ class GameScene: SKScene {
         fireButton = nil
         fireTouch = nil
         shipDragTouch = nil
+    }
+
+    /// Shows FIRE exactly when it does something, and hides it when it does
+    /// not.
+    ///
+    /// Driven from two places, and it needs both. `update(_:)` catches the
+    /// beats — a level banner, the wave-clear overlay — where the scene keeps
+    /// running. **A panel does not run**: Settings and How To Play set
+    /// `isPaused`, `update(_:)` stops being called, and a frame-driven sync
+    /// never fires. So `syncPanelChrome()` calls this too, the same way it
+    /// hides the SET / INFO pair underneath.
+    func syncFireButtonVisibility() {
+        guard let fireButton else { return }
+        let wanted = !acceptsTouchControls
+        guard fireButton.isHidden != wanted else { return }
+        fireButton.isHidden = wanted
+        // A finger can still be down on it: `I` and the INFO button both open
+        // a panel without anything being lifted, and a hidden button that is
+        // still held leaves the gun firing into whatever comes back.
+        if wanted {
+            fireTouch = nil
+            shipDragTouch = nil
+            setTouchFiring(false)
+        }
     }
 
     // MARK: - What the touch controls are allowed to ask for
@@ -5120,17 +5149,7 @@ class GameScene: SKScene {
         }
 
         #if os(iOS)
-        // Off between levels and under a banner. The button is a control,
-        // and showing a control that does nothing — the beat is suspended,
-        // so a shot would not fire — reads as the game having stopped
-        // responding.
-        if let fireButton {
-            let wanted = !acceptsTouchControls
-            if fireButton.isHidden != wanted {
-                fireButton.isHidden = wanted
-                if wanted { fireButton.setHeld(false) }
-            }
-        }
+        syncFireButtonVisibility()
         #endif
 
         if stateMachine.currentState is PlayingState {
