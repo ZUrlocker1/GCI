@@ -656,15 +656,18 @@ final class SceneLayoutTests: XCTestCase {
         }
     }
 
-    /// Only the left gutter is reserved. Reserving a second one on the right —
-    /// where nothing is drawn — cost the board 200pt it did not need to give
-    /// up, and made opening the log sidebar shrink the game far more than the
-    /// sidebar actually took.
-    func testOnlyTheLeftGutterIsReserved() {
+    /// The right margin is a reservation, but a much smaller one than the
+    /// gutter. Reserving a second *full* gutter there cost the board 200pt it
+    /// did not need and made opening the log sidebar shrink the game far more
+    /// than the sidebar took; reserving almost nothing left the board jammed
+    /// against the right edge on any window too narrow to centre it.
+    func testTheRightMarginIsReservedButNotAWholeGutter() {
         let narrow = SceneLayout(size: CGSize(width: 650, height: 700))
-        XCTAssertEqual(narrow.squareSize, 50)   // floor((650 - 224 - 24) / 8)
-        // Reserving both gutters would have given 25.
+        XCTAssertEqual(narrow.squareSize, 41)   // floor((650 - 224 - 96) / 8)
+        // Reserving both gutters in full would have given 25.
         XCTAssertGreaterThan(narrow.squareSize, 25)
+        XCTAssertLessThan(SceneLayout.rightMarginWidth, SceneLayout.minGutterWidth,
+                          "the right carries no readouts; it should not cost as much")
     }
 
     /// A centred banner belongs to the board, not the window — and the two are
@@ -678,11 +681,44 @@ final class SceneLayoutTests: XCTestCase {
         XCTAssertEqual(design.boardCentre.y, 376)              // 26 above 350
         XCTAssertEqual(design.boardCentre.y - design.size.height / 2, 26)
 
-        // Narrow enough that the gutter's minimum, not the centring, sets the
-        // board's left edge — so the board is right of the window's middle.
+        // Narrow enough that the board cannot be centred, so it sits right of
+        // the window's middle. The gutter gives some width back here rather
+        // than starving the right margin — see `boardOriginX`.
         let narrow = SceneLayout(size: CGSize(width: 650, height: 700))
         XCTAssertEqual(narrow.boardOriginX, narrow.minGutterWidth)
         XCTAssertGreaterThan(narrow.boardCentre.x, narrow.size.width / 2)
+    }
+
+    /// The board is centred wherever it fits, and where it does not the two
+    /// sides stay within sight of each other.
+    ///
+    /// Pinning the board at the gutter's 224pt minimum gave an iPad in
+    /// portrait 224 to the left of the board and 40 to its right, which reads
+    /// as the board shoved against the edge.
+    func testTheRightMarginIsNotStarvedWhenTheBoardCannotBeCentred() {
+        // Centres comfortably: untouched.
+        for size in [CGSize(width: 960, height: 700),      // the design canvas
+                     CGSize(width: 1512, height: 982),     // a laptop full screen
+                     CGSize(width: 1376, height: 1032)] {  // iPad landscape
+            let l = SceneLayout(size: size)
+            let right = l.size.width - l.boardTopX
+            XCTAssertEqual(l.boardOriginX, right, accuracy: 0.5,
+                           "should still be centred at \(size)")
+        }
+
+        // Cannot centre — an iPad in portrait. The board is fitted to what is
+        // left after *both* margins, so the right keeps its reservation
+        // instead of getting the 40pt scraps it used to.
+        let portrait = SceneLayout(size: CGSize(width: 1032, height: 1376))
+        let right = portrait.size.width - portrait.boardTopX
+        XCTAssertGreaterThanOrEqual(right, SceneLayout.rightMarginWidth - 0.5,
+                                    "against the 40 it used to get")
+        // And the gutter keeps every point of its width, because the Chess
+        // Hint is the widest thing in the game's left column and needs it.
+        XCTAssertEqual(portrait.boardOriginX, portrait.minGutterWidth)
+        // And the readouts still fit beside the board rather than under it.
+        XCTAssertLessThan(portrait.gutterCentreX + portrait.powerUpBarWidth / 2,
+                          portrait.boardOriginX)
     }
 
     /// The ship stays under the board as the board moves, not pinned to the

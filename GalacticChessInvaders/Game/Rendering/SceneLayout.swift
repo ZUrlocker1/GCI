@@ -110,14 +110,28 @@ struct SceneLayout {
     /// What the left gutter needs for the widest thing it carries.
     static let minGutterWidth: CGFloat = 224
     var minGutterWidth: CGFloat { Self.minGutterWidth }
-    /// Breathing room to the right of the board, and nothing more.
+    /// Breathing room to the right of the board.
     ///
-    /// The right-hand space is empty — the board is centred, and everything
-    /// that reads is in the left column. Reserving a second full gutter there
-    /// was costing the board 200pt it did not need to give up, which is why
-    /// opening the log sidebar shrank the game far more than the sidebar
-    /// actually took.
-    static let rightMarginWidth: CGFloat = 24
+    /// Reserving a second *full* gutter here was tried and reverted: at 224 it
+    /// cost the board 200pt it did not need, and opening the log sidebar
+    /// shrank the game far more than the sidebar actually took. 24 was the
+    /// answer to that, and it was too far the other way — on a window too
+    /// narrow to centre the board, the left kept its whole 224 and the right
+    /// got whatever was left, which on an iPad in portrait was **40pt**. The
+    /// board read as shoved against the edge.
+    ///
+    /// 96 is the middle. It is not symmetry — the left carries every readout
+    /// in the game and the right carries nothing, so it should not be — but
+    /// it is enough that the board sits in the window rather than against it.
+    ///
+    /// Taken out of the *square*, not out of the gutter: `squareSize` fits the
+    /// board to what is left after both margins, so a narrow window now gets a
+    /// slightly smaller board with room on both sides, rather than a board at
+    /// the cap with none. The gutter is untouched, which matters — the Chess
+    /// Hint is the widest thing in it and at a 96pt square it needs every one
+    /// of its 224 points. Squeezing the gutter instead was tried first and
+    /// clipped "OR KNIGHT" off the left edge of an iPad.
+    static let rightMarginWidth: CGFloat = 96
     var rightMarginWidth: CGFloat { Self.rightMarginWidth }
 
     /// Never smaller than this, whatever the window does. Below it the pieces
