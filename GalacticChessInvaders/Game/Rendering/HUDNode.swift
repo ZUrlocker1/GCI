@@ -47,7 +47,9 @@ final class HUDNode: SKNode {
         // LEVEL takes the gap between the lives and the nav, centred in it, and
         // drops to "L 01" when that gap will not hold the long form.
         let livesRight = HUDNode.livesX + CGFloat(HUDNode.maxLives - 1) * HUDNode.livesStep + 9
-        let navLeft = HUDNode.navOriginX(forSceneWidth: sceneWidth) + HUDNode.navDesignLeft
+        let navLeft = HUDNode.navOriginX(forSceneWidth: sceneWidth)
+            + (HUDNode.includesPauseButton ? HUDNode.navDesignLeftWithPause
+                                           : HUDNode.navDesignLeft)
         let gapLeft = livesRight + HUDNode.levelGap
         let gapRight = navLeft - HUDNode.levelGap
         levelIsAbbreviated = (gapRight - gapLeft) < HUDNode.levelFullWidth
@@ -57,7 +59,9 @@ final class HUDNode: SKNode {
         levelLabel.verticalAlignmentMode = .center
         levelLabel.name = "levelLabel"
 
-        let nav = HUDNode.makeNavButtons()
+        // The gameplay HUD carries PAUSE; the title screen's copy does not,
+        // because there is no game to pause or leave.
+        let nav = HUDNode.makeNavButtons(includePause: HUDNode.includesPauseButton)
         nav.name = HUDNode.navName
         nav.position.x = HUDNode.navOriginX(forSceneWidth: sceneWidth)
         addChild(nav)
@@ -100,6 +104,19 @@ final class HUDNode: SKNode {
 
     /// SET's left edge in the pair's own coordinates.
     static let navDesignLeft: CGFloat = 742
+    /// Where the nav cluster starts once PAUSE is in front of SET. The LEVEL
+    /// readout measures its gap against this, or it would run underneath.
+    static let navDesignLeftWithPause: CGFloat = 664
+    static let pauseButtonName = "pauseButton"
+
+    /// PAUSE only where there is no Escape key to press.
+    static var includesPauseButton: Bool {
+        #if os(macOS)
+        false
+        #else
+        true
+        #endif
+    }
 
     // The left block runs SCORE · HI · lives · LEVEL, in that order, tight
     // against the left edge. Only LEVEL has any give in it: everything to its
@@ -125,14 +142,30 @@ final class HUDNode: SKNode {
         childNode(withName: HUDNode.navName)?.isHidden = hidden
     }
 
-    static func makeNavButtons() -> SKNode {
+    /// The label on the pause button, which doubles as the way out of a run:
+    /// PAUSE while playing, QUIT once paused, as decided with Zack.
+    func setPauseButtonTitle(_ title: String) {
+        guard let nav = childNode(withName: HUDNode.navName) else { return }
+        for case let label as SKLabelNode in nav.children
+        where label.name == HUDNode.pauseButtonName {
+            label.text = title
+        }
+    }
+
+    static func makeNavButtons(includePause: Bool = false) -> SKNode {
         let nav = SKNode()
         // `hotkey` is the index of the character that is also the keyboard
         // shortcut. Press Start 2P advances exactly one em per character, so
         // the rule under it is arithmetic rather than a measured guess.
-        for (name, text, x, centre, hotkey) in
+        // PAUSE sits in front of SET, so the pair keeps the position it has
+        // always had and the cluster grows leftward into space the HUD has.
+        var buttons: [(String, String, CGFloat, CGFloat, Int)] =
             [("settingsButton", "SET",    CGFloat(742), CGFloat(44), 0),
-             ("infoButton",     "? INFO", CGFloat(820), CGFloat(35), 2)] {
+             ("infoButton",     "? INFO", CGFloat(820), CGFloat(35), 2)]
+        if includePause {
+            buttons.insert((pauseButtonName, "PAUSE", CGFloat(664), CGFloat(35), 0), at: 0)
+        }
+        for (name, text, x, centre, hotkey) in buttons {
             let btn = SKShapeNode(rect: CGRect(x: x, y: 7, width: 70, height: 22), cornerRadius: 3)
             btn.fillColor = HUDNode.cyan.withAlphaComponent(0.12)
             btn.strokeColor = HUDNode.cyan; btn.lineWidth = 1; btn.name = name
@@ -145,12 +178,18 @@ final class HUDNode: SKNode {
             lbl.name = name
             nav.addChild(lbl)
 
+            // The rule under the hotkey letter is a promise about a key, so
+            // it comes off where there is no keyboard — Zack's call, and the
+            // same reasoning as the copy in `InputPrompts`. How To Play names
+            // the keys for anyone who has plugged one in.
+            #if os(macOS)
             let charX = x + centre - CGFloat(text.count) * 4 + CGFloat(hotkey) * 8
             let rule = SKShapeNode(rect: CGRect(x: charX + 0.5, y: 11, width: 7, height: 1))
             rule.fillColor = HUDNode.cyan
             rule.strokeColor = .clear
             rule.name = name
             nav.addChild(rule)
+            #endif
 
             if name == "settingsButton" {
                 let gear = HUDNode.gearIcon()

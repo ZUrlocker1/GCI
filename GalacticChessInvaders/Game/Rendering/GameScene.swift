@@ -3208,6 +3208,9 @@ class GameScene: SKScene {
     static let pauseHintGap: CGFloat = 31
 
     func showPausedOverlay() {
+        #if os(iOS)
+        hudNode?.setPauseButtonTitle("QUIT")
+        #endif
         // Phase 0: simple "PAUSED" label; proper pause menu in Phase 5
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
         label.name = "pausedLabel"
@@ -3257,6 +3260,9 @@ class GameScene: SKScene {
     }
 
     func hidePausedOverlay() {
+        #if os(iOS)
+        hudNode?.setPauseButtonTitle("PAUSE")
+        #endif
         removePausedOverlay()
         laserPool?.setPaused(false)
         // A Time Freeze that was running when the player paused is still
@@ -5075,6 +5081,20 @@ class GameScene: SKScene {
             if size != skyBuiltSize { rebuildSky() }
         }
 
+        #if os(iOS)
+        // Off between levels and under a banner. The button is a control,
+        // and showing a control that does nothing — the beat is suspended,
+        // so a shot would not fire — reads as the game having stopped
+        // responding.
+        if let fireButton {
+            let wanted = !acceptsTouchControls
+            if fireButton.isHidden != wanted {
+                fireButton.isHidden = wanted
+                if wanted { fireButton.setHeld(false) }
+            }
+        }
+        #endif
+
         if stateMachine.currentState is PlayingState {
             syncRespawnWarnings()
             syncPowerUpAlley()
@@ -5560,6 +5580,22 @@ class GameScene: SKScene {
             pressButton(hit) { [weak self] in self?.showHowToPlay() }
             return
         }
+        #if os(iOS)
+        // PAUSE, and QUIT once paused. One tap stops the game, a second
+        // leaves the run — the label changing is the confirmation, so there
+        // is no prompt on top of it. Ahead of the paused-resumes branch
+        // below, or QUIT would simply resume.
+        if hit.name == HUDNode.pauseButtonName || hit.parent?.name == HUDNode.pauseButtonName {
+            AudioManager.shared.play(.uiButtonClick)
+            if stateMachine.currentState is PausedState {
+                resetToTitle()
+            } else if stateMachine.currentState is PlayingState {
+                stateMachine.enter(PausedState.self)
+            }
+            return
+        }
+        #endif
+
         if hit.name == "settingsButton" || hit.parent?.name == "settingsButton" {
             pressButton(hit) { [weak self] in self?.showSettings() }
             return
