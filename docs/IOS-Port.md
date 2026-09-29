@@ -615,21 +615,33 @@ developer tool.
 
 These split cleanly by kind, and the split is the design:
 
-- **Toggles** — `L` (diagnostics panel) and `A` (Auto Chess) are states that persist.
-  They belong in **Settings rows shown only in Test Mode**, which is exactly how the log
-  row already works (`SettingsNode(showsLogRow: testMode)`). Auto Chess joins it.
+- **Toggles** — `L` (diagnostics panel) and `A` (Auto Chess) are states that persist,
+  and **Settings already carries both**: the log row behind
+  `SettingsNode(showsLogRow: testMode)`, and Auto Chess as the CHESS `YOU PLAY / AUTO`
+  row, which has been there since 1.0. Nothing to build. They stay where they are.
 - **Momentary actions** — `P` (grant the next power-up), `R` (send a raider now) and
   `V` (skip the level) all fire *during play* and are meaningless from a modal panel: by
   the time you have closed Settings, the thing you wanted to observe has moved on. They
-  need to be reachable with the game running, which means a **Test Mode strip on the
-  playfield**: a compact row of small buttons — `PWR · RAID · SKIP` — drawn only while
-  Test Mode is on, and therefore never seen by a player.
+  need to be reachable with the game running. **Built** as `TestModeStripNode`: three
+  chips, `PWR · RAID · SKIP`, drawn only while Test Mode is on and greyed outside
+  `PlayingState`, so a player never sees them and a tester never presses a dead one.
 
-Two placement constraints for that strip. The left gutter is gone in portrait on a phone
-(§5, Pass 4), so it cannot live there; and the diagnostics panel is landscape-only for
-the same reason, so `L` should be hidden outright in portrait rather than offered and
-then disappointing. The ship's lane along the bottom is the one band that survives every
-orientation, which makes it the likely home — or a single `⚙` that expands, on a phone.
+**The strip sits at the top of the left gutter, under the version label** — Test Mode's
+indicator and its controls in one place. Not the ship's lane, which this section first
+suggested as the band that survives every orientation. Everything below the board is a
+ship grab (`isInShipLane` is `point.y < boardBottomY`, the full width), so each chip
+would need an exception ahead of the lane test, and they would sit exactly where a
+steering thumb lives.
+
+Nothing has to dodge the board: the row is about 142pt wide at x=10, and `boardOriginX`
+is never less than `minGutterWidth` at 224, so the chips are left of the squares at
+every size. The gutter's own topmost item, the Chess Hint, is hundreds of points lower.
+The row is anchored to the version label rather than to `boardTopY` — in portrait the
+board is centred in the leftover height, so its top edge is nearly 300pt below the HUD
+and a strip hung off it is stranded mid-gutter.
+
+One open placement question remains for **Pass 4**: the left gutter is gone in iPhone
+portrait, so the strip needs a home there — or a single `⚙` that expands.
 
 The keyboard path stays for all five on an iPad with a keyboard, so nothing here is a
 regression for the way the game is tested today.

@@ -357,6 +357,9 @@ class GameScene: SKScene {
     /// The version string, top-left, and the only way into Test Mode on a
     /// device with no keyboard. See `setupVersionLabel`.
     var versionLabel: SKLabelNode?
+    /// `P`, `R` and `V` as buttons, under the version label. Exists only
+    /// while Test Mode is on. `L` and `A` are Settings rows and stay there.
+    var testStrip: TestModeStripNode?
     /// How far the ship sits from the finger steering it, fixed at the moment
     /// of the grab. See `beginShipDrag`.
     var shipDragOffset: CGFloat = 0
@@ -824,7 +827,11 @@ class GameScene: SKScene {
             // — and a player who opens it by accident has no idea what they are
             // looking at or that they asked for it. Testers get told ⌘T then L.
             guard testMode else {
+                #if os(macOS)
                 flashGutterNotice("⌘T FIRST")
+                #else
+                flashGutterNotice("TEST MODE FIRST")
+                #endif
                 return
             }
             // `L` and the settings switch are the same control reached two
@@ -933,7 +940,10 @@ class GameScene: SKScene {
         // The FIRE button is the third piece of chrome a panel covers, and
         // the only one that could still be pressed through it.
         syncFireButtonVisibility()
-        versionLabel?.isHidden = settingsNode != nil || howToPlayNode != nil
+        let panelUp = settingsNode != nil || howToPlayNode != nil
+        versionLabel?.isHidden = panelUp
+        testStrip?.isHidden = panelUp
+        syncTestStripState()
         #endif
     }
 
@@ -1287,11 +1297,73 @@ class GameScene: SKScene {
         versionLabel.alpha = testMode ? 1.0 : Self.versionRestAlpha
     }
 
-    /// A generous target. The label is 8pt type and a fingertip is not — the
-    /// same reasoning as `FireButtonNode.contains(scenePoint:)`.
+    // MARK: - The test strip
+    //
+    // `P`, `R` and `V` as buttons. They live and die with Test Mode, so a
+    // player never sees them and nothing has to be hidden. `L` and `A` are
+    // toggles and Settings already carries both — the log row, and the CHESS
+    // `YOU PLAY / AUTO` row — so there is nothing to build for those.
+
+    /// Built on the way into Test Mode, gone on the way out.
+    private func syncTestStripPresence() {
+        if testMode, testStrip == nil {
+            let strip = TestModeStripNode()
+            addChild(strip)
+            testStrip = strip
+            layOutTestStrip()
+            syncTestStripState()
+        } else if !testMode {
+            testStrip?.removeFromParent()
+            testStrip = nil
+        }
+    }
+
+    /// Directly under the version label, which is the whole point of it.
+    ///
+    /// Anchored to the label rather than to `boardTopY`. The board's top edge
+    /// was the first attempt and it is wrong in portrait: the board is
+    /// centred in whatever height is left over, so its top sits nearly 300pt
+    /// below the HUD and the strip went with it, stranded in the middle of
+    /// the gutter.
+    ///
+    /// Nothing has to dodge the board. At x=10 the widest row reaches about
+    /// 152, and `boardOriginX` is never less than `minGutterWidth` — 224 —
+    /// so the strip is left of the squares at every size and orientation.
+    /// The gutter's own topmost item, the Chess Hint, sits hundreds of points
+    /// lower.
+    func layOutTestStrip() {
+        guard let testStrip, let versionLabel else { return }
+        testStrip.position = CGPoint(x: 10, y: versionLabel.position.y - 14)
+    }
+
+    /// All three are dead outside play, exactly as the keys are — every one
+    /// of those handlers is gated on `PlayingState`.
+    func syncTestStripState() {
+        testStrip?.setLive(stateMachine.currentState is PlayingState
+                           && settingsNode == nil
+                           && howToPlayNode == nil)
+    }
+
+    /// Runs the chip and blinks it. Each is the same call the key makes.
+    private func runTestAction(_ action: TestModeStripNode.Action) {
+        switch action {
+        case .power:  grantNextPowerUp()
+        case .raider: summonRaider()
+        case .skip:   skipLevel()
+        }
+        testStrip?.flash(action)
+        syncTestStripState()
+    }
+
+    /// A generous target, but not so generous that it reaches the chips.
+    ///
+    /// Padded less vertically than horizontally: the strip sits 14pt below
+    /// and the label would otherwise cover its top row. Horizontally there is
+    /// nothing to collide with, and the label is 21 characters wide now, so
+    /// it is a large target either way.
     func versionLabelContains(_ point: CGPoint) -> Bool {
         guard let versionLabel, !versionLabel.isHidden else { return false }
-        return versionLabel.frame.insetBy(dx: -24, dy: -24).contains(point)
+        return versionLabel.frame.insetBy(dx: -16, dy: -7).contains(point)
     }
 
     /// Starts the hold. The brightening *is* the progress indicator, so the
@@ -3073,6 +3145,7 @@ class GameScene: SKScene {
         #if os(iOS)
         layOutFireButton()
         layOutVersionLabel()
+        layOutTestStrip()      // hangs off the label, so it follows it
         #endif
 
         if let ship {
@@ -3496,6 +3569,7 @@ class GameScene: SKScene {
         }
         #if os(iOS)
         refreshVersionLabel()
+        syncTestStripPresence()
         #endif
         flashGutterNotice(testMode ? "TEST MODE ON" : "TEST MODE OFF")
         DiagnosticsLog.shared.log(.info, "test mode \(testMode ? "on" : "off")")
@@ -5280,6 +5354,7 @@ class GameScene: SKScene {
 
         #if os(iOS)
         syncFireButtonVisibility()
+        syncTestStripState()
         #endif
 
         if stateMachine.currentState is PlayingState {
@@ -5764,6 +5839,14 @@ class GameScene: SKScene {
         #if os(iOS)
         // Ahead of every other target. Nothing else claims this corner, and
         // the press has to start the hold rather than fall through.
+        // The chips first. They are explicit targets sitting just under the
+        // label, and the label's own padding reaches down over the top row —
+        // tested the other way round, AUTO started a Test Mode hold instead.
+        if let action = testStrip?.action(atScenePoint: location) {
+            AudioManager.shared.play(.uiButtonClick)
+            runTestAction(action)
+            return
+        }
         if versionLabelContains(location) {
             beginVersionPress()
             return

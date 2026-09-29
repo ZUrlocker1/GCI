@@ -53,6 +53,7 @@
 		287D223989B63F5263041B93 /* LogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E6B81BC9D85555BA341E47 /* LogPanelView.swift */; };
 		2D6AEAFFDB4E3817A7AA8A3F /* HowToPlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */; };
 		2D759A6F7DC0767BC11E05DD /* SoundKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFA8FE0D63A1CAAA9CBA031E /* SoundKey.swift */; };
+		2FDECE8337F891167124075E /* TestModeStripNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6F6FE655D52A6DFE615827 /* TestModeStripNode.swift */; };
 		307160FF13738695496D01B6 /* MusicVariants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B881B3211D393C65EE95DC56 /* MusicVariants.swift */; };
 		3203C80A87E53941D3CA57FE /* chess-w-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 9AB88E2F8252175EF285AF23 /* chess-w-rook-d2.png */; };
 		32A9D91C43338FC322D62ED7 /* DiagnosticsLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C108816F834B07B96432B59 /* DiagnosticsLog.swift */; };
@@ -170,6 +171,7 @@
 		B67633A0D0D31669ED91AEDA /* chess-b-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F648508E30268B3A5E5EDBB4 /* chess-b-bishop-d2.png */; };
 		B79000D2F408803F50DDB22F /* chess-b-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = 5CE8E6CB170AE028DA898F3D /* chess-b-queen-d1.png */; };
 		B885AB3887AD2C690E35831D /* PowerUps.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF8136F818C7011E78335EF2 /* PowerUps.swift */; };
+		B8BBA9F79CE7DC246005C839 /* TestModeStripNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6F6FE655D52A6DFE615827 /* TestModeStripNode.swift */; };
 		BAB4CB4D9C72DA7B0410F459 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326322DAB1AA3C9AC03E637 /* PhysicsCategory.swift */; };
 		BD2632D358EDB06B453D7DD5 /* FleetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386C3750928FB14BC1D27D55 /* FleetController.swift */; };
 		BF65DE6B34BC76D86E140734 /* StarfieldTiling.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */; };
@@ -268,6 +270,7 @@
 		2C700B2F09ADAB666A66E141 /* LevelBannerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelBannerNode.swift; sourceTree = "<group>"; };
 		2CAF566BD8F26FECE2DB1C25 /* TurnTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnTimer.swift; sourceTree = "<group>"; };
 		2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-rook-d2.png"; sourceTree = "<group>"; };
+		2F6F6FE655D52A6DFE615827 /* TestModeStripNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestModeStripNode.swift; sourceTree = "<group>"; };
 		321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreManager.swift; sourceTree = "<group>"; };
 		3420846073BE18C53447E8B2 /* ship-camel-c.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ship-camel-c.png"; sourceTree = "<group>"; };
 		34882D7861C40C7EF778334D /* GCIiOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCIiOSApp.swift; sourceTree = "<group>"; };
@@ -579,6 +582,7 @@
 				C85CA9EDA2CA72A635DCD707 /* Silhouette.swift */,
 				433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */,
 				CA08B29F3B57111A1DAB71AB /* StarfieldTiling.swift */,
+				2F6F6FE655D52A6DFE615827 /* TestModeStripNode.swift */,
 				E5479162403C3F6B963DA628 /* TitleOverlayNode.swift */,
 				0DD287E9A35A46D7482B9AE4 /* TurnTimerNode.swift */,
 			);
@@ -620,28 +624,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_0327960B-1B83-4213-8310-CE2E5EDF25F4" /* .claude */ = {
+		"TEMP_0769F8DF-06F0-4418-92AF-BC78637C36D9" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_40199916-4CEC-4260-A4C2-3F4A0969D3D3" /* .claude */ = {
+		"TEMP_285FFAA4-F3F2-4F00-B9C5-B38E25A93315" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_4198B49D-BD2E-4524-866D-FEABE1BF36D5" /* .claude */ = {
+		"TEMP_48AF3843-EF53-42D3-B79D-91B9684DD3E1" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_A6C17CCA-AC28-4365-96E5-505D4A5C86A5" /* .claude */ = {
+		"TEMP_9510FD9C-C9C7-4E90-B368-4BB5EE69377A" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -931,6 +935,7 @@
 				E08464B23F92D11F3F247DAB /* SpaceshipNode.swift in Sources */,
 				1105DF500AABD684C9DF74CD /* SpaceshipState.swift in Sources */,
 				BF65DE6B34BC76D86E140734 /* StarfieldTiling.swift in Sources */,
+				B8BBA9F79CE7DC246005C839 /* TestModeStripNode.swift in Sources */,
 				F85FF93C6997AF4868C1CBC3 /* TitleOverlayNode.swift in Sources */,
 				1840BB4464E1128BE071D44C /* TitleScene.swift in Sources */,
 				50B2F42115E0AC209B961272 /* TouchInputAdapter.swift in Sources */,
@@ -1005,6 +1010,7 @@
 				68F50FA3CDA0B3307474CA56 /* SpaceshipNode.swift in Sources */,
 				AE5E482AE217E7882271387B /* SpaceshipState.swift in Sources */,
 				19D40CAC178E01C71D28135C /* StarfieldTiling.swift in Sources */,
+				2FDECE8337F891167124075E /* TestModeStripNode.swift in Sources */,
 				E03642468B53404E29D22B4E /* TitleOverlayNode.swift in Sources */,
 				4DE75B382B1C797060820072 /* TitleScene.swift in Sources */,
 				A87C86625128BF86EB1F27B9 /* TouchInputAdapter.swift in Sources */,
