@@ -572,13 +572,20 @@ empty from the Chess Hint up. Nothing claims touches there, so the press simply 
 The label doubles as the Test Mode indicator: dim cyan when off, lit orange when on. The
 gutter notice says it once; the label keeps saying it.
 
+It is drawn as a **chip**, matching the test strip below it, because as bare text it
+did the reading job and hid the pressing one — nothing about dim type in a corner says
+"hold me".
+
 A **single ~1.5-second press** on it, rather than a tap count. Counted taps were the
 first idea — seven is the Android developer-mode convention — but seven is slow, gives
 no feedback while you are doing it, and feels broken until it suddenly works. A long
 press is one deliberate action, impossible to trigger by accident in a corner nothing
-else uses, and it can show its own progress: dim the label up to full brightness over
-the hold, so the gesture explains itself halfway through. The confirmation already
-exists — `flashGutterNotice("TEST MODE ON")`.
+else uses, and it can show its own progress. Three states, built: cyan at rest, or
+orange once Test Mode is on; **white — border, text and all — with a bar sweeping the
+box left to right while held**; then back to rest in the new colour. The sweep is the
+part that earns its keep. A brightening fade was the first cut and it reads as a glow
+rather than as progress, which is the objection that ruled out counted taps to begin
+with. The confirmation already exists too — `flashGutterNotice("TEST MODE ON")`.
 
 The other conventions considered, and why not:
 
