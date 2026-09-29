@@ -36,10 +36,36 @@ final class KeyboardFocusedSKView: SKView {
 
     override var canBecomeFirstResponder: Bool { true }
 
+    private var keyWindowObserver: NSObjectProtocol?
+
     override func didMoveToWindow() {
         super.didMoveToWindow()
         claimKeyboard()
+        observeKeyWindow()
     }
+
+    /// The event that was missing.
+    ///
+    /// `didMoveToWindow` fires when the view *has* a window, which is earlier
+    /// than that window being **key** — and a view cannot hold first responder
+    /// until then. Asking again on the next run-loop turn happened to work in
+    /// the simulator and did not on a real iPad, where the gap is longer.
+    ///
+    /// `didBecomeKeyNotification` is the moment itself rather than a guess at
+    /// how long it takes, so there is nothing left to race.
+    private func observeKeyWindow() {
+        guard keyWindowObserver == nil else { return }
+        keyWindowObserver = NotificationCenter.default.addObserver(
+            forName: UIWindow.didBecomeKeyNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.claimKeyboard() }
+        }
+    }
+
+    // No `deinit` unregistering the observer: Swift 6 will not let a
+    // nonisolated `deinit` touch it, and it does not need to. The block holds
+    // the view weakly, and this view lives as long as the game does.
+
 
     /// Asks for the keyboard, and keeps asking.
     ///
@@ -57,20 +83,23 @@ final class KeyboardFocusedSKView: SKView {
     ///
     /// Cheap, because `becomeFirstResponder` on the current first responder
     /// is a no-op.
-    func claimKeyboard() {
+    func claimKeyboard(attempt: Int = 0) {
         guard window != nil, !isFirstResponder else { return }
-        if !becomeFirstResponder() {
-            // Not an error worth a red line — the retries below are expected
-            // to be the ones that land.
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.window != nil, !self.isFirstResponder else { return }
-                if self.becomeFirstResponder() {
-                    DiagnosticsLog.shared.log(.input, "keyboard focus (deferred)")
-                }
-            }
+        if becomeFirstResponder() {
+            DiagnosticsLog.shared.log(.input,
+                attempt == 0 ? "keyboard focus" : "keyboard focus (attempt \(attempt + 1))")
             return
         }
-        DiagnosticsLog.shared.log(.input, "keyboard focus")
+        // A bounded retry behind the notification above, for whatever order
+        // SwiftUI settles its own focus in. Five turns over half a second,
+        // then it gives up and says so rather than retrying forever.
+        guard attempt < 5 else {
+            DiagnosticsLog.shared.log(.error, "could not claim the keyboard")
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            MainActor.assumeIsolated { self?.claimKeyboard(attempt: attempt + 1) }
+        }
     }
 
     override func didMoveToSuperview() {
