@@ -120,12 +120,19 @@ targets:
         DEVELOPMENT_TEAM: K66MA9TR8Z
         CODE_SIGN_STYLE: Automatic        # the way ZudioiOS is signed
         TARGETED_DEVICE_FAMILY: "1,2"     # iPhone and iPad
-      configs:
-        Debug:
-          CODE_SIGN_IDENTITY: "-"
-          CODE_SIGNING_REQUIRED: NO
-        Release:
-          CODE_SIGNING_REQUIRED: YES
+      # No ad-hoc Debug config, unlike the Mac target above.
+      #
+      # That block was copied from macOS, where signing Debug ad-hoc is a
+      # deliberate trade — a local build never waits on a certificate. On iOS
+      # the trade does not exist: a device refuses an ad-hoc bundle, and
+      # `CODE_SIGN_IDENTITY: "-"` fails the build outright with "has
+      # entitlements that require signing with a development certificate".
+      # Simulator builds need no signing either way; Xcode turns it off for
+      # that destination on its own.
+      #
+      # So both configurations sign automatically against the team above, and
+      # Xcode picks Apple Development for a device and Apple Distribution for
+      # an archive.
 
   GCITests:
     type: bundle.unit-test
@@ -170,6 +177,25 @@ schemes:
       config: Debug
       targets:
         - GCITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  # Declared rather than left to Xcode.
+  #
+  # This scheme existed as an autocreated one in `xcuserdata`, which is not
+  # checked in and does not survive `xcodegen generate` — so regenerating the
+  # project made the iOS target unbuildable from the command line and
+  # invisible to anyone else who opened it. Shared, it survives both.
+  GalacticChessInvadersiOS:
+    build:
+      targets:
+        GalacticChessInvadersiOS: all
+    run:
+      config: Debug
     profile:
       config: Release
     analyze:

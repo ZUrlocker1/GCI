@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "2700"
+   LastUpgradeVersion = "1620"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
-      buildArchitectures = "Automatic">
+      runPostActionsOnFailure = "NO">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B53F6BD0AA8B7AC8370F4257"
                BuildableName = "GalacticChessInvadersiOS.app"
+               BlueprintName = "GalacticChessInvadersiOS"
                ReferencedContainer = "container:GalacticChessInvaders.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -27,7 +28,18 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      shouldAutocreateTestPlan = "YES">
+      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "B53F6BD0AA8B7AC8370F4257"
+            BuildableName = "GalacticChessInvadersiOS.app"
+            BlueprintName = "GalacticChessInvadersiOS"
+            ReferencedContainer = "container:GalacticChessInvaders.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
+      <Testables>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -38,17 +50,19 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES"
-      queueDebuggingEnabled = "No">
+      allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B53F6BD0AA8B7AC8370F4257"
             BuildableName = "GalacticChessInvadersiOS.app"
+            BlueprintName = "GalacticChessInvadersiOS"
             ReferencedContainer = "container:GalacticChessInvaders.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -62,9 +76,12 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B53F6BD0AA8B7AC8370F4257"
             BuildableName = "GalacticChessInvadersiOS.app"
+            BlueprintName = "GalacticChessInvadersiOS"
             ReferencedContainer = "container:GalacticChessInvaders.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

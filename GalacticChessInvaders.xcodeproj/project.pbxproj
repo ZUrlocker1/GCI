@@ -618,28 +618,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_1D92BA3B-232E-4ADC-821B-327199BC1FEB" /* .claude */ = {
+		"TEMP_4E37C67A-C034-4D52-A90A-58DF777E0AAE" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_5B5D7667-D61A-4F23-949F-C4D1030B24F8" /* .claude */ = {
+		"TEMP_6A4CE78A-A678-4070-B586-2EEF598B834D" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_6B18AF37-5409-4190-9843-5750AEF5CDCF" /* .claude */ = {
+		"TEMP_9E02B899-BF88-4074-9787-5D4692BFD097" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_BCF44C27-A18A-49B1-94CC-FAA8511BDA37" /* .claude */ = {
+		"TEMP_FF0A3B0E-E72C-4E6B-A688-EBA55396F441" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -1026,8 +1026,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
@@ -1075,7 +1074,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_REQUIRED = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
