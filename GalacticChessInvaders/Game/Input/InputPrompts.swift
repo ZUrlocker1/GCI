@@ -50,6 +50,39 @@ enum InputPrompts {
         #endif
     }
 
+    // MARK: - Arcade Hints
+    //
+    // The two that name a control. Eleven characters a line is the measured
+    // ceiling — "PRESS SPACE" is exactly that, and twelve overflows the
+    // gutter — so both sides of these are counted, not estimated.
+
+    /// Raised after three beats without firing.
+    ///
+    /// "TAP FIRE" names the control exactly as the button is labelled, which
+    /// is the word a player is hunting for. "HOLD FIRE" would describe the
+    /// mechanic more precisely and is unusable: in English it reads as an
+    /// order to *stop* shooting.
+    static var fireHint: (String, String) {
+        #if os(macOS)
+        ("PRESS SPACE", "TO FIRE!")
+        #else
+        ("TAP FIRE", "TO SHOOT!")
+        #endif
+    }
+
+    /// Raised after ten seconds of firing without steering.
+    ///
+    /// "Drag" rather than "slide" because it is the verb the whole iOS scheme
+    /// is built on — the ship in its lane, a piece to its square — and the
+    /// same word should teach both.
+    static var moveHint: (String, String) {
+        #if os(macOS)
+        ("USE ARROWS", "TO MOVE!")
+        #else
+        ("DRAG SHIP", "TO MOVE!")
+        #endif
+    }
+
     /// The wave-clear overlay, which carries the next level's number.
     /// Unpadded: `OutcomePresentationTests` reads "LEVEL 3", and the banner
     /// has said it that way since 0.2.

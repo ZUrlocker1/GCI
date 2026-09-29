@@ -77,10 +77,13 @@ final class ChessHintNode: SKNode {
 
         var lines: (String, String) {
             switch self {
-            // Twelve characters would be "PRESS ARROWS", wider than anything
-            // GameStatusNode fits in this gutter. Ten is safe.
-            case .fire: return ("PRESS SPACE", "TO FIRE!")
-            case .move: return ("USE ARROWS", "TO MOVE!")
+            // Both wordings live in `InputPrompts` with the rest of the copy
+            // that names a control, because they differ per platform: there
+            // is no space bar on an iPad and no FIRE button on a Mac. Eleven
+            // characters a line is the ceiling either way — twelve would be
+            // "PRESS ARROWS", wider than anything GameStatusNode fits here.
+            case .fire: return InputPrompts.fireHint
+            case .move: return InputPrompts.moveHint
             // No "PRESS SPACE" — this only ever shows to someone who has
             // already fired this level, so they know where the trigger is.
             // What they have stopped doing is using it.
