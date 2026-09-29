@@ -548,11 +548,29 @@ string, not two code paths.
 `⌘T` is deliberately Command-modified so it cannot collide with gameplay, and it is
 per-session so nobody leaves it on. Neither property survives onto a touch device.
 
-**Decided: a long press on the version label, and Test Mode ships.** On iOS the version
-moves out of the Settings screen — where it sits today, `SettingsNode` line 277 — and
-onto the play screen, bottom-left corner, small and dim. That earns its place twice
-over: a tester reporting a bug can read the build number straight off the screen, and it
-gives the gesture something real to aim at.
+**Decided, and built: a long press on the version label, and Test Mode ships.** On iOS
+the version is drawn on the play screen as well as in Settings — `V1.2  B9`, 8pt and
+dim, **top-left, in the band under the HUD bar**. That earns its place twice over: a
+tester reporting a bug can read the build number straight off the screen, and it gives
+the gesture something real to aim at.
+
+**Top-left, not the bottom-left corner this section first chose.** Three things are
+wrong with the bottom, and the first is disqualifying:
+
+1. `isInShipLane` claims *every* touch below the board, across the full width — it is
+   `point.y < boardBottomY`, not a box around the ship. A label down there never sees
+   the press. It would need its own exception ahead of the lane test, the way FIRE has
+   one.
+2. It would share a 36pt strip with `ERROR - SEE LOG` at (50, 30), so one of them would
+   have to hide the other.
+3. The iOS host sets `ignoresSafeArea`, so the scene runs under the home indicator.
+
+The band under the HUD has none of that. `hudBandHeight` is 68 against a 36pt bar, so
+there is always a clear 32pt strip above the board at every size, and the left gutter is
+empty from the Chess Hint up. Nothing claims touches there, so the press simply arrives.
+
+The label doubles as the Test Mode indicator: dim cyan when off, lit orange when on. The
+gutter notice says it once; the label keeps saying it.
 
 A **single ~1.5-second press** on it, rather than a tap count. Counted taps were the
 first idea — seven is the Android developer-mode convention — but seven is slow, gives
@@ -948,11 +966,8 @@ Phase 1 is complete. The ship flies: drag it in its lane, hold FIRE in the right
 margin, as decided in §4. A hardware keyboard still drives every key the Mac reads, and
 the diagnostics log has a SwiftUI panel beside the game in landscape.
 
-The one thing carried forward is **copy**: the two Arcade Hints still say "PRESS SPACE
-TO FIRE!" and "USE ARROWS TO MOVE!". There is now a button and a lane to point at
-instead, so they can be reworded — "TAP THE / FIRE BUTTON!" and "DRAG TO / MOVE SHIP!"
-per the table in §4 — and that belongs with Pass 1, where the gutter is being looked at
-anyway.
+The Arcade Hint copy is done: `InputPrompts` says "TAP FIRE / TO SHOOT!" and
+"DRAG SHIP / TO MOVE!" on iOS, both inside the gutter's eleven-character line.
 
 ---
 

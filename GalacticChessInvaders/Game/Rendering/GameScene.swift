@@ -354,6 +354,9 @@ class GameScene: SKScene {
     var fireButton: FireButtonNode?
     var shipDragTouch: ObjectIdentifier?
     var fireTouch: ObjectIdentifier?
+    /// The version string, top-left, and the only way into Test Mode on a
+    /// device with no keyboard. See `setupVersionLabel`.
+    var versionLabel: SKLabelNode?
     /// How far the ship sits from the finger steering it, fixed at the moment
     /// of the grab. See `beginShipDrag`.
     var shipDragOffset: CGFloat = 0
@@ -542,6 +545,9 @@ class GameScene: SKScene {
         setupBloomNode()
         setupPools()
         setupStarfield()
+        #if os(iOS)
+        setupVersionLabel()
+        #endif
     }
 
     /// The object pools, built once for the life of the scene.
@@ -927,6 +933,7 @@ class GameScene: SKScene {
         // The FIRE button is the third piece of chrome a panel covers, and
         // the only one that could still be pressed through it.
         syncFireButtonVisibility()
+        versionLabel?.isHidden = settingsNode != nil || howToPlayNode != nil
         #endif
     }
 
@@ -1211,6 +1218,99 @@ class GameScene: SKScene {
 
     /// Air between the button and both the board and the screen edge.
     private static let fireButtonInset: CGFloat = 8
+
+    // MARK: - The version label, and the door into Test Mode
+    //
+    // docs/IOS-Port.md §4: ⌘T is the Mac's way in, and an iPad without a
+    // keyboard has no ⌘T. A long press on the version string is the
+    // replacement — one deliberate act on a target that earns its place
+    // anyway, since a tester filing a bug can read the build off the screen.
+    //
+    // Counted taps were the first idea and are worse: seven is the Android
+    // convention, but it is slow and silent until it suddenly works. A press
+    // can show its own progress — the label brightens over the hold — so the
+    // gesture explains itself halfway through.
+    //
+    // **Top-left, not the bottom-left corner the plan first chose.** Three
+    // things are wrong with the bottom. `isInShipLane` claims *every* touch
+    // below the board, across the full width, so a label down there never
+    // sees the press — it would need its own exception ahead of the lane, the
+    // way FIRE has one. It would share a 36pt strip with `ERROR - SEE LOG`.
+    // And the scene runs under the home indicator, since the iOS host sets
+    // `ignoresSafeArea`. The band beneath the HUD has none of that: the
+    // layout reserves `hudBandHeight` 68 against a 36pt bar, so there is
+    // always a clear strip above the board, and the left gutter is empty from
+    // the Chess Hint up.
+
+    private static let versionRestAlpha: CGFloat = 0.3
+    /// Long enough not to happen by accident, short enough that nobody lets
+    /// go first.
+    private static let testModeHold: TimeInterval = 1.5
+    private static let testModeHoldKey = "testModeHold"
+
+    private func setupVersionLabel() {
+        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        label.text = "V\(Bundle.main.appVersion)  B\(Bundle.main.appBuild)"
+        label.fontSize = 8
+        label.horizontalAlignmentMode = .left
+        label.verticalAlignmentMode = .center
+        // Above the playfield, below the panels — and below the game-over
+        // scrim, deliberately. The error flag sits at 26 so it outlasts that
+        // scrim, because a run that went wrong has to say so; a build number
+        // does not.
+        label.zPosition = 11
+        addChild(label)
+        versionLabel = label
+        refreshVersionLabel()
+        layOutVersionLabel()
+    }
+
+    /// Left-aligned with SCORE, centred in the band under the HUD bar.
+    func layOutVersionLabel() {
+        versionLabel?.position = CGPoint(x: 10, y: size.height - HUDNode.height - 16)
+    }
+
+    /// Dim and cyan normally; lit and orange while Test Mode is on, so the
+    /// state is legible without opening anything. The gutter notice says it
+    /// once; this keeps saying it.
+    private func refreshVersionLabel() {
+        guard let versionLabel else { return }
+        versionLabel.removeAction(forKey: Self.testModeHoldKey)
+        versionLabel.fontColor = testMode ? NeonPalette.alertOrange : NeonPalette.cyan
+        versionLabel.alpha = testMode ? 0.85 : Self.versionRestAlpha
+    }
+
+    /// A generous target. The label is 8pt type and a fingertip is not — the
+    /// same reasoning as `FireButtonNode.contains(scenePoint:)`.
+    func versionLabelContains(_ point: CGPoint) -> Bool {
+        guard let versionLabel, !versionLabel.isHidden else { return false }
+        return versionLabel.frame.insetBy(dx: -24, dy: -24).contains(point)
+    }
+
+    /// Starts the hold. The brightening *is* the progress indicator, so the
+    /// fade and the toggle are one group under one key and are cancelled
+    /// together — a finger lifted early takes the toggle with it.
+    func beginVersionPress() {
+        guard let versionLabel else { return }
+        versionLabel.removeAction(forKey: Self.testModeHoldKey)
+        versionLabel.run(.group([
+            .fadeAlpha(to: 1.0, duration: Self.testModeHold),
+            .sequence([
+                .wait(forDuration: Self.testModeHold),
+                .run { [weak self] in self?.toggleTestMode() },
+            ]),
+        ]), withKey: Self.testModeHoldKey)
+    }
+
+    /// Lifted, or slid off. Either way the hold is off and the label settles
+    /// back to whatever Test Mode's current state looks like.
+    func endVersionPress() {
+        guard let versionLabel,
+              versionLabel.action(forKey: Self.testModeHoldKey) != nil else { return }
+        versionLabel.removeAction(forKey: Self.testModeHoldKey)
+        versionLabel.run(.fadeAlpha(to: testMode ? 0.85 : Self.versionRestAlpha,
+                                    duration: 0.2))
+    }
     #endif
 
     /// The one thing on screen that should show a pointing hand: the Zudio
@@ -2965,6 +3065,7 @@ class GameScene: SKScene {
 
         #if os(iOS)
         layOutFireButton()
+        layOutVersionLabel()
         #endif
 
         if let ship {
@@ -3370,6 +3471,28 @@ class GameScene: SKScene {
     /// toggle, so §8.1's A / D ship movement had to be dropped to make room.
     /// Behind a gate, the letters go back to moving the ship.
     private var testMode = false
+
+    /// The one place Test Mode goes on and off.
+    ///
+    /// Two doors reach it and they are not interchangeable: ⌘T wherever a
+    /// keyboard is attached, and — on iOS — a long press on the version
+    /// label, which is the only way in on a device that has no ⌘T at all.
+    /// See the version-label section for why the gesture is what it is.
+    func toggleTestMode() {
+        testMode.toggle()
+        NotificationCenter.default.post(name: .gciTestModeChanged, object: testMode)
+        // Otherwise the panel is stranded: open, and with no way to close
+        // it short of turning Test Mode back on.
+        if !testMode, GameSettings.shared.logPanel {
+            GameSettings.shared.logPanel = false
+            NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
+        }
+        #if os(iOS)
+        refreshVersionLabel()
+        #endif
+        flashGutterNotice(testMode ? "TEST MODE ON" : "TEST MODE OFF")
+        DiagnosticsLog.shared.log(.info, "test mode \(testMode ? "on" : "off")")
+    }
 
     private var quitPrompt: SKNode?
     /// Whether the scene was already held when the prompt went up. Settings and
@@ -5423,16 +5546,7 @@ class GameScene: SKScene {
         // Command-T arms the test keys. Command-modified so it cannot collide
         // with anything the game reads, and per session so nobody leaves it on.
         if key.isCommand("t") {
-            testMode.toggle()
-            NotificationCenter.default.post(name: .gciTestModeChanged, object: testMode)
-            // Otherwise the panel is stranded: open, and with no way to close
-            // it short of turning Test Mode back on.
-            if !testMode, GameSettings.shared.logPanel {
-                GameSettings.shared.logPanel = false
-                NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
-            }
-            flashGutterNotice(testMode ? "TEST MODE ON" : "TEST MODE OFF")
-            DiagnosticsLog.shared.log(.info, "test mode \(testMode ? "on" : "off")")
+            toggleTestMode()
             return
         }
 
@@ -5590,10 +5704,19 @@ class GameScene: SKScene {
         if let settingsNode {
             settingsNode.handleDrag(at: settingsNode.convert(location, from: self))
         }
+        #if os(iOS)
+        // Slid off the label: a hold that has wandered is not a hold. Cheap
+        // to check, and it stops a drag that happens to begin in the corner
+        // from arming Test Mode on the way past.
+        if !versionLabelContains(location) { endVersionPress() }
+        #endif
     }
 
     func pointerUp() {
         settingsNode?.endDrag()
+        #if os(iOS)
+        endVersionPress()
+        #endif
     }
 
     func handle(keyUp key: KeyPress) {
@@ -5630,6 +5753,15 @@ class GameScene: SKScene {
             }
             return
         }
+
+        #if os(iOS)
+        // Ahead of every other target. Nothing else claims this corner, and
+        // the press has to start the hold rather than fall through.
+        if versionLabelContains(location) {
+            beginVersionPress()
+            return
+        }
+        #endif
 
         // INFO button opens How To Play from any game state.
         let hit = atPoint(location)
