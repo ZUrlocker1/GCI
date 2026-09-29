@@ -324,9 +324,13 @@ The genuine risks live in stage 2, and there are three:
 The ask is narrow and that helps: horizontal ship movement, and fire. Two axes of one
 stick and one button.
 
-### Virtual controller
+### Virtual controller — considered and not used
 
-`GCVirtualController` (GameController, iOS 15+) is the right default:
+**Read the decision in *Why GCI cannot just copy that* below before this
+section.** What follows is why the obvious default was not taken; it is kept
+because the reasoning still holds if the built scheme ever needs replacing.
+
+`GCVirtualController` (GameController, iOS 15+) looks like the right default:
 
 ```swift
 let config = GCVirtualController.Configuration()
@@ -346,10 +350,13 @@ Why it might not: you get very little say over how it looks. It is a translucent
 system d-pad laid over a neon vector arcade game, and it may look borrowed. There is no
 way to restyle it.
 
-**Recommendation:** build against `GCVirtualController` first because it is hours rather
-than days, and decide on looks with it running. If it clashes, a custom `SKNode` control
-pair is a contained replacement — the input layer is one adapter either way, and
-`GameAction` means nothing downstream knows the difference.
+**This originally recommended building against `GCVirtualController` first**, on the
+grounds that it is hours rather than days and the looks could be judged with it
+running. That advice was written before the decision below it and is superseded: the
+chosen scheme turned out to be a comparable amount of work, and it avoids laying a
+grey system d-pad over a neon vector game. The fallback reasoning stands, though —
+the input layer is one adapter either way, and `GameAction` means nothing downstream
+would know the difference.
 
 ### What other arcade ports actually do
 
@@ -404,11 +411,33 @@ order of how much they ask of the player:
 3. **`GCVirtualController`** — the d-pad the table above says people dislike, but it
    is free, native, and disappears when a real controller connects.
 
-**Decided: 2, and no auto-fire.** Drag in the ship's lane with the left thumb, a
-fire button under the right. Landscape puts both thumbs in the bottom corners
-already, and the fire button can sit in the right-hand gutter — space the layout
-has spare and the Mac build uses for nothing. Option 1 is the thing to test it
-against, not the thing to build.
+**Decided and built: 2, and no auto-fire.** Drag in the ship's lane with the left
+thumb, a fire button under the right. Landscape puts both thumbs in the bottom
+corners already, and the fire button sits in the right-hand margin — space the
+layout has spare and the Mac build uses for nothing. Option 1 is the thing to test
+it against, not the thing to build.
+
+*As built* (`TouchInputAdapter`, `FireButtonNode`):
+
+- **Every touch is tracked by identity.** Reading `touches.first` was the first
+  version and it makes the two thumbs fight — a right thumb resting on FIRE becomes
+  "first" and steals the left thumb's drag.
+- **The drag is one to one with the finger**, clamped to `shipLane`, not routed
+  through the ship's speed — dragging *is* the position, so a speed multiplier would
+  leave the ship trailing the thumb steering it. The Settings speed slider therefore
+  governs the keyboard and a game controller, not touch.
+- **The drag region is `point.y < boardBottomY`** — the ship's band and the space
+  around it, which is what keeps a drag over the squares a chess move.
+- **A finger that starts on FIRE keeps firing wherever it slides**; lifting is what
+  stops it. Sliding off a button and expecting it to stop is a desktop habit, and
+  mid-fight it reads as the gun jamming.
+- **The button is sized to the margin, not to the board.** Scaling it by
+  `contentScale` like everything else put a 114pt button in a 96pt margin and the
+  screen edge cut it in half. It is 80pt in portrait and 114 in landscape.
+- **The touch target is half again the drawn circle.** A thumb is wider than what it
+  is aiming at, and a missed shot here is a piece of White's that survives.
+- Both controls are live only during play, and the button appears and disappears
+  with the HUD.
 
 **Chess pieces drag too.** Tap-then-tap still works, but drag is the default: it is
 what every chess app on a phone has taught people, and it is one gesture instead of
@@ -887,7 +916,7 @@ this work starts, so that a port failure is never confused with a coin flip.
 | Phase | Work | Ships? |
 |---|---|---|
 | 0 | `SceneLayout` refactor, validated on macOS at the existing size | macOS 1.2 |
-| 1 | iOS target, audio session, lifecycle, `GCVirtualController`, touch chess | **mostly done** |
+| 1 | iOS target, audio session, lifecycle, touch controls, touch chess | **done** |
 | 2 | iPad landscape, all four sizes + physical mini | TestFlight |
 | 3 | iPad portrait | TestFlight |
 | 4 | How To Play and Settings restructure | — |
@@ -904,10 +933,15 @@ A hardware keyboard drives every key the Mac reads, through `KeyboardInputAdapte
 Three things in `Game/` that were quietly macOS-only — the notification names, an
 `NSFont`, one `invalidateCursorRects` — are not any more.
 
-What is left of Phase 1 is **the ship**: `GCVirtualController` for steering and firing.
-Until that lands the chess half is playable on iPad and the arcade half is not, which
-also means the two Arcade Hints still name keys — "PRESS SPACE TO FIRE!" — because
-there is no button yet to point at instead.
+Phase 1 is complete. The ship flies: drag it in its lane, hold FIRE in the right-hand
+margin, as decided in §4. A hardware keyboard still drives every key the Mac reads, and
+the diagnostics log has a SwiftUI panel beside the game in landscape.
+
+The one thing carried forward is **copy**: the two Arcade Hints still say "PRESS SPACE
+TO FIRE!" and "USE ARROWS TO MOVE!". There is now a button and a lane to point at
+instead, so they can be reworded — "TAP THE / FIRE BUTTON!" and "DRAG TO / MOVE SHIP!"
+per the table in §4 — and that belongs with Pass 1, where the gutter is being looked at
+anyway.
 
 ---
 

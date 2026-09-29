@@ -346,6 +346,15 @@ class GameScene: SKScene {
     /// Whether the fire key is currently down. Ordinary fire is one shot per
     /// press and ignores this; Spread Fire sprays for as long as it is held.
     private var isFireHeld = false
+
+    #if os(iOS)
+    /// The touch controls (docs/IOS-Port.md §4): drag the ship with one thumb,
+    /// hold FIRE with the other. Two touches at once, so each is tracked by
+    /// identity — `touches.first` would make the two thumbs fight.
+    var fireButton: FireButtonNode?
+    var shipDragTouch: ObjectIdentifier?
+    var fireTouch: ObjectIdentifier?
+    #endif
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
     /// slots, so without this the prompt reappeared immediately after submitting
@@ -1025,6 +1034,9 @@ class GameScene: SKScene {
     }
 
     func showHUD() {
+        #if os(iOS)
+        showFireButton()
+        #endif
         guard hudNode == nil else { return }
         let hud = HUDNode(sceneWidth: size.width)
         hud.position = CGPoint(x: 0, y: size.height - HUDNode.height)
@@ -1040,9 +1052,93 @@ class GameScene: SKScene {
     }
 
     func hideHUD() {
+        #if os(iOS)
+        hideFireButton()
+        #endif
         hudNode?.removeFromParent()
         hudNode = nil
     }
+
+    #if os(iOS)
+    /// The FIRE button lives and dies with the HUD: both are gameplay chrome,
+    /// and neither belongs on the title screen or under a panel.
+    func showFireButton() {
+        guard fireButton == nil else { return }
+        let button = FireButtonNode()
+        addChild(button)
+        fireButton = button
+        layOutFireButton()
+    }
+
+    func hideFireButton() {
+        fireButton?.setHeld(false)
+        fireButton?.removeFromParent()
+        fireButton = nil
+        fireTouch = nil
+        shipDragTouch = nil
+    }
+
+    // MARK: - What the touch controls are allowed to ask for
+    //
+    // A narrow surface on purpose. `TouchInputAdapter` is an extension in
+    // another file, so it cannot see this class's `private` members — and
+    // widening half a dozen of them to suit one caller would be the wrong
+    // trade. These four are the whole of what the scheme needs.
+
+    /// Whether there is a game to fly in. The title screen, the panels and
+    /// the game-over prompt all want a plain tap instead.
+    var acceptsTouchControls: Bool {
+        fireButton != nil && stateMachine.currentState is PlayingState
+    }
+
+    /// The band below the board: the ship's lane and the space around it.
+    /// Bounded rather than drag-anywhere, because this screen is also a chess
+    /// board and a drag over the squares has to stay a piece being moved.
+    func isInShipLane(_ point: CGPoint) -> Bool {
+        point.y < layout.boardBottomY
+    }
+
+    /// Hold or release the trigger, through the same `GameAction` path the
+    /// space bar uses — so the laser cap, the audio and the Arcade Hints all
+    /// behave identically however the shot was asked for.
+    func setTouchFiring(_ firing: Bool) {
+        fireButton?.setHeld(firing)
+        handle(firing ? .fireLaser : .stopFiring)
+    }
+
+    /// One to one with the finger, clamped to the lane the ship may fly in.
+    ///
+    /// Direct rather than nudging `direction`: dragging *is* the position, so
+    /// routing it through the ship's speed would leave the ship trailing the
+    /// thumb steering it. The Settings speed slider therefore governs the
+    /// keyboard and a game controller, not this.
+    func dragShip(to x: CGFloat) {
+        guard let ship, !isShipDown else { return }
+        ship.direction = 0
+        let lane = layout.shipLane
+        ship.position.x = min(max(x, lane.lowerBound), lane.upperBound)
+        noteShipMoved()
+    }
+
+    /// Centred in the right-hand margin, level with the ship it fires.
+    ///
+    /// Sized to the margin rather than to the board. Scaling it by
+    /// `contentScale` like everything else put a 114pt button in a 96pt
+    /// margin and the screen edge cut it in half — the margin is a fixed
+    /// reservation and does not grow with the squares, so neither can this.
+    func layOutFireButton() {
+        guard let fireButton else { return }
+        let layout = self.layout
+        let margin = size.width - layout.boardTopX
+        let fits = (margin - Self.fireButtonInset * 2) / FireButtonNode.diameter
+        fireButton.adopt(scale: max(0.6, min(layout.contentScale, fits)))
+        fireButton.position = CGPoint(x: layout.boardTopX + margin / 2,
+                                      y: layout.shipLaneY)
+    }
+
+    /// Air between the button and both the board and the screen edge.
+    private static let fireButtonInset: CGFloat = 8
+    #endif
 
     /// The one thing on screen that should show a pointing hand: the Zudio
     /// link on the info panel. `KeyboardFocusedSKView` turns this into a cursor
@@ -2793,6 +2889,10 @@ class GameScene: SKScene {
         // Both cross the playfield rather than the window, so both have to be
         // told when the window changes what the playfield is.
         raiders?.adopt(lane: layout.playfieldMinX...layout.playfieldMaxX)
+
+        #if os(iOS)
+        layOutFireButton()
+        #endif
 
         if let ship {
             // The ship belongs to the board's scale, not the window's — it sits

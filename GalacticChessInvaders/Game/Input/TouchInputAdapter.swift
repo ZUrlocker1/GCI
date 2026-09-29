@@ -1,16 +1,24 @@
 // TouchInputAdapter.swift
-// The iOS sibling of MacInputAdapter: `UITouch` into the same neutral pointer
-// calls a mouse makes.
+// The iOS sibling of MacInputAdapter: fingers into the same neutral calls a
+// mouse makes, plus the two controls a mouse never needed.
 //
-// This is short because the work was done already. `GameScene` stopped taking
-// `NSEvent` when the Mac adapter was lifted out of it, and what was left —
-// `pointerDown(at:)`, `pointerDragged(to:)`, `pointerUp()` — describes a
-// finger just as well as a mouse. So one tap now starts the game, picks a
-// chess piece, names its destination, works SET and INFO, both BACK buttons
-// and the Settings sliders, with no change to any of them.
+// docs/IOS-Port.md §4 settles the scheme, and it is one rule: **on iOS you
+// drag things.** The ship in its lane, a piece to its square. The only tap is
+// the fire button.
 //
-// What a finger is NOT: the ship. Steering and firing want a virtual
-// controller (§4), and that is the next piece.
+//   · a touch on FIRE holds fire until it lifts
+//   · a touch in the ship's lane drags the ship, one to one
+//   · anything else is a pointer — the board, the panels, the sliders, which
+//     `GameScene` already handles because the Mac refactor left
+//     `pointerDown(at:)` behind for exactly this
+//
+// **Every touch is tracked by identity.** Reading `touches.first` was the
+// first version and it makes the two thumbs fight: a right thumb resting on
+// FIRE becomes "first" and steals the left thumb's drag. `UITouch` instances
+// persist across phases, so their `ObjectIdentifier` is the handle.
+//
+// Auto-fire is deliberately absent. In GCI your own pieces sit in the firing
+// line on every shot, so firing has to be a decision the player makes.
 
 import SpriteKit
 
@@ -19,27 +27,66 @@ import UIKit
 
 extension GameScene {
 
-    /// The first touch only. The game has no two-finger gesture, and reading
-    /// them all would let a palm on the bezel fight the finger that meant it.
     public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        pointerDown(at: touch.location(in: self))
+        for touch in touches {
+            let point = touch.location(in: self)
+            let id = ObjectIdentifier(touch)
+
+            if let fireButton, fireButton.contains(scenePoint: point), acceptsTouchControls {
+                fireTouch = id
+                setTouchFiring(true)
+                continue
+            }
+            if acceptsTouchControls, isInShipLane(point) {
+                shipDragTouch = id
+                dragShip(to: point.x)
+                continue
+            }
+            pointerDown(at: point)
+        }
     }
 
     public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        pointerDragged(to: touch.location(in: self))
+        for touch in touches {
+            let point = touch.location(in: self)
+            let id = ObjectIdentifier(touch)
+
+            if id == shipDragTouch {
+                dragShip(to: point.x)
+                continue
+            }
+            // A finger that started on FIRE keeps firing wherever it slides;
+            // lifting is what stops it. Sliding off a button and expecting it
+            // to stop is a desktop habit, and mid-fight it would read as the
+            // gun jamming.
+            if id == fireTouch { continue }
+            pointerDragged(to: point)
+        }
     }
 
     public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        pointerUp()
+        endTouches(touches)
     }
 
-    /// A touch the system takes away — a call arriving, a system gesture. It
-    /// has to end the drag, or a Settings slider stays captured and the next
-    /// tap anywhere drags it.
     public override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        pointerUp()
+        endTouches(touches)
     }
+
+    private func endTouches(_ touches: Set<UITouch>) {
+        for touch in touches {
+            let id = ObjectIdentifier(touch)
+            if id == fireTouch {
+                fireTouch = nil
+                setTouchFiring(false)
+                continue
+            }
+            if id == shipDragTouch {
+                shipDragTouch = nil
+                continue
+            }
+            pointerUp()
+        }
+    }
+
 }
 #endif
