@@ -59,7 +59,6 @@
 		33D1AA16FA29AE83414E4A8C /* chess-w-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = B1C4ECE6D9D8E3925073ACFE /* chess-w-king-d2.png */; };
 		340D780199536FE1F956652E /* Chess.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11C903C797D394A807E396 /* Chess.swift */; };
 		346FAE43588F07BD3A9E0EE8 /* chess-w-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F7658142CFF640B25888ADBB /* chess-w-knight-d2.png */; };
-		35371BABCEC1D46F00CE6BBD /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = D6E00200878F5A414C7AA097 /* AppIcon.icns */; };
 		362A63B60EAE25EE61172DB1 /* ExplosionPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815CA288511D02127E0E884F /* ExplosionPool.swift */; };
 		368610872B731D709369E6BC /* Chess.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11C903C797D394A807E396 /* Chess.swift */; };
 		3A13D4F27754EBE3F1990D3E /* FleetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386C3750928FB14BC1D27D55 /* FleetController.swift */; };
@@ -109,6 +108,7 @@
 		6CEB1B9161FCB29DC4C0DAF6 /* RaiderRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D52D7B60FB53896B80DB403D /* RaiderRules.swift */; };
 		6E68EDE0BFEE0BC6E2899B6F /* chess-w-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */; };
 		6F91DE073D013E6683627559 /* CollisionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */; };
+		704CD7BA905A14E599FBCB5A /* Assets-iOS.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A3074A426F399258F3BDEBAC /* Assets-iOS.xcassets */; };
 		72D2115FAB465E7CCE18AE4E /* GameOverNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */; };
 		75E7AD5D7B8013F85C756947 /* InputPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2AE39FA6875082A7D1BC5A /* InputPrompts.swift */; };
 		760602011486A974F4A2883F /* FleetFiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2413DE75C60DE24F7CDAD34F /* FleetFiring.swift */; };
@@ -327,6 +327,7 @@
 		9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCIBoard.swift; sourceTree = "<group>"; };
 		A00359D531409FD8FEF80590 /* ChessEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessEngine.swift; sourceTree = "<group>"; };
 		A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PressStart2P-Regular.ttf"; sourceTree = "<group>"; };
+		A3074A426F399258F3BDEBAC /* Assets-iOS.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets-iOS.xcassets"; sourceTree = "<group>"; };
 		A31680B5E066A40DE4421288 /* TouchInputAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchInputAdapter.swift; sourceTree = "<group>"; };
 		A56497B49CFE839D85ABCC3A /* HUDNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDNode.swift; sourceTree = "<group>"; };
 		ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverScene.swift; sourceTree = "<group>"; };
@@ -431,6 +432,7 @@
 		2D966E5713FCF544A056D4C2 /* GalacticChessInvaders */ = {
 			isa = PBXGroup;
 			children = (
+				A3074A426F399258F3BDEBAC /* Assets-iOS.xcassets */,
 				08241E562A4DA292A1335EC5 /* Info-iOS.plist */,
 				46F6F35A994CABC71E91B264 /* Info.plist */,
 				1FCC729449E404D8961A14A7 /* App */,
@@ -618,28 +620,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_4E37C67A-C034-4D52-A90A-58DF777E0AAE" /* .claude */ = {
+		"TEMP_0327960B-1B83-4213-8310-CE2E5EDF25F4" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_6A4CE78A-A678-4070-B586-2EEF598B834D" /* .claude */ = {
+		"TEMP_40199916-4CEC-4260-A4C2-3F4A0969D3D3" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_9E02B899-BF88-4074-9787-5D4692BFD097" /* .claude */ = {
+		"TEMP_4198B49D-BD2E-4524-866D-FEABE1BF36D5" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_FF0A3B0E-E72C-4E6B-A688-EBA55396F441" /* .claude */ = {
+		"TEMP_A6C17CCA-AC28-4365-96E5-505D4A5C86A5" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -751,7 +753,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				35371BABCEC1D46F00CE6BBD /* AppIcon.icns in Resources */,
+				704CD7BA905A14E599FBCB5A /* Assets-iOS.xcassets in Resources */,
 				F16167CD5B548B86C6C1F21D /* PressStart2P-Regular.ttf in Resources */,
 				8C7AB56556385E87803B0AF9 /* chess-b-bishop-d1.png in Resources */,
 				5658AD3082139ED6D7F14CE6 /* chess-b-bishop-d2.png in Resources */,

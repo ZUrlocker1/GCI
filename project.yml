@@ -22,6 +22,7 @@ targets:
           # one shell and not the other's; everything under Game/ is shared.
           - App-iOS/**
           - Info-iOS.plist
+          - Assets-iOS.xcassets
           # Bundled as a folder reference below so the vendor subdirectories
           # survive; SoundKey resolves paths like "sfx/kenney-digital/x.caf",
           # and Xcode's default resource handling would flatten them.
@@ -104,6 +105,7 @@ targets:
           - Resources/sfx/**
           - Resources/music/**
           - Info.plist
+          - Resources/AppIcon.icns   # the Mac's icon; iOS has its own catalog
       - path: GalacticChessInvaders/Resources/sfx
         type: folder
       - path: GalacticChessInvaders/Resources/music
@@ -120,6 +122,10 @@ targets:
         DEVELOPMENT_TEAM: K66MA9TR8Z
         CODE_SIGN_STYLE: Automatic        # the way ZudioiOS is signed
         TARGETED_DEVICE_FAMILY: "1,2"     # iPhone and iPad
+        # The same artwork the Mac ships, extracted from AppIcon.icns and
+        # flattened onto black: iOS rejects an icon with alpha, and applies
+        # its own rounded mask.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       # No ad-hoc Debug config, unlike the Mac target above.
       #
       # That block was copied from macOS, where signing Debug ad-hoc is a

@@ -36,6 +36,18 @@ final class KeyboardFocusedSKView: SKView {
 
     override var canBecomeFirstResponder: Bool { true }
 
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        // `UIView` delivers one touch unless asked otherwise, so the scheme
+        // §4 decided — drag with one thumb, hold FIRE with the other — could
+        // not work: the second finger down was simply never reported.
+        // Tracking touches by identity was necessary and not sufficient.
+        isMultipleTouchEnabled = true
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
     private var keyWindowObserver: NSObjectProtocol?
 
     override func didMoveToWindow() {

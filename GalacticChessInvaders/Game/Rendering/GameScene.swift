@@ -1088,7 +1088,13 @@ class GameScene: SKScene {
     /// Whether there is a game to fly in. The title screen, the panels and
     /// the game-over prompt all want a plain tap instead.
     var acceptsTouchControls: Bool {
-        fireButton != nil && stateMachine.currentState is PlayingState
+        // `isBeatSuspended` covers the three moments the state is still
+        // `PlayingState` but the player is not flying: a level banner, the
+        // end-of-run reveal, and the wave-clear overlay. Without it the ship
+        // swallowed the tap that was meant to start the next level.
+        fireButton != nil
+            && stateMachine.currentState is PlayingState
+            && !isBeatSuspended
     }
 
     /// The band below the board: the ship's lane and the space around it.
@@ -5565,6 +5571,35 @@ class GameScene: SKScene {
             stateMachine.enter(PlayingState.self)
             return
         }
+
+        // iOS only, both of these. On the Mac the overlays say "PRESS ANY
+        // KEY" and "NEW GAME? Y / N", and a stray click answering a question
+        // the screen did not ask — sending someone to the title when they
+        // meant to press Y — would be a regression, not a convenience.
+        #if os(iOS)
+        // Wave clear: a tap moves on, the same as any key does.
+        //
+        // The key path has had this since 0.2 and the pointer path never
+        // needed it — a Mac always has a keyboard. On an iPad it is the
+        // difference between finishing a level and being stuck looking at
+        // "TAP FOR LEVEL 02" while the tap goes to the ship.
+        if isAwaitingWaveContinue {
+            isAwaitingWaveContinue = false
+            hideGameOverOverlay()
+            startNextLevel()
+            return
+        }
+
+        // Game over: a tap goes back to the title, where another starts a new
+        // run. On the Mac this is Y for a fresh game and anything else for
+        // the title; touch has no Y, and until the prompt is two real buttons
+        // one tap out is what keeps a player from being stranded on the
+        // last screen of the game with no way off it.
+        if stateMachine.currentState is GameOverState {
+            resetToTitle()
+            return
+        }
+        #endif
 
         // The scene owns the board geometry, so it resolves the click to a square
         // and lets the input layer decide whether that's a pick or a destination.
