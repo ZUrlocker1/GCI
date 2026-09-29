@@ -354,6 +354,9 @@ class GameScene: SKScene {
     var fireButton: FireButtonNode?
     var shipDragTouch: ObjectIdentifier?
     var fireTouch: ObjectIdentifier?
+    /// How far the ship sits from the finger steering it, fixed at the moment
+    /// of the grab. See `beginShipDrag`.
+    var shipDragOffset: CGFloat = 0
     #endif
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
@@ -1118,7 +1121,36 @@ class GameScene: SKScene {
         handle(firing ? .fireLaser : .stopFiring)
     }
 
-    /// One to one with the finger, clamped to the lane the ship may fly in.
+    /// Takes hold of the ship without moving it.
+    ///
+    /// The gap between finger and ship is fixed here and kept for the whole
+    /// drag, which is the fix for the one real complaint about this scheme:
+    /// a thumb on the ship hides the ship. Absolute mapping snapped it to the
+    /// finger, so grabbing the thing you wanted to move was the natural act
+    /// and put your thumb straight over it. Now you can hold anywhere in the
+    /// band — a hundred points below, off to one side — and steer from there
+    /// with a clear view.
+    ///
+    /// It also removes a wart: a touch in the lane used to teleport the ship
+    /// across to meet it.
+    ///
+    /// This is the genre's answer. Mobile shooters either offset the ship
+    /// from the finger or move it by the finger's delta; Sky Force ships both
+    /// and lets the player pick. Offsetting is the better fit here because
+    /// the ship only travels on one axis, so the vertical half of the offset
+    /// is free — the ship stays in its lane however low you hold.
+    func beginShipDrag(at x: CGFloat) {
+        guard let ship else { return }
+        shipDragOffset = ship.position.x - x
+    }
+
+    /// Moves the ship by as much as the finger has moved, keeping the gap.
+    func continueShipDrag(to x: CGFloat) {
+        dragShip(to: x + shipDragOffset)
+    }
+
+    /// One to one with the finger's *movement*, clamped to the lane the ship
+    /// may fly in.
     ///
     /// Direct rather than nudging `direction`: dragging *is* the position, so
     /// routing it through the ship's speed would leave the ship trailing the

@@ -422,10 +422,21 @@ it against, not the thing to build.
 - **Every touch is tracked by identity.** Reading `touches.first` was the first
   version and it makes the two thumbs fight — a right thumb resting on FIRE becomes
   "first" and steals the left thumb's drag.
-- **The drag is one to one with the finger**, clamped to `shipLane`, not routed
-  through the ship's speed — dragging *is* the position, so a speed multiplier would
+- **The drag is offset, not absolute.** The gap between finger and ship is fixed at
+  the moment of the grab and kept for the whole drag, so a thumb can hold anywhere in
+  the band and steer from there with a clear view of the ship. Absolute mapping was
+  built first and had the flaw the genre already knows about: it snaps the ship to the
+  finger, so grabbing the thing you want to move puts your thumb straight over it.
+  Mobile shooters answer this by offsetting the ship from the finger or by moving it
+  on the finger's delta — Sky Force ships both and lets the player choose. Offsetting
+  suits GCI because the ship travels on one axis, which makes the vertical half of the
+  offset free: the ship stays in its lane however low you hold.
+- **It is one to one with the finger's movement**, clamped to `shipLane`, and not
+  routed through the ship's speed — dragging *is* the position, so a multiplier would
   leave the ship trailing the thumb steering it. The Settings speed slider therefore
-  governs the keyboard and a game controller, not touch.
+  governs the keyboard and a game controller, not touch. If virtual arrow buttons are
+  ever added, that slider starts mattering again on iOS, which is a point in their
+  favour.
 - **The drag region is `point.y < boardBottomY`** — the ship's band and the space
   around it, which is what keeps a drag over the squares a chess move.
 - **A finger that starts on FIRE keeps firing wherever it slides**; lifting is what

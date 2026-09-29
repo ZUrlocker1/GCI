@@ -39,7 +39,10 @@ extension GameScene {
             }
             if acceptsTouchControls, isInShipLane(point) {
                 shipDragTouch = id
-                dragShip(to: point.x)
+                // Grabs without moving: the ship keeps its distance from the
+                // finger for the rest of the drag, so a thumb never ends up
+                // on top of it.
+                beginShipDrag(at: point.x)
                 continue
             }
             pointerDown(at: point)
@@ -52,7 +55,7 @@ extension GameScene {
             let id = ObjectIdentifier(touch)
 
             if id == shipDragTouch {
-                dragShip(to: point.x)
+                continueShipDrag(to: point.x)
                 continue
             }
             // A finger that started on FIRE keeps firing wherever it slides;
