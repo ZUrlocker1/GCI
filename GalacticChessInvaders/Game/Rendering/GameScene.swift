@@ -1092,9 +1092,15 @@ class GameScene: SKScene {
         // `PlayingState` but the player is not flying: a level banner, the
         // end-of-run reveal, and the wave-clear overlay. Without it the ship
         // swallowed the tap that was meant to start the next level.
+        //
+        // The panels are the fourth. Opening Settings or How To Play leaves
+        // the state alone, so FIRE sat on top of the panel — a live control
+        // over a screen that owns every touch.
         fireButton != nil
             && stateMachine.currentState is PlayingState
             && !isBeatSuspended
+            && settingsNode == nil
+            && howToPlayNode == nil
     }
 
     /// The band below the board: the ship's lane and the space around it.
