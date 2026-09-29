@@ -1242,7 +1242,10 @@ class GameScene: SKScene {
     // always a clear strip above the board, and the left gutter is empty from
     // the Chess Hint up.
 
-    private static let versionRestAlpha: CGFloat = 0.3
+    /// Readable, not hidden. This is a label a tester reads off the screen
+    /// into a bug report, and the first cut at 8pt and 0.3 alpha was a
+    /// watermark — legible only if you already knew it was there.
+    private static let versionRestAlpha: CGFloat = 0.6
     /// Long enough not to happen by accident, short enough that nobody lets
     /// go first.
     private static let testModeHold: TimeInterval = 1.5
@@ -1250,8 +1253,12 @@ class GameScene: SKScene {
 
     private func setupVersionLabel() {
         let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
-        label.text = "V\(Bundle.main.appVersion)  B\(Bundle.main.appBuild)"
-        label.fontSize = 8
+        // Spelled out rather than abbreviated. It costs nothing — the band
+        // it sits in is empty for the full width of the scene — and "GCI iOS"
+        // is the part that tells a bug report which build of which app it is
+        // looking at.
+        label.text = "GCI iOS V\(Bundle.main.appVersion)  Build \(Bundle.main.appBuild)"
+        label.fontSize = 10
         label.horizontalAlignmentMode = .left
         label.verticalAlignmentMode = .center
         // Above the playfield, below the panels — and below the game-over
@@ -1277,7 +1284,7 @@ class GameScene: SKScene {
         guard let versionLabel else { return }
         versionLabel.removeAction(forKey: Self.testModeHoldKey)
         versionLabel.fontColor = testMode ? NeonPalette.alertOrange : NeonPalette.cyan
-        versionLabel.alpha = testMode ? 0.85 : Self.versionRestAlpha
+        versionLabel.alpha = testMode ? 1.0 : Self.versionRestAlpha
     }
 
     /// A generous target. The label is 8pt type and a fingertip is not — the
@@ -1308,7 +1315,7 @@ class GameScene: SKScene {
         guard let versionLabel,
               versionLabel.action(forKey: Self.testModeHoldKey) != nil else { return }
         versionLabel.removeAction(forKey: Self.testModeHoldKey)
-        versionLabel.run(.fadeAlpha(to: testMode ? 0.85 : Self.versionRestAlpha,
+        versionLabel.run(.fadeAlpha(to: testMode ? 1.0 : Self.versionRestAlpha,
                                     duration: 0.2))
     }
     #endif
