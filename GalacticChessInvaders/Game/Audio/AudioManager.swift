@@ -1,6 +1,20 @@
 // AudioManager.swift
-// Preloads all SFX at startup using SoundKey. Zero I/O during gameplay.
+// Preloads all SFX at startup using SoundKey.
 // SFX: .caf (lowest latency) via AVAudioPlayer pools.
+//
+// This header used to say "Zero I/O during gameplay". It was not true, and on
+// 30 Sep it cost an iPad half its frame rate. `prepareToPlay()` is called once
+// at preload, but **an AVAudioPlayer releases its buffers when it finishes** —
+// so the second and every later use of a pooled player re-prepared inline on
+// the main thread: file open, read, decoder setup, per shot.
+//
+// Measured by Zack on an iPad mini 5: SOUND FX off held 53–60fps with glow
+// *and* nebula on, against dips into the 20s with them off and sound on. That
+// is the whole of it. §6a's "GPU-bound, the bloom is why" was a Mac finding
+// and does not transfer; the Mac simply had the headroom to absorb this.
+//
+// `rearmFinishedPlayers()` puts the buffers back on a 250ms tick instead, so
+// the cost lands away from the frame that fires the shot.
 // Looping sounds (ambient, critical crackle) use a single dedicated player.
 // Music: .m4a via a separate streaming player.
 
@@ -11,6 +25,19 @@ import Foundation
 final class AudioManager {
     static let shared = AudioManager()
     private init() {}
+
+    /// The worst single `play(_:)` call since the last time this was read, in
+    /// milliseconds. The log panel shows it beside fps.
+    ///
+    /// Here because the frame-rate question kept being answered with
+    /// impressions. A number that says "4ms" or "0.1ms" ends the argument in
+    /// one run; three separate A/B rounds did not.
+    private(set) var worstPlayMs: Double = 0
+
+    func takeWorstPlayMs() -> Double {
+        defer { worstPlayMs = 0 }
+        return worstPlayMs
+    }
 
     /// Silent under XCTest, and not negotiable.
     ///
@@ -173,6 +200,10 @@ final class AudioManager {
     func play(_ key: SoundKey, scale: Float = 1) {
         let settings = GameSettings.shared
         guard settings.soundOn else { return }
+        let began = CACurrentMediaTime()
+        defer {
+            worstPlayMs = max(worstPlayMs, (CACurrentMediaTime() - began) * 1000)
+        }
 
         // Dropped rather than queued. A late explosion is worse than a missing
         // one — the sound would arrive after the thing it belongs to is gone.
@@ -198,6 +229,28 @@ final class AudioManager {
             if Self.destructionKeys.contains(key) {
                 destructionEnds = max(destructionEnds,
                                       Date().addingTimeInterval(player.duration))
+            }
+        }
+    }
+
+    /// Puts the buffers back on players that have finished.
+    ///
+    /// An `AVAudioPlayer` releases them when playback ends, and `play()` then
+    /// re-prepares synchronously — file I/O on the frame that fired the shot.
+    /// Called from the same 250ms tick that samples fps, so the work is
+    /// bounded, predictable, and nowhere near a trigger pull.
+    ///
+    /// Capped per tick so a wave of finishing sounds cannot turn one tick into
+    /// the hitch this is meant to remove. Eight per tick is 32 a second,
+    /// comfortably ahead of how fast the pools can be cycled.
+    func rearmFinishedPlayers(limit: Int = 8) {
+        var done = 0
+        for pool in sfxPools.values {
+            for player in pool where !player.isPlaying && player.currentTime != 0 {
+                player.currentTime = 0
+                player.prepareToPlay()
+                done += 1
+                if done >= limit { return }
             }
         }
     }

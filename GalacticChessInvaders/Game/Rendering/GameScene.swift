@@ -5583,6 +5583,9 @@ class GameScene: SKScene {
         if GameSettings.shared.logPanel {
             DiagnosticsLog.shared.nodeCount = countAllNodes()
         }
+        DiagnosticsLog.shared.sfxWorstMs = AudioManager.shared.takeWorstPlayMs()
+        // Off the frame that fires the shot. See `rearmFinishedPlayers`.
+        AudioManager.shared.rearmFinishedPlayers()
     }
 
     /// Catches a piece that is on the board with no hitbox and no beam-in
