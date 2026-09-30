@@ -179,7 +179,7 @@ final class AudioManager {
         var loaded = 0
         for key in SoundKey.allCases where preload(key) { loaded += 1 }
         let decodeMs = (CACurrentMediaTime() - began) * 1000
-        ensureRunning()
+        applySoundSettings()
 
         DiagnosticsLog.shared.log(.audio, String(
             format: "SFX ready — %d sounds decoded in %.0fms", loaded, decodeMs))
@@ -304,6 +304,30 @@ final class AudioManager {
         // free rather than left holding voices nothing will give back.
         voiceBusy = Array(repeating: nil, count: voiceNodes.count)
         ensureRunning()
+    }
+
+    /// Runs the engine only when it has something to do.
+    ///
+    /// Eight nodes and a mixer are pulled by the render thread every cycle
+    /// whether SOUND FX is on or not, so with effects muted this was pure
+    /// cost. On an A12 that cost is audible **in the music**, which shares
+    /// the output: Zack turned effects off and the title screen still
+    /// distorted, and with effects off nothing of ours is playing at all.
+    ///
+    /// So a muted graph is a stopped graph. It is also the cleanest test of
+    /// whether the engine is the distortion — mute the effects and listen.
+    func applySoundSettings() {
+        if GameSettings.shared.soundOn {
+            ensureRunning()
+            return
+        }
+        for node in voiceNodes where node.isPlaying { node.stop() }
+        for node in loopNodes.values where node.isPlaying { node.stop() }
+        if engine.isRunning {
+            engine.stop()
+            DiagnosticsLog.shared.log(.audio, "engine stopped — sound fx off")
+        }
+        voiceBusy = Array(repeating: nil, count: voiceNodes.count)
     }
 
     /// Starts, or restarts after an interruption took the engine down.

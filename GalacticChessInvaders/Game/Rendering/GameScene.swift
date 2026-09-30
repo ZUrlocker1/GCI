@@ -1613,6 +1613,9 @@ class GameScene: SKScene {
         boardNode?.applyDisplaySettings()
         refreshBackdrop()
         AudioManager.shared.applyMusicSettings()
+        // Stops the effects graph outright when SOUND FX is off, rather than
+        // leaving eight silent voices being mixed every render cycle.
+        AudioManager.shared.applySoundSettings()
         // The update loop drives this too, but it does not run while a panel
         // holds the scene paused — so switching Auto Chess on from Settings
         // would leave the gutter blank until play resumed.
