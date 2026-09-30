@@ -6499,9 +6499,7 @@ final class GlowSwitchTests: XCTestCase {
 /// PERF-INSTRUMENTATION (temporary) — remove with the rest of it.
 ///
 /// The live footer readout updates four times a second and cannot be read
-/// while playing, so the numbers also go into the log once a second. This
-/// pins the cadence and the "low" figure, which is the part that matters: a
-/// second averaging 55fps that contained one 22 is the second worth finding.
+/// while playing, so the numbers also go into the log once a second.
 @MainActor
 final class PerformanceLogTests: XCTestCase {
 
@@ -6509,6 +6507,7 @@ final class PerformanceLogTests: XCTestCase {
         // The counters live on the shared scene and survive between tests.
         GameScene.shared.resetPerformanceSample()
         DiagnosticsLog.shared.fps = 60
+        DiagnosticsLog.shared.sfxWorstMs = 0
     }
 
     private func perfLines() -> [String] {
@@ -6526,18 +6525,19 @@ final class PerformanceLogTests: XCTestCase {
         XCTAssertEqual(perfLines().count, before + 1, "the fourth closes it")
     }
 
-    func testTheLineReportsTheWorstOfTheSecondNotTheLast() {
+    /// The worst `sfx` of the second, not the last — a burst that cost 4ms
+    /// once is the thing worth seeing, and the sample after it is usually 0.
+    func testTheLineReportsTheWorstSfxOfTheSecond() {
         let scene = GameScene.shared
-        DiagnosticsLog.shared.fps = 22           // the dip
+        DiagnosticsLog.shared.sfxWorstMs = 4.4      // the spike
         scene.logPerformanceSample()
         for _ in 0..<3 {
-            DiagnosticsLog.shared.fps = 60       // and three good samples
+            DiagnosticsLog.shared.sfxWorstMs = 0    // and three quiet samples
             scene.logPerformanceSample()
         }
-        let line = try? XCTUnwrap(perfLines().last)
-        XCTAssertEqual(line?.contains("low 22"), true,
-                       "an average would hide the dip, which is the whole "
-                       + "reason for logging at all — got \(line ?? "nothing")")
+        let line = perfLines().last
+        XCTAssertEqual(line?.contains("sfx 4.4ms"), true,
+                       "got \(line ?? "nothing")")
     }
 }
 

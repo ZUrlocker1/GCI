@@ -50,7 +50,7 @@ struct LogPanelView: View {
     /// anyone watches, so the numbers sit next to the newest line instead of
     /// at the far end of the panel from it.
     private var stats: some View {
-        Text(String(format: "fps: %.0f   nodes: %d   sfx: %.1fms",
+        Text(String(format: "fps %.0f, nodes %d, sfx %.1fms",
                     DiagnosticsLog.shared.fps, DiagnosticsLog.shared.nodeCount,
                     DiagnosticsLog.shared.sfxWorstMs))
             .font(.system(size: 11, design: .monospaced))

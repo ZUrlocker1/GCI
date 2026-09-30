@@ -34,6 +34,12 @@ Current release: `1.2` (build 9). Universal binary — runs natively on both App
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
 
+**What's new in v1.3** — the sound engine, rebuilt:
+
+- **Heavy fire no longer costs frames.** Sound effects are decoded once at launch and played from a pool of voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot — **11.7ms a shot, down to 0.03ms**. A Mac that dropped into the 40s under sustained fire, and an iPad mini that dropped into the 20s, both hold 60 now.
+- **NEON GLOW actually turns the glow off.** It cleared the blur but left the offscreen render pass in place, so the expensive half never went away.
+- **Clearing the last wave says so** instead of holding on a silent board until the high score panel appears.
+
 **What's new in v1.2** — the release that prepares the Mac game for iPad and iPhone:
 
 - **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. Everything on the playfield — the ship, the lasers, the raiders, the explosions — is sized against the board rather than staying as drawn.

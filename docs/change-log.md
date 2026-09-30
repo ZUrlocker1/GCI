@@ -1,5 +1,16 @@
 # Galactic Chess Invaders Change Log
 
+## V 1.3 (Build 10)  Sound Without the Stutter
+
+*One fix, and it is the whole release: the game stopped doing file and codec work every time it played a sound.*
+
+- **The frame rate, fixed.** Heavy fire used to drop the Mac into the 40s and the iPad mini into the 20s. Both now hold 60. Every sound effect is decoded once at launch into memory and played from a pool of audio voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot. Measured: **11.7ms a shot, down to 0.03ms.**
+- **It was never the graphics.** The glow, the nebula and the board all had a turn as the suspect. Turning each of them off changed nothing, and the log is what settled it — the frame rate tracked the *sound*, not the picture. There is a note in [IOS-Port.md](IOS-Port.md) §6a about why the Mac profile pointed the wrong way for so long.
+- **The NEON GLOW switch now actually turns the glow off.** It cleared the blur but left SpriteKit still rendering the playfield to an offscreen buffer and compositing it back — so the expensive half of the pass stayed. It does less work with it off now, on both platforms.
+- **The last wave says so.** Clearing wave 10 held on a silent board for two and a half seconds before the high score panel appeared, which read as a crash. It announces "ALL 10 WAVES CLEARED" now, and a win by checkmate — the one route that never raised a banner — says so too.
+
+---
+
 ## V 1.2 (Build 9)  Better Screen Resizing
 
 *The release that gets the Mac game ready for iPad and iPhone. Most of the work is underneath: the playfield is laid out rather than scaled, everything drawn on it is sized against the board, and the game loop stopped doing several things sixty times a second that only needed doing when they changed.*
