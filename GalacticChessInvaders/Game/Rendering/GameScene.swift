@@ -4800,8 +4800,17 @@ class GameScene: SKScene {
         // Clamped inward so a scout shot near the edge does not put half the
         // word off-screen — the label is wider than the ship that earned it.
         let margin = (CGFloat(powerUp.label.count) * 7 + 12) * scale
+        // And clamped vertically, which it was not. A scout destroyed high in
+        // its lane put the top of the word under the HUD bar — and the label
+        // *rises* 12pt as it lands, so the position that looked clear when it
+        // was placed was not the position it finished at. Both the rise and
+        // half the cap height are counted here rather than hoped for.
+        let rise = 12 * scale
+        let halfHeight = 8 * scale
+        let ceiling = size.height - HUDNode.height - halfHeight - rise
+        let floor = halfHeight + rise
         label.position = CGPoint(x: min(max(point.x, margin), size.width - margin),
-                                 y: point.y)
+                                 y: min(max(point.y, floor), max(floor, ceiling)))
         label.zPosition = 16
         bloomNode.addChild(label)
         label.setScale(0.6)
