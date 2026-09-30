@@ -6495,3 +6495,48 @@ final class GlowSwitchTests: XCTestCase {
                        + "compositing it back, which is the expensive half")
     }
 }
+
+/// PERF-INSTRUMENTATION (temporary) — remove with the rest of it.
+///
+/// The live footer readout updates four times a second and cannot be read
+/// while playing, so the numbers also go into the log once a second. This
+/// pins the cadence and the "low" figure, which is the part that matters: a
+/// second averaging 55fps that contained one 22 is the second worth finding.
+@MainActor
+final class PerformanceLogTests: XCTestCase {
+
+    override func setUp() async throws {
+        // The counters live on the shared scene and survive between tests.
+        GameScene.shared.resetPerformanceSample()
+        DiagnosticsLog.shared.fps = 60
+    }
+
+    private func perfLines() -> [String] {
+        DiagnosticsLog.shared.lines
+            .filter { $0.category == .perf }
+            .map(\.message)
+    }
+
+    func testOneLinePerSecondNotPerTick() {
+        let before = perfLines().count
+        let scene = GameScene.shared
+        for _ in 0..<3 { scene.logPerformanceSample() }
+        XCTAssertEqual(perfLines().count, before, "three ticks is not a second")
+        scene.logPerformanceSample()
+        XCTAssertEqual(perfLines().count, before + 1, "the fourth closes it")
+    }
+
+    func testTheLineReportsTheWorstOfTheSecondNotTheLast() {
+        let scene = GameScene.shared
+        DiagnosticsLog.shared.fps = 22           // the dip
+        scene.logPerformanceSample()
+        for _ in 0..<3 {
+            DiagnosticsLog.shared.fps = 60       // and three good samples
+            scene.logPerformanceSample()
+        }
+        let line = try? XCTUnwrap(perfLines().last)
+        XCTAssertEqual(line?.contains("low 22"), true,
+                       "an average would hide the dip, which is the whole "
+                       + "reason for logging at all — got \(line ?? "nothing")")
+    }
+}

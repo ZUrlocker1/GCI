@@ -38,6 +38,8 @@ enum LogCategory: String {
     case restart = "RESTART  "
     case auto    = "AUTOMODE "
     case info    = "INFO     "
+    /// PERF-INSTRUMENTATION — temporary, see `GameScene.logPerformanceSample`.
+    case perf    = "PERF     "
 }
 
 struct LogLine: Identifiable {

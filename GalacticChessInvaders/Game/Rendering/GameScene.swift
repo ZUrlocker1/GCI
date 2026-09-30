@@ -5586,6 +5586,55 @@ class GameScene: SKScene {
         DiagnosticsLog.shared.sfxWorstMs = AudioManager.shared.takeWorstPlayMs()
         // Off the frame that fires the shot. See `rearmFinishedPlayers`.
         AudioManager.shared.rearmFinishedPlayers()
+        if GameSettings.shared.logPanel { logPerformanceSample() }
+    }
+
+    // MARK: - PERF-INSTRUMENTATION (temporary)
+    //
+    // Remove this section, `DiagnosticsLog.sfxWorstMs`, `Category.perf`,
+    // `AudioManager.worstPlayMs` / `takeWorstPlayMs` and the `sfx:` field in
+    // both log panels once the frame-rate question is closed. Grep
+    // PERF-INSTRUMENTATION.
+
+    private var perfTicks = 0
+    private var perfLowFps: Double = .infinity
+    private var perfWorstSfx: Double = 0
+
+    /// Writes one performance line a second into the diagnostics log.
+    ///
+    /// The live readout in the panel footer updates four times a second and
+    /// cannot be read while playing — the dips are the whole point and they
+    /// are gone before you can look at them. This keeps the *worst* of each
+    /// second somewhere it can be scrolled back to afterwards.
+    ///
+    /// `low` is the lowest of the four 250ms fps samples in that second, not
+    /// the last one. A second that averaged 55 but contained one 22 is the
+    /// second worth finding, and an average hides exactly that.
+    ///
+    /// Gated on the log panel, which is behind Test Mode, so a player never
+    /// pays for it or sees it.
+    /// Starts a fresh second. The counters live on the shared scene, so a
+    /// test has to be able to get to a known boundary.
+    func resetPerformanceSample() {
+        perfTicks = 0
+        perfLowFps = .infinity
+        perfWorstSfx = 0
+    }
+
+    func logPerformanceSample() {
+        perfTicks += 1
+        perfLowFps = min(perfLowFps, DiagnosticsLog.shared.fps)
+        perfWorstSfx = max(perfWorstSfx, DiagnosticsLog.shared.sfxWorstMs)
+        guard perfTicks >= 4 else { return }        // 4 × 250ms
+
+        DiagnosticsLog.shared.log(.perf, String(
+            format: "fps %.0f  low %.0f  nodes %d  sfx %.1fms",
+            DiagnosticsLog.shared.fps, perfLowFps,
+            DiagnosticsLog.shared.nodeCount, perfWorstSfx))
+
+        perfTicks = 0
+        perfLowFps = .infinity
+        perfWorstSfx = 0
     }
 
     /// Catches a piece that is on the board with no hitbox and no beam-in
