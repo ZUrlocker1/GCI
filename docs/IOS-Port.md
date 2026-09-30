@@ -527,7 +527,7 @@ on a touch device:
 | `GameScene.showPausedOverlay` | `PRESS ANY KEY TO RESUME` | `TAP TO RESUME` |
 | `HowToPlayNode`, `SettingsNode` | `PRESS ANY KEY TO RESUME GAME` | `TAP BACK TO RESUME` |
 | `GameOverNode` | `PRESS ANY KEY  ·  LEVEL n` | `TAP FOR LEVEL n` |
-| `GameOverNode` | `NEW GAME?   Y / N` | **built** — `NEW GAME` and `TITLE` buttons |
+| `GameOverNode` | `NEW GAME?   Y / N` | **built** — `NEW GAME?` over `YES` / `NO` |
 | `GameScene` quit prompt | `Y / N` | two buttons — `QUIT` / `KEEP PLAYING` |
 | Arcade Hint, fire | `PRESS SPACE` / `TO FIRE!` | `TAP THE` / `FIRE BUTTON!` |
 | Arcade Hint, steer | `USE ARROWS` / `TO MOVE!` | `DRAG TO` / `MOVE SHIP!` |
@@ -544,22 +544,42 @@ touch-only player who made the table could not type a name — a tap fell throug
 renamed a button nobody could press. (It is eight characters, not three; the table row
 was wrong about that too.)
 
-**Built: the system keyboard, via `NameEntryField`.** A bespoke A–Z picker is the arcade
-convention and was the first plan. The system keyboard wins on one point that outweighs
-the idiom — it serves both kinds of input from a single path. With a hardware keyboard
-attached nothing changes and no software keyboard appears; without one, iOS puts the
-keyboard up. A picker would be redundant chrome for anyone on a Magic Keyboard, and four
-more layouts to get right across the device passes.
+**Built: the system keyboard, via `NameEntryField`, summoned by a tap.**
 
-It is the usual SpriteKit shim: a `UITextField` sized 1×1 with clear colours, first
-responder only while the entry screen is up, filtered to printable ASCII because Press
-Start 2P has glyphs for nothing else. Two details that are not obvious. First, the
-keyboard covers the bottom of the screen, so the overlay slides up by half of what is
-covered — `keyboardWillChangeFrameNotification`, intersected against the view's bounds,
-which handles the floating and split keyboards on iPad by the same path as the docked
-one. Second, `KeyboardFocusedSKView` has to *take first responder back* afterwards, or
-every hardware key stops arriving — `endNameEntry` calls `claimKeyboard`, whose bounded
-retry is exactly what is needed while the field is still resigning.
+A `UITextField` sized 1×1 with clear colours, living in the `SKView` and holding first
+responder only while the entry screen is up. Input is uppercased and filtered to
+printable ASCII, because Press Start 2P has glyphs for nothing else and an emoji would
+be a blank box in the table forever. The scene still draws the name itself; the field is
+a keyboard, not a text box.
+
+Four things about it are load-bearing, and all four were found on device.
+
+1. **It is summoned by tapping the panel, never automatically.** iOS's *first* keyboard
+   presentation in a session spins up the keyboard process and its layouts, and on an
+   A12 that measured 690ms, 744ms and 4418ms on three runs — main thread blocked, frame
+   rate at 5fps, audio distorting for the duration. Asking for it as part of showing the
+   panel put that squarely on the end of a winning run. The name sits in a bordered
+   field and the footer says `TAP TO TYPE`, so it reads as a control rather than a
+   caret on black.
+2. **The cost is paid on the title screen instead.** `warmKeyboard()` becomes first
+   responder and resigns in the same turn, two seconds after the title draws — no
+   keyboard is ever visible and the setup happens anyway. The title screen specifically,
+   because every run passes through it before a score exists: you can die on level 1 and
+   make the table.
+3. **`claimKeyboard` stands down while name entry is active.** `GameView.updateUIView`
+   claims the keyboard on every SwiftUI pass, and the log panel is `@Observable` — so
+   every logged line redrew it and the view took first responder straight back off the
+   field. The software keyboard could not stay up at all.
+4. **The overlay lifts clear of the keyboard**, by half of what it covers, driven by
+   `keyboardWillChangeFrameNotification` intersected against the view's bounds — which
+   handles iPad's floating and split keyboards by the same path as the docked one.
+
+A **DONE** button sits on the panel as well, and is the only way off the screen when no
+keyboard appears — a hardware keyboard that is connected but flat is enough for iOS to
+suppress the software one. It submits rather than discards: anything typed is kept and
+an empty field falls back to PLAYER, since a blank row in the table reads as a bug. A
+hardware keyboard needs none of this and types straight through
+`KeyboardFocusedSKView` → `handleKey`, exactly as on the Mac.
 
 **The Info screen's own TEST MODE block is rewritten too**, and it had to be: it
 advertised `⌘T` on a device with no ⌘T, and named `P`, `R` and `V` as keys when they are
@@ -808,6 +828,54 @@ UIKit twin or, more simply, a SwiftUI `ScrollView` of `Text` on both platforms.
 
 ## 6a. Render cost, and what to turn off on a small screen
 
+> **The headline for iOS: it was the audio, not the graphics.** Everything below about
+> the bloom is a *Mac* finding and it does not transfer. On an iPad mini 5 the frame
+> rate was pinned by sound effects, and the graphics switches barely moved it. See
+> **The SFX engine** immediately below before reading the rest of this section.
+
+### The SFX engine
+
+`AudioManager` plays effects through one `AVAudioEngine`, with every sound decoded once
+at launch into an `AVAudioPCMBuffer` and a fixed pool of **8** `AVAudioPlayerNode`s left
+running for the life of the app. Firing a sound is `scheduleBuffer` on a node that is
+already going.
+
+It replaced per-key pools of `AVAudioPlayer`, and the numbers are the reason — medians
+of 20 on an M-series Mac, file already loaded, player reused:
+
+| | |
+|---|---|
+| `AVAudioPlayer.play()` | **11.7ms**, every call, prepared or not |
+| `prepareToPlay()` | 6.4ms, and saves 0.2ms off the next `play()` |
+| starting a stopped `AVAudioPlayerNode` | 10.9ms |
+| `scheduleBuffer` on a running node | **0.000ms** |
+
+Two sounds in a frame was the entire 16.7ms budget. On the device, with effects on
+under sustained fire at wave 10, `play()` went from that to **0.1–0.3ms**, holding
+53–60fps where the Mac had been dropping to 45 and the iPad into the 20s.
+
+Four things about the design are load-bearing:
+
+- **One canonical format** — mono, 44.1kHz, float32 — converted at load. The assets are
+  not uniform (two stereo, one 48kHz, one 96kHz) and a node is wired to the mixer in a
+  single format, so converting once is what buys a *shared* pool. Per-key pools would
+  need 134 keys' worth of nodes for the same polyphony. Resident cost: **8.2MB** for
+  48.9 seconds of audio.
+- **Eight voices, not more.** Every *running* node is pulled by the render thread each
+  cycle and summed whether it has anything to play or not, so an idle pool is not free.
+  24 overloaded an A12 — `HALC_ProxyIOContext: skipping cycle due to overload`, audible
+  as distortion at the title screen with nothing playing. And they cannot be started on
+  demand instead: that is the 10.9ms above.
+- **Dropped, not stolen, when the pool is full.** Stealing a live voice measured 23ms.
+- **The engine stops when SOUND FX is off**, rather than mixing eight silent voices
+  every cycle.
+
+`AudioEnginePathTests` pins both halves: firing costs under 1ms, and voices come back
+when a sound ends — a pool that leaks them goes silent after eight sounds and nothing
+else would notice.
+
+### The Mac profile
+
 Measured on an M-series Mac in ordinary play: **35–38% of one core**, holding 60fps.
 That is around 6ms of CPU per 16.7ms frame — comfortable on a desktop, and the figure
 to carry into the port as the thing to beat, because a phone has nothing like that
@@ -911,25 +979,15 @@ detached while the pool is idle and re-attached on first use — one `addChild` 
 glass first flies, and 154 nodes leave every frame that has no glass in it, without
 allocating during play.
 
-**The switch already exists — and until 30 Sep it did not do what this said.**
-`GameSettings.neonGlow` detached the filter, and the sentence that used to sit here
-claimed that was "what actually skips the offscreen pass". It is not.
-`SKEffectNode.shouldEnableEffects` defaults to `true` and was never written anywhere in
-the codebase, so with the filter nil the node still rendered its whole subtree into an
-offscreen texture and composited it back. Only the blur was being skipped; the
-full-screen render target and blit stayed.
+**The switch works, and the glow is not the bottleneck on iOS.**
+`GameSettings.neonGlow` clears the `CIBloom` *and* sets
+`SKEffectNode.shouldEnableEffects` — both are needed, because with effects still
+enabled SpriteKit renders the subtree to an offscreen texture and composites it back
+whether there is a filter or not, which is the expensive half.
 
-That is why turning NEON GLOW off on an iPad mini 5 — A12, 2048×1536 — barely moved the
-frame rate, and it means **every glow A/B measured before that date compared two runs
-that both paid for the pass.** `applyGlowSetting()` now sets `shouldEnableEffects`
-alongside the filter. The Mac never showed it because the Mac has the headroom to
-absorb a wasted pass; the A12 does not.
-
-Two lessons, both already learned once in this section and evidently not hard enough.
-A measurement is only as good as the thing it toggles actually toggling. And an
-inference about what an API does — "detaching the filter skips the pass" — is not a
-measurement, however reasonable it sounds. So the iOS work is not building a toggle, it is
-choosing the **default**:
+With that working, turning the glow off on an iPad mini 5 — A12, 2048×1536 — changes the
+frame rate very little. §6a's Mac conclusion does not transfer: the bottleneck on iOS
+was audio, not the GPU (see below). The remaining question is the **default**:
 
 1. **Glow on** for iPad, which has the die and the thermal envelope for it.
 2. **Glow off by default on iPhone**, or on any scene below some width, with the
@@ -1036,19 +1094,29 @@ this work starts, so that a port failure is never confused with a coin flip.
 
 Phase 0 is the one that is easy to skip and expensive to skip.
 
-**Where Phase 1 actually got to.** The target exists and the game plays on an iPad
-simulator by touch — tap to start, tap a piece, tap its destination, the panels and the
-Settings sliders. `AVAudioSession`, the interruption path and `scenePhase` are in.
-A hardware keyboard drives every key the Mac reads, through `KeyboardInputAdapter`.
-Three things in `Game/` that were quietly macOS-only — the notification names, an
-`NSFont`, one `invalidateCursorRects` — are not any more.
+**Where Phase 1 landed.** The target exists and the game plays on an iPad by touch:
+tap to start, drag the ship in its lane, hold FIRE in the right-hand margin, tap a
+piece and tap its destination, the panels and the Settings sliders. `AVAudioSession`,
+the interruption path and `scenePhase` are in. A hardware keyboard drives every key the
+Mac reads, through `KeyboardInputAdapter`. Three things in `Game/` that were quietly
+macOS-only — the notification names, an `NSFont`, one `invalidateCursorRects` — are not
+any more.
 
-Phase 1 is complete. The ship flies: drag it in its lane, hold FIRE in the right-hand
-margin, as decided in §4. A hardware keyboard still drives every key the Mac reads, and
-the diagnostics log has a SwiftUI panel beside the game in landscape.
+Built beyond the original Phase 1 list, all of it on device:
 
-The Arcade Hint copy is done: `InputPrompts` says "TAP FIRE / TO SHOOT!" and
-"DRAG SHIP / TO MOVE!" on iOS, both inside the gutter's eleven-character line.
+- **Test Mode has a door and controls.** Hold the version badge to arm, tap it to
+  clear; `POWER · RAID · LEVEL` chips appear under it. `L` and `A` stay in Settings,
+  which already carried both.
+- **Name entry works without a keyboard** — the system keyboard on a tap, warmed on the
+  title screen, with a DONE button as the way out when no keyboard appears.
+- **Two real buttons at the end of a run**, `NEW GAME?` over `YES` / `NO`, and the last
+  wave announces itself instead of holding on a silent board.
+- **The SFX engine**, which is what actually fixed the frame rate — see §6a.
+- **Settings and the Info screen say true things on iOS**: no `⌘T`, no `Y / N`, no
+  "SLOWER MAC", the controls list leading with DRAG and FIRE, and larger body type.
+
+The remaining Phase 1 work is the four-size sweep — iPad Pro 13", Pro 11", 10.9" and
+mini — after which it is TestFlight-able.
 
 ---
 
@@ -1072,6 +1140,11 @@ The Arcade Hint copy is done: `InputPrompts` says "TAP FIRE / TO SHOOT!" and
   gutter and Settings text at a stroke, and also makes Dynamic Type possible.
 - **Test Mode stays.** The diagnostics log is **landscape only** — it does not fit in
   portrait and repositioning it to the bottom is not worth the work.
+- **The SFX engine is `AVAudioEngine` with pre-decoded buffers**, not `AVAudioPlayer`
+  pools, and the voice pool is eight. §6a has the measurements; the short version is
+  that `AVAudioPlayer.play()` costs 11.7ms a call and `scheduleBuffer` costs nothing.
+- **Name entry uses the system keyboard, on a tap, warmed at the title screen.** Not a
+  bespoke A–Z picker, and not summoned automatically.
 - **Test Mode needs a way in without a keyboard.** As of 1.2 it is ⌘T on the Mac, and
   the log panel sits behind it. Neither exists on a device with no hardware keyboard,
   so iOS needs its own door. Options: a row at the bottom of Settings, which is
