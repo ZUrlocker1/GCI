@@ -5,6 +5,9 @@
 // Phase 0: black background, starfield, title overlay, placeholder board, state machine.
 
 import SpriteKit
+#if os(iOS)
+import GameController
+#endif
 import GameplayKit
 
 class GameScene: SKScene {
@@ -1310,6 +1313,26 @@ class GameScene: SKScene {
     private func beginSoftwareNameEntry() {
         guard let view = view as? KeyboardFocusedSKView,
               let entry = highScoreEntry else { return }
+
+        // **Only when there is no keyboard already.** Measured on Zack's iPad
+        // at 690ms of blocked main thread on a good run, and reported as
+        // fifteen seconds on bad ones — `becomeFirstResponder` negotiating
+        // with iOS's input system over a hardware keyboard that is attached
+        // and not answering. That is the freeze before NEW HIGH SCORE, and
+        // the distortion with it: while the main thread waits, nothing can
+        // stop a looping sound or schedule the next buffer.
+        //
+        // And it buys nothing. iOS suppresses the software keyboard whenever
+        // a hardware one is attached, so the field is asking for something it
+        // will not get — while `KeyboardFocusedSKView` is *already* first
+        // responder and routes every key through `handleKey` to
+        // `HighScoreEntryNode`, which is how the Mac has always done this.
+        // The field exists solely to summon the software keyboard for a
+        // touch-only device.
+        if GCKeyboard.coalesced != nil {
+            DiagnosticsLog.shared.log(.info, "hardware keyboard — typing direct")
+            return
+        }
         view.beginNameEntry(
             initial: entry.enteredName,
             maxLength: HighScoreEntryNode.maxLength,
