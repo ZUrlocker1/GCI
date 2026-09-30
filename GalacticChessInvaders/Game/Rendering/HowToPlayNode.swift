@@ -160,10 +160,20 @@ final class HowToPlayNode: SKNode {
         // below, and 25 characters at 12pt still clears the column.
         chip("ESC",    "Pause  ·  Q quits  ·  M mutes",      x: x, y: 256)
         #else
-        chip("TAP",    "Pick piece, then new square",        x: x, y: 388)
-        chip("← →",    "Arrows or A / D move the ship",      x: x, y: 344)
-        chip("SPACE",  "Fire laser",                         x: x, y: 300)
-        chip("KEYS",   "Optional: ESC, Q, M, S, I",          x: x, y: 256)
+        // Touch first. This list used to lead with arrows and SPACE, which
+        // named a keyboard an iPad may not have while leaving the two
+        // controls it definitely does have — the drag and the FIRE button —
+        // unmentioned.
+        //
+        // The keyboard line is down to the three keys that do something no
+        // on-screen control does. Q, M, S and I all have buttons now: PAUSE
+        // twice quits, mute is a Settings row, and SET and INFO are in the
+        // HUD — so listing them named a second way to do things the player
+        // can already see.
+        chip("DRAG",   "Move the ship left or right",        x: x, y: 388)
+        chip("FIRE",   "Hold the button to shoot",           x: x, y: 344)
+        chip("TAP",    "Pick piece, then new square",        x: x, y: 300)
+        chip("KEYS",   "Optional: SPACE, ARROWS, ESC",       x: x, y: 256)
         #endif
 
         // — HISTORY —
@@ -203,6 +213,7 @@ final class HowToPlayNode: SKNode {
         let testDim = Self.cyan.withAlphaComponent(0.55)
         let testEm: CGFloat = 18
         heading("TEST MODE", testDim, x: x, y: 155)
+        #if os(macOS)
         // 4pt above the pixel caps' baseline: the two fonts do not share one,
         // and the system glyph sat low against them.
         addChild(commandGlyph(size: testEm, color: testDim,
@@ -210,6 +221,7 @@ final class HowToPlayNode: SKNode {
         let testKey = label("T", testEm, testDim, .left)
         testKey.position = CGPoint(x: x + 12 * testEm, y: 155)
         addChild(testKey)
+        #endif
         // Two short lines rather than one long one — five key/label pairs on a
         // single row runs the width of the column and reads as a wall. A, P, R
         // and V do nothing until Command-T arms them; L works either way.
@@ -217,8 +229,20 @@ final class HowToPlayNode: SKNode {
         // Press Start 2P advances exactly one em per character, so the padding
         // after "Log" is counted rather than eyeballed: it puts `A` and `V` on
         // the same column, 16 characters in on both lines.
-        for (i, line) in ["L  Log      ·   A  Auto   ·   P  Powerup",
-                          "R  Raider   ·   V  Level"].enumerated() {
+        // iOS says something else entirely, because none of the above is true
+        // there: an iPad has no ⌘T, and P, R and V are the POWER, RAID and
+        // LEVEL chips. L and A are not buttons at all — Settings already
+        // carries both — so the honest instruction is where to look rather
+        // than which key to press.
+        #if os(macOS)
+        let testLines = ["L  Log      ·   A  Auto   ·   P  Powerup",
+                         "R  Raider   ·   V  Level"]
+        #else
+        let testLines = ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
+                         "POWER, RAID AND LEVEL BUTTONS APPEAR",
+                         "LOG AND AUTO CHESS JOIN SETTINGS"]
+        #endif
+        for (i, line) in testLines.enumerated() {
             // 10pt, not 11: at 11 the longer line is 440pt against a 410pt
             // column and runs off the panel.
             let keys = label(line, 10, SKColor.white.withAlphaComponent(0.6), .left)

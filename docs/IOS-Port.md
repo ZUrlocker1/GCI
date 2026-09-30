@@ -527,14 +527,14 @@ on a touch device:
 | `GameScene.showPausedOverlay` | `PRESS ANY KEY TO RESUME` | `TAP TO RESUME` |
 | `HowToPlayNode`, `SettingsNode` | `PRESS ANY KEY TO RESUME GAME` | `TAP BACK TO RESUME` |
 | `GameOverNode` | `PRESS ANY KEY  ·  LEVEL n` | `TAP FOR LEVEL n` |
-| `GameOverNode` | `NEW GAME?   Y / N` | `NEW GAME?` with two buttons |
+| `GameOverNode` | `NEW GAME?   Y / N` | **built** — `NEW GAME` and `TITLE` buttons |
 | `GameScene` quit prompt | `Y / N` | two buttons — `QUIT` / `KEEP PLAYING` |
 | Arcade Hint, fire | `PRESS SPACE` / `TO FIRE!` | `TAP THE` / `FIRE BUTTON!` |
 | Arcade Hint, steer | `USE ARROWS` / `TO MOVE!` | `DRAG TO` / `MOVE SHIP!` |
 | `HighScoreEntryNode` | `RETURN WHEN DONE  ·  UP TO 8 CHARACTERS` | `TAP DONE  ·  UP TO 8 CHARACTERS` |
-| How To Play, controls | chips `← →` / `SPACE` / `CLICK` / `ESC` | `DRAG` / `FIRE` / `TAP` / `PAUSE`, naming the on-screen controls |
+| How To Play, controls | chips `← →` / `SPACE` / `CLICK` / `ESC` | **built** — `DRAG` / `FIRE` / `TAP` / `KEYS` |
 | `SettingsNode`, log row | `SAME AS THE L KEY` | drop the line |
-| Test Mode gate | `⌘T FIRST` | `TEST MODE FIRST` |
+| Test Mode gate | `⌘T FIRST` | **built** — `TEST MODE FIRST` |
 
 **That row was hiding a hole, and the table's own framing is what hid it.** Every other
 line here is a control that exists on iOS and is named wrongly; this one was a control
@@ -560,6 +560,20 @@ which handles the floating and split keyboards on iPad by the same path as the d
 one. Second, `KeyboardFocusedSKView` has to *take first responder back* afterwards, or
 every hardware key stops arriving — `endNameEntry` calls `claimKeyboard`, whose bounded
 retry is exactly what is needed while the field is still resigning.
+
+**The Info screen's own TEST MODE block is rewritten too**, and it had to be: it
+advertised `⌘T` on a device with no ⌘T, and named `P`, `R` and `V` as keys when they are
+now the POWER, RAID and LEVEL chips. iOS reads `HOLD THE VERSION BOX · TAP TO CLEAR` /
+`POWER, RAID AND LEVEL BUTTONS APPEAR` / `LOG AND AUTO CHESS JOIN SETTINGS`. The Mac
+keeps its two key lines and the ⌘ glyph unchanged.
+
+The CONTROLS list changed for the same reason. It opened with arrows and SPACE — naming
+a keyboard an iPad may not have, while never mentioning the two controls it certainly
+does have. The keyboard chip is down to `SPACE, ARROWS, ESC`: Q, M, S and I all have
+on-screen buttons now, so listing them advertised a second way to do something already
+visible.
+
+This is a correction, not the restructure Phase 4 has in mind.
 
 Two notes on that table. The Arcade Hints are the constrained ones —
 `ChessHintNode.ControlPrompt` returns two lines and the column fits about eleven

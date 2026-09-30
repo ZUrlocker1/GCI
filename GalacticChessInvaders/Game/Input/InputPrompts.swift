@@ -83,18 +83,13 @@ enum InputPrompts {
         #endif
     }
 
-    /// The game-over prompt.
+    /// The game-over prompt, on the Mac only.
     ///
-    /// Touch gets one way out rather than a choice: a tap returns to the
-    /// title, and starting again is the tap after that. Two real buttons is
-    /// the right answer and is Pass 1's business — offering "Y / N" to a
-    /// device with no Y is not.
+    /// iOS draws two buttons instead — see `GameOverNode.addButtons` — so
+    /// nothing reads this there. It stays a prompt here because a keyboard
+    /// answers it in one key, which no pair of buttons improves on.
     static var gameOver: String {
-        #if os(macOS)
         "NEW GAME?   Y / N"
-        #else
-        "TAP TO CONTINUE"
-        #endif
     }
 
     /// The footer of the high score name entry.

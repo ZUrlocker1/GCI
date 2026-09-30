@@ -1,7 +1,18 @@
 // GameOverNode.swift
-// End-of-game overlay: outcome, final score, and the NEW GAME? Y/N prompt.
+// End-of-game overlay: outcome, final score, and the way on.
 // Centred like the PAUSED banner, over a dimmed playfield so the final position
 // stays readable behind it.
+//
+// The way on differs by platform, and has to. On the Mac it is the prompt
+// `NEW GAME?  Y / N`. On iOS there is no Y, so 1.2's stopgap was a single
+// `TAP TO CONTINUE` that always went to the title — a player who wanted
+// another run had to tap twice and pass through the title screen to do it.
+// docs/IOS-Port.md §4 called two real buttons the right answer; these are
+// them.
+//
+// Only for the terminal outcomes. A cleared wave is one choice, not two, so
+// it keeps its tap-anywhere prompt — a button there would be ceremony around
+// the single thing you can do.
 
 import SpriteKit
 
@@ -75,6 +86,12 @@ final class GameOverNode: SKNode {
     private static let orange  = NeonPalette.orange
     private static let font    = "PressStart2P-Regular"
 
+    /// The scene hit-tests for these. Both the box and its label carry the
+    /// name, which is what `GameScene.pressButton` needs to move them
+    /// together.
+    static let newGameButtonName = "gameOverNewGame"
+    static let titleButtonName   = "gameOverTitle"
+
     init(outcome: Outcome, score: Int, sceneSize: CGSize) {
         super.init()
 
@@ -100,7 +117,19 @@ final class GameOverNode: SKNode {
         scoreLabel.position = CGPoint(x: centre.x, y: centre.y - 6)
         addChild(scoreLabel)
 
-        let prompt = label(outcome.prompt, 20, Self.cyan)
+        #if os(iOS)
+        if case .waveCleared = outcome {
+            addPrompt(outcome.prompt, at: centre)
+        } else {
+            addButtons(at: centre)
+        }
+        #else
+        addPrompt(outcome.prompt, at: centre)
+        #endif
+    }
+
+    private func addPrompt(_ text: String, at centre: CGPoint) {
+        let prompt = label(text, 20, Self.cyan)
         prompt.position = CGPoint(x: centre.x, y: centre.y - 62)
         addChild(prompt)
         // Blink like the title screen's start prompt, so it reads as the live control.
@@ -111,6 +140,53 @@ final class GameOverNode: SKNode {
             SKAction.fadeAlpha(to: 1.0, duration: 0.15),
         ])))
     }
+
+    #if os(iOS)
+    /// NEW GAME and TITLE, side by side and centred as a pair.
+    ///
+    /// NEW GAME first because it is what most people want after a run, and
+    /// because it is the one the Mac's `Y` reaches with a single key.
+    private func addButtons(at centre: CGPoint) {
+        let gap: CGFloat = 24
+        let newW = Self.buttonWidth("NEW GAME")
+        let titleW = Self.buttonWidth("TITLE")
+        let left = centre.x - (newW + gap + titleW) / 2
+        let y = centre.y - 66
+
+        button("NEW GAME", name: Self.newGameButtonName,
+               x: left, y: y, colour: Self.cyan)
+        button("TITLE", name: Self.titleButtonName,
+               x: left + newW + gap, y: y,
+               colour: SKColor.white.withAlphaComponent(0.7))
+    }
+
+    /// Press Start 2P advances exactly one em per character, the same
+    /// arithmetic the rest of the game's chrome is placed by.
+    private static func buttonWidth(_ text: String) -> CGFloat {
+        CGFloat(text.count) * 14 + 36
+    }
+
+    private func button(_ text: String, name: String,
+                        x: CGFloat, y: CGFloat, colour: SKColor) {
+        let width = Self.buttonWidth(text)
+        let height: CGFloat = 44        // a comfortable touch target
+
+        let box = SKShapeNode(rect: CGRect(x: x, y: y - height / 2,
+                                           width: width, height: height),
+                              cornerRadius: 4)
+        box.strokeColor = colour
+        box.fillColor = colour.withAlphaComponent(0.14)
+        box.lineWidth = 2
+        box.name = name
+        box.zPosition = 1
+        addChild(box)
+
+        let lbl = label(text, 14, colour)
+        lbl.position = CGPoint(x: x + width / 2, y: y)
+        lbl.name = name
+        addChild(lbl)
+    }
+    #endif
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }

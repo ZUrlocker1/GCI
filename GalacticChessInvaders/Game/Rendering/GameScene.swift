@@ -5962,13 +5962,18 @@ class GameScene: SKScene {
             return
         }
 
-        // Game over: a tap goes back to the title, where another starts a new
-        // run. On the Mac this is Y for a fresh game and anything else for
-        // the title; touch has no Y, and until the prompt is two real buttons
-        // one tap out is what keeps a player from being stranded on the
-        // last screen of the game with no way off it.
+        // Game over: two real buttons now, so a tap has to land on one. A
+        // stray tap does nothing, which is the point — the old behaviour sent
+        // anyone who missed straight to the title, and a player who wanted
+        // another run had to pass through it to get one.
         if stateMachine.currentState is GameOverState {
-            resetToTitle()
+            if hit.name == GameOverNode.newGameButtonName {
+                AudioManager.shared.play(.uiButtonClick)
+                pressButton(hit) { [weak self] in self?.startNewGame() }
+            } else if hit.name == GameOverNode.titleButtonName {
+                AudioManager.shared.play(.uiButtonClick)
+                pressButton(hit) { [weak self] in self?.resetToTitle() }
+            }
             return
         }
         #endif
