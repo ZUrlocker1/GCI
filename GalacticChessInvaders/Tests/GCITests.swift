@@ -6440,3 +6440,58 @@ final class AudioIsSilentUnderTestTests: XCTestCase {
                      "the soundtrack must not start during a test run")
     }
 }
+
+/// The NEON GLOW switch has to remove the *pass*, not just the blur.
+///
+/// `SKEffectNode.shouldEnableEffects` defaults to true and was never written,
+/// so until 30 Sep clearing the filter left the node still rendering its whole
+/// subtree to an offscreen texture and compositing it back. Only the blur was
+/// skipped. On a Mac that is absorbed; on an A12 at 2048×1536 it is most of
+/// the cost, and it made every glow measurement before that date meaningless
+/// — both sides of the A/B paid for the pass.
+///
+/// Shared code, so this covers iOS as well as the Mac it runs on.
+@MainActor
+final class GlowSwitchTests: XCTestCase {
+
+    private var original = true
+
+    override func setUp() async throws {
+        original = GameSettings.shared.neonGlow
+    }
+
+    /// The setting persists to `UserDefaults`, and the test host is the app —
+    /// so leaving it flipped would change the player's own preference.
+    override func tearDown() async throws {
+        GameSettings.shared.neonGlow = original
+        GameScene.shared.applyGlowSetting()
+    }
+
+    private func bloom() throws -> SKEffectNode {
+        let scene = GameScene.shared
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+        view.presentScene(scene)
+        return try XCTUnwrap(scene.childNode(withName: "bloom") as? SKEffectNode)
+    }
+
+    func testGlowOnAttachesTheFilterAndEnablesEffects() throws {
+        let bloom = try bloom()
+        GameSettings.shared.neonGlow = true
+        GameScene.shared.applyGlowSetting()
+
+        XCTAssertNotNil(bloom.filter)
+        XCTAssertTrue(bloom.shouldEnableEffects)
+    }
+
+    func testGlowOffRemovesTheOffscreenPassAndNotJustTheBlur() throws {
+        let bloom = try bloom()
+        GameSettings.shared.neonGlow = false
+        GameScene.shared.applyGlowSetting()
+
+        XCTAssertNil(bloom.filter, "the blur")
+        XCTAssertFalse(bloom.shouldEnableEffects,
+                       "and the pass — clearing the filter alone leaves "
+                       + "SpriteKit rendering the subtree offscreen and "
+                       + "compositing it back, which is the expensive half")
+    }
+}

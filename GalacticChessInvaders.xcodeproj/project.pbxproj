@@ -632,28 +632,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_7CC1446A-DEC7-4D58-B127-0B8FCC5F5DFD" /* .claude */ = {
+		"TEMP_1920EAB6-CE83-4803-8CFE-73D619B8BDC6" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_8E0B17A1-4CEA-4E51-A2BF-555314C6FDDF" /* .claude */ = {
+		"TEMP_46697C53-0BFE-4D77-AEAF-6B3E88DE7A13" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_93AA4EC3-6319-403F-8604-30A03B123066" /* .claude */ = {
+		"TEMP_CBE384BF-584F-48EF-ABD5-7453065C168E" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_B655095E-3901-4F16-AAC5-85977BF7B459" /* .claude */ = {
+		"TEMP_F4FBC2AE-6CC3-477D-8227-722BE0167CFB" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -1048,7 +1048,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				INFOPLIST_FILE = "GalacticChessInvaders/Info-iOS.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1056,7 +1056,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1073,7 +1073,7 @@
 				CODE_SIGN_ENTITLEMENTS = GalacticChessInvaders.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -1082,7 +1082,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1096,7 +1096,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				INFOPLIST_FILE = "GalacticChessInvaders/Info-iOS.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1104,7 +1104,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1122,7 +1122,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = K66MA9TR8Z;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = GalacticChessInvaders/Info.plist;
@@ -1131,7 +1131,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zurlocker.GalacticChessInvaders;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;

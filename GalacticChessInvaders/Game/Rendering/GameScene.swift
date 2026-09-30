@@ -602,13 +602,29 @@ class GameScene: SKScene {
     /// the game, so turning it off is the one switch that can rescue an older
     /// Mac. Detaching the filter — rather than zeroing its intensity — is what
     /// actually skips the offscreen pass.
-    private func applyGlowSetting() {
-        bloomNode.filter = GameSettings.shared.neonGlow
+    /// Internal rather than private so `GlowSwitchTests` can pin it. The
+    /// bug it now guards against — a filter cleared but the offscreen pass
+    /// left running — is invisible on screen and shows up only as frame time.
+    func applyGlowSetting() {
+        let on = GameSettings.shared.neonGlow
+        bloomNode.filter = on
             ? CIFilter(name: "CIBloom", parameters: [
                 "inputRadius": 6.0,
                 "inputIntensity": 0.9
               ])
             : nil
+        // **Clearing the filter is not enough.** `shouldEnableEffects`
+        // defaults to true and was never written, so with the filter nil the
+        // node still rendered its whole subtree into an offscreen texture and
+        // composited it back — the full-screen render target and blit stayed,
+        // and only the blur went. That is why turning NEON GLOW off barely
+        // moved the frame rate on an iPad: the expensive half of the pass was
+        // never being skipped.
+        //
+        // §6a measured the *filter* as the GPU cost and inferred the switch
+        // removed it. On a Mac with headroom the difference did not show; on
+        // an A12 at 2048×1536 it does.
+        bloomNode.shouldEnableEffects = on
     }
 
     /// Re-applies whichever sky is up. The title's cycle and a wave's static
@@ -2346,7 +2362,11 @@ class GameScene: SKScene {
         guard board.isMate || board.isStalemate || board.isDrawn else { return false }
 
         if board.isMate, loser == .black {
-            winLevel(bonus: Self.checkmateBonus, label: "checkmate")
+            // The only win route that used to pass no banner, so the 2.5s
+            // reveal hold that follows had nothing on screen to explain
+            // itself. The other three all say BLACK KING DESTROYED.
+            winLevel(bonus: Self.checkmateBonus, label: "checkmate",
+                     banner: "BLACK KING CHECKMATED")
             return true
         }
         if board.isMate {
@@ -2383,7 +2403,18 @@ class GameScene: SKScene {
     /// instant cannot both try to end the level.
     private func winLevel(bonus: Int, label: String, banner: String? = nil) {
         guard stateMachine.currentState is PlayingState, !isEndingGame else { return }
-        if let banner { showEndBanner(banner, color: NeonPalette.cyan) }
+        // The last wave says so, and says it *now* rather than after the hold.
+        //
+        // `scheduleAfterReveal` sits on the final position for 2.5s before
+        // anything else happens, and on wave 10 `showWaveClearOverlay` skips
+        // its own acknowledgement entirely and goes straight to the game-over
+        // flow. So finishing the game showed a settled board and no text for
+        // two and a half seconds, then a high score panel — which reads as a
+        // crash, not a win. The hold is worth keeping; the silence was not.
+        let line = levels.isFinalLevel
+            ? "ALL \(LevelManager.finalLevel) WAVES CLEARED"
+            : banner
+        if let line { showEndBanner(line, color: NeonPalette.cyan) }
         isEndingGame = true
         turnTimer.stop()
         clearSelection()
@@ -5962,13 +5993,13 @@ class GameScene: SKScene {
         // the screen did not ask — sending someone to the title when they
         // meant to press Y — would be a regression, not a convenience.
         #if os(iOS)
-        // Name entry owns the screen while it is up, and SKIP is the only
+        // Name entry owns the screen while it is up, and DONE is the only
         // target on it — the keyboard's own DONE is the other way out, and
         // the whole reason this button exists is that the keyboard sometimes
         // never appears. Returning unconditionally stops a stray tap falling
         // through to the board underneath.
         if highScoreEntry != nil {
-            if hit.name == HighScoreEntryNode.skipButtonName {
+            if hit.name == HighScoreEntryNode.doneButtonName {
                 AudioManager.shared.play(.uiButtonClick)
                 pressButton(hit) { [weak self] in self?.highScoreEntry?.submit() }
             }
@@ -5993,10 +6024,10 @@ class GameScene: SKScene {
         // anyone who missed straight to the title, and a player who wanted
         // another run had to pass through it to get one.
         if stateMachine.currentState is GameOverState {
-            if hit.name == GameOverNode.newGameButtonName {
+            if hit.name == GameOverNode.yesButtonName {
                 AudioManager.shared.play(.uiButtonClick)
                 pressButton(hit) { [weak self] in self?.startNewGame() }
-            } else if hit.name == GameOverNode.titleButtonName {
+            } else if hit.name == GameOverNode.noButtonName {
                 AudioManager.shared.play(.uiButtonClick)
                 pressButton(hit) { [weak self] in self?.resetToTitle() }
             }

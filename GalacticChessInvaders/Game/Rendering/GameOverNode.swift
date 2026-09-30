@@ -10,6 +10,12 @@
 // docs/IOS-Port.md §4 called two real buttons the right answer; these are
 // them.
 //
+// **The same question, in touch form.** They were `NEW GAME` and `TITLE`
+// first, which made the screen ask nothing and then offer two destinations —
+// the player had to work out that one of them was "yes". Asking `NEW GAME?`
+// and answering it `YES` / `NO` is what the Mac has always done, and the two
+// platforms now differ only in whether you press the letter or the button.
+//
 // Only for the terminal outcomes. A cleared wave is one choice, not two, so
 // it keeps its tap-anywhere prompt — a button there would be ceremony around
 // the single thing you can do.
@@ -89,8 +95,8 @@ final class GameOverNode: SKNode {
     /// The scene hit-tests for these. Both the box and its label carry the
     /// name, which is what `GameScene.pressButton` needs to move them
     /// together.
-    static let newGameButtonName = "gameOverNewGame"
-    static let titleButtonName   = "gameOverTitle"
+    static let yesButtonName = "gameOverYes"
+    static let noButtonName  = "gameOverNo"
 
     init(outcome: Outcome, score: Int, sceneSize: CGSize) {
         super.init()
@@ -142,21 +148,26 @@ final class GameOverNode: SKNode {
     }
 
     #if os(iOS)
-    /// NEW GAME and TITLE, side by side and centred as a pair.
+    /// `NEW GAME?` over `YES` / `NO`, which is the Mac's prompt with the two
+    /// keys turned into targets.
     ///
-    /// NEW GAME first because it is what most people want after a run, and
-    /// because it is the one the Mac's `Y` reaches with a single key.
+    /// YES is cyan and first; NO is the quieter of the two and goes to the
+    /// title, exactly as any key other than Y does on the Mac.
     private func addButtons(at centre: CGPoint) {
-        let gap: CGFloat = 24
-        let newW = Self.buttonWidth("NEW GAME")
-        let titleW = Self.buttonWidth("TITLE")
-        let left = centre.x - (newW + gap + titleW) / 2
-        let y = centre.y - 66
+        let question = label("NEW GAME?", 20, Self.cyan)
+        question.position = CGPoint(x: centre.x, y: centre.y - 48)
+        addChild(question)
 
-        button("NEW GAME", name: Self.newGameButtonName,
+        let gap: CGFloat = 24
+        let yesW = Self.buttonWidth("YES")
+        let noW = Self.buttonWidth("NO")
+        let left = centre.x - (yesW + gap + noW) / 2
+        let y = centre.y - 100
+
+        button("YES", name: Self.yesButtonName,
                x: left, y: y, colour: Self.cyan)
-        button("TITLE", name: Self.titleButtonName,
-               x: left + newW + gap, y: y,
+        button("NO", name: Self.noButtonName,
+               x: left + yesW + gap, y: y,
                colour: SKColor.white.withAlphaComponent(0.7))
     }
 

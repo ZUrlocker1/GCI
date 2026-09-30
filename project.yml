@@ -45,8 +45,8 @@ targets:
         # byte for byte. This file is the source of truth again, which is what
         # makes adding the iOS target a reviewable diff rather than surgery on
         # a 900-line pbxproj.
-        CURRENT_PROJECT_VERSION: "9"
-        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: "10"
+        MARKETING_VERSION: "1.3"
         SWIFT_STRICT_CONCURRENCY: complete
         # Signing, set up the way Zudio is. `DEVELOPMENT_TEAM` is the piece that
         # was missing: without it an archive carries no team and Xcode refuses to
@@ -116,8 +116,8 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.zurlocker.GalacticChessInvaders
         INFOPLIST_FILE: GalacticChessInvaders/Info-iOS.plist
-        CURRENT_PROJECT_VERSION: "9"
-        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: "10"
+        MARKETING_VERSION: "1.3"
         SWIFT_STRICT_CONCURRENCY: complete
         DEVELOPMENT_TEAM: K66MA9TR8Z
         CODE_SIGN_STYLE: Automatic        # the way ZudioiOS is signed

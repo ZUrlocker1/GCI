@@ -14,7 +14,7 @@ final class HighScoreEntryNode: SKNode {
 
     /// The scene hit-tests for this. Box and label share the name so
     /// `GameScene.pressButton` moves them together.
-    static let skipButtonName = "highScoreSkip"
+    static let doneButtonName = "highScoreDone"
 
     private static let cyan   = NeonPalette.cyan
     private static let orange = NeonPalette.orange
@@ -88,14 +88,14 @@ final class HighScoreEntryNode: SKNode {
         addChild(hint)
 
         #if os(iOS)
-        addSkipButton(at: centre)
+        addDoneButton(at: centre)
         #endif
 
         refresh()
     }
 
     #if os(iOS)
-    /// The way off this screen when nothing else works.
+    /// The way off this screen when the keyboard's own DONE never arrives.
     ///
     /// The software keyboard carries DONE, and that was the only touch route
     /// out — which fails in a case that is not rare at all: **a hardware
@@ -104,16 +104,18 @@ final class HighScoreEntryNode: SKNode {
     /// types, and the screen has no exit. Zack hit exactly that with a Zagg
     /// case on the mini.
     ///
-    /// It submits rather than discards, so anything already typed is kept and
-    /// an empty field falls back to PLAYER — the same `submit()` Return and
-    /// DONE use. A blank row in the high score table would look like the game
-    /// had broken, which is not what "skip" should mean.
+    /// Called DONE, not SKIP. SKIP was the first label and it was the wrong
+    /// word: this submits rather than discards — anything typed is kept, and
+    /// an empty field falls back to PLAYER, the same `submit()` Return uses.
+    /// A button that takes your input should not be named after throwing it
+    /// away, and DONE is what the software keyboard's return key says when it
+    /// does appear, so both routes out are labelled the same.
     ///
     /// Placed above the keyboard's reach: the overlay lifts by half of what
     /// the keyboard covers, and at 132 below centre this clears it in both
     /// orientations.
-    private func addSkipButton(at centre: CGPoint) {
-        let text = "SKIP"
+    private func addDoneButton(at centre: CGPoint) {
+        let text = "DONE"
         let width = CGFloat(text.count) * 14 + 36
         let height: CGFloat = 44
         let y = centre.y - 132
@@ -124,12 +126,12 @@ final class HighScoreEntryNode: SKNode {
         box.strokeColor = SKColor.white.withAlphaComponent(0.7)
         box.fillColor = SKColor.white.withAlphaComponent(0.12)
         box.lineWidth = 2
-        box.name = Self.skipButtonName
+        box.name = Self.doneButtonName
         addChild(box)
 
         let lbl = label(text, 14, SKColor.white.withAlphaComponent(0.85))
         lbl.position = CGPoint(x: centre.x, y: y)
-        lbl.name = Self.skipButtonName
+        lbl.name = Self.doneButtonName
         addChild(lbl)
     }
     #endif

@@ -911,9 +911,24 @@ detached while the pool is idle and re-attached on first use — one `addChild` 
 glass first flies, and 154 nodes leave every frame that has no glass in it, without
 allocating during play.
 
-**The switch already exists.** `GameSettings.neonGlow` detaches the filter entirely
-rather than zeroing its intensity, which is what actually skips the offscreen pass —
-see `GameScene.applyGlowSetting()`. So the iOS work is not building a toggle, it is
+**The switch already exists — and until 30 Sep it did not do what this said.**
+`GameSettings.neonGlow` detached the filter, and the sentence that used to sit here
+claimed that was "what actually skips the offscreen pass". It is not.
+`SKEffectNode.shouldEnableEffects` defaults to `true` and was never written anywhere in
+the codebase, so with the filter nil the node still rendered its whole subtree into an
+offscreen texture and composited it back. Only the blur was being skipped; the
+full-screen render target and blit stayed.
+
+That is why turning NEON GLOW off on an iPad mini 5 — A12, 2048×1536 — barely moved the
+frame rate, and it means **every glow A/B measured before that date compared two runs
+that both paid for the pass.** `applyGlowSetting()` now sets `shouldEnableEffects`
+alongside the filter. The Mac never showed it because the Mac has the headroom to
+absorb a wasted pass; the A12 does not.
+
+Two lessons, both already learned once in this section and evidently not hard enough.
+A measurement is only as good as the thing it toggles actually toggling. And an
+inference about what an API does — "detaching the filter skips the pass" — is not a
+measurement, however reasonable it sounds. So the iOS work is not building a toggle, it is
 choosing the **default**:
 
 1. **Glow on** for iPad, which has the die and the thermal envelope for it.
