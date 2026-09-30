@@ -2481,7 +2481,14 @@ class GameScene: SKScene {
         if levels.isFinalLevel {
             outcome = .runCompleted
             logWave("run complete — all \(LevelManager.finalLevel) waves cleared")
+            // PERF-INSTRUMENTATION (temporary). The other candidate for the
+            // fifteen seconds: the victory stinger builds a fresh
+            // `AVAudioPlayer` on a file up to 2.5MB, synchronously.
+            let musicAt = CACurrentMediaTime()
             playEndOfRunMusic(won: true)
+            DiagnosticsLog.shared.log(.perf, String(
+                format: "run-complete music %.0fms",
+                (CACurrentMediaTime() - musicAt) * 1000))
             stateMachine.enter(GameOverState.self)
             return
         }
@@ -3785,7 +3792,14 @@ class GameScene: SKScene {
         // so anything that re-enters this path would otherwise prompt again.
         hasOfferedHighScore = true
 
+        // PERF-INSTRUMENTATION (temporary). Fifteen seconds between "ALL 10
+        // WAVES CLEARED" and this panel, reproducibly, on an iPad mini. That
+        // is a timeout, not slow work, and there are only three things here
+        // that could own it — so each one says how long it took rather than
+        // being argued about.
+        let builtAt = CACurrentMediaTime()
         let entry = buildHighScoreEntry()
+        let buildMs = (CACurrentMediaTime() - builtAt) * 1000
         entry.onSubmit = { [weak self] name in
             guard let self else { return }
             ScoreManager.shared.submitHighScore(initials: name)
@@ -3798,9 +3812,23 @@ class GameScene: SKScene {
             self.showGameOverOverlay()
         }
 
+        var keyboardMs: Double = 0
         #if os(iOS)
+        // The prime suspect. `becomeFirstResponder` asks iOS's input system
+        // for a keyboard, and Zack's iPad has a hardware keyboard that has
+        // already proved flaky — it is why the DONE button exists. A stalled
+        // handshake with a keyboard that is not answering times out in about
+        // this long, and while the main thread waits, nothing can stop a
+        // looping sound or schedule the next buffer. Which would make the
+        // distortion a symptom of the freeze rather than its cause.
+        let keyboardAt = CACurrentMediaTime()
         beginSoftwareNameEntry()
+        keyboardMs = (CACurrentMediaTime() - keyboardAt) * 1000
         #endif
+
+        DiagnosticsLog.shared.log(.perf, String(
+            format: "high score panel — build %.0fms, keyboard %.0fms",
+            buildMs, keyboardMs))
 
         // Let the loss sting finish first. `asyncAfter` rather than an
         // `SKAction`: an overlay can pause the scene, and a paused node's
