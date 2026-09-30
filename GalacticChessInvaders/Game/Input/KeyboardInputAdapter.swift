@@ -26,6 +26,7 @@ import SpriteKit
 
 #if os(iOS)
 import UIKit
+import QuartzCore
 
 /// An `SKView` that claims the keyboard as soon as it has a window, and turns
 /// what it receives into the same `KeyPress` the Mac produces.
@@ -70,6 +71,21 @@ final class KeyboardFocusedSKView: SKView {
     /// never stay up. Claiming has to stand down while name entry owns the
     /// keyboard.
     private var nameEntryActive = false
+
+    private var hasWarmedKeyboard = false
+
+    /// Once per launch. See `NameEntryField.warm`.
+    func warmKeyboard() {
+        guard !hasWarmedKeyboard, window != nil else { return }
+        hasWarmedKeyboard = true
+        let began = CACurrentMediaTime()
+        nameField.warm(in: self)
+        DiagnosticsLog.shared.log(.perf, String(
+            format: "keyboard warmed in %.0fms",
+            (CACurrentMediaTime() - began) * 1000))
+        // The throwaway responder change leaves the view without focus.
+        claimKeyboard()
+    }
 
     func beginNameEntry(initial: String,
                         maxLength: Int,

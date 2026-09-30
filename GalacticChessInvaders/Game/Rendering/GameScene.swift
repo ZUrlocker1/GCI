@@ -922,6 +922,22 @@ class GameScene: SKScene {
     // MARK: - Screen Transitions (called by GKState subclasses)
 
     func showTitleScreen() {
+        #if os(iOS)
+        // Pay iOS's first-keyboard cost here, where nothing is at stake.
+        //
+        // Two seconds in, so the title has drawn and the intro track is
+        // playing — the music runs on its own thread, so it carries on
+        // through the stall and the screen does not read as dead. Every run
+        // passes through this screen before a score exists, which matters:
+        // you can die on level 1 and make the table.
+        //
+        // `asyncAfter` rather than an `SKAction`: this must still happen if
+        // the player opens a panel, and a panel pauses the scene.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            (self?.view as? KeyboardFocusedSKView)?.warmKeyboard()
+        }
+        #endif
+
         // Defensive: remove any stale overlay before adding a new one (prevents double-overlay on restart)
         titleOverlay?.removeFromParent()
         titleOverlay = nil

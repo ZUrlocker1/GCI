@@ -87,6 +87,26 @@ final class NameEntryField: NSObject, UITextFieldDelegate {
         field.becomeFirstResponder()
     }
 
+    /// Pays iOS's first-keyboard cost somewhere it does not matter.
+    ///
+    /// The first presentation in an app session is slow — the system spins
+    /// up the keyboard process, its layouts and any extensions — and on an
+    /// A12 that measured 690ms, 744ms and 4418ms on three runs, with the
+    /// frame rate at 5fps and the audio distorting throughout. Every later
+    /// presentation is warm and instant, which is why it worked on Zack's
+    /// second run and not his first.
+    ///
+    /// Become and resign in the same turn, so no keyboard is ever visible;
+    /// the setup happens anyway. Called once, on the title screen, because
+    /// every run passes through it before a score exists — you can die on
+    /// level 1 and make the table.
+    func warm(in host: UIView) {
+        if field.superview !== host { host.addSubview(field) }
+        field.becomeFirstResponder()
+        field.resignFirstResponder()
+        field.removeFromSuperview()
+    }
+
     /// Takes the keyboard away. The caller hands first responder back to the
     /// game view afterwards, or the hardware keys stop arriving.
     func end() {
