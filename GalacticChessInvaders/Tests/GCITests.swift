@@ -6600,6 +6600,6 @@ final class AudioEnginePathTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(50))
         }
         XCTAssertEqual(audio.busyVoiceCount, 0, "and handed back")
-        XCTAssertGreaterThanOrEqual(audio.voiceCapacity, 24)
+        XCTAssertGreaterThanOrEqual(audio.voiceCapacity, 8)
     }
 }

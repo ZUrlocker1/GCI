@@ -101,10 +101,26 @@ final class AudioManager {
     // anyway, and all but two of the sources are mono already.
     private static let canonical = AVAudioFormat(standardFormatWithSampleRate: 44100,
                                                  channels: 1)!
-    /// Enough for the worst case seen in a log — six lasers, several hits and
-    /// a multi-piece nuke landing together — with room over. Idle nodes cost
-    /// almost nothing; running out and dropping a sound costs a sound.
-    private static let voiceCount = 24
+    /// Eight, and the number matters more than it looks.
+    ///
+    /// Every *running* node is pulled by the render thread each cycle and
+    /// summed by the mixer whether it has anything to play or not, so an idle
+    /// pool is not free. This was 24 on the reasoning that idle nodes cost
+    /// almost nothing. On an A12 they do not: an iPad mini 5 distorted at the
+    /// title screen with nothing playing, and the console said why —
+    /// `HALC_ProxyIOContext: skipping cycle due to overload`, the render
+    /// thread failing to finish in time.
+    ///
+    /// Starting them on demand instead is not the answer: `scheduleBuffer`
+    /// plus `play()` on a stopped node measures **10.9ms**, as bad as the
+    /// `AVAudioPlayer` this replaced. Scheduling onto one already running is
+    /// 0.000ms. So they stay running and there are fewer of them.
+    ///
+    /// Eight covers what the game actually asks for — the destruction voice
+    /// cap is already 3, and the old design gave each key a pool of 4 and
+    /// sounded fine. A burst larger than eight drops a sound, which is
+    /// cheaper than distorting every sound.
+    private static let voiceCount = 8
 
     private let engine = AVAudioEngine()
     private var configObserver: NSObjectProtocol?
