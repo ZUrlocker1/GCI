@@ -107,6 +107,7 @@ final class AudioManager {
     private static let voiceCount = 24
 
     private let engine = AVAudioEngine()
+    private var configObserver: NSObjectProtocol?
     private var buffers: [SoundKey: AVAudioPCMBuffer] = [:]
     private var voiceNodes: [AVAudioPlayerNode] = []
     /// What each voice is currently playing, or nil if it is free. A started
@@ -219,6 +220,7 @@ final class AudioManager {
     /// keeps `scheduleBuffer` free at the trigger.
     private func startEngine() {
         guard voiceNodes.isEmpty else { return }
+        observeConfigurationChanges()
         for _ in 0..<Self.voiceCount {
             let node = AVAudioPlayerNode()
             engine.attach(node)
@@ -241,6 +243,44 @@ final class AudioManager {
         ensureRunning()
     }
 
+    /// Rebuilds the graph after the system changes it underneath us.
+    ///
+    /// **This is the one that bites on a device and never on a Mac.** A route
+    /// change — headphones, a call ending, the app coming back from the
+    /// background and reactivating its session — makes AVFoundation tear the
+    /// engine's connections down and post
+    /// `AVAudioEngineConfigurationChange`. Scheduling onto a node whose
+    /// connection is gone is not a silent failure; it raises, and an
+    /// uncaught Objective-C exception is a crash.
+    ///
+    /// Reconnecting every node is cheap and idempotent, so this does it
+    /// wholesale rather than trying to work out what survived.
+    private func observeConfigurationChanges() {
+        guard configObserver == nil else { return }
+        configObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine, queue: .main) { _ in
+                MainActor.assumeIsolated { [weak self] in
+                    self?.reconnectAfterConfigurationChange()
+                }
+            }
+    }
+
+    private func reconnectAfterConfigurationChange() {
+        DiagnosticsLog.shared.log(.audio, "engine reconfigured — reconnecting")
+        for node in voiceNodes {
+            engine.connect(node, to: engine.mainMixerNode, format: Self.canonical)
+        }
+        for node in loopNodes.values {
+            engine.connect(node, to: engine.mainMixerNode, format: Self.canonical)
+        }
+        // Whatever was in flight did not survive the teardown, and its
+        // completion handlers may never arrive — so the pool is declared
+        // free rather than left holding voices nothing will give back.
+        voiceBusy = Array(repeating: nil, count: voiceNodes.count)
+        ensureRunning()
+    }
+
     /// Starts, or restarts after an interruption took the engine down.
     @discardableResult
     private func ensureRunning() -> Bool {
@@ -252,7 +292,9 @@ final class AudioManager {
                 return false
             }
         }
-        for node in voiceNodes where !node.isPlaying { node.play() }
+        for node in voiceNodes where !node.isPlaying && node.engine != nil {
+            node.play()
+        }
         return true
     }
 
@@ -341,7 +383,7 @@ final class AudioManager {
         if key.loops {
             guard let node = loopNodes[key] else { return }
             node.volume = level
-            guard ensureRunning() else { return }
+            guard ensureRunning(), node.engine != nil else { return }
             if !node.isPlaying { node.play() }
             node.scheduleBuffer(buffer, at: nil, options: [.loops, .interrupts])
             return
@@ -368,8 +410,11 @@ final class AudioManager {
         }
 
         guard ensureRunning() else { return }
-        voiceBusy[slot] = key
         let node = voiceNodes[slot]
+        // A node detached by a configuration change raises rather than
+        // failing quietly, and an uncaught ObjC exception is a crash.
+        guard node.engine != nil else { return }
+        voiceBusy[slot] = key
         node.volume = level
         // `.dataPlayedBack` rather than `.dataRendered`: the voice is not free
         // until the sound has actually left, or a burst would reuse a node
