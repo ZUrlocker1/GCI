@@ -6540,3 +6540,66 @@ final class PerformanceLogTests: XCTestCase {
                        + "reason for logging at all — got \(line ?? "nothing")")
     }
 }
+
+/// The SFX path runs on an `AVAudioEngine` with pre-decoded buffers, and
+/// these are the two things that has to keep being true.
+///
+/// It replaced `AVAudioPlayer` pools because `play()` measured ~11.7ms a
+/// call, every call, prepared or not — two sounds in a frame was the whole
+/// 16.7ms budget, which is what pinned an iPad mini into the 20s and dropped
+/// a Mac to 35–49 during heavy fire. Scheduling a buffer on an already
+/// running node is ~0.03ms.
+///
+/// Silenced through `startSilentlyForBenchmark`, so the suite stays quiet.
+@MainActor
+final class AudioEnginePathTests: XCTestCase {
+
+    /// Waiting lets any presented scene tick, and a tick can leave
+    /// `SceneLayout.current` adopted at whatever size that scene happens to
+    /// be — which failed `BoardNodeTests` two classes later with squares at
+    /// 28pt instead of 32. The global goes back afterwards.
+    override func tearDown() async throws {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+    }
+
+    private func audio() -> AudioManager {
+        let audio = AudioManager.shared
+        audio.preloadAll()
+        audio.startSilentlyForBenchmark()
+        return audio
+    }
+
+    /// The regression that matters. A slide back to anything doing per-shot
+    /// file or codec work shows up here long before it shows up as a frame
+    /// rate complaint.
+    func testFiringASoundCostsAlmostNothing() {
+        let audio = audio()
+        var times: [Double] = []
+        for _ in 0..<30 {
+            let t = CACurrentMediaTime()
+            audio.play(.playerLaserFire)
+            times.append((CACurrentMediaTime() - t) * 1000)
+        }
+        let median = times.sorted()[times.count / 2]
+        XCTAssertLessThan(median, 1.0,
+                          "AVAudioPlayer.play() was 11.7ms; this path measured "
+                          + "0.03ms. A whole millisecond means something has "
+                          + "gone back to loading or preparing per shot.")
+    }
+
+    /// A pool that never frees a voice goes quiet after twenty-four sounds,
+    /// and nothing else in the suite would catch it.
+    func testVoicesComeBackWhenASoundFinishes() async throws {
+        let audio = audio()
+        for _ in 0..<5 { audio.play(.playerLaserFire) }
+        XCTAssertGreaterThan(audio.busyVoiceCount, 0, "voices taken")
+
+        // Polled rather than slept: it leaves as soon as the voices are back,
+        // which is both quicker and not a guess at how long the clip runs.
+        for _ in 0..<60 where audio.busyVoiceCount > 0 {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        XCTAssertEqual(audio.busyVoiceCount, 0, "and handed back")
+        XCTAssertGreaterThanOrEqual(audio.voiceCapacity, 24)
+    }
+}

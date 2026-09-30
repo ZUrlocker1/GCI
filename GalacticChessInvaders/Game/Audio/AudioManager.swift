@@ -83,12 +83,39 @@ final class AudioManager {
         player?.play()
     }
 
-    // One pool per non-looping key (round-robin for polyphony)
-    private var sfxPools:    [SoundKey: [AVAudioPlayer]] = [:]
-    // One player per looping key
-    private var loopPlayers: [SoundKey: AVAudioPlayer]   = [:]
+    // MARK: - The SFX engine
+    //
+    // One `AVAudioEngine`, every sound pre-decoded into an `AVAudioPCMBuffer`,
+    // and a fixed pool of `AVAudioPlayerNode`s left running for the life of
+    // the app. Firing a shot is `scheduleBuffer` on an already-running node,
+    // which is the 0.000ms in the header's table.
+    //
+    // **One canonical format for every buffer**, so any voice can play any
+    // sound. The assets are not uniform — mostly mono 44.1kHz, but there are
+    // two stereo files, one at 48kHz and one at 96kHz — and a node is
+    // connected to the mixer in a single format. Converting once at load is
+    // what buys a *shared* pool; per-key pools would need 134 keys' worth of
+    // nodes to get the same polyphony.
+    //
+    // Mono, not stereo: it halves the resident memory, the mixer upmixes
+    // anyway, and all but two of the sources are mono already.
+    private static let canonical = AVAudioFormat(standardFormatWithSampleRate: 44100,
+                                                 channels: 1)!
+    /// Enough for the worst case seen in a log — six lasers, several hits and
+    /// a multi-piece nuke landing together — with room over. Idle nodes cost
+    /// almost nothing; running out and dropping a sound costs a sound.
+    private static let voiceCount = 24
+
+    private let engine = AVAudioEngine()
+    private var buffers: [SoundKey: AVAudioPCMBuffer] = [:]
+    private var voiceNodes: [AVAudioPlayerNode] = []
+    /// What each voice is currently playing, or nil if it is free. A started
+    /// `AVAudioPlayerNode` reports `isPlaying` even with nothing scheduled,
+    /// so the pool cannot ask the nodes and has to track this itself.
+    private var voiceBusy: [SoundKey?] = []
+    private var loopNodes: [SoundKey: AVAudioPlayerNode] = [:]
+
     private var musicPlayer: AVAudioPlayer?
-    private let poolSize = 4
 
     /// Music sits on top; effects sit just under it. Each SoundKey keeps its own
     /// relative balance and the whole SFX bus is scaled, so the mix is tuned here
@@ -125,7 +152,9 @@ final class AudioManager {
         // and loop counts are reported here any more: all three only change
         // when `SoundKey` does, so they said the same thing on every launch
         // while taking up the one line that says the audio came up at all.
+        startEngine()
         for key in SoundKey.allCases { preload(key) }
+        ensureRunning()
 
         DiagnosticsLog.shared.log(.audio, "SFX ready")
     }
@@ -136,27 +165,110 @@ final class AudioManager {
         guard let base = sfxBaseURL else { return false }
         let url = base.appendingPathComponent(key.filename)
         guard FileManager.default.fileExists(atPath: url.path) else { return false }
-        if key.loops {
-            guard let player = try? AVAudioPlayer(contentsOf: url) else { return false }
-            player.numberOfLoops = -1
-            player.volume = Self.volume(for: key)
-            player.prepareToPlay()
-            loopPlayers[key] = player
-            return true
-        }
+        guard let buffer = Self.canonicalBuffer(from: url) else { return false }
+        buffers[key] = buffer
 
-        var pool: [AVAudioPlayer] = []
-        for _ in 0..<poolSize {
-            if let player = try? AVAudioPlayer(contentsOf: url) {
-                player.volume = Self.volume(for: key)
-                player.prepareToPlay()
-                pool.append(player)
-            }
+        // A looping sound gets its own node, since it holds one indefinitely
+        // and must not be taking a voice from the shared pool.
+        if key.loops {
+            let node = AVAudioPlayerNode()
+            node.volume = Self.volume(for: key)
+            engine.attach(node)
+            engine.connect(node, to: engine.mainMixerNode, format: Self.canonical)
+            loopNodes[key] = node
         }
-        guard !pool.isEmpty else { return false }
-        sfxPools[key] = pool
         return true
     }
+
+    /// Decodes a file once, into the one format every voice is wired for.
+    ///
+    /// `AVAudioFile.processingFormat` is float32 at the *file's* rate and
+    /// channel count, so a 96kHz stereo effect and a 44.1kHz mono one arrive
+    /// incompatible. `AVAudioConverter` resolves both in the same pass.
+    private static func canonicalBuffer(from url: URL) -> AVAudioPCMBuffer? {
+        guard let file = try? AVAudioFile(forReading: url) else { return nil }
+        let source = file.processingFormat
+        guard file.length > 0,
+              let raw = AVAudioPCMBuffer(pcmFormat: source,
+                                         frameCapacity: AVAudioFrameCount(file.length)),
+              (try? file.read(into: raw)) != nil else { return nil }
+        if source == canonical { return raw }
+
+        guard let converter = AVAudioConverter(from: source, to: canonical) else { return nil }
+        let ratio = canonical.sampleRate / source.sampleRate
+        let capacity = AVAudioFrameCount(Double(raw.frameLength) * ratio) + 4096
+        guard let out = AVAudioPCMBuffer(pcmFormat: canonical, frameCapacity: capacity)
+        else { return nil }
+
+        var delivered = false
+        var error: NSError?
+        converter.convert(to: out, error: &error) { _, status in
+            if delivered { status.pointee = .endOfStream; return nil }
+            delivered = true
+            status.pointee = .haveData
+            return raw
+        }
+        return error == nil ? out : nil
+    }
+
+    /// Attaches the shared voices and starts the engine.
+    ///
+    /// Every node is left in `play()` for the life of the app: a running node
+    /// with nothing scheduled is idle, and starting one is the expensive part
+    /// — 44.7ms the first time, measured. Doing it once at launch is what
+    /// keeps `scheduleBuffer` free at the trigger.
+    private func startEngine() {
+        guard voiceNodes.isEmpty else { return }
+        for _ in 0..<Self.voiceCount {
+            let node = AVAudioPlayerNode()
+            engine.attach(node)
+            engine.connect(node, to: engine.mainMixerNode, format: Self.canonical)
+            voiceNodes.append(node)
+            voiceBusy.append(nil)
+        }
+    }
+
+    /// PERF-INSTRUMENTATION (temporary) — lets the suite exercise the real
+    /// scheduling path with the mixer silenced, so the end-to-end cost of
+    /// `play(_:)` can be measured rather than argued about. Remove with the
+    /// rest of the PERF work.
+    private var benchmarking = false
+
+    func startSilentlyForBenchmark() {
+        startEngine()
+        engine.mainMixerNode.outputVolume = 0
+        benchmarking = true
+        ensureRunning()
+    }
+
+    /// Starts, or restarts after an interruption took the engine down.
+    @discardableResult
+    private func ensureRunning() -> Bool {
+        guard !Self.isUnderTest || benchmarking else { return false }
+        if !engine.isRunning {
+            engine.prepare()
+            do { try engine.start() } catch {
+                DiagnosticsLog.shared.log(.error, "audio engine: \(error.localizedDescription)")
+                return false
+            }
+        }
+        for node in voiceNodes where !node.isPlaying { node.play() }
+        return true
+    }
+
+    private static func seconds(of buffer: AVAudioPCMBuffer) -> TimeInterval {
+        Double(buffer.frameLength) / buffer.format.sampleRate
+    }
+
+    private func freeVoice() -> Int? {
+        voiceBusy.firstIndex(where: { $0 == nil })
+    }
+
+    /// How many voices are in use. Read by `AudioEnginePathTests` to prove
+    /// the completion handler gives them back — a pool that leaks voices
+    /// goes silent after twenty-four sounds and nothing else would notice.
+    var busyVoiceCount: Int { voiceBusy.count(where: { $0 != nil }) }
+    var voiceCapacity: Int { voiceNodes.count }
 
     // MARK: - Playback
 
@@ -208,8 +320,8 @@ final class AudioManager {
         play(key, scale: scale)
         // Read off the player rather than hard-coded: these are trimmed assets
         // and the number would rot the moment one is re-cut.
-        if GameSettings.shared.soundOn, let length = sfxPools[key]?.first?.duration {
-            stingEnds = Date().addingTimeInterval(length)
+        if GameSettings.shared.soundOn, let buffer = buffers[key] {
+            stingEnds = Date().addingTimeInterval(Self.seconds(of: buffer))
         }
     }
 
@@ -221,37 +333,58 @@ final class AudioManager {
             worstPlayMs = max(worstPlayMs, (CACurrentMediaTime() - began) * 1000)
         }
 
+        guard let buffer = buffers[key] else { return }
+        // Applied here rather than at preload: the player can move the slider
+        // mid-game, and a level baked in at launch would stay where it was.
+        let level = Self.volume(for: key) * settings.soundVolume * scale
+
+        if key.loops {
+            guard let node = loopNodes[key] else { return }
+            node.volume = level
+            guard ensureRunning() else { return }
+            if !node.isPlaying { node.play() }
+            node.scheduleBuffer(buffer, at: nil, options: [.loops, .interrupts])
+            return
+        }
+
         // Dropped rather than queued. A late explosion is worse than a missing
         // one — the sound would arrive after the thing it belongs to is gone.
         if Self.destructionKeys.contains(key) {
-            let live = Self.destructionKeys.reduce(0) { total, other in
-                total + (sfxPools[other]?.count(where: \.isPlaying) ?? 0)
+            let live = voiceBusy.reduce(0) { total, busy in
+                total + (busy.map(Self.destructionKeys.contains) == true ? 1 : 0)
             }
             guard live < Self.destructionVoiceCap else { return }
         }
-        // Applied here rather than at preload: the player can move the slider
-        // mid-game, and a level baked into a pooled `AVAudioPlayer` would stay
-        // wherever it was when the app launched.
-        let level = Self.volume(for: key) * settings.soundVolume * scale
-        if key.loops {
-            loopPlayers[key]?.volume = level
-            start(loopPlayers[key])
-        } else {
-            guard let pool = sfxPools[key] else { return }
-            let player = pool.first(where: { !$0.isPlaying }) ?? pool[0]
-            player.volume = level
-            player.currentTime = 0
-            start(player)
-            if Self.destructionKeys.contains(key) {
-                destructionEnds = max(destructionEnds,
-                                      Date().addingTimeInterval(player.duration))
-            }
+
+        // Dropped rather than stolen when the pool is full. Stealing meant
+        // `currentTime = 0` on a player mid-flight, measured at 23ms — twice
+        // the cost of an ordinary play, for the privilege of cutting off a
+        // sound someone was already hearing.
+        guard let slot = freeVoice() else { return }
+
+        if Self.destructionKeys.contains(key) {
+            destructionEnds = max(destructionEnds,
+                                  Date().addingTimeInterval(Self.seconds(of: buffer)))
+        }
+
+        guard ensureRunning() else { return }
+        voiceBusy[slot] = key
+        let node = voiceNodes[slot]
+        node.volume = level
+        // `.dataPlayedBack` rather than `.dataRendered`: the voice is not free
+        // until the sound has actually left, or a burst would reuse a node
+        // that is still sounding. The callback is not on the main thread.
+        node.scheduleBuffer(buffer, at: nil, options: [],
+                            completionCallbackType: .dataPlayedBack) { [weak self] _ in
+            Task { @MainActor in self?.voiceBusy[slot] = nil }
         }
     }
 
     func stop(_ key: SoundKey) {
         if key.loops {
-            loopPlayers[key]?.stop()
+            // Stopping clears the schedule; `play(_:)` calls `play()` again
+            // before it reschedules, so the node comes back.
+            loopNodes[key]?.stop()
         }
     }
 
