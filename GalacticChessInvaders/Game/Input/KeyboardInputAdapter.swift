@@ -61,11 +61,22 @@ final class KeyboardFocusedSKView: SKView {
     // `⌘T` and the rest are not arriving here — which is correct, because
     // during name entry they are letters someone is typing.
 
+    /// True while the hidden text field should hold first responder.
+    ///
+    /// `GameView.updateUIView` calls `claimKeyboard()` on every SwiftUI
+    /// update, and the log panel is `@Observable` — so every logged line
+    /// redraws it and the view snatched focus straight back off the text
+    /// field, milliseconds after it got it. The software keyboard could
+    /// never stay up. Claiming has to stand down while name entry owns the
+    /// keyboard.
+    private var nameEntryActive = false
+
     func beginNameEntry(initial: String,
                         maxLength: Int,
                         onChange: @escaping (String) -> Void,
                         onDone: @escaping (String) -> Void,
                         onCoveredHeight: @escaping (CGFloat) -> Void) {
+        nameEntryActive = true
         nameField.begin(in: self,
                         initial: initial,
                         maxLength: maxLength,
@@ -78,6 +89,7 @@ final class KeyboardFocusedSKView: SKView {
     /// `becomeFirstResponder`, because the retry it carries is exactly what
     /// this needs: the field is still resigning as this runs.
     func endNameEntry() {
+        nameEntryActive = false
         nameField.end()
         claimKeyboard()
     }
@@ -128,6 +140,10 @@ final class KeyboardFocusedSKView: SKView {
     /// Cheap, because `becomeFirstResponder` on the current first responder
     /// is a no-op.
     func claimKeyboard(attempt: Int = 0) {
+        // Name entry owns the keyboard while it is up. Without this the view
+        // takes it straight back — `updateUIView` claims on every SwiftUI
+        // pass, and the log panel redraws on every logged line.
+        guard !nameEntryActive else { return }
         guard window != nil, !isFirstResponder else { return }
         if becomeFirstResponder() {
             DiagnosticsLog.shared.log(.input,

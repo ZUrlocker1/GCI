@@ -62,6 +62,22 @@ final class HighScoreEntryNode: SKNode {
         prompt.position = CGPoint(x: centre.x, y: centre.y + 6)
         addChild(prompt)
 
+        // A box around the name, so it reads as something you touch.
+        //
+        // A blinking caret over black does not look like a control on a
+        // touch device, and it has to: the keyboard is summoned by tapping
+        // here rather than automatically, because asking iOS for one
+        // unprompted cost 4.4 seconds of frozen main thread when a hardware
+        // keyboard was attached and not answering.
+        let fieldWidth = CGFloat(Self.maxLength) * 30 + 40
+        let field = SKShapeNode(rect: CGRect(x: centre.x - 150, y: centre.y - 68,
+                                             width: fieldWidth, height: 56),
+                                cornerRadius: 5)
+        field.strokeColor = Self.cyan.withAlphaComponent(0.5)
+        field.fillColor = Self.cyan.withAlphaComponent(0.08)
+        field.lineWidth = 1.5
+        addChild(field)
+
         // Left-aligned with a trailing caret, so the text grows rightward from a
         // fixed point instead of the whole field shifting on every keystroke.
         nameLabel.fontSize = 30
@@ -82,8 +98,8 @@ final class HighScoreEntryNode: SKNode {
         ])))
 
         // Submits whatever has been typed — any length, no need to fill it.
-        let hint = label(InputPrompts.nameEntryHint(max: Self.maxLength), 9,
-                         Self.cyan.withAlphaComponent(0.55))
+        let hint = label(InputPrompts.nameEntryHint(max: Self.maxLength), 10,
+                         Self.cyan.withAlphaComponent(0.85))
         hint.position = CGPoint(x: centre.x, y: centre.y - 92)
         addChild(hint)
 
