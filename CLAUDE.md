@@ -239,7 +239,8 @@ struct PhysicsCategory {
 
 ## Where the project is
 
-**1.2 is live on the Mac App Store**; 1.3 (build 10) is built and unreleased.
+**1.3 (build 10) is the current DMG release**; the Mac App Store still carries
+1.2 until 1.3 is resubmitted.
 Signed, notarized, and also distributed as a DMG. Ten levels play end to end
 with every mechanic, all five power-ups, a settings screen, its own soundtrack
 and full arcade audio.
