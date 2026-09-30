@@ -3815,14 +3815,7 @@ class GameScene: SKScene {
         // so anything that re-enters this path would otherwise prompt again.
         hasOfferedHighScore = true
 
-        // PERF-INSTRUMENTATION (temporary). Fifteen seconds between "ALL 10
-        // WAVES CLEARED" and this panel, reproducibly, on an iPad mini. That
-        // is a timeout, not slow work, and there are only three things here
-        // that could own it — so each one says how long it took rather than
-        // being argued about.
-        let builtAt = CACurrentMediaTime()
         let entry = buildHighScoreEntry()
-        let buildMs = (CACurrentMediaTime() - builtAt) * 1000
         entry.onSubmit = { [weak self] name in
             guard let self else { return }
             ScoreManager.shared.submitHighScore(initials: name)
@@ -3835,23 +3828,20 @@ class GameScene: SKScene {
             self.showGameOverOverlay()
         }
 
-        var keyboardMs: Double = 0
-        #if os(iOS)
-        // The prime suspect. `becomeFirstResponder` asks iOS's input system
-        // for a keyboard, and Zack's iPad has a hardware keyboard that has
-        // already proved flaky — it is why the DONE button exists. A stalled
-        // handshake with a keyboard that is not answering times out in about
-        // this long, and while the main thread waits, nothing can stop a
-        // looping sound or schedule the next buffer. Which would make the
-        // distortion a symptom of the freeze rather than its cause.
-        let keyboardAt = CACurrentMediaTime()
-        beginSoftwareNameEntry()
-        keyboardMs = (CACurrentMediaTime() - keyboardAt) * 1000
-        #endif
-
-        DiagnosticsLog.shared.log(.perf, String(
-            format: "high score panel — build %.0fms, keyboard %.0fms",
-            buildMs, keyboardMs))
+        // **Not requested here, and that is the fix.** Measured on Zack's
+        // iPad at 690ms, 744ms and 4418ms on three consecutive runs, with
+        // the frame rate collapsing to 5fps and the audio distorting while
+        // the main thread waited — `becomeFirstResponder` negotiating with
+        // iOS's input system over a hardware keyboard that is attached and
+        // not answering. Reported as fifteen seconds on the worst runs.
+        //
+        // `GCKeyboard.coalesced` was the first attempt at detecting that and
+        // it does not see his Zagg, so there is no signal to branch on. The
+        // answer is not to ask automatically: a hardware keyboard already
+        // types through `KeyboardFocusedSKView` → `handleKey`, which is how
+        // the Mac has always done this, and a touch-only player gets the
+        // keyboard by tapping the panel. Whoever needs it asks for it, and
+        // the cost lands on a deliberate tap instead of on the ending.
 
         // Let the loss sting finish first. `asyncAfter` rather than an
         // `SKAction`: an overlay can pause the scene, and a paused node's
@@ -6113,6 +6103,10 @@ class GameScene: SKScene {
             if hit.name == HighScoreEntryNode.doneButtonName {
                 AudioManager.shared.play(.uiButtonClick)
                 pressButton(hit) { [weak self] in self?.highScoreEntry?.submit() }
+            } else {
+                // Anywhere else on the panel asks for the keyboard. Whoever
+                // needs one taps for it; a hardware keyboard just types.
+                beginSoftwareNameEntry()
             }
             return
         }
