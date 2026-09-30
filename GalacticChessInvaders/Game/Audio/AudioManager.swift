@@ -170,10 +170,19 @@ final class AudioManager {
         // when `SoundKey` does, so they said the same thing on every launch
         // while taking up the one line that says the audio came up at all.
         startEngine()
-        for key in SoundKey.allCases { preload(key) }
+        // Timed because it is the one piece of launch work the rewrite added,
+        // and it is not small: 42 files decoded to float32 and resampled to a
+        // common rate — two of them from 48kHz and 96kHz — all on the main
+        // thread before the first frame. If this is seconds on an A12 it is
+        // the startup distortion, and it needs to come off the main thread.
+        let began = CACurrentMediaTime()
+        var loaded = 0
+        for key in SoundKey.allCases where preload(key) { loaded += 1 }
+        let decodeMs = (CACurrentMediaTime() - began) * 1000
         ensureRunning()
 
-        DiagnosticsLog.shared.log(.audio, "SFX ready")
+        DiagnosticsLog.shared.log(.audio, String(
+            format: "SFX ready — %d sounds decoded in %.0fms", loaded, decodeMs))
     }
 
     /// Returns false if the sound is not available to load.
