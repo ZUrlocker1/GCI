@@ -12,6 +12,34 @@ final class AudioManager {
     static let shared = AudioManager()
     private init() {}
 
+    /// Silent under XCTest, and not negotiable.
+    ///
+    /// The suite launches the app as its test host, so the app starts, the
+    /// soundtrack starts, and seventy seconds of it plays out of whoever is
+    /// running the tests. Muting by hand is a thing to forget; muting through
+    /// `GameSettings` writes the player's own settings; and passing
+    /// `-GCI_MusicOn NO` through the scheme does not work, because Xcode
+    /// sends it as a single argv element and `NSArgumentDomain` never parses
+    /// it into a key and a value.
+    ///
+    /// So the check lives here, at the one place sound is produced.
+    /// `XCTestConfigurationFilePath` is set by XCTest in the host process and
+    /// by nothing else, so a real launch is unaffected.
+    static let isUnderTest =
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
+    /// The one place a sound actually starts, so the test guard is the one
+    /// line in it.
+    ///
+    /// Deliberately *here* rather than at the top of `play` and `preloadAll`,
+    /// which was the first cut and broke `AudioAssetTests`: those methods also
+    /// load the assets and record how long a sting runs, and the suite reads
+    /// that bookkeeping. Loading a file is silent; only playback is not.
+    private func start(_ player: AVAudioPlayer?) {
+        guard !Self.isUnderTest else { return }
+        player?.play()
+    }
+
     // One pool per non-looping key (round-robin for polyphony)
     private var sfxPools:    [SoundKey: [AVAudioPlayer]] = [:]
     // One player per looping key
@@ -160,13 +188,13 @@ final class AudioManager {
         let level = Self.volume(for: key) * settings.soundVolume * scale
         if key.loops {
             loopPlayers[key]?.volume = level
-            loopPlayers[key]?.play()
+            start(loopPlayers[key])
         } else {
             guard let pool = sfxPools[key] else { return }
             let player = pool.first(where: { !$0.isPlaying }) ?? pool[0]
             player.volume = level
             player.currentTime = 0
-            player.play()
+            start(player)
             if Self.destructionKeys.contains(key) {
                 destructionEnds = max(destructionEnds,
                                       Date().addingTimeInterval(player.duration))
@@ -287,6 +315,9 @@ final class AudioManager {
     func playMusic(_ trackName: String, volume: Float = AudioManager.musicVolume,
                    startAt: TimeInterval = 0, fadeIn: TimeInterval = 0,
                    loops: Bool = true) {
+        // Every route to the soundtrack ends here — `fadeTo`, `playMusic(from:)`
+        // and the direct calls — so this one guard is the whole of it.
+        guard !Self.isUnderTest else { return }
         guard let url = Bundle.main.url(forResource: trackName, withExtension: "m4a",
                                         subdirectory: Self.musicDirectory) else {
             DiagnosticsLog.shared.log(.error, "Music not found: \(trackName).m4a")

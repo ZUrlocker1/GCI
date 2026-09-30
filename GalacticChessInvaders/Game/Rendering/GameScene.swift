@@ -3221,6 +3221,19 @@ class GameScene: SKScene {
             showHUD()
             hudNode?.updateScore(ScoreManager.shared.currentScore)
         }
+
+        // A rebuilt HUD is a *fresh* HUD, and a fresh one knows nothing about
+        // a panel being open: its SET / INFO pair comes back unhidden, and on
+        // iOS `showHUD` hands out a new FIRE button, drawn at z 30 — over the
+        // panel shade at 19 and the panel itself at 20.
+        //
+        // That is the rotation bug. Turning the iPad with Settings or How To
+        // Play open resizes the scene, which runs this method, which rebuilds
+        // the HUD underneath the panel and puts gameplay chrome back on top
+        // of it. Re-stating the chrome afterwards is the fix, and it belongs
+        // here rather than inside `showHUD` — the rebuild is what is unusual,
+        // not the showing.
+        syncPanelChrome()
     }
 
     /// Lights the king of `side` red, clearing any previously lit king. Passing

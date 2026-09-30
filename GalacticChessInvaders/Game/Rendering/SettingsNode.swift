@@ -186,7 +186,7 @@ final class SettingsNode: SKNode {
             self.settings.chessHintsUserSet = true
             self.settings.chessHints = $0
         }
-        explain("PULSE THE BEST PIECES TO MOVE. ON FOR CADET.", x: x, y: 376)
+        explain("PULSE THE BEST PIECES TO MOVE", x: x, y: 376)
 
         heading("AUDIO", Self.cyan, x: x, y: 340)
         // Both audio sliders are shown as a fraction of `audioMax`, so the
@@ -221,18 +221,22 @@ final class SettingsNode: SKNode {
         toggleRow("NEON GLOW", x: x, w: w, y: 512, value: settings.neonGlow) {
             self.settings.neonGlow = $0
         }
+        #if os(macOS)
         explain("TURN OFF ON A SLOWER MAC", x: x, y: 490)
+        #else
+        explain("TURN OFF ON A SLOWER DEVICE", x: x, y: 490)
+        #endif
 
         sliderRow("BOARD GRID", x: x, w: w, y: 460, fraction: settings.boardGrid,
                   readout: percent(settings.boardGrid), dimmed: false, defaultMark: 0.5) {
             self.settings.boardGrid = $0
         }
-        explain("0% = OPEN SPACE, 100% = NAMED ROWS, COLS", x: x, y: 435)
+        explain("0% OPEN SPACE · 100% ROWS AND COLS", x: x, y: 435)
 
         toggleRow("NEBULA", x: x, w: w, y: 408, value: settings.nebula) {
             self.settings.nebula = $0
         }
-        explain("COLORED HAZE BACKGROUND IN LATER LEVELS", x: x, y: 386)
+        explain("COLORED HAZE IN LATER LEVELS", x: x, y: 386)
 
         // Only inside Test Mode — see `GameScene.toggleDiagnostics`. The row
         // is omitted rather than dimmed, because a disabled switch invites the
@@ -461,7 +465,7 @@ final class SettingsNode: SKNode {
     // MARK: - Primitives
 
     private func rowLabel(_ text: String, x: CGFloat, y: CGFloat, dimmed: Bool = false) {
-        let node = label(text, 9, SKColor.white.withAlphaComponent(dimmed ? 0.32 : 0.88), .left)
+        let node = label(text, 10, SKColor.white.withAlphaComponent(dimmed ? 0.36 : 0.92), .left)
         node.verticalAlignmentMode = .center
         node.position = CGPoint(x: x, y: y)
         content.addChild(node)
@@ -473,8 +477,21 @@ final class SettingsNode: SKNode {
         content.addChild(node)
     }
 
+    /// The grey line under a row, explaining what it does.
+    ///
+    /// 10pt and 0.55, up from 8pt and 0.38. Two things made the old setting
+    /// hard to read and only one of them was the size: at 0.38 on black this
+    /// was nearly as faint as the panel's hairlines.
+    ///
+    /// 10 is the ceiling, not a preference. Press Start 2P advances one em
+    /// per character and the left column is 420pt, so the longest line here
+    /// may be 42 characters — two of them had to be cut to fit. And the panel
+    /// is composed at 960 wide and scaled to fit, so in portrait on an iPad
+    /// mini every size here renders at 0.775 of itself: 10pt lands at 7.8.
+    /// Genuinely comfortable portrait type needs the panel restructure in
+    /// §7, not a larger number here.
     private func explain(_ text: String, x: CGFloat, y: CGFloat) {
-        let node = label(text, 8, SKColor.white.withAlphaComponent(0.38), .left)
+        let node = label(text, 10, SKColor.white.withAlphaComponent(0.55), .left)
         node.position = CGPoint(x: x, y: y)
         content.addChild(node)
     }

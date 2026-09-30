@@ -6324,3 +6324,119 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
         XCTAssertLessThan(highest, 664, "clear of the HUD")
     }
 }
+
+/// Rotating an iPad with a panel open is a resize, and a resize rebuilds the
+/// HUD — which is where this went wrong.
+///
+/// `applyLayout` tears the HUD down and builds it again, because the bar bakes
+/// the scene width in at construction. The rebuilt one is *fresh*: its
+/// SET / INFO pair comes back unhidden, and on iOS `showHUD` hands out a new
+/// FIRE button drawn at z 30, over the panel shade at 19 and the panel at 20.
+/// So turning the device put gameplay chrome on top of Settings.
+///
+/// The FIRE button is iOS-only and cannot be asserted here, but it is the same
+/// fault and the same fix — `syncPanelChrome()` after the rebuild — so pinning
+/// the nav pair pins both.
+@MainActor
+final class PanelChromeAcrossResizeTests: XCTestCase {
+
+    private func nav(_ scene: GameScene) -> SKNode? {
+        scene.children
+            .compactMap { $0 as? HUDNode }
+            .first?
+            .childNode(withName: HUDNode.navName)
+    }
+
+    private func playing() throws -> GameScene {
+        let scene = GameScene.shared
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+        view.presentScene(scene)
+        if !(scene.stateMachine.currentState is TitleState) {
+            XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
+        }
+        XCTAssertTrue(scene.stateMachine.enter(PlayingState.self))
+        scene.showHUD()
+        return scene
+    }
+
+    override func tearDown() async throws {
+        GameScene.shared.hideSettings()
+        GameScene.shared.size = CGSize(width: 960, height: 700)
+        _ = GameScene.shared.stateMachine.enter(TitleState.self)
+    }
+
+    func testPanelHidesTheHUDNav() throws {
+        let scene = try playing()
+        XCTAssertEqual(nav(scene)?.isHidden, false, "visible during play")
+        scene.showSettings()
+        XCTAssertEqual(nav(scene)?.isHidden, true, "and hidden under a panel")
+    }
+
+    /// The regression. Portrait to landscape, with Settings up.
+    func testResizeWithSettingsOpenLeavesTheNavHidden() throws {
+        let scene = try playing()
+        scene.showSettings()
+
+        let before = nav(scene).map(ObjectIdentifier.init)
+        scene.size = CGSize(width: 700, height: 960)
+        let after = nav(scene).map(ObjectIdentifier.init)
+        XCTAssertNotEqual(before, after,
+                          "the resize must actually rebuild the HUD, or this "
+                          + "test proves nothing")
+
+        XCTAssertEqual(nav(scene)?.isHidden, true,
+                       "a rotation must not put the HUD's buttons over Settings")
+    }
+
+    /// And the panel is still the one that is up — the resize must not have
+    /// quietly dismissed it, which is the other half of what a player sees.
+    func testResizeWithHowToPlayOpenLeavesTheNavHidden() throws {
+        let scene = try playing()
+        scene.showHowToPlay()
+        defer { scene.hideHowToPlay() }
+
+        scene.size = CGSize(width: 700, height: 960)
+
+        XCTAssertEqual(nav(scene)?.isHidden, true,
+                       "How To Play is covered by the same rebuild")
+    }
+
+    /// Closing the panel after a resize gives the buttons back, so the fix is
+    /// not simply hiding them forever.
+    func testNavReturnsAfterThePanelCloses() throws {
+        let scene = try playing()
+        scene.showSettings()
+        scene.size = CGSize(width: 700, height: 960)
+        scene.hideSettings()
+        XCTAssertEqual(nav(scene)?.isHidden, false)
+    }
+}
+
+/// The test suite must not make a sound.
+///
+/// The suite launches the app as its test host, so the app comes up and the
+/// soundtrack comes up with it — seventy seconds of music out of whoever is
+/// running the tests, every run. Muting by hand is a thing to forget, and
+/// muting through `GameSettings` would write the player's own settings.
+///
+/// Passing `-GCI_MusicOn NO` through the scheme was tried and does not work:
+/// Xcode sends it as a single argv element, so `NSArgumentDomain` never
+/// splits it into a key and a value and `UserDefaults` never sees it.
+@MainActor
+final class AudioIsSilentUnderTestTests: XCTestCase {
+
+    func testTheSuiteKnowsItIsATest() {
+        XCTAssertTrue(AudioManager.isUnderTest,
+                      "XCTestConfigurationFilePath is how the guard detects a "
+                      + "test run; if this fails the suite has started singing")
+    }
+
+    /// Belt and braces: calling the loudest entry points must leave no player
+    /// running. This is the assertion that would actually catch a regression,
+    /// since it does not care *how* the guard is implemented.
+    func testPlayingMusicUnderTestStartsNothing() {
+        AudioManager.shared.playMusic(MusicVariants.introTrack)
+        XCTAssertNil(AudioManager.shared.currentTrack,
+                     "the soundtrack must not start during a test run")
+    }
+}
