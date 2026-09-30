@@ -97,6 +97,19 @@ enum InputPrompts {
         #endif
     }
 
+    /// The footer of the high score name entry.
+    ///
+    /// The key is named on the Mac and the button on iOS, where the software
+    /// keyboard's return key is labelled DONE — `returnKeyType = .done` in
+    /// `NameEntryField`, so the two say the same word.
+    static func nameEntryHint(max: Int) -> String {
+        #if os(macOS)
+        "RETURN WHEN DONE   ·   UP TO \(max) CHARACTERS"
+        #else
+        "TAP DONE   ·   UP TO \(max) CHARACTERS"
+        #endif
+    }
+
     /// The wave-clear overlay, which carries the next level's number.
     /// Unpadded: `OutcomePresentationTests` reads "LEVEL 3", and the banner
     /// has said it that way since 0.2.

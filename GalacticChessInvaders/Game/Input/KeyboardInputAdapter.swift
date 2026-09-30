@@ -50,6 +50,38 @@ final class KeyboardFocusedSKView: SKView {
 
     private var keyWindowObserver: NSObjectProtocol?
 
+    /// The system keyboard, for the one screen that needs typing. Built on
+    /// demand: most sessions never make the high score table.
+    private lazy var nameField = NameEntryField()
+
+    // MARK: - Name entry
+    //
+    // The keyboard has to change hands and change back. This view holds first
+    // responder to read hardware keys, so while the text field has it, `L`,
+    // `⌘T` and the rest are not arriving here — which is correct, because
+    // during name entry they are letters someone is typing.
+
+    func beginNameEntry(initial: String,
+                        maxLength: Int,
+                        onChange: @escaping (String) -> Void,
+                        onDone: @escaping (String) -> Void,
+                        onCoveredHeight: @escaping (CGFloat) -> Void) {
+        nameField.begin(in: self,
+                        initial: initial,
+                        maxLength: maxLength,
+                        onChange: onChange,
+                        onDone: onDone,
+                        onCoveredHeight: onCoveredHeight)
+    }
+
+    /// Ends it and takes the keyboard back. `claimKeyboard` rather than a bare
+    /// `becomeFirstResponder`, because the retry it carries is exactly what
+    /// this needs: the field is still resigning as this runs.
+    func endNameEntry() {
+        nameField.end()
+        claimKeyboard()
+    }
+
     override func didMoveToWindow() {
         super.didMoveToWindow()
         claimKeyboard()

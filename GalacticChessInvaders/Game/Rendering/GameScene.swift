@@ -1279,6 +1279,52 @@ class GameScene: SKScene {
         versionBadge?.position = CGPoint(x: 10, y: size.height - HUDNode.height - 16)
     }
 
+    // MARK: - Name entry on a touch device
+    //
+    // `HighScoreEntryNode` reads `KeyPress` and nothing else, so on an iPad
+    // with no keyboard a player who made the table could not type a name —
+    // only tap out of the screen and record a blank one. The system keyboard
+    // fixes it from one path: attached hardware keeps working untouched, and
+    // `NameEntryField` puts the software keyboard up when there is none.
+
+    /// How much of the bottom of the screen the keyboard covers, kept so a
+    /// rebuild at a new scene size can put the lift back.
+    private var keyboardCoveredHeight: CGFloat = 0
+
+    private func beginSoftwareNameEntry() {
+        guard let view = view as? KeyboardFocusedSKView,
+              let entry = highScoreEntry else { return }
+        view.beginNameEntry(
+            initial: entry.enteredName,
+            maxLength: HighScoreEntryNode.maxLength,
+            onChange: { [weak self] text in self?.highScoreEntry?.restore(name: text) },
+            onDone: { [weak self] _ in self?.highScoreEntry?.submit() },
+            onCoveredHeight: { [weak self] height in self?.liftNameEntry(above: height) })
+    }
+
+    private func endSoftwareNameEntry() {
+        keyboardCoveredHeight = 0
+        (view as? KeyboardFocusedSKView)?.endNameEntry()
+    }
+
+    /// Slides the entry overlay up by half of what the keyboard covers, which
+    /// re-centres its contents in the band that is left.
+    ///
+    /// The scrim rises with it and stops short of the bottom edge, which is
+    /// fine — the keyboard is what is down there. Recomposing the node
+    /// against a shorter scene would be tidier and costs a full rebuild on
+    /// every keyboard frame change, including the ones that only slide a
+    /// floating keyboard sideways.
+    private func liftNameEntry(above covered: CGFloat) {
+        keyboardCoveredHeight = covered
+        guard let highScoreEntry else { return }
+        highScoreEntry.removeAction(forKey: Self.nameLiftKey)
+        highScoreEntry.run(.moveTo(y: covered / 2, duration: 0.2),
+                           withKey: Self.nameLiftKey)
+    }
+
+    private static let nameLiftKey = "nameLift"
+
     // MARK: - The test strip
     //
     // `P`, `R` and `V` as buttons. They live and die with Test Mode, so a
@@ -3036,6 +3082,11 @@ class GameScene: SKScene {
             let fresh = buildHighScoreEntry()
             fresh.onSubmit = submit
             fresh.restore(name: typed)
+            #if os(iOS)
+            // The fresh node is composed at the full scene height, so the
+            // keyboard would be back over it.
+            fresh.position.y = keyboardCoveredHeight / 2
+            #endif
         }
     }
 
@@ -3675,6 +3726,9 @@ class GameScene: SKScene {
     func hideGameOverOverlay() {
         gameOverNode?.removeFromParent()
         gameOverNode = nil
+        #if os(iOS)
+        if highScoreEntry != nil { endSoftwareNameEntry() }
+        #endif
         highScoreEntry?.removeFromParent()
         highScoreEntry = nil
     }
@@ -3688,11 +3742,18 @@ class GameScene: SKScene {
         entry.onSubmit = { [weak self] name in
             guard let self else { return }
             ScoreManager.shared.submitHighScore(initials: name)
+            #if os(iOS)
+            self.endSoftwareNameEntry()
+            #endif
             self.highScoreEntry?.removeFromParent()
             self.highScoreEntry = nil
             self.refreshHUD()
             self.showGameOverOverlay()
         }
+
+        #if os(iOS)
+        beginSoftwareNameEntry()
+        #endif
 
         // Let the loss sting finish first. `asyncAfter` rather than an
         // `SKAction`: an overlay can pause the scene, and a paused node's

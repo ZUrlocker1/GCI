@@ -531,10 +531,35 @@ on a touch device:
 | `GameScene` quit prompt | `Y / N` | two buttons — `QUIT` / `KEEP PLAYING` |
 | Arcade Hint, fire | `PRESS SPACE` / `TO FIRE!` | `TAP THE` / `FIRE BUTTON!` |
 | Arcade Hint, steer | `USE ARROWS` / `TO MOVE!` | `DRAG TO` / `MOVE SHIP!` |
-| `HighScoreEntryNode` | `RETURN WHEN DONE  ·  UP TO 3 CHARACTERS` | `DONE  ·  UP TO 3 CHARACTERS` |
+| `HighScoreEntryNode` | `RETURN WHEN DONE  ·  UP TO 8 CHARACTERS` | `TAP DONE  ·  UP TO 8 CHARACTERS` |
 | How To Play, controls | chips `← →` / `SPACE` / `CLICK` / `ESC` | `DRAG` / `FIRE` / `TAP` / `PAUSE`, naming the on-screen controls |
 | `SettingsNode`, log row | `SAME AS THE L KEY` | drop the line |
 | Test Mode gate | `⌘T FIRST` | `TEST MODE FIRST` |
+
+**That row was hiding a hole, and the table's own framing is what hid it.** Every other
+line here is a control that exists on iOS and is named wrongly; this one was a control
+that did not exist at all. `HighScoreEntryNode` reads `KeyPress` and nothing else, so a
+touch-only player who made the table could not type a name — a tap fell through to
+`resetToTitle` and the run was recorded blank. Changing `RETURN` to `DONE` would have
+renamed a button nobody could press. (It is eight characters, not three; the table row
+was wrong about that too.)
+
+**Built: the system keyboard, via `NameEntryField`.** A bespoke A–Z picker is the arcade
+convention and was the first plan. The system keyboard wins on one point that outweighs
+the idiom — it serves both kinds of input from a single path. With a hardware keyboard
+attached nothing changes and no software keyboard appears; without one, iOS puts the
+keyboard up. A picker would be redundant chrome for anyone on a Magic Keyboard, and four
+more layouts to get right across the device passes.
+
+It is the usual SpriteKit shim: a `UITextField` sized 1×1 with clear colours, first
+responder only while the entry screen is up, filtered to printable ASCII because Press
+Start 2P has glyphs for nothing else. Two details that are not obvious. First, the
+keyboard covers the bottom of the screen, so the overlay slides up by half of what is
+covered — `keyboardWillChangeFrameNotification`, intersected against the view's bounds,
+which handles the floating and split keyboards on iPad by the same path as the docked
+one. Second, `KeyboardFocusedSKView` has to *take first responder back* afterwards, or
+every hardware key stops arriving — `endNameEntry` calls `claimKeyboard`, whose bounded
+retry is exactly what is needed while the field is still resigning.
 
 Two notes on that table. The Arcade Hints are the constrained ones —
 `ChessHintNode.ControlPrompt` returns two lines and the column fits about eleven

@@ -128,6 +128,7 @@
 		810F0928A47208EA127E979E /* PieceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86607BAC135182D9E5F8BD4 /* PieceNode.swift */; };
 		82FBE8F0FE17EC1EED7ECC03 /* GameOverNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */; };
 		85830BC31A121E884D7C827C /* GameStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */; };
+		87AB039948F046CE721C523D /* NameEntryField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455DF28033FB896489EDFBE7 /* NameEntryField.swift */; };
 		87FF43D18AB562A891F9F2EB /* ChessEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00359D531409FD8FEF80590 /* ChessEngine.swift */; };
 		889F0676F6B449554065AC28 /* chess-w-knight-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = F7658142CFF640B25888ADBB /* chess-w-knight-d2.png */; };
 		8916FC9528C763093B5D18BE /* LaserPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C9EB476F38A1115CA12AE8 /* LaserPool.swift */; };
@@ -152,6 +153,7 @@
 		9F1596A7F6BC01E4F501C8D7 /* chess-w-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = B1C4ECE6D9D8E3925073ACFE /* chess-w-king-d2.png */; };
 		9FA864C3A1A1170A6DA19CC2 /* GameOverScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC4BC0D1B2AAFBA570F24F4 /* GameOverScene.swift */; };
 		A2784D2036C624089B6F8ED0 /* MusicVariants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B881B3211D393C65EE95DC56 /* MusicVariants.swift */; };
+		A2A0C1F9A972F91814602F9A /* NameEntryField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455DF28033FB896489EDFBE7 /* NameEntryField.swift */; };
 		A48C365E31A834FAD4782D2B /* ship-camel-c.png in Resources */ = {isa = PBXBuildFile; fileRef = 3420846073BE18C53447E8B2 /* ship-camel-c.png */; };
 		A4A3E07979353792EF694F11 /* chess-b-bishop.png in Resources */ = {isa = PBXBuildFile; fileRef = 89C03C76F77C2116A0D5D2BB /* chess-b-bishop.png */; };
 		A504046DA183FD217143DACE /* LevelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3958B7024DAADC15E5C557B9 /* LevelManager.swift */; };
@@ -286,6 +288,7 @@
 		416A804FC2359078E164449E /* ChessFEN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessFEN.swift; sourceTree = "<group>"; };
 		433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceshipNode.swift; sourceTree = "<group>"; };
 		434106FC1B4B61FF73D33D6D /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = GalacticChessInvaders/Resources/music; sourceTree = SOURCE_ROOT; };
+		455DF28033FB896489EDFBE7 /* NameEntryField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameEntryField.swift; sourceTree = "<group>"; };
 		4653CBF5CC5AE085AA7195D2 /* chess-w-queen-d2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-queen-d2.png"; sourceTree = "<group>"; };
 		46E88C786A6B62EF1391252D /* GCITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GCITests.swift; sourceTree = "<group>"; };
 		46F6F35A994CABC71E91B264 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -602,6 +605,7 @@
 				FBEEDFCF2C7B25C534D69FB8 /* KeyboardInputAdapter.swift */,
 				6F42DE810C8534D684F0CBC0 /* KeyPress.swift */,
 				25F41233D63B1F66EE664E87 /* MacInputAdapter.swift */,
+				455DF28033FB896489EDFBE7 /* NameEntryField.swift */,
 				A31680B5E066A40DE4421288 /* TouchInputAdapter.swift */,
 			);
 			path = Input;
@@ -628,28 +632,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_809E20B6-13DF-41C5-8AC0-20D86621CCBE" /* .claude */ = {
+		"TEMP_387BE148-7FCF-4477-BFC9-040F9DFF4A1B" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_9315542B-9DFB-4BFE-B09F-60DF5E5D062D" /* .claude */ = {
+		"TEMP_ACFC6900-9A61-45DD-88D9-EA8E74E4D815" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_94C8715B-97ED-475D-AE60-A26336DD807F" /* .claude */ = {
+		"TEMP_C891E4F3-788A-4F8F-84AF-A61882D977DB" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_FE28BFBF-8A92-4A1C-8F9A-819CCC2B9B61" /* .claude */ = {
+		"TEMP_D6581948-557C-4E0A-B5F6-154725D1310A" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -920,6 +924,7 @@
 				AA42BB90D142078098CEC2C0 /* MacInputAdapter.swift in Sources */,
 				97705FE9DD4E31AE447668AD /* MusicLibrary.swift in Sources */,
 				A2784D2036C624089B6F8ED0 /* MusicVariants.swift in Sources */,
+				87AB039948F046CE721C523D /* NameEntryField.swift in Sources */,
 				FAB43706A371DD88D34AB3D6 /* NeonPalette.swift in Sources */,
 				761E80CDFA1BA24920975185 /* PhysicsCategory.swift in Sources */,
 				10EC7FDA96FB9D9DF9ED8846 /* Piece.swift in Sources */,
@@ -996,6 +1001,7 @@
 				17383AD91DFCBA97D9D94795 /* MacInputAdapter.swift in Sources */,
 				10E6831FDBF069A9C645AA76 /* MusicLibrary.swift in Sources */,
 				307160FF13738695496D01B6 /* MusicVariants.swift in Sources */,
+				A2A0C1F9A972F91814602F9A /* NameEntryField.swift in Sources */,
 				1D4796CAB8534A6870CFBE42 /* NeonPalette.swift in Sources */,
 				BAB4CB4D9C72DA7B0410F459 /* PhysicsCategory.swift in Sources */,
 				470834A6A8F44559446005C5 /* Piece.swift in Sources */,

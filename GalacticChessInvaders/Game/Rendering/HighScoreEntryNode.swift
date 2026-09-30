@@ -77,8 +77,8 @@ final class HighScoreEntryNode: SKNode {
             .wait(forDuration: 0.4), .hide(), .wait(forDuration: 0.4), .unhide(),
         ])))
 
-        // Return submits whatever has been typed — any length, no need to fill it.
-        let hint = label("RETURN WHEN DONE   ·   UP TO \(Self.maxLength) CHARACTERS", 9,
+        // Submits whatever has been typed — any length, no need to fill it.
+        let hint = label(InputPrompts.nameEntryHint(max: Self.maxLength), 9,
                          Self.cyan.withAlphaComponent(0.55))
         hint.position = CGPoint(x: centre.x, y: centre.y - 92)
         addChild(hint)
@@ -91,13 +91,20 @@ final class HighScoreEntryNode: SKNode {
 
     // MARK: - Key handling
 
+    /// Hands over whatever has been typed. Shared by Return on a keyboard and
+    /// Done on the software one, so the two cannot drift — including the
+    /// fallback, which is what stops a row reading as blank.
+    func submit() {
+        let trimmed = enteredName.trimmingCharacters(in: .whitespaces)
+        onSubmit?(trimmed.isEmpty ? "PLAYER" : trimmed)
+    }
+
     /// Returns true if the press was consumed.
     @discardableResult
     func handleKey(_ key: KeyPress) -> Bool {
         switch key.code {
         case .enter:
-            let trimmed = enteredName.trimmingCharacters(in: .whitespaces)
-            onSubmit?(trimmed.isEmpty ? "PLAYER" : trimmed)
+            submit()
             return true
         case .delete:
             if !enteredName.isEmpty { enteredName.removeLast(); refresh() }
