@@ -1,6 +1,6 @@
 # Galactic Chess Invaders Change Log
 
-## V 1.3 (Build 10)  Sound Without the Stutter
+## V 1.3 (Build 10)  Sound Without the Stutter  *— in development*
 
 *One fix, and it is the whole release: the game stopped doing file and codec work every time it played a sound.*
 

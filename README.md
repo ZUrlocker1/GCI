@@ -30,11 +30,11 @@ clock and comes apart as you play it.
 
 Or [download the DMG for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.2.dmg) directly.
 
-Current release: `1.2` (build 9). Universal binary — runs natively on both Apple Silicon and Intel
+Current release: `1.2` (build 9) — what is on the App Store and in the DMG above. Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
 
-**What's new in v1.3** — the sound engine, rebuilt:
+**In development — v1.3** (build 10, not yet released) — the sound engine, rebuilt:
 
 - **Heavy fire no longer costs frames.** Sound effects are decoded once at launch and played from a pool of voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot — **11.7ms a shot, down to 0.03ms**. A Mac that dropped into the 40s under sustained fire, and an iPad mini that dropped into the 20s, both hold 60 now.
 - **NEON GLOW actually turns the glow off.** It cleared the blur but left the offscreen render pass in place, so the expensive half never went away.

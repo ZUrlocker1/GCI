@@ -230,7 +230,10 @@ check them against the requirements.
 - [ ] **GCI section added to https://www.mzurlocker.com/privacy** — the only hard blocker; text in `docs/privacy-policy.md`
 - [ ] Bundle ID registered in the developer portal — `com.zurlocker.GalacticChessInvaders`, team `K66MA9TR8Z`, no capabilities
 - [ ] App Store Connect record created — macOS, name `Galactic Chess Invaders`, SKU `GCI-001`, English, then Pricing → Free
-- [x] **Version bumped** — `MARKETING_VERSION` **1.1**, `CURRENT_PROJECT_VERSION` **8**
+- [x] **Version bumped** — `MARKETING_VERSION` **1.3**, `CURRENT_PROJECT_VERSION` **10**.
+  Both targets, set in `project.yml`; the plists read `$(MARKETING_VERSION)` and
+  `$(CURRENT_PROJECT_VERSION)` rather than carrying numbers of their own. Shipped so
+  far: 1.0 (build 7), 1.1 (build 8), 1.2 (build 9)
 - [x] **Signing switched to Automatic** — Release no longer pins `CODE_SIGN_IDENTITY`; `CODE_SIGN_STYLE = Automatic`, team `K66MA9TR8Z`. Matches the ZudioiOS App Store target. Verified: Release builds and signs as "Apple Development: Zack Urlocker (DKP93R82F9)", universal, hardened runtime, sandboxed
 - [ ] Archive and upload via Xcode Organizer
 - [ ] App icon — `Resources/AppIcon.icns` carries a 1024×1024 rep, so this is covered. It is missing the 16pt and 32pt @1x members, which is cosmetic, not a blocker

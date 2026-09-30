@@ -8,7 +8,7 @@
 
 ## What This Game Is
 
-An arcade-chess hybrid for macOS (Swift / SpriteKit). A real chess game plays out on screen, but Black's pieces simultaneously behave as an arcade invader fleet — sliding left and right, descending, and firing at the player. The player controls White's chess moves **and** a horizontally-moving laser spaceship at the bottom of the screen, simultaneously.
+An arcade-chess hybrid for macOS and iPad (Swift / SpriteKit). A real chess game plays out on screen, but Black's pieces simultaneously behave as an arcade invader fleet — sliding left and right, descending, and firing at the player. The player controls White's chess moves **and** a horizontally-moving laser spaceship at the bottom of the screen, simultaneously.
 
 The chess game is real but fast and shallow (5-second turn timer, 1–2 ply engine). Arcade reflex, not deep strategy, determines whether you survive.
 
@@ -239,14 +239,19 @@ struct PhysicsCategory {
 
 ## Where the project is
 
-**Shipping as v1.1, and development is complete.** Signed, notarized,
-distributed as a DMG. Ten levels play end to end with every mechanic, all five
-power-ups, a settings screen, its own soundtrack and full arcade audio.
+**1.2 is live on the Mac App Store**; 1.3 (build 10) is built and unreleased.
+Signed, notarized, and also distributed as a DMG. Ten levels play end to end
+with every mechanic, all five power-ups, a settings screen, its own soundtrack
+and full arcade audio.
 
-What is left is playtest adjustment — a balance pass and an Instruments run.
-Read
-`docs/implementation.md` for the current state; it is kept accurate and this file
-is not a substitute for it.
+**There is an iPad build.** The game plays by touch — drag the ship, hold FIRE,
+tap a piece and tap its square — with its own Test Mode, name entry and
+end-of-run buttons. It has not shipped. `docs/IOS-Port.md` is the plan and the
+record of where it landed; the remaining Phase 1 work is a sweep across the
+four iPad sizes.
+
+Read `docs/implementation.md` for the current state; it is kept accurate and
+this file is not a substitute for it.
 
 Deliberately not building: Escorts, the Flagship, Kamikaze and Llama raiders
 (§6), attract mode (§14.2), wireframe debris (§12.4), 8-frame explosion sheets
