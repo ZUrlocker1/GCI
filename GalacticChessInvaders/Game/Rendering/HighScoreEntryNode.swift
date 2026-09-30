@@ -12,6 +12,10 @@ final class HighScoreEntryNode: SKNode {
 
     static let maxLength = 8
 
+    /// The scene hit-tests for this. Box and label share the name so
+    /// `GameScene.pressButton` moves them together.
+    static let skipButtonName = "highScoreSkip"
+
     private static let cyan   = NeonPalette.cyan
     private static let orange = NeonPalette.orange
     private static let font   = "PressStart2P-Regular"
@@ -83,8 +87,52 @@ final class HighScoreEntryNode: SKNode {
         hint.position = CGPoint(x: centre.x, y: centre.y - 92)
         addChild(hint)
 
+        #if os(iOS)
+        addSkipButton(at: centre)
+        #endif
+
         refresh()
     }
+
+    #if os(iOS)
+    /// The way off this screen when nothing else works.
+    ///
+    /// The software keyboard carries DONE, and that was the only touch route
+    /// out — which fails in a case that is not rare at all: **a hardware
+    /// keyboard that is connected but flat.** iOS still counts it as attached
+    /// and suppresses the software keyboard, so nothing appears, nothing
+    /// types, and the screen has no exit. Zack hit exactly that with a Zagg
+    /// case on the mini.
+    ///
+    /// It submits rather than discards, so anything already typed is kept and
+    /// an empty field falls back to PLAYER — the same `submit()` Return and
+    /// DONE use. A blank row in the high score table would look like the game
+    /// had broken, which is not what "skip" should mean.
+    ///
+    /// Placed above the keyboard's reach: the overlay lifts by half of what
+    /// the keyboard covers, and at 132 below centre this clears it in both
+    /// orientations.
+    private func addSkipButton(at centre: CGPoint) {
+        let text = "SKIP"
+        let width = CGFloat(text.count) * 14 + 36
+        let height: CGFloat = 44
+        let y = centre.y - 132
+
+        let box = SKShapeNode(rect: CGRect(x: centre.x - width / 2, y: y - height / 2,
+                                           width: width, height: height),
+                              cornerRadius: 4)
+        box.strokeColor = SKColor.white.withAlphaComponent(0.7)
+        box.fillColor = SKColor.white.withAlphaComponent(0.12)
+        box.lineWidth = 2
+        box.name = Self.skipButtonName
+        addChild(box)
+
+        let lbl = label(text, 14, SKColor.white.withAlphaComponent(0.85))
+        lbl.position = CGPoint(x: centre.x, y: y)
+        lbl.name = Self.skipButtonName
+        addChild(lbl)
+    }
+    #endif
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }

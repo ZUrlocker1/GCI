@@ -5962,6 +5962,19 @@ class GameScene: SKScene {
         // the screen did not ask — sending someone to the title when they
         // meant to press Y — would be a regression, not a convenience.
         #if os(iOS)
+        // Name entry owns the screen while it is up, and SKIP is the only
+        // target on it — the keyboard's own DONE is the other way out, and
+        // the whole reason this button exists is that the keyboard sometimes
+        // never appears. Returning unconditionally stops a stray tap falling
+        // through to the board underneath.
+        if highScoreEntry != nil {
+            if hit.name == HighScoreEntryNode.skipButtonName {
+                AudioManager.shared.play(.uiButtonClick)
+                pressButton(hit) { [weak self] in self?.highScoreEntry?.submit() }
+            }
+            return
+        }
+
         // Wave clear: a tap moves on, the same as any key does.
         //
         // The key path has had this since 0.2 and the pointer path never

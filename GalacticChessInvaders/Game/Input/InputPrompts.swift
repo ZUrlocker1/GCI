@@ -101,7 +101,7 @@ enum InputPrompts {
         #if os(macOS)
         "RETURN WHEN DONE   ·   UP TO \(max) CHARACTERS"
         #else
-        "TAP DONE   ·   UP TO \(max) CHARACTERS"
+        "TAP DONE OR SKIP   ·   UP TO \(max) CHARACTERS"
         #endif
     }
 
