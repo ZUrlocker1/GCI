@@ -246,7 +246,11 @@ final class SettingsNode: SKNode {
             toggleRow("LOG PANEL", x: x, w: w, y: 358, value: settings.logPanel) {
                 self.settings.logPanel = $0
             }
+            #if os(macOS)
             explain("SAME AS THE L KEY", x: x, y: 336)
+            #else
+            explain("LANDSCAPE ONLY · ALSO THE L KEY", x: x, y: 336)
+            #endif
         }
 
         // The right column closes up when the LOG PANEL row is absent, so Test
@@ -275,13 +279,20 @@ final class SettingsNode: SKNode {
     }
 
     private func buildFooter() {
-        // Above the rule, opposite SAVED AUTOMATICALLY. This is the screen
-        // someone opens to look the app over, so it is where the build number
-        // belongs.
+        // Above the rule, opposite SAVED AUTOMATICALLY. On the Mac this is the
+        // screen someone opens to look the app over, so it is where the build
+        // number belongs.
+        //
+        // Not on iOS: `VersionBadgeNode` carries it on the play screen there,
+        // where it is also the way into Test Mode. Printing it twice made the
+        // Settings copy the stale-looking one — it is the only place a tester
+        // could read the build without being able to press it.
+        #if os(macOS)
         let build = label("VERSION \(Bundle.main.appVersion)  BUILD \(Bundle.main.appBuild)",
                           9, SKColor.white.withAlphaComponent(0.45), .left)
         build.position = CGPoint(x: Self.lx, y: 88)
         content.addChild(build)
+        #endif
 
         content.addChild(hline(x: 40, y: 70, w: Self.W - 80))
 
