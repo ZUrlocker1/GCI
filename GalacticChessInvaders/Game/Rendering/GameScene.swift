@@ -5584,8 +5584,6 @@ class GameScene: SKScene {
             DiagnosticsLog.shared.nodeCount = countAllNodes()
         }
         DiagnosticsLog.shared.sfxWorstMs = AudioManager.shared.takeWorstPlayMs()
-        // Off the frame that fires the shot. See `rearmFinishedPlayers`.
-        AudioManager.shared.rearmFinishedPlayers()
         if GameSettings.shared.logPanel { logPerformanceSample() }
     }
 

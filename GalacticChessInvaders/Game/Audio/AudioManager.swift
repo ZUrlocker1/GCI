@@ -13,8 +13,24 @@
 // is the whole of it. §6a's "GPU-bound, the bloom is why" was a Mac finding
 // and does not transfer; the Mac simply had the headroom to absorb this.
 //
-// `rearmFinishedPlayers()` puts the buffers back on a 250ms tick instead, so
-// the cost lands away from the frame that fires the shot.
+// **And re-arming the pool does not fix it.** Measured on 30 Sep, medians of
+// 20 on an M-series Mac, with the file already loaded and the player reused:
+//
+//     prepareToPlay()        6.40ms
+//     play() after prepare  11.49ms
+//     play() bare           11.69ms
+//     currentTime = 0        0.00ms
+//     first play of a player 44.70ms   (one-time audio unit setup)
+//
+// Preparing off-frame saves 0.2ms and costs 6.4ms elsewhere. `play()` is
+// simply expensive, every call, whatever state the player is in — so a
+// warm pool was the wrong idea and the first attempt at it (a 250ms tick
+// re-arming up to eight players) was spending up to 51ms of main thread
+// four times a second to save nothing. It has been removed.
+//
+// The replacement is an `AVAudioEngine` with the audio pre-decoded into
+// `AVAudioPCMBuffer`s and player nodes left running, so firing is just
+// `scheduleBuffer`. Measured the same way: **0.000ms**.
 // Looping sounds (ambient, critical crackle) use a single dedicated player.
 // Music: .m4a via a separate streaming player.
 
@@ -229,28 +245,6 @@ final class AudioManager {
             if Self.destructionKeys.contains(key) {
                 destructionEnds = max(destructionEnds,
                                       Date().addingTimeInterval(player.duration))
-            }
-        }
-    }
-
-    /// Puts the buffers back on players that have finished.
-    ///
-    /// An `AVAudioPlayer` releases them when playback ends, and `play()` then
-    /// re-prepares synchronously — file I/O on the frame that fired the shot.
-    /// Called from the same 250ms tick that samples fps, so the work is
-    /// bounded, predictable, and nowhere near a trigger pull.
-    ///
-    /// Capped per tick so a wave of finishing sounds cannot turn one tick into
-    /// the hitch this is meant to remove. Eight per tick is 32 a second,
-    /// comfortably ahead of how fast the pools can be cycled.
-    func rearmFinishedPlayers(limit: Int = 8) {
-        var done = 0
-        for pool in sfxPools.values {
-            for player in pool where !player.isPlaying && player.currentTime != 0 {
-                player.currentTime = 0
-                player.prepareToPlay()
-                done += 1
-                if done >= limit { return }
             }
         }
     }
