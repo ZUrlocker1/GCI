@@ -734,18 +734,37 @@ than to black bars.
 Test on iPad Pro 13", iPad Pro 11", iPad 10.9" and iPad mini, in the simulator, then on
 the physical mini — the mini is the tightest of the four and the one you own.
 
-### Pass 2 — iPad portrait
+### Pass 2 — iPad portrait — **closed: not needed**
 
 3:4 rather than 4:3. The board can stay large; what changes is that the vertical space
 above and below it is generous and the horizontal space is not.
 
-Move the readouts from a left column to a **bar above the board**. Turn timer, score and
-level read naturally as a top strip, and the power-up alley and hints can sit beneath the
-board, above the ship lane.
+The plan here was to move the readouts from the left column to a **bar above the board**,
+with the power-up alley and hints beneath it. **That is not being built.** It was written
+when portrait meant a 424pt board inside a 744pt screen, and the reason it looked
+necessary was a bug rather than a shape: `minGutterWidth` reserved a flat 224pt at every
+size, which is what the gutter needs at the *largest* square the game allows. Portrait
+draws the same readouts at the 0.9 scale floor, where they need about 145 — so roughly
+80pt of every portrait screen was reserved for nothing and showed as dead space down the
+left.
 
-This is also where `GeometryReader` earns its place — not for the scene itself, which
-should read its own size in `didChangeSize`, but for the SwiftUI chrome around it and for
-safe-area insets.
+The reservation is now `130 * gutterScale + 28`, solved against the square it implies.
+Portrait boards grew 48–64pt on every iPad from the mini to the 11-inch, 8pt on the
+13-inch; landscape and the 960×700 design canvas are unchanged, because their square is
+already at the 96pt cap and nothing was over-reserved. Nothing moved — the gutter keeps
+its position and its contents.
+
+So the restructure buys a second layout to maintain and an inconsistent look between
+orientations, for a board that is already competitive. **Decision: keep one composition
+across both orientations on iPad.** The top-bar idea is not wasted — it is what Pass 4
+needs on iPhone, where 393pt genuinely has no room for a gutter.
+
+`GeometryReader` still earns its place for the SwiftUI chrome and safe-area insets, not
+for the scene, which reads its own size in `didChangeSize`.
+
+`GutterFitTests` measures the real `ChessHintNode` and `GameStatusNode` at nine sizes and
+pins 4pt of clearance from the board's rank labels — the guard against the earlier squeeze
+that clipped "OR KNIGHT" off the left edge of an iPad.
 
 ### Pass 3 — iPhone landscape
 
@@ -1086,8 +1105,8 @@ this work starts, so that a port failure is never confused with a coin flip.
 | 0 | `SceneLayout` refactor, validated on macOS at the existing size | macOS 1.2 |
 | 1 | iOS target, audio session, lifecycle, touch controls, touch chess | **done** |
 | 2 | iPad landscape, all four sizes + physical mini | TestFlight |
-| 3 | iPad portrait | TestFlight |
-| 4 | How To Play and Settings restructure | — |
+| 3 | ~~iPad portrait~~ — **closed, not needed**; see Pass 2 | — |
+| 4 | How To Play and Settings — **done for iPad**; revisit for iPhone | — |
 | 5 | iPhone landscape | TestFlight |
 | 6 | iPhone portrait, or the decision not to | — |
 | 7 | iPhone Duo | — |
@@ -1161,10 +1180,11 @@ mini — after which it is TestFlight-able.
 2. **One app or two?** A universal bundle means one listing, one set of reviews, and
    users get every platform. A separate iOS app versions independently. Zudio is a third
    model — one project, separate targets, one App Store record.
-3. ~~**A version label on the title screen.**~~ **Decided: the play screen, bottom-left
-   corner.** It moves off the Settings panel on iOS and becomes the long-press target
-   for Test Mode (§4). It shares that corner with the `ERROR - SEE LOG` flag, which sits
-   at (50, 30) today — one of the two has to move, and that is a Pass 1 layout detail.
+3. ~~**A version label on the title screen.**~~ ~~**The play screen, bottom-left.**~~
+   **Shipped upper-left**, under the HUD at (10, height − 84). Bottom-left collided with
+   the `ERROR - SEE LOG` flag at (50, 30); upper-left avoids that and keeps the badge
+   clear of the ship lane. It is a bordered box — hold to arm Test Mode, tap to clear —
+   with the `POWER · RAID · LEVEL` chips directly beneath it.
 4. ~~**Does a Test Mode strip ship at all?**~~ **Decided: yes.** On iOS Test Mode is
    also a cheat code — see §4 — so it belongs in the shipping binary rather than in a
    separate configuration testers cannot report against. What remains open is only

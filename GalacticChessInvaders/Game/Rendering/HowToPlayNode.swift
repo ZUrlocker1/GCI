@@ -193,7 +193,13 @@ final class HowToPlayNode: SKNode {
 
         // — STAY ALIVE —
         heading("STAY ALIVE", Self.magenta, x: x, y: 428)
-        multiline("Guard your White King and your ship. You have 3 lives — lose one if a shot hits your ship or an invader reaches the bottom row.",
+        // Read, not written: `GameSettings.lives` gives Cadet five and Ace
+        // three, and this said "3" flatly — wrong on Cadet, which is both the
+        // default for a fresh install and where a stale 1.0 "pilot" setting
+        // lands. The HUD has always drawn the real number; this screen was the
+        // only place claiming otherwise.
+        let lives = GameSettings.shared.lives
+        multiline("Guard your White King and your ship. You have \(lives) lives — lose one if a shot hits your ship or an invader reaches the bottom row.",
                   size: 12, maxW: Self.rw, x: x, y: 414)
 
         // — SCORING —
