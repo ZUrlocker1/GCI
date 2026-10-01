@@ -987,7 +987,9 @@ is left:
 
 - Depth-2 search: **0.40ms** from the opening, **1.95ms** midgame, against a
   50ms budget. The engine is not a bottleneck and needs no pruning
-- 1,000 legal-move generations: 5.6ms against a 100ms budget
+- 1,000 legal-move generations: 5.6ms against a 100ms budget — **optimised**.
+  The same sources at `-Onone` take 97ms, so the test that guards this runs
+  against a 500ms Debug threshold; the 100ms budget is a Release figure
 - `Board.pieces()` walks the occupied mask rather than all 64 squares; it runs at
   every search leaf
 - Diagnostics publish at 4Hz, not per frame — `DiagnosticsLog` is `@Observable`,
