@@ -1059,6 +1059,32 @@ Suggested restructuring:
 
 ---
 
+## 7a. The two panels are landscape-shaped
+
+Audited against the code first, which said both screens were fine on iOS: the
+strings are accurate, `CADET / ACE` matches the rename, `LANDSCAPE ONLY` for the
+log panel is enforced at `GCIiOSApp.swift:149`, and the version line is correctly
+Mac-only. One real error turned up and is fixed — How To Play claimed "3 lives"
+as a flat string, where `GameSettings.lives` gives Cadet five and Ace three, and
+Cadet is both the default for a fresh install and where a stale 1.0 "pilot"
+setting lands. It reads the value now.
+
+**Rendering them was the part that mattered.** On an iPad Pro 13" in portrait,
+both panels occupy only the top ~45% of the screen and leave the bottom half
+empty. Their content is laid out against the 960×700 landscape canvas, and
+neither reflows. In landscape both look right.
+
+So the restructure Phase 4 was written for is **not** closed — it is closed for
+landscape, which is the orientation they were designed in. What remains is
+portrait, and it is the same problem as Pass 4 on iPhone rather than a separate
+one: content that has to reflow rather than sit in a fixed composition. Worth
+doing once, for both.
+
+Consequence for the store listing: How To Play and Settings are shot in
+landscape. Portrait screenshots are the title and gameplay, which do fill it.
+
+---
+
 ## 8. Refactoring worth doing regardless
 
 **`GameScene.swift` is 4,826 lines.** It is the single biggest obstacle to a clean port
@@ -1106,7 +1132,7 @@ this work starts, so that a port failure is never confused with a coin flip.
 | 1 | iOS target, audio session, lifecycle, touch controls, touch chess | **done** |
 | 2 | iPad landscape, all four sizes + physical mini | TestFlight |
 | 3 | ~~iPad portrait~~ — **closed, not needed**; see Pass 2 | — |
-| 4 | How To Play and Settings — **done for iPad**; revisit for iPhone | — |
+| 4 | How To Play and Settings — **landscape done**; both are short in portrait (§7a); revisit for iPhone | — |
 | 5 | iPhone landscape | TestFlight |
 | 6 | iPhone portrait, or the decision not to | — |
 | 7 | iPhone Duo | — |
