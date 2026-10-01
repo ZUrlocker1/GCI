@@ -1397,46 +1397,43 @@ final class HowToPlayNodeTests: XCTestCase {
         return found
     }
 
-    /// The TEST MODE block's first line on the Mac is three nodes — text, the
-    /// ⌘ glyph from the system font, and the T — placed by em arithmetic. So
-    /// it is measured here rather than trusted, same as the credit below.
+    /// The TEST MODE block is at its ceiling: three rows at 17pt from y=137,
+    /// and the music credit sits at 83. A fourth row would land on it.
     ///
-    /// It also has to clear the music credit at y=83: three rows at 17pt from
-    /// 137 is the ceiling, and this line added a row to the Mac block.
-    func testTheTestModeLineFitsItsColumn() throws {
+    /// The ⌘ belongs to the heading and only the heading — printed on the
+    /// body line as well it read as sloppy, so this pins that there is
+    /// exactly one of them.
+    func testTheTestModeBlockFitsItsColumn() throws {
         let screen = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
         let all = labels(in: screen)
 
-        #if os(macOS)
-        // Both the heading and this line carry a ⌘, at 18pt and 10pt — the
-        // glyph is drawn at 0.86 of its nominal size, so the body one is 8.6.
-        let parts = all.filter {
-            ($0.text?.hasPrefix("CLICK AND HOLD") ?? false)
-                || ($0.text == "⌘" && $0.fontSize < 10)
-                || ($0.text == "T" && $0.fontSize == 10)
+        // The block's own rows: body size, in the right column, above the
+        // credit. 510 is `rx`, and the column is 410 wide.
+        let rows = all.filter {
+            $0.fontSize == 10 && $0.position.x >= 500
+                && $0.position.y >= 100 && $0.position.y <= 140
         }
-        XCTAssertEqual(parts.count, 3,
-                       "expected the lead, the glyph and the T: "
-                       + "\(parts.compactMap(\.text))")
-        var line = CGRect.null
-        for part in parts { line = line.union(part.calculateAccumulatedFrame()) }
-        // The right column starts at 510 and is 410 wide.
-        XCTAssertGreaterThanOrEqual(line.minX, 510 - 1, "starts left of its column")
-        XCTAssertLessThanOrEqual(line.maxX, 510 + 410, "runs past the column")
-        // In reading order, with no gap and no overlap.
-        let ordered = parts.sorted { $0.position.x < $1.position.x }
-        XCTAssertTrue(ordered[0].text?.hasPrefix("CLICK") ?? false)
-        XCTAssertEqual(ordered[1].text, "⌘")
-        XCTAssertEqual(ordered[2].text, "T")
-        #endif
-
-        // Whatever the platform, the block's rows have to clear the credit.
-        let rows = all.filter { $0.fontSize == 10 && ($0.text?.count ?? 0) > 12 }
-        for row in rows where row.position.y <= 137 && row.position.y > 83 {
+        XCTAssertEqual(rows.count, 3, "three rows: \(rows.compactMap(\.text))")
+        for row in rows {
+            let frame = row.calculateAccumulatedFrame()
+            XCTAssertLessThanOrEqual(frame.maxX, 510 + 410,
+                                     "runs past the column: \(row.text ?? "")")
             XCTAssertGreaterThanOrEqual(row.position.y, 103,
-                                        "a fourth row would land on the credit: "
-                                        + "\(row.text ?? "")")
+                                        "a row this low lands on the credit")
         }
+
+        XCTAssertEqual(all.filter { $0.text == "⌘" }.count, 1,
+                       "the command glyph should appear once, in the heading")
+
+        #if os(macOS)
+        let text = rows.sorted { $0.position.y > $1.position.y }.compactMap(\.text)
+        XCTAssertEqual(text.first, "Or click and hold the Version Box",
+                       "the first row is the way in without a keyboard")
+        // Grouped the way the controls divide: the two Settings toggles, then
+        // the three chips, in the chip row's order.
+        XCTAssertEqual(text.dropFirst().first, "L  Log  ·  A  Auto")
+        XCTAssertEqual(text.last, "P  PowerUp  ·  R  Raider  ·  V  Level")
+        #endif
     }
 
     /// The credit runs the full panel width at body size, so it has to clear
@@ -1602,13 +1599,41 @@ final class MateDetectionTests: XCTestCase {
     }
 }
 
+/// One `SKView` for the whole test run, because the app has exactly one.
+///
+/// Six classes each used to build their own view, present the singleton
+/// `GameScene` into it, and let the view go as the helper returned — so the
+/// same scene was presented and abandoned dozens of times inside one process.
+/// The app never does that: `makeNSView` presents it once and keeps the view
+/// for the life of the window. `GameScene.didMove` already guards against
+/// being called twice, which is the shape of the hazard, and
+/// `GlowSwitchTests` was crashing the test host intermittently inside
+/// SpriteKit's first-time setup: green 3 for 3 on its own, and red on 2 of 9
+/// full-suite runs. At that rate a handful of green runs proves little, so
+/// this is reasoned from what the app does rather than from a clean sweep.
+///
+/// Presented once here and held, so the suite exercises the arrangement the
+/// app actually ships.
+@MainActor
+enum SharedSceneHost {
+    private static var view: SKView?
+
+    static func presented() -> GameScene {
+        let scene = GameScene.shared
+        if view == nil {
+            let host = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
+            host.presentScene(scene)
+            view = host
+        }
+        return scene
+    }
+}
+
 @MainActor
 final class ReturnToTitleTests: XCTestCase {
 
     private func scene() -> GameScene {
-        let scene = GameScene.shared
-        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
-        view.presentScene(scene)
+        let scene = SharedSceneHost.presented()
         return scene
     }
 
@@ -1709,9 +1734,7 @@ final class QuitPromptTests: XCTestCase {
     }
 
     private func playing() throws -> GameScene {
-        let scene = GameScene.shared
-        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
-        view.presentScene(scene)
+        let scene = SharedSceneHost.presented()
         if !(scene.stateMachine.currentState is TitleState) {
             XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
         }
@@ -1778,9 +1801,7 @@ final class QuitPromptTests: XCTestCase {
     /// opened it, the keypress would have been swallowed and the game would not
     /// have started.
     func testQuitIsNotTheQuitKeyOnTheTitleScreen() throws {
-        let scene = GameScene.shared
-        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
-        view.presentScene(scene)
+        let scene = SharedSceneHost.presented()
         if !(scene.stateMachine.currentState is TitleState) {
             XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
         }
@@ -1794,9 +1815,7 @@ final class QuitPromptTests: XCTestCase {
 final class RestartTests: XCTestCase {
 
     func testXRestartClearsTheLogAndLeavesRestartFirst() {
-        let scene = GameScene.shared
-        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
-        view.presentScene(scene)
+        let scene = SharedSceneHost.presented()
 
         DiagnosticsLog.shared.clear()
         for i in 0..<25 { DiagnosticsLog.shared.log(.chess, "noise \(i)") }
@@ -1812,9 +1831,7 @@ final class RestartTests: XCTestCase {
     }
 
     func testGameOverAcceptsBothAnswers() {
-        let scene = GameScene.shared
-        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
-        view.presentScene(scene)
+        let scene = SharedSceneHost.presented()
 
         // The whole suite shares this one scene, so whatever ran before has left
         // the machine somewhere. Title is reachable from everywhere except
@@ -6410,9 +6427,7 @@ final class PanelChromeAcrossResizeTests: XCTestCase {
     }
 
     private func playing() throws -> GameScene {
-        let scene = GameScene.shared
-        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
-        view.presentScene(scene)
+        let scene = SharedSceneHost.presented()
         if !(scene.stateMachine.currentState is TitleState) {
             XCTAssertTrue(scene.stateMachine.enter(TitleState.self))
         }
@@ -6530,9 +6545,7 @@ final class GlowSwitchTests: XCTestCase {
     }
 
     private func bloom() throws -> SKEffectNode {
-        let scene = GameScene.shared
-        let view = SKView(frame: CGRect(x: 0, y: 0, width: 960, height: 700))
-        view.presentScene(scene)
+        let scene = SharedSceneHost.presented()
         return try XCTUnwrap(scene.childNode(withName: "bloom") as? SKEffectNode)
     }
 

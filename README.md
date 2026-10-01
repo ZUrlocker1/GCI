@@ -30,16 +30,17 @@ clock and comes apart as you play it.
 
 Or [download the DMG for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.3.dmg) directly.
 
-Current release: `1.3` (build 10) — the DMG above. The App Store carries 1.2 until 1.3 is resubmitted. Universal binary — runs natively on both Apple Silicon and Intel
+Current release: `1.3` (build 10) — the DMG above. 
+Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
 
-**What's new in v1.3** — the sound engine, rebuilt:
+**What's new in v1.3** — iPad Port and optimized sound engine:
 
-- **Heavy fire no longer costs frames.** Sound effects are decoded once at launch and played from a pool of voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot — **11.7ms a shot, down to 0.03ms**. A Mac that dropped into the 40s under sustained fire, and an iPad mini that dropped into the 20s, both hold 60 now.
-- **NEON GLOW actually turns the glow off.** It cleared the blur but left the offscreen render pass in place, so the expensive half never went away.
+- **Heavy fire no longer costs frames.** Sound effects are decoded once at launch and played from a pool of voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot — **11.7ms a shot, down to 0.03ms**. A Mac that dropped into the 40fps under sustained fire, and an iPad mini that dropped into the 20s, both hold 60 fps now.
 - **Clearing the last wave says so** instead of holding on a silent board until the high score panel appears.
 - **A bigger board on iPad in portrait**, and in any narrow window — the left column was reserving space for type larger than it ever draws there. Up to 64pt more board; landscape is unchanged.
+- **Test Mode is the same on both platforms** — click and hold the version badge to arm it, tap it to clear. The Mac keeps `⌘T` and the keys too.
 - **Tested on five iPad sizes**, both orientations — iPad Pro 13-inch and 11-inch (M5), iPad (A16) and iPad mini 6 in the simulator, plus a physical iPad mini 5.
 
 **What's new in v1.2** — the release that prepares the Mac game for iPad and iPhone:
