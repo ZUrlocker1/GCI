@@ -40,6 +40,7 @@ Invaders to your Applications folder. Or build it from source with Xcode (see [S
 - **NEON GLOW actually turns the glow off.** It cleared the blur but left the offscreen render pass in place, so the expensive half never went away.
 - **Clearing the last wave says so** instead of holding on a silent board until the high score panel appears.
 - **A bigger board on iPad in portrait**, and in any narrow window — the left column was reserving space for type larger than it ever draws there. Up to 64pt more board; landscape is unchanged.
+- **Tested on five iPad sizes**, both orientations — iPad Pro 13-inch and 11-inch (M5), iPad (A16) and iPad mini 6 in the simulator, plus a physical iPad mini 5.
 
 **What's new in v1.2** — the release that prepares the Mac game for iPad and iPhone:
 

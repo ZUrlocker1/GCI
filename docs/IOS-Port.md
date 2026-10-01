@@ -734,6 +734,35 @@ than to black bars.
 Test on iPad Pro 13", iPad Pro 11", iPad 10.9" and iPad mini, in the simulator, then on
 the physical mini — the mini is the tightest of the four and the one you own.
 
+### Tested on — 1 October 2026
+
+Five sizes, both orientations, after the gutter change. The simulators were
+driven with `xcrun simctl`; the mini 5 is the physical device and the only one
+with real hardware timings behind it.
+
+| Device | | Portrait | Board, portrait | Board, landscape |
+|---|---|---|---|---|
+| iPad Pro 13-inch (M5) | simulator | 1032×1376 | 712 → **720** | 768 |
+| iPad Pro 11-inch (M5) | simulator | 834×1210 | 512 → **560** | 640 |
+| iPad (A16) | simulator | 820×1180 | 496 → **552** | 632 |
+| iPad mini (6th gen) | simulator | 744×1133 | 424 → **488** | 552 |
+| **iPad mini 5 (A12)** | **device** | 768×1024 | 448 → **512** | 576 |
+
+Portrait figures are before → after the gutter change; landscape is unchanged
+at every size, because the square is already at its 96pt cap and nothing was
+over-reserved. The A16 was measured from a native capture rather than by eye:
+board 552pt, left gutter 168, right margin 96 — both reservations are binding,
+so there is nothing further to reclaim there.
+
+Note the two minis are **not** the same size. The 6th generation is 744×1133;
+the mini 5 is 768×1024, which is a different aspect as well as a different
+width, so both are worth keeping in the sweep.
+
+`UIRequiresFullScreen` is `true`, so none of this has to survive Split View,
+Stage Manager or a resizable iPad window — the app is always full screen.
+
+---
+
 ### Pass 2 — iPad portrait — **closed: not needed**
 
 3:4 rather than 4:3. The board can stay large; what changes is that the vertical space
@@ -1160,8 +1189,9 @@ Built beyond the original Phase 1 list, all of it on device:
 - **Settings and the Info screen say true things on iOS**: no `⌘T`, no `Y / N`, no
   "SLOWER MAC", the controls list leading with DRAG and FIRE, and larger body type.
 
-The remaining Phase 1 work is the four-size sweep — iPad Pro 13", Pro 11", 10.9" and
-mini — after which it is TestFlight-able.
+The four-size sweep is **done** — see the table under §5. Five sizes in the end,
+both orientations, including the physical mini 5. Phase 1 is complete and the
+build is TestFlight-able.
 
 ---
 
