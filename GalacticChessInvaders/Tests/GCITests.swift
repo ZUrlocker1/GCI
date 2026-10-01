@@ -1397,6 +1397,48 @@ final class HowToPlayNodeTests: XCTestCase {
         return found
     }
 
+    /// The TEST MODE block's first line on the Mac is three nodes — text, the
+    /// ⌘ glyph from the system font, and the T — placed by em arithmetic. So
+    /// it is measured here rather than trusted, same as the credit below.
+    ///
+    /// It also has to clear the music credit at y=83: three rows at 17pt from
+    /// 137 is the ceiling, and this line added a row to the Mac block.
+    func testTheTestModeLineFitsItsColumn() throws {
+        let screen = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
+        let all = labels(in: screen)
+
+        #if os(macOS)
+        // Both the heading and this line carry a ⌘, at 18pt and 10pt — the
+        // glyph is drawn at 0.86 of its nominal size, so the body one is 8.6.
+        let parts = all.filter {
+            ($0.text?.hasPrefix("CLICK AND HOLD") ?? false)
+                || ($0.text == "⌘" && $0.fontSize < 10)
+                || ($0.text == "T" && $0.fontSize == 10)
+        }
+        XCTAssertEqual(parts.count, 3,
+                       "expected the lead, the glyph and the T: "
+                       + "\(parts.compactMap(\.text))")
+        var line = CGRect.null
+        for part in parts { line = line.union(part.calculateAccumulatedFrame()) }
+        // The right column starts at 510 and is 410 wide.
+        XCTAssertGreaterThanOrEqual(line.minX, 510 - 1, "starts left of its column")
+        XCTAssertLessThanOrEqual(line.maxX, 510 + 410, "runs past the column")
+        // In reading order, with no gap and no overlap.
+        let ordered = parts.sorted { $0.position.x < $1.position.x }
+        XCTAssertTrue(ordered[0].text?.hasPrefix("CLICK") ?? false)
+        XCTAssertEqual(ordered[1].text, "⌘")
+        XCTAssertEqual(ordered[2].text, "T")
+        #endif
+
+        // Whatever the platform, the block's rows have to clear the credit.
+        let rows = all.filter { $0.fontSize == 10 && ($0.text?.count ?? 0) > 12 }
+        for row in rows where row.position.y <= 137 && row.position.y > 83 {
+            XCTAssertGreaterThanOrEqual(row.position.y, 103,
+                                        "a fourth row would land on the credit: "
+                                        + "\(row.text ?? "")")
+        }
+    }
+
     /// The credit runs the full panel width at body size, so it has to clear
     /// the HISTORY block above it and the footer rule below — measured, not
     /// trusted to the em arithmetic that placed it.

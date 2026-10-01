@@ -240,19 +240,49 @@ final class HowToPlayNode: SKNode {
         // LEVEL chips. L and A are not buttons at all — Settings already
         // carries both — so the honest instruction is where to look rather
         // than which key to press.
+        let testBody = SKColor.white.withAlphaComponent(0.6)
+        let bodyEm: CGFloat = 10
+        // Three lines is the ceiling: they run 137, 120, 103 and the music
+        // credit sits at 83.
+        var testLines: [String] = []
         #if os(macOS)
-        let testLines = ["L  Log      ·   A  Auto   ·   P  Powerup",
-                         "R  Raider   ·   V  Level"]
+        // The Mac block never said how to get in without a keyboard, which
+        // stopped being a detail once the badge shipped here. "Click and
+        // hold" rather than "long press": that is the Mac's own phrasing for
+        // holding the pointer down — the gesture that opens a Dock menu —
+        // where "long press" is an iOS API term that means nothing here.
+        //
+        // The ⌘ again comes from the system font, Press Start 2P having no
+        // U+2318, and is placed by the same em arithmetic as the heading: the
+        // lead is 34 characters, so the glyph sits at 34 ems and the T at 35.
+        // 36 ems at 10pt is 360 against a 410pt column.
+        let lead = "CLICK AND HOLD THE VERSION BOX OR "
+        let leadLabel = label(lead, bodyEm, testBody, .left)
+        leadLabel.position = CGPoint(x: x, y: 137)
+        addChild(leadLabel)
+        // 2pt, scaled down from the heading's 4: the two fonts share no
+        // baseline and the glyph sits low against the pixel caps.
+        addChild(commandGlyph(size: bodyEm, color: testBody,
+                              at: CGPoint(x: x + CGFloat(lead.count) * bodyEm,
+                                          y: 137 + 2)))
+        let testKeyInline = label("T", bodyEm, testBody, .left)
+        testKeyInline.position = CGPoint(x: x + CGFloat(lead.count + 1) * bodyEm,
+                                        y: 137)
+        addChild(testKeyInline)
+        testLines = ["L  Log      ·   A  Auto   ·   P  Powerup",
+                     "R  Raider   ·   V  Level"]
+        let firstRow = 1
         #else
-        let testLines = ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
-                         "POWER, RAID AND LEVEL BUTTONS APPEAR",
-                         "LOG AND AUTO CHESS JOIN SETTINGS"]
+        testLines = ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
+                     "POWER, RAID AND LEVEL BUTTONS APPEAR",
+                     "LOG AND AUTO CHESS JOIN SETTINGS"]
+        let firstRow = 0
         #endif
         for (i, line) in testLines.enumerated() {
             // 10pt, not 11: at 11 the longer line is 440pt against a 410pt
             // column and runs off the panel.
-            let keys = label(line, 10, SKColor.white.withAlphaComponent(0.6), .left)
-            keys.position = CGPoint(x: x, y: 137 - CGFloat(i) * 17)
+            let keys = label(line, bodyEm, testBody, .left)
+            keys.position = CGPoint(x: x, y: 137 - CGFloat(i + firstRow) * 17)
             addChild(keys)
         }
 
