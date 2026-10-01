@@ -1324,8 +1324,9 @@ class GameScene: SKScene {
 
     /// How much of the window's width the badge may occupy. The one number
     /// to turn if the wording should give way sooner or later than it does:
-    /// at a third, the full string survives down to an 800pt window.
-    private static let versionBadgeWidthShare: CGFloat = 1.0 / 3.0
+    /// at a quarter, the full string survives the 960pt design canvas and
+    /// the 640pt minimum window gets "GCI V1.3 B10".
+    private static let versionBadgeWidthShare: CGFloat = 1.0 / 4.0
 
     /// The longest form that stays inside `versionBadgeWidthShare`.
     ///
@@ -1353,11 +1354,16 @@ class GameScene: SKScene {
         let version = Bundle.main.appVersion
         let build = Bundle.main.appBuild
         let budget = size.width * Self.versionBadgeWidthShare
-        // Longest first. Each step gives up the least useful word still
-        // standing: the platform, then "GCI", then the spelling of "Build".
+        // Longest first. Each step gives up the least useful thing still
+        // standing: the platform, then the spelling of "Build", then "GCI".
+        //
+        // "GCI" outranks "Build" deliberately — it is what names the app in a
+        // bug report, where "Build" is a word in front of a number that is
+        // obviously a build. The bare form is only reachable on a phone; the
+        // Mac window stops at 640 and an iPad is wider still.
         let forms = ["GCI \(platform) V\(version)  Build \(build)",
                      "GCI V\(version)  Build \(build)",
-                     "V\(version)  Build \(build)",
+                     "GCI V\(version) B\(build)",
                      "V\(version) B\(build)"]
         return forms.first { VersionBadgeNode.width(of: $0) <= budget } ?? forms[forms.count - 1]
     }
@@ -1473,6 +1479,12 @@ class GameScene: SKScene {
     /// lower.
     func layOutTestStrip() {
         guard let testStrip, let versionBadge else { return }
+        // Unlike the badge, this is a collision and not a matter of taste: the
+        // row sits in the gutter beside the board, and the spelled-out wording
+        // runs onto the squares in a 640pt Mac window. 8pt of air beyond the
+        // board's own edge, so the chips never touch the rank labels either.
+        let available = layout.boardOriginX - 10 - 8
+        testStrip.setCompact(TestModeStripNode.width(compact: false) > available)
         testStrip.position = CGPoint(
             x: 10, y: versionBadge.position.y - VersionBadgeNode.height / 2 - 6)
     }

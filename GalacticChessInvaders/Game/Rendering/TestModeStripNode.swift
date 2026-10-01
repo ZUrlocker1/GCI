@@ -34,13 +34,26 @@ final class TestModeStripNode: SKNode {
 
     /// What a chip does. The raw value is the label.
     ///
-    /// Spelled out rather than abbreviated. The row costs 166pt at these
-    /// lengths against a gutter that is never narrower than 224, so the
-    /// space was there and `PWR`/`SKIP` were saving nothing with it.
+    /// Spelled out where there is room. The row costs 166pt at these lengths,
+    /// which was free when this was iOS-only — the gutter was never narrower
+    /// than 224. Both halves of that stopped being true: the gutter is sized
+    /// to its own type now and reaches down to 145, and the row ships on a Mac
+    /// whose window goes to 640pt, where the board's left edge comes in to 166
+    /// and the spelled-out row ended at 176 — on the board. Hence `short`.
     enum Action: String, CaseIterable {
         case power  = "POWER"
         case raider = "RAID"
         case skip   = "LEVEL"
+
+        /// For a gutter too narrow to carry the words. `RAID` is already as
+        /// short as it goes, which is why it is not abbreviated further.
+        var short: String {
+            switch self {
+            case .power:  return "PWR"
+            case .raider: return "RAID"
+            case .skip:   return "LVL"
+            }
+        }
     }
 
     private static let fontSize: CGFloat = 8
@@ -55,12 +68,50 @@ final class TestModeStripNode: SKNode {
         let action: Action
         let box: SKShapeNode
         let label: SKLabelNode
-        /// In this node's own space, which is where hit tests land.
-        let rect: CGRect
+        /// In this node's own space, which is where hit tests land. Moves with
+        /// the wording, so it is a `var` — a stale rect here would leave the
+        /// hit targets where the old, wider chips used to be.
+        var rect: CGRect
     }
 
     private var chips: [Chip] = []
     private var isLive = false
+    private var isCompact = false
+
+    /// What the row measures at a given wording, so a caller can decide which
+    /// one fits before committing to it.
+    static func width(compact: Bool) -> CGFloat {
+        let titles = Action.allCases.map { compact ? $0.short : $0.rawValue }
+        let boxes = titles.reduce(CGFloat(0)) {
+            $0 + CGFloat($1.count) * charWidth + padding * 2
+        }
+        return boxes + chipGap * CGFloat(titles.count - 1)
+    }
+
+    /// Switches the row between `POWER RAID LEVEL` and `PWR RAID LVL`.
+    func setCompact(_ compact: Bool) {
+        guard compact != isCompact else { return }
+        isCompact = compact
+        layOutChips()
+    }
+
+    /// Lays the chips left to right from x = 0, hanging below the anchor.
+    private func layOutChips() {
+        var x: CGFloat = 0
+        for index in chips.indices {
+            let title = isCompact ? chips[index].action.short
+                                  : chips[index].action.rawValue
+            let width = CGFloat(title.count) * Self.charWidth + Self.padding * 2
+            let rect = CGRect(x: x, y: -Self.chipHeight,
+                              width: width, height: Self.chipHeight)
+            chips[index].box.path = CGPath(roundedRect: rect, cornerWidth: 3,
+                                           cornerHeight: 3, transform: nil)
+            chips[index].label.text = title
+            chips[index].label.position = CGPoint(x: rect.midX, y: rect.midY)
+            chips[index].rect = rect
+            x += width + Self.chipGap
+        }
+    }
 
     override init() {
         super.init()

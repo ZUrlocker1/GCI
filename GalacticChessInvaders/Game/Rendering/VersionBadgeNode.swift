@@ -45,6 +45,9 @@ final class VersionBadgeNode: SKNode {
 
     private var isTestMode = false
     private var isPressed = false
+    /// The hold's deadline, kept off the scene's action clock — see
+    /// `beginPress`.
+    private var holdWork: DispatchWorkItem?
 
     /// What `text` would measure, so a caller can choose between wordings
     /// before committing to one.
@@ -141,17 +144,40 @@ final class VersionBadgeNode: SKNode {
     /// Runs the sweep and calls `then` if it finishes. Everything is under one
     /// key so `cancelPress()` takes the callback with it — a finger lifted
     /// early must not toggle anything.
-    func beginPress(duration: TimeInterval, then: @escaping () -> Void) {
+    /// Starts the hold: a bar sweeps across the badge, and `then` fires when
+    /// it reaches the end.
+    ///
+    /// The sweep is an `SKAction` because it is a picture. The *deadline* is
+    /// not, and that distinction is the whole of a bug Zack hit: the callback
+    /// used to be the second half of the same action sequence, so it only
+    /// arrived if the scene happened to be ticking for the full 1.5s. On a
+    /// freshly launched Mac it never arrived at all, and the badge looked
+    /// dead until ⌘T had been used once — pressing it did nothing, with no
+    /// clue why. A node's action clock is the wrong thing to hang a
+    /// commitment on; anything that pauses the scene stops it.
+    ///
+    /// So the timer is a plain work item, cancelled by `cancelPress`. The
+    /// `isHidden` check is for the one case the old coupling handled by
+    /// accident: a panel opened by a *key* while the badge is held, which
+    /// hides the badge without ever reaching `cancelPress`.
+    func beginPress(duration: TimeInterval, then: @escaping @MainActor () -> Void) {
         isPressed = true
         restyle()
         fill.removeAllActions()
         fill.xScale = 0.001
         fill.alpha = 0.3
         fill.color = .white
-        fill.run(.sequence([
-            .scaleX(to: 1, duration: duration),
-            .run(then),
-        ]), withKey: Self.sweepKey)
+        fill.run(.scaleX(to: 1, duration: duration), withKey: Self.sweepKey)
+
+        holdWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.isPressed, !self.isHidden else { return }
+                then()
+            }
+        }
+        holdWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
     }
 
     /// Down, with nothing to wait for — the caller acts on the lift instead.
@@ -160,6 +186,8 @@ final class VersionBadgeNode: SKNode {
     func beginTap() {
         isPressed = true
         restyle()
+        holdWork?.cancel()
+        holdWork = nil
         fill.removeAllActions()
         fill.xScale = 1
         fill.alpha = 0.3
@@ -172,6 +200,8 @@ final class VersionBadgeNode: SKNode {
     func cancelPress() -> Bool {
         guard isPressed else { return false }
         isPressed = false
+        holdWork?.cancel()
+        holdWork = nil
         fill.removeAction(forKey: Self.sweepKey)
         fill.run(.fadeAlpha(to: 0, duration: 0.15))
         restyle()

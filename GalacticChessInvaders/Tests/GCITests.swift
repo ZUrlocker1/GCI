@@ -6805,14 +6805,40 @@ final class TestModeStripClearsTheBoardTests: XCTestCase {
 
     private static let stripLeft: CGFloat = 10
 
+    /// Mac windows are in here because the row shipped on macOS, where the
+    /// window goes down to 640x500 — far narrower than any iPad, and the size
+    /// at which the spelled-out wording ran onto the board.
+    private static let sizes: [(String, CGSize)] = [
+        ("mini portrait",    CGSize(width: 744,  height: 1133)),
+        ("A16 portrait",     CGSize(width: 820,  height: 1180)),
+        ("Pro 11 portrait",  CGSize(width: 834,  height: 1194)),
+        ("Pro 13 portrait",  CGSize(width: 1024, height: 1366)),
+        ("mini landscape",   CGSize(width: 1133, height: 744)),
+        ("Pro 13 landscape", CGSize(width: 1366, height: 1024)),
+        ("design canvas",    CGSize(width: 960,  height: 700)),
+        ("Mac minimum",      CGSize(width: 640,  height: 500)),
+        ("Mac small",        CGSize(width: 700,  height: 520)),
+        ("Mac medium",       CGSize(width: 800,  height: 600)),
+        ("Mac full screen",  CGSize(width: 1512, height: 982)),
+    ]
+
+    /// The guarantee the shortening rests on: wherever the spelled-out row is
+    /// too wide, the compact one fits. Without this, `setCompact` could be
+    /// choosing between two wordings that both overlap.
+    func testTheCompactRowAlwaysClearsTheBoard() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            SceneLayout.adopt(l)
+            let right = Self.stripLeft + TestModeStripNode.width(compact: true)
+            XCTAssertLessThanOrEqual(
+                right, l.boardOriginX,
+                "\(name): even the compact row reaches the board — "
+                + "ends \(right), board starts \(l.boardOriginX)")
+        }
+    }
+
     func testTheStripNeverLandsOnTheBoard() {
-        for (name, size) in [("mini portrait",   CGSize(width: 744,  height: 1133)),
-                             ("A16 portrait",    CGSize(width: 820,  height: 1180)),
-                             ("Pro 11 portrait", CGSize(width: 834,  height: 1194)),
-                             ("Pro 13 portrait", CGSize(width: 1024, height: 1366)),
-                             ("mini landscape",  CGSize(width: 1133, height: 744)),
-                             ("Pro 13 landscape", CGSize(width: 1366, height: 1024)),
-                             ("design",          CGSize(width: 960,  height: 700))] {
+        for (name, size) in Self.sizes {
             let l = SceneLayout(size: size)
             SceneLayout.adopt(l)
 
@@ -6823,7 +6849,13 @@ final class TestModeStripClearsTheBoardTests: XCTestCase {
             // anchor, from -chipHeight to 0 — so the node's own frame gives
             // both figures, and a longer chip label cannot silently outgrow
             // this test the way a hardcoded 166 would have let it.
-            let frame = TestModeStripNode().calculateAccumulatedFrame()
+            //
+            // Built the way `layOutTestStrip` builds it, compact wording and
+            // all, because that choice is part of what is being checked.
+            let strip = TestModeStripNode()
+            let available = l.boardOriginX - Self.stripLeft - 8
+            strip.setCompact(TestModeStripNode.width(compact: false) > available)
+            let frame = strip.calculateAccumulatedFrame()
             let stripBottom = stripY - frame.height
             let stripRight = Self.stripLeft + frame.width
 
@@ -6908,5 +6940,74 @@ final class VersionBadgeTextTests: XCTestCase {
         XCTAssertEqual(badge.width, VersionBadgeNode.width(of: "V1.3 B10"))
         badge.setText("GCI Mac V1.3  Build 10")
         XCTAssertEqual(badge.width, wide)
+    }
+}
+
+// MARK: - The long press into Test Mode
+
+/// Zack reported the hold doing nothing on a fresh Mac launch and then working
+/// once ⌘T had been used. This drives the real path: a pointer down on the
+/// badge, the scene ticking for longer than the hold, and `toggleTestMode`
+/// observed through the notification it posts.
+@MainActor
+final class VersionBadgeHoldTests: XCTestCase {
+
+    private var view: SKView?
+
+    override func tearDown() async throws {
+        view = nil
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+    }
+
+    /// Presented, because the hold is an `SKAction` and actions only advance
+    /// while something is ticking the scene.
+    private func presented(width: CGFloat = 960, height: CGFloat = 700) -> GameScene {
+        let scene = GameScene(size: CGSize(width: width, height: height))
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: width, height: height))
+        view.presentScene(scene)
+        self.view = view
+        return scene
+    }
+
+    private func badgeCentre(_ scene: GameScene) throws -> CGPoint {
+        let badge = try XCTUnwrap(scene.versionBadge)
+        return CGPoint(x: badge.position.x + badge.width / 2, y: badge.position.y)
+    }
+
+    private func awaitTestModeChange(_ body: () -> Void) -> Bool? {
+        var seen: Bool?
+        let hit = expectation(description: "test mode changed")
+        let token = NotificationCenter.default.addObserver(
+            forName: .gciTestModeChanged, object: nil, queue: .main) { note in
+                guard seen == nil else { return }
+                seen = note.object as? Bool
+                hit.fulfill()
+            }
+        body()
+        // Longer than `testModeHold`, with room for a slow machine.
+        _ = XCTWaiter.wait(for: [hit], timeout: 4.0)
+        NotificationCenter.default.removeObserver(token)
+        return seen
+    }
+
+    /// The reported bug, on a fresh scene that has never seen ⌘T.
+    func testHoldingTheBadgeArmsTestModeOnAFreshScene() throws {
+        let scene = presented()
+        let point = try badgeCentre(scene)
+        XCTAssertTrue(scene.versionBadgeContains(point), "badge not where we pressed")
+
+        let changed = awaitTestModeChange { scene.pointerDown(at: point) }
+        XCTAssertEqual(changed, true, "the hold never completed on a fresh scene")
+    }
+
+    /// And in a minimum-size window, where the wording is at its shortest and
+    /// the box is correspondingly narrower — a stale hit rect would show here.
+    func testTheHoldStillLandsInTheSmallestWindow() throws {
+        let scene = presented(width: 640, height: 500)
+        let point = try badgeCentre(scene)
+        XCTAssertTrue(scene.versionBadgeContains(point),
+                      "the box did not follow the shortened text")
+        let changed = awaitTestModeChange { scene.pointerDown(at: point) }
+        XCTAssertEqual(changed, true, "the hold never completed at 640pt")
     }
 }
