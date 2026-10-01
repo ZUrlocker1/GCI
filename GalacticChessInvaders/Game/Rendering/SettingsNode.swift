@@ -287,12 +287,10 @@ final class SettingsNode: SKNode {
         // where it is also the way into Test Mode. Printing it twice made the
         // Settings copy the stale-looking one — it is the only place a tester
         // could read the build without being able to press it.
-        #if os(macOS)
-        let build = label("VERSION \(Bundle.main.appVersion)  BUILD \(Bundle.main.appBuild)",
-                          9, SKColor.white.withAlphaComponent(0.45), .left)
-        build.position = CGPoint(x: Self.lx, y: 88)
-        content.addChild(build)
-        #endif
+        // No version line here on either platform. It moved to the badge on
+        // the play screen when iOS got one, and the Mac followed: a build
+        // number two panels deep is the wrong place for the thing a bug
+        // report needs, and the badge is on screen the whole time.
 
         content.addChild(hline(x: 40, y: 70, w: Self.W - 80))
 

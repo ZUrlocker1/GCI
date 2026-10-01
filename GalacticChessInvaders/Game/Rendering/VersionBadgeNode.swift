@@ -39,15 +39,27 @@ final class VersionBadgeNode: SKNode {
     private let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
     private static let sweepKey = "sweep"
 
-    /// Whole width, so the caller can place the strip beneath it.
-    let width: CGFloat
+    /// Whole width, so the caller can place the strip beneath it. Changes
+    /// with the text — see `setText`.
+    private(set) var width: CGFloat
 
     private var isTestMode = false
     private var isPressed = false
 
+    /// What `text` would measure, so a caller can choose between wordings
+    /// before committing to one.
+    static func width(of text: String) -> CGFloat {
+        CGFloat(text.count) * charWidth + padding * 2
+    }
+
+    /// The box for `text`, in a monospaced face, so the width is arithmetic.
+    private static func box(for text: String) -> CGRect {
+        CGRect(x: 0, y: -height / 2, width: width(of: text), height: height)
+    }
+
     init(text: String) {
-        width = CGFloat(text.count) * Self.charWidth + Self.padding * 2
-        let rect = CGRect(x: 0, y: -Self.height / 2, width: width, height: Self.height)
+        let rect = Self.box(for: text)
+        width = rect.width
         box = SKShapeNode(rect: rect, cornerRadius: 3)
 
         // Anchored left so growing `xScale` sweeps rather than stretches from
@@ -79,6 +91,26 @@ final class VersionBadgeNode: SKNode {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Re-letters the badge and resizes the box to match.
+    ///
+    /// Exists because the text is picked from the window's width, and a Mac
+    /// window changes size while the game runs — the full string is more than
+    /// a third of a small window, which reads as the badge shouting. See
+    /// `GameScene.versionBadgeText`.
+    func setText(_ text: String) {
+        guard label.text != text else { return }
+        let rect = Self.box(for: text)
+        width = rect.width
+        box.path = CGPath(roundedRect: rect, cornerWidth: 3, cornerHeight: 3,
+                          transform: nil)
+        // The sweep is a plain sprite inset inside the box, so it has to be
+        // re-sized by hand; `xScale` is left alone, since a press in flight
+        // during a resize is not worth preserving.
+        fill.size = CGSize(width: rect.width - 2, height: rect.height - 2)
+        label.text = text
+        label.position = CGPoint(x: rect.midX, y: 0)
+    }
 
     // MARK: - State
 

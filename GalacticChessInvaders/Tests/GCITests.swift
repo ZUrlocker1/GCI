@@ -6837,3 +6837,76 @@ final class TestModeStripClearsTheBoardTests: XCTestCase {
         }
     }
 }
+
+// MARK: - The version badge gives way as the window narrows
+
+/// The badge is a fixed 10pt, so what gives way in a small window is the
+/// wording, not the type. These pin that it gives way at all, that it never
+/// takes more than its share, and that the version and build — the only parts
+/// a bug report actually needs — survive every step.
+@MainActor
+final class VersionBadgeTextTests: XCTestCase {
+
+    private func scene(width: CGFloat) -> GameScene {
+        let s = GameScene(size: CGSize(width: width, height: 700))
+        return s
+    }
+
+    func testTheBadgeNeverTakesMoreThanItsShare() {
+        for width in stride(from: CGFloat(380), through: 1600, by: 20) {
+            let text = scene(width: width).versionBadgeText
+            let w = VersionBadgeNode.width(of: text)
+            // The shortest form can exceed the share on a very narrow window —
+            // there is nothing left to drop — so that is the one exemption.
+            if text != "V\(Bundle.main.appVersion) B\(Bundle.main.appBuild)" {
+                XCTAssertLessThanOrEqual(w, width / 3 + 0.5,
+                                         "at \(width)pt the badge took \(w)pt: \(text)")
+            }
+        }
+    }
+
+    func testEveryFormStillCarriesTheVersionAndBuild() {
+        let version = Bundle.main.appVersion
+        let build = Bundle.main.appBuild
+        for width in [CGFloat(400), 480, 560, 627, 700, 800, 960, 1512] {
+            let text = scene(width: width).versionBadgeText
+            XCTAssertTrue(text.contains(version), "\(width)pt lost the version: \(text)")
+            XCTAssertTrue(text.contains(build), "\(width)pt lost the build: \(text)")
+        }
+    }
+
+    /// The wording only ever gets shorter as the window narrows — no width
+    /// should pick a longer string than a wider one did.
+    func testItIsMonotone() {
+        var last = CGFloat.greatestFiniteMagnitude
+        for width in stride(from: CGFloat(1600), through: 380, by: -20) {
+            let w = VersionBadgeNode.width(of: scene(width: width).versionBadgeText)
+            XCTAssertLessThanOrEqual(w, last, "badge grew as the window shrank, at \(width)pt")
+            last = w
+        }
+    }
+
+    /// The full string survives the design canvas, and the platform word is
+    /// the first thing to go — not the build number.
+    func testTheDesignCanvasKeepsTheWholeString() {
+        let text = scene(width: SceneLayout.designSize.width).versionBadgeText
+        XCTAssertTrue(text.hasPrefix("GCI "), text)
+        #if os(macOS)
+        XCTAssertTrue(text.contains("Mac"), text)
+        #else
+        XCTAssertTrue(text.contains("iOS"), text)
+        #endif
+        XCTAssertTrue(text.contains("Build"), text)
+    }
+
+    /// `setText` has to resize the box, not just re-letter it.
+    func testTheBoxFollowsTheText() {
+        let badge = VersionBadgeNode(text: "GCI Mac V1.3  Build 10")
+        let wide = badge.width
+        badge.setText("V1.3 B10")
+        XCTAssertLessThan(badge.width, wide)
+        XCTAssertEqual(badge.width, VersionBadgeNode.width(of: "V1.3 B10"))
+        badge.setText("GCI Mac V1.3  Build 10")
+        XCTAssertEqual(badge.width, wide)
+    }
+}

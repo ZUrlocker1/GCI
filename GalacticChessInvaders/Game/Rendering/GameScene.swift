@@ -1301,14 +1301,10 @@ class GameScene: SKScene {
         // Spelled out rather than abbreviated. It costs nothing — the band it
         // sits in is empty for the full width of the scene — and the platform
         // word is the part that tells a bug report which build of which app it
-        // is looking at, now that the same badge ships on both.
-        #if os(macOS)
-        let platform = "Mac"
-        #else
-        let platform = "iOS"
-        #endif
-        let badge = VersionBadgeNode(
-            text: "GCI \(platform) V\(Bundle.main.appVersion)  Build \(Bundle.main.appBuild)")
+        // is looking at, now that the same badge ships on both. It is the
+        // first thing dropped when the window is too narrow to carry it; see
+        // `versionBadgeText`.
+        let badge = VersionBadgeNode(text: versionBadgeText)
         addChild(badge)
         versionBadge = badge
         badge.setTestMode(testMode)
@@ -1322,7 +1318,48 @@ class GameScene: SKScene {
     /// to make room for it. Its width is unconstrained for the same reason:
     /// the band is empty all the way across.
     func layOutVersionBadge() {
+        versionBadge?.setText(versionBadgeText)
         versionBadge?.position = CGPoint(x: 10, y: size.height - HUDNode.height - 16)
+    }
+
+    /// How much of the window's width the badge may occupy. The one number
+    /// to turn if the wording should give way sooner or later than it does:
+    /// at a third, the full string survives down to an 800pt window.
+    private static let versionBadgeWidthShare: CGFloat = 1.0 / 3.0
+
+    /// The longest form that stays inside `versionBadgeWidthShare`.
+    ///
+    /// The badge is a fixed 10pt — shrinking the type is the wrong lever, it
+    /// is already the smallest thing on screen — so what gives way is the
+    /// wording. At the design size the full string is about a quarter of the
+    /// width and reads as a footnote; in a small window it was approaching
+    /// half, which is the badge shouting rather than labelling.
+    ///
+    /// A third, rather than fitting it to the gutter: the band under the HUD
+    /// is empty right across the scene, so the badge is free to overhang the
+    /// board's left edge and always has. The limit here is how much of the
+    /// window it is *reasonable* for a build number to occupy, which is a
+    /// judgement, not a collision.
+    ///
+    /// Dropping the platform word first is deliberate. It is the one part a
+    /// reader can infer — they know which machine they are looking at — where
+    /// the version and build are the whole point of the thing.
+    var versionBadgeText: String {
+        #if os(macOS)
+        let platform = "Mac"
+        #else
+        let platform = "iOS"
+        #endif
+        let version = Bundle.main.appVersion
+        let build = Bundle.main.appBuild
+        let budget = size.width * Self.versionBadgeWidthShare
+        // Longest first. Each step gives up the least useful word still
+        // standing: the platform, then "GCI", then the spelling of "Build".
+        let forms = ["GCI \(platform) V\(version)  Build \(build)",
+                     "GCI V\(version)  Build \(build)",
+                     "V\(version)  Build \(build)",
+                     "V\(version) B\(build)"]
+        return forms.first { VersionBadgeNode.width(of: $0) <= budget } ?? forms[forms.count - 1]
     }
 
     #if os(iOS)
