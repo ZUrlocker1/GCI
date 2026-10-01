@@ -663,7 +663,9 @@ final class SceneLayoutTests: XCTestCase {
     /// against the right edge on any window too narrow to centre it.
     func testTheRightMarginIsReservedButNotAWholeGutter() {
         let narrow = SceneLayout(size: CGSize(width: 650, height: 700))
-        XCTAssertEqual(narrow.squareSize, 41)   // floor((650 - 224 - 96) / 8)
+        // floor((650 - 145 - 96) / 8), where 145 is the gutter at its type's
+        // smallest. The flat 224 reservation gave 41 here.
+        XCTAssertEqual(narrow.squareSize, 51)
         // Reserving both gutters in full would have given 25.
         XCTAssertGreaterThan(narrow.squareSize, 25)
         XCTAssertLessThan(SceneLayout.rightMarginWidth, SceneLayout.minGutterWidth,
@@ -713,9 +715,12 @@ final class SceneLayoutTests: XCTestCase {
         let right = portrait.size.width - portrait.boardTopX
         XCTAssertGreaterThanOrEqual(right, SceneLayout.rightMarginWidth - 0.5,
                                     "against the 40 it used to get")
-        // And the gutter keeps every point of its width, because the Chess
-        // Hint is the widest thing in the game's left column and needs it.
+        // And the gutter keeps every point it needs — which is what the Chess
+        // Hint takes at the scale it is drawn at here, not the flat 224 that
+        // the widest case calls for. `GutterFitTests` measures the hint.
         XCTAssertEqual(portrait.boardOriginX, portrait.minGutterWidth)
+        XCTAssertLessThan(portrait.minGutterWidth, SceneLayout.minGutterWidth,
+                          "portrait should not be paying the full-scale price")
         // And the readouts still fit beside the board rather than under it.
         XCTAssertLessThan(portrait.gutterCentreX + portrait.powerUpBarWidth / 2,
                           portrait.boardOriginX)
@@ -6601,5 +6606,188 @@ final class AudioEnginePathTests: XCTestCase {
         }
         XCTAssertEqual(audio.busyVoiceCount, 0, "and handed back")
         XCTAssertGreaterThanOrEqual(audio.voiceCapacity, 8)
+    }
+}
+
+// MARK: - Gutter fit
+
+/// The gutter is no longer reserved at a flat 224pt — it gets what its own
+/// type needs at `gutterScale`, which is what let the portrait board grow.
+/// That only holds if the widest thing the gutter can show still fits, so
+/// these measure the real nodes instead of trusting the arithmetic.
+///
+/// The failure being guarded against is on record: an earlier attempt at
+/// squeezing the gutter clipped "OR KNIGHT" off the left edge of an iPad.
+@MainActor
+final class GutterFitTests: XCTestCase {
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    /// Every size the game is expected to run at, portrait and landscape.
+    private static let sizes: [(String, CGSize)] = [
+        ("design",            CGSize(width: 960,  height: 700)),
+        ("mini portrait",     CGSize(width: 744,  height: 1133)),
+        ("mini landscape",    CGSize(width: 1133, height: 744)),
+        ("A16 portrait",      CGSize(width: 820,  height: 1180)),
+        ("A16 landscape",     CGSize(width: 1180, height: 820)),
+        ("Pro 11 portrait",   CGSize(width: 834,  height: 1194)),
+        ("Pro 11 landscape",  CGSize(width: 1194, height: 834)),
+        ("Pro 13 portrait",   CGSize(width: 1024, height: 1366)),
+        ("Pro 13 landscape",  CGSize(width: 1366, height: 1024)),
+    ]
+
+    /// The widest the hint block gets: two kinds with the longest names, and
+    /// every prompt, including the friendly-fire notice for each piece.
+    private func widestHintHalfWidth() -> CGFloat {
+        let node = ChessHintNode()
+        var widest: CGFloat = 0
+        let kindSets: [[PieceType]] = [[.knight], [.bishop, .knight],
+                                       [.queen, .knight], [.pawn, .bishop]]
+        var prompts: [ChessHintNode.ControlPrompt?] = [nil, .fire, .move, .shootSomething]
+        prompts += PieceType.allCases.map { ChessHintNode.ControlPrompt.friendlyFire($0) }
+        for kinds in kindSets {
+            for prompt in prompts {
+                node.show(nil)                  // `show` is idempotent
+                node.show(kinds)
+                node.showPrompt(nil)
+                node.showPrompt(prompt)
+                widest = max(widest, node.calculateAccumulatedFrame().width)
+            }
+        }
+        return widest / 2
+    }
+
+    private func widestStatusHalfWidth() -> CGFloat {
+        let node = GameStatusNode()
+        var widest: CGFloat = 0
+        for status: GameStatusNode.Status in [.check(.white), .check(.black),
+                                             .checkmate(.white), .checkmate(.black),
+                                             .stalemate] {
+            node.show(.none)
+            node.show(status)
+            widest = max(widest, node.calculateAccumulatedFrame().width)
+        }
+        return widest / 2
+    }
+
+    /// Nothing in the gutter runs off the left edge of the screen, and nothing
+    /// reaches the board's rank labels.
+    func testWidestGutterContentFitsAtEverySize() {
+        let hintHalf = widestHintHalfWidth()
+        let statusHalf = widestStatusHalfWidth()
+
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            SceneLayout.adopt(l)
+
+            // The rank labels are right-aligned at -12 * contentScale off the
+            // board's left edge, so that x is where the gutter has to stop.
+            //
+            // Measured against the digits' *left* edge instead, the shipping
+            // design canvas already fails by 2pt: an accumulated frame carries
+            // the font's side bearing, so the hint's box laps a little into the
+            // digits' column and always has. The anchor is the honest line.
+            let rankLabelRight = l.boardOriginX - 12 * l.contentScale
+
+            for (what, half) in [("hint", hintHalf * l.gutterScale),
+                                 ("status", statusHalf * l.gutterScale),
+                                 ("power-up bar", l.powerUpBarWidth / 2)] {
+                let left = l.gutterCentreX - half
+                let right = l.gutterCentreX + half
+                XCTAssertGreaterThanOrEqual(
+                    left, 0,
+                    "\(name): \(what) runs off the left edge by \(-left)pt")
+                // 4pt, not 0: the narrowest case (iPad mini in portrait) lands
+                // at 4.9 and the design canvas at 8, so this pins the clearance
+                // that is actually there rather than merely "it does not touch".
+                XCTAssertLessThanOrEqual(
+                    right, rankLabelRight - 4,
+                    "\(name): \(what) crowds the rank labels — right edge "
+                    + "\(right), labels anchored at \(rankLabelRight)")
+            }
+        }
+    }
+
+    /// The reservation is still exactly the old flat 224 at the largest square,
+    /// which is the case it was originally calibrated against. Portrait is
+    /// where it gets smaller, and only because the type there is smaller.
+    func testGutterReservationMatchesTheOldConstantAtFullScale() {
+        let big = SceneLayout(size: CGSize(width: 1366, height: 1024))
+        XCTAssertEqual(big.squareSize, SceneLayout.maxSquareSize)
+        XCTAssertEqual(big.minGutterWidth, SceneLayout.minGutterWidth,
+                       accuracy: 1.5,
+                       "the widest case should still reserve ~224pt")
+    }
+
+    /// The point of the change: portrait boards got bigger, and landscape did
+    /// not move at all.
+    func testPortraitBoardIsLargerThanTheFlatReservationAllowed() {
+        for (name, size) in Self.sizes where size.height > size.width {
+            let l = SceneLayout(size: size)
+            let flat = floor(min((size.height - SceneLayout.hudBandHeight
+                                  - SceneLayout.shipBandHeight) / 8,
+                                 (size.width - SceneLayout.minGutterWidth
+                                  - SceneLayout.rightMarginWidth) / 8))
+            XCTAssertGreaterThan(l.squareSize, flat,
+                                 "\(name) should have gained board")
+            XCTAssertLessThanOrEqual(l.boardOriginX + l.boardSize
+                                     + SceneLayout.rightMarginWidth,
+                                     size.width,
+                                     "\(name) overflows the right margin")
+        }
+    }
+}
+
+/// The Test Mode chip row is anchored under the version badge at x=10 and is
+/// about 166pt wide, so it used to be safe on the flat reasoning that
+/// `boardOriginX` was never below 224. Portrait reservations are smaller than
+/// that now — an iPad mini puts the board's left edge at 152 — so the row does
+/// reach past it, and the clearance it actually relies on is vertical: in
+/// portrait the board is centred in the leftover height and its top sits a long
+/// way below the HUD.
+///
+/// `TestModeStripNode` is iOS-only, so this is the geometry rather than the
+/// node. The two figures are its own: 10pt from the left edge, 166 wide.
+@MainActor
+final class TestModeStripClearsTheBoardTests: XCTestCase {
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    private static let stripLeft: CGFloat = 10
+    private static let stripWidth: CGFloat = 166
+    private static let chipHeight: CGFloat = 22
+
+    func testTheStripNeverLandsOnTheBoard() {
+        for (name, size) in [("mini portrait",   CGSize(width: 744,  height: 1133)),
+                             ("A16 portrait",    CGSize(width: 820,  height: 1180)),
+                             ("Pro 11 portrait", CGSize(width: 834,  height: 1194)),
+                             ("Pro 13 portrait", CGSize(width: 1024, height: 1366)),
+                             ("mini landscape",  CGSize(width: 1133, height: 744)),
+                             ("Pro 13 landscape", CGSize(width: 1366, height: 1024)),
+                             ("design",          CGSize(width: 960,  height: 700))] {
+            let l = SceneLayout(size: size)
+            SceneLayout.adopt(l)
+
+            // Where `layOutVersionBadge` and `layOutTestStrip` put it.
+            let badgeY = size.height - HUDNode.height - 16
+            // `VersionBadgeNode.height`, which is iOS-only like the strip.
+            let stripY = badgeY - 24 / 2 - 6
+            let stripBottom = stripY - Self.chipHeight
+            let stripRight = Self.stripLeft + Self.stripWidth
+
+            let clearsSideways = stripRight <= l.boardOriginX
+            let clearsAbove = stripBottom >= l.boardTopY + 20
+
+            XCTAssertTrue(clearsSideways || clearsAbove,
+                          "\(name): chip row \(Self.stripLeft)…\(stripRight) × "
+                          + "down to \(stripBottom) overlaps the board at "
+                          + "x \(l.boardOriginX), top \(l.boardTopY)")
+        }
     }
 }

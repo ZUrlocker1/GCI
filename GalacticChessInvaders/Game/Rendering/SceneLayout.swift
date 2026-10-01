@@ -89,7 +89,29 @@ struct SceneLayout {
                              height: max(size.height, Self.minimumSize.height))
         self.size = clamped
         let fromHeight = (clamped.height - Self.hudBandHeight - Self.shipBandHeight) / 8
-        let fromWidth  = (clamped.width - Self.minGutterWidth - Self.rightMarginWidth) / 8
+
+        // Width is the binding constraint on every iPad in portrait, and the
+        // gutter's share of it depends on the scale its type is drawn at —
+        // which depends on the square. Two regimes, because that scale stops
+        // shrinking at `minGutterScale`:
+        //
+        //   scaling — every point of square costs 8pt of board plus
+        //             `gutterContentWidth / designSquareSize` of gutter;
+        //   floored — the type is at its floor, so the gutter is a constant
+        //             and the board takes whatever is left.
+        //
+        // Solve the scaling case and use it if it lands above the floor;
+        // otherwise the floored one applies, capped at where the floor begins.
+        let gutterCostPerPoint = Self.gutterContentWidth / Self.designSquareSize
+        let ifScaling = (clamped.width - Self.gutterAir - Self.rightMarginWidth)
+            / (8 + gutterCostPerPoint)
+        let ifFloored = (clamped.width - Self.gutterWidth(atScale: Self.minGutterScale)
+            - Self.rightMarginWidth) / 8
+        let flooredCeiling = Self.minGutterScale * Self.designSquareSize
+        let fromWidth = ifScaling >= flooredCeiling
+            ? ifScaling
+            : min(ifFloored, flooredCeiling)
+
         let fitted = floor(min(fromHeight, fromWidth))
         self.squareSize = min(Self.maxSquareSize, max(Self.minSquareSize, fitted))
     }
@@ -107,9 +129,31 @@ struct SceneLayout {
     /// The design `boardBottomY`: everything below the board.
     static let shipBandHeight: CGFloat = 120
     var shipBandHeight: CGFloat { Self.shipBandHeight }
-    /// What the left gutter needs for the widest thing it carries.
+    /// What the left gutter needs for the widest thing it carries, **at the
+    /// largest square the game allows**. Kept as the headline number because
+    /// that is the case the gutter was designed against.
     static let minGutterWidth: CGFloat = 224
-    var minGutterWidth: CGFloat { Self.minGutterWidth }
+    /// What it needs *here*, which is less whenever the type is smaller.
+    ///
+    /// The widest thing in the gutter is about 130pt of monospace at scale 1
+    /// — "FRIENDLY FIRE!" at 9pt, "OR KNIGHT" at 13 — and it is centred, so
+    /// the gutter holds that plus air for the rank labels. At `gutterScale`
+    /// 1.5, the scale a 96pt square gives, that comes to 223: the 224 above,
+    /// which is where the number came from.
+    ///
+    /// Reserving 224 at *every* scale is what left a band of dead space down
+    /// the left in portrait, where the square is small and the scale sits on
+    /// its 0.9 floor — 145 is enough there, and the other 79 goes to the
+    /// board. Nothing moves: the gutter keeps its position and its contents,
+    /// it is simply not over-reserved.
+    var minGutterWidth: CGFloat { Self.gutterWidth(atScale: gutterScale) }
+
+    static let gutterContentWidth: CGFloat = 130
+    static let gutterAir: CGFloat = 28
+
+    static func gutterWidth(atScale scale: CGFloat) -> CGFloat {
+        gutterContentWidth * scale + gutterAir
+    }
     /// Breathing room to the right of the board.
     ///
     /// Reserving a second *full* gutter here was tried and reverted: at 224 it
@@ -183,6 +227,14 @@ struct SceneLayout {
     /// The number reproduces the canvas the game was composed on. At the design
     /// size the box is 512 + 2×224 = 960 — exactly the old fixed canvas — and it
     /// stops growing once the square hits its 96pt cap.
+    /// Deliberately the static 224 and not `minGutterWidth`, even though the
+    /// reservation is now narrower than that in portrait. This is the ship's
+    /// lane and the centre the gutter's readouts hang off, so deriving it from
+    /// the smaller number would move both — and the portrait change is meant
+    /// to grow the board, not relocate anything. Against the constant,
+    /// `playfieldMinX` simply clamps to 0 in portrait: the ship gets the dead
+    /// space at the far left, which is the same space the board just took a
+    /// share of.
     var playfieldMargin: CGFloat { Self.minGutterWidth * contentScale }
 
     /// Centred on the board, and never outside the window.

@@ -1413,8 +1413,11 @@ class GameScene: SKScene {
     /// the gutter.
     ///
     /// Nothing has to dodge the board. At x=10 the row reaches about 176,
-    /// and `boardOriginX` is never less than `minGutterWidth` — 224 —
-    /// so the strip is left of the squares at every size and orientation.
+    /// and `boardOriginX` is never less than `minGutterWidth`, which is 224
+    /// at the largest square and about 152 at the smallest portrait one —
+    /// so in portrait the row does reach past the board's left edge, but the
+    /// board there is centred in the leftover height and its top sits far
+    /// below this strip. `TestModeStripClearsTheBoardTests` measures it.
     /// The gutter's own topmost item, the Chess Hint, sits hundreds of points
     /// lower.
     func layOutTestStrip() {
