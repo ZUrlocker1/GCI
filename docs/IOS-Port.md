@@ -1,7 +1,8 @@
 # Porting Galactic Chess Invaders to iPad and iPhone
 
-*Written 13 September 2026 against v1.1. Updated for 1.2, in which §3 — the layout
-refactor — was built and shipped on macOS. Everything else is still a plan.*
+*Written 13 September 2026 against v1.1. Rewritten 1 October 2026: the layout refactor
+and Phase 1 are built and shipping, iPad is done, and the roads not taken have been cut
+back to the reasoning that still earns its place. What is left is the phone.*
 
 ---
 
@@ -18,10 +19,15 @@ x=112, the ship lane is at y=62. That works on one Mac window and on iPad landsc
 luck. It does not survive portrait, and it wastes a third of an iPhone screen.
 
 So the port was one substantial refactor — make the scene lay itself out from its own
-size — followed by four increasingly fiddly device passes. **The refactor is done**
-as of 1.2; see §3, which also records why it was done, what it cost, the cheaper
-option that was not considered at the time, and the one line that reverts macOS to
-the 1.1 behaviour. The device passes remain.
+size — followed by increasingly fiddly device passes. **The refactor shipped in 1.2**
+(§3), and **iPad is done**: the game plays by touch, Test Mode has a door that needs no
+keyboard, and all five iPad sizes have been checked in both orientations (§5). iPad
+portrait was closed as unnecessary rather than built, because the restructure it called
+for turned out to be answering a gutter bug rather than a shape problem.
+
+**What is left is the phone**, and it is where the geometry actually bites: 393pt has no
+room for a left gutter at all, and that is the one case the uniform-scale approach could
+never have served.
 
 ---
 
@@ -180,142 +186,44 @@ value into a latent bug, and they only surface where something reads them.
 
 ### Why this was done at all, and why the Mac paid for it
 
-Worth writing down, because the answer is not "the old way was broken".
+The answer is not "the old way was broken". A fixed canvas under `.aspectFit` is one
+image scaled uniformly, so fonts, banners and missiles resized together by construction
+— there was no per-element work to get wrong. Every resize bug the refactor caused is a
+bug it created.
 
-**The old way could not break.** A fixed canvas under `.aspectFit` is one image
-scaled uniformly, so fonts, banners, missiles and messages all resized together
-by construction. There was no per-element work to get wrong because there was
-none to do. Every resize bug listed above is a bug this change created.
-
-**Where `.aspectFit` genuinely fails is legibility, not letterboxing.** A uniform
-scale shrinks type along with the board, and the HUD and gutter already run at
-8–11pt. The scale factors from §2's table, applied to 9pt gutter type:
+**Where `.aspectFit` genuinely fails is legibility, not letterboxing.** A uniform scale
+shrinks type along with the board, and the HUD and gutter already run at 8–11pt:
 
 | Target | Uniform scale | 9pt type renders at |
 |---|---|---|
 | iPad 12.9" landscape | 1.42× | 12.8pt |
 | iPad mini landscape | 1.06× | 9.6pt |
-| iPad portrait | 1.07× | 9.6pt, in a 45%-black screen |
 | iPhone landscape | 0.56× | **5.0pt** |
 | iPhone portrait | 0.41× | **3.7pt** |
 
-So the refactor was **unnecessary for macOS, unnecessary for iPad landscape,
-marginal for iPad portrait, and genuinely required for iPhone**. Below roughly
-0.7× the game stops being readable however much screen is left over.
+So the refactor was unnecessary for macOS and iPad landscape, marginal for iPad
+portrait, and **genuinely required for iPhone**. Below roughly 0.7× the game stops
+being readable however much screen is left.
 
-**The cheaper option, not taken.** Keep `.aspectFit` and swap the *design canvas*
-per orientation — 960×700 landscape, something nearer 760×1000 portrait —
-rebuilding the scene on rotation. Two or three fixed canvases, each internally
-rigid and each scaled uniformly the way the Mac already did. That still requires
-composing a portrait layout, which is the real work in §5, but it would not have
-required parameterising every round, pop and dot. It reaches iPad fully and
-iPhone acceptably for a fraction of the effort, and it was not on the table when
-this was planned. If the phone passes turn out harder than §5 expects, this is
-the fallback worth reconsidering.
+**Two things worth carrying forward.**
 
-**What it cost.** 1,502 lines across 19 files, and about sixteen of the
-twenty-three commits after Stage 2 exist only to clean up after it — including
-one regression that stopped the fleet sweeping horizontally from Level 02
-onward, in a game that had already shipped twice.
+*The sequencing was the mistake, more than the decision.* `scaleMode` is one line per
+platform. macOS could have stayed on `.aspectFit` until an iOS target existed and the
+responsive layout had been proven there; doing it on the shipping platform first paid
+the destabilisation cost where none of the benefit lands.
 
-**The sequencing was the mistake, more than the decision.** `scaleMode` is set in
-one line per platform. macOS could have stayed on `.aspectFit` until an iOS
-target existed and the responsive layout had been proven there. Doing it on the
-shipping platform first meant paying the whole destabilisation cost where none of
-the benefit lands.
+*The fallback is still one line.* `scene.scaleMode = .aspectFit` in `GameScene.shared`
+pins the scene at 960×700 forever, `SceneLayout` returns its design values, and macOS
+renders exactly as 1.1 did. Worth remembering if a Mac release ever needs the safe path
+in a hurry. The cheaper design never taken — keep `.aspectFit` and swap the *canvas*
+per orientation, two or three rigid canvases each scaled uniformly — remains the
+fallback to reconsider if the phone passes prove harder than §5 expects.
 
-**The fallback is still one line.** Setting `scene.scaleMode = .aspectFit` in
-`GameScene.shared` pins the scene at 960×700 forever, so `SceneLayout` always
-returns its design values and macOS renders exactly as 1.1 did. Everything in
-this section goes dormant and stays available for iOS. Worth remembering if a
-Mac release ever needs the safe path in a hurry.
-
----
-
-## 3a. Original plan
-
-Everything else depends on this, so it comes first and it is worth doing properly.
-
-**Replace the fixed canvas with a scene that lays itself out.** Set
-`scaleMode = .resizeFill`, implement `didChangeSize(_:)`, and derive every position from
-a single computed value rather than from literals.
-
-```swift
-/// Every position in the scene, derived from the size it actually has.
-struct SceneLayout {
-    let size: CGSize
-    let safeArea: UIEdgeInsets       // zero on macOS
-    let mode: Mode                   // .wide, .tall
-
-    var squareSize: CGFloat          // was BoardNode.squareSize = 64
-    var boardOrigin: CGPoint         // was (224, 120)
-    var shipLaneY: CGFloat           // was 62
-    var readoutColumn: CGRect?       // the gutter, nil in portrait
-    var readoutBar: CGRect?          // the portrait replacement
-}
-```
-
-The constants it replaces, all currently literals in `GameScene` and `BoardNode`:
-
-`squareSize 64` · `boardSize 512` · `boardBottomY 120` · `shipLaneY 62` ·
-`shipMargin 30` · `gutterDrop 8` · `chessHintY 292` · `powerUpAlleyBottomY 196` ·
-`powerUpAlleyStep 14` · `powerUpBarWidth 84` · `powerUpBarY` · and **eight** separate
-uses of the literal `x: 112` for the gutter centre.
-
-**`BoardNode.squareSize` must stop being a static constant.** It is the root of the
-whole coordinate system — `boardSize` is `squareSize * 8`, piece sprites are fitted to
-it, and `FleetController` sweeps in multiples of it. Making it an instance property
-derived from available space is the single highest-leverage change in the port, and it
-touches the most files.
-
-**Do this on macOS first.** Ship it as a macOS point release that behaves identically at
-960×700 but also lets the window resize properly. That way the refactor is validated
-against a known-good build before any iOS variable enters.
-
-### How risky is it?
-
-Measured rather than estimated, and the answer is **less risky than it looks**, because
-the architecture rules already did most of the work:
-
-- **`PieceNode.squareSize` is already an instance property**, injected at construction.
-  The piece layer never reads the static.
-- **`FleetRules.sweepAmplitude(squareSize:ratio:)` already takes it as a parameter.** The
-  Logic layer does not depend on the constant either.
-- **58 test references** touch `squareSize` / `boardSize`. Geometry is not the untested
-  part of this codebase.
-
-So the usual hazard in a refactor like this — hidden couplings to a global — largely is
-not there. The consumers were written to be parameterised and are simply being handed a
-constant today.
-
-What remains, in order of care needed:
-
-| Area | Call sites | Note |
-|---|---|---|
-| `BoardNode` | 18 | Grid lines, rank/file labels, marker pool, selection |
-| `GameScene` | 12 | Plus the eight `x: 112` literals |
-| `FleetController` | 7 | Sweep and descent distances |
-| `RaiderController` | 3 | Crossing height |
-
-**Do it in two stages, and the first is near-zero risk:**
-
-1. **Parameterise without changing numbers.** Route everything through `SceneLayout`,
-   which returns exactly today's values. Behaviour-preserving by construction, verifiable
-   by screenshot at 960×700, and the 388 tests pass unchanged.
-2. **Make the values size-dependent.** Only now can behaviour change, and only when the
-   window is not 960×700.
-
-The genuine risks live in stage 2, and there are three:
-
-- **Non-integer square sizes.** A 1pt grid line at 63.4pt spacing will alias. Rounding
-  `squareSize` down to a whole point and centring the remainder is the fix, and it should
-  be in the layout from the start rather than bolted on.
-- **`didChangeSize` is a new code path.** On a Mac it fires continuously during a live
-  window drag. Rebuilding nodes there rather than repositioning them would be visibly
-  bad; the layout has to be cheap to recompute.
-- **Visual regressions the tests cannot see.** Spacing and overlap are exactly what this
-  session's bugs were made of. Screenshots before and after at 960×700, compared
-  directly, are the only real check.
+**Two stage-2 hazards that are still live constraints**, now that the layout is
+size-dependent: `squareSize` must stay a whole number of points or a 1pt grid line
+aliases (it is floored, with the remainder centred), and `didChangeSize` fires
+continuously during a live window drag, so the layout has to be cheap to recompute
+rather than rebuild nodes.
 
 ---
 
@@ -324,139 +232,63 @@ The genuine risks live in stage 2, and there are three:
 The ask is narrow and that helps: horizontal ship movement, and fire. Two axes of one
 stick and one button.
 
-### Virtual controller — considered and not used
+### What was considered, briefly
 
-**Read the decision in *Why GCI cannot just copy that* below before this
-section.** What follows is why the obvious default was not taken; it is kept
-because the reasoning still holds if the built scheme ever needs replacing.
+**`GCVirtualController`** (iOS 15+) was the obvious default: it disappears when a
+physical controller connects, `GCKeyboard` comes free, and it needs no art. Not taken —
+it is an unrestylable translucent grey system d-pad over a neon vector game, and the
+scheme that shipped was comparable work. The input layer is one adapter either way and
+`GameAction` means nothing downstream would know the difference, so this stays the
+fallback if the built scheme ever needs replacing.
 
-`GCVirtualController` (GameController, iOS 15+) looks like the right default:
-
-```swift
-let config = GCVirtualController.Configuration()
-config.elements = [GCInputDirectionPad, GCInputButtonA]
-```
-
-Why it wins for this game:
-
-- **It disappears on its own** when a physical controller connects, and comes back when
-  it disconnects. No code.
-- **Physical keyboards work for free** via `GCKeyboard` (iOS 14+), which satisfies the
-  requirement that a hardware keyboard keeps working. Arrow keys and space map to the
-  same `GameAction`s the Mac build already uses.
-- It is the native, familiar, Apple-blessed control and needs no art.
-
-Why it might not: you get very little say over how it looks. It is a translucent grey
-system d-pad laid over a neon vector arcade game, and it may look borrowed. There is no
-way to restyle it.
-
-**This originally recommended building against `GCVirtualController` first**, on the
-grounds that it is hours rather than days and the looks could be judged with it
-running. That advice was written before the decision below it and is superseded: the
-chosen scheme turned out to be a comparable amount of work, and it avoids laying a
-grey system d-pad over a neon vector game. The fallback reasoning stands, though —
-the input layer is one adapter either way, and `GameAction` means nothing downstream
-would know the difference.
-
-### What other arcade ports actually do
-
-Worth settling by looking at what shipped and worked, rather than by reasoning from
-first principles. The pattern across touch conversions of one-axis shooters is
-fairly consistent:
-
-| Game | Movement | Firing |
-|---|---|---|
-| Sky Force Reloaded | drag anywhere | auto |
-| Phoenix 2 | drag anywhere | auto |
-| Galaga Wars | drag anywhere | auto |
-| Space Invaders (Taito) | virtual d-pad, later direct touch | button |
-| Geometry Wars 3 | twin virtual sticks | auto / stick |
-| Super Hexagon | tap left or right half | n/a |
-
-Two things stand out. **Direct drag beat the virtual d-pad**, everywhere, and the
-ports that kept a d-pad are the ones people complain about — a d-pad gives no
-tactile edge, so a thumb drifts off it and the player finds out by dying. And
-**auto-fire is close to universal**, because it removes the second input entirely
-and leaves one thumb doing everything.
-
-Most implementations also use **offset drag**: the ship tracks the finger's
-*movement* rather than sitting under it, so the finger never covers the thing you
-are aiming.
+**What shipped touch conversions of one-axis shooters actually do** settled two
+questions. Direct drag beat the virtual d-pad everywhere — a d-pad gives no tactile
+edge, so a thumb drifts off it and the player finds out by dying — and most use *offset*
+drag, where the ship tracks the finger's movement rather than sitting under it. Also
+near-universal: **auto-fire**, which GCI cannot have. See below.
 
 ### Why GCI cannot just copy that
 
-Two complications, and the second is the interesting one.
+**The screen is also a chess board.** Drag-anywhere assumes the whole surface is a
+movement pad; here taps on the board select and move pieces. So the drag region is
+bounded to the ship's lane and the space below the board — `point.y < boardBottomY`,
+which is the band the layout already reserves as `shipBandHeight`. That is a reason to
+keep that band generous on a phone rather than trimming it to grow the board.
 
-**The screen is also a chess board.** A drag-anywhere scheme assumes the whole
-surface is a movement pad. Here, taps on the board select and move pieces. So the
-drag region has to be bounded — most likely the ship's own lane and the space below
-the board, which is exactly the band the layout already reserves as
-`shipBandHeight`. That is a reason to keep that band generous on a phone rather
-than trimming it to make the board bigger.
+**Auto-fire would be actively harmful.** In every game that uses it, the only things in
+front of you are enemies. In GCI your own pieces sit in your firing line on every shot
+— that is what the friendly-fire hint exists to teach. Auto-fire would demolish White's
+position without the player choosing to. So the dominant touch-shmup solution is not
+available, and GCI keeps an explicit fire control.
 
-**Auto-fire would be actively harmful.** In every game in that table, the only
-things in front of you are enemies. In GCI your own pieces sit in your firing line
-on every shot — that is what the friendly-fire hint exists to teach. Auto-fire would
-demolish White's position without the player ever choosing to. So GCI keeps an
-explicit fire control, and the dominant touch-shmup solution is not available to it.
-
-That leaves the two-input problem that auto-fire usually solves. Options, roughly in
-order of how much they ask of the player:
-
-1. **Drag in the ship lane to move, tap anywhere in the lane to fire.** One thumb,
-   no on-screen furniture, no chrome over the art. Risk: a tap and the start of a
-   drag are hard to tell apart, so firing may trigger on movement.
-2. **Drag to move with the left thumb, a fire button under the right.** Two thumbs,
-   which is the natural landscape grip anyway, and it is unambiguous.
-3. **`GCVirtualController`** — the d-pad the table above says people dislike, but it
-   is free, native, and disappears when a real controller connects.
-
-**Decided and built: 2, and no auto-fire.** Drag in the ship's lane with the left
-thumb, a fire button under the right. Landscape puts both thumbs in the bottom
-corners already, and the fire button sits in the right-hand margin — space the
-layout has spare and the Mac build uses for nothing. Option 1 is the thing to test
-it against, not the thing to build.
+**Decided and built: drag in the ship's lane with the left thumb, a fire button under
+the right, and no auto-fire.** Landscape puts both thumbs in the bottom corners already,
+and the button sits in the right-hand margin — space the layout has spare and the Mac
+uses for nothing.
 
 *As built* (`TouchInputAdapter`, `FireButtonNode`):
 
-- **Every touch is tracked by identity.** Reading `touches.first` was the first
-  version and it makes the two thumbs fight — a right thumb resting on FIRE becomes
-  "first" and steals the left thumb's drag.
-- **The drag is offset, not absolute.** The gap between finger and ship is fixed at
-  the moment of the grab and kept for the whole drag, so a thumb can hold anywhere in
-  the band and steer from there with a clear view of the ship. Absolute mapping was
-  built first and had the flaw the genre already knows about: it snaps the ship to the
-  finger, so grabbing the thing you want to move puts your thumb straight over it.
-  Mobile shooters answer this by offsetting the ship from the finger or by moving it
-  on the finger's delta — Sky Force ships both and lets the player choose. Offsetting
-  suits GCI because the ship travels on one axis, which makes the vertical half of the
-  offset free: the ship stays in its lane however low you hold.
-- **It is one to one with the finger's movement**, clamped to `shipLane`, and not
-  routed through the ship's speed — dragging *is* the position, so a multiplier would
-  leave the ship trailing the thumb steering it. The Settings speed slider therefore
-  governs the keyboard and a game controller, not touch. If virtual arrow buttons are
-  ever added, that slider starts mattering again on iOS, which is a point in their
-  favour.
-- **The drag region is `point.y < boardBottomY`** — the ship's band and the space
-  around it, which is what keeps a drag over the squares a chess move.
-- **A finger that starts on FIRE keeps firing wherever it slides**; lifting is what
-  stops it. Sliding off a button and expecting it to stop is a desktop habit, and
-  mid-fight it reads as the gun jamming.
-- **The button is sized to the margin, not to the board.** Scaling it by
-  `contentScale` like everything else put a 114pt button in a 96pt margin and the
-  screen edge cut it in half. It is 80pt in portrait and 114 in landscape.
-- **The touch target is half again the drawn circle.** A thumb is wider than what it
-  is aiming at, and a missed shot here is a piece of White's that survives.
-- Both controls are live only during play, and the button appears and disappears
-  with the HUD.
+- **Every touch is tracked by identity.** `touches.first` was the first version and it
+  makes the two thumbs fight — a right thumb resting on FIRE becomes "first" and steals
+  the left thumb's drag.
+- **The drag is offset, not absolute**, fixed at the moment of the grab. Absolute
+  mapping snaps the ship to the finger, so grabbing the thing you want to move puts your
+  thumb over it. The ship travels on one axis, which makes the vertical half of the
+  offset free: it stays in its lane however low you hold.
+- **One to one with the finger**, clamped to `shipLane`, not routed through ship speed —
+  dragging *is* the position, so a multiplier would leave the ship trailing the thumb.
+  The Settings speed slider therefore governs the keyboard and a controller, not touch.
+- **A finger that starts on FIRE keeps firing wherever it slides**; lifting stops it.
+  Expecting a slide-off to stop is a desktop habit, and mid-fight it reads as a jam.
+- **The button is sized to the margin, not the board** — 80pt portrait, 114 landscape.
+  Scaling it by `contentScale` put a 114pt button in a 96pt margin and the screen edge
+  cut it in half. Its touch target is half again the drawn circle.
+- Both controls are live only during play and come and go with the HUD.
 
-**Chess pieces drag too.** Tap-then-tap still works, but drag is the default: it is
-what every chess app on a phone has taught people, and it is one gesture instead of
-two at a moment when the clock is running. That matters more here than the
-convention does — see the metric under *Testing* below.
-
-Which leaves the port with one consistent rule: **on iOS you drag things.** The ship
-in its lane, a piece to its square. The only tap is the fire button.
+**Chess pieces drag too**, with tap-then-tap still working. It is what every phone chess
+app has taught people, and one gesture instead of two while the clock runs. Which leaves
+one consistent rule: **on iOS you drag things** — the ship in its lane, a piece to its
+square. The only tap is the fire button.
 
 ### Testing for playability
 
@@ -477,252 +309,115 @@ Not a simulator job. The things that decide this cannot be seen on a desktop:
   proportion of beats where the player completes their own move.**
 - **Cadet first.** Test on Cadet, which is the default and gives a seven-second beat.
   If it is not playable there it is not playable.
+- **The 44pt floor is a layout requirement, not a guideline.** A square below it fails
+  Apple's guidance, and on an iPhone in portrait a square could be 40pt. `SceneLayout`
+  enforces `minSquareSize`, and a small tap-tolerance margin around each square is worth
+  adding on touch.
 
-### Touch for chess
+### What becomes unreachable, and what shipped instead
 
-The existing flow is click piece, click destination. That maps to tap-then-tap with no
-change in logic. Two things need attention:
-
-- **Hit targets.** A 64pt square is comfortable; the same square on an iPhone in portrait
-  could be 40pt, below Apple's 44pt guidance. The layout must enforce a floor on
-  `squareSize`, and the port should consider a small tap-tolerance margin around each
-  square.
-- **Drag as an alternative.** Worth adding on touch — dragging a piece is the gesture
-  people expect from every chess app they have used. The `selectPieceAt` / `movePieceTo`
-  actions already support it; it is a gesture recogniser, not a rules change.
-
-### What becomes unreachable
-
-Every hotkey in the game is an `NSEvent` in `GameScene.keyDown` or `InputHandler`. On a
-phone there is no keyboard at all; on an iPad there may or may not be one. Three
-separate problems, and they want different answers.
-
-#### 1. The player-facing hotkeys, and the promises the UI makes about them
-
-| Binding | What it does | On iOS |
-|---|---|---|
-| `S` | Settings | Button exists; **drop the hotkey affordance** |
-| `I`, `⌘I`, `?` | How To Play | Button exists; **drop the affordance** |
-| `M` | Mute music | Needs a Settings row — it already has one |
-| `Escape` | Pause | Needs a touch target |
-| `Q` | Leave the run | Needs a touch target |
-| `Return` / any key | Start, dismiss, continue | Tap anywhere already works for most of these |
-| `Y` / `N` | Quit prompt, new game | On-screen buttons |
-| `Space`, `←` `→`, `A` `D` | Fire and steer | §4's virtual controller |
+Every hotkey is an `NSEvent` in `GameScene.keyDown` or `InputHandler`. On a phone there
+is no keyboard; on an iPad there may or may not be one.
 
 **Decided: the handlers stay, the affordances go.** Every `keyDown` path is kept, so an
-iPad in a Magic Keyboard behaves exactly as the Mac does today — including `⌘T` and the
-test keys. What does not survive is the *advertising*: the underlined hotkey letter in
-`SET` and `INFO` comes off on iOS unconditionally, not conditionally, because a button
-that sometimes claims a shortcut and sometimes does not is worse than one that never
-does. `GCKeyboard.coalesced` (iOS 14+, with connect/disconnect notifications) is still
-worth knowing about for the *copy* below, but the underlines are simply gone.
+iPad in a Magic Keyboard behaves exactly as the Mac does, `⌘T` and the test keys
+included. What does not survive is the *advertising* — the underlined hotkey letter in
+`SET` and `INFO` comes off on iOS unconditionally, because a button that sometimes
+claims a shortcut is worse than one that never does.
 
-**The copy has to change, because it names keys.** Every string, and what it should say
-on a touch device:
+**The copy that named keys was rewritten**: `TAP TO START`, `TAP TO RESUME`, `TAP BACK
+TO RESUME`, `NEW GAME?` over `YES` / `NO`, `TAP THE FIRE BUTTON!`, `DRAG TO MOVE SHIP!`,
+and a CONTROLS list that leads with `DRAG` / `FIRE` / `TAP` and relegates keys to
+`Optional:`. Where a keyboard *is* attached the Mac wording is still better, so these are
+one function returning either string rather than two code paths.
 
-| Where | Today | On iOS |
-|---|---|---|
-| `TitleOverlayNode` | `PRESS ANY KEY TO START` | `TAP TO START` |
-| `GameScene.showPausedOverlay` | `PRESS ANY KEY TO RESUME` | `TAP TO RESUME` |
-| `HowToPlayNode`, `SettingsNode` | `PRESS ANY KEY TO RESUME GAME` | `TAP BACK TO RESUME` |
-| `GameOverNode` | `PRESS ANY KEY  ·  LEVEL n` | `TAP FOR LEVEL n` |
-| `GameOverNode` | `NEW GAME?   Y / N` | **built** — `NEW GAME?` over `YES` / `NO` |
-| `GameScene` quit prompt | `Y / N` | two buttons — `QUIT` / `KEEP PLAYING` |
-| Arcade Hint, fire | `PRESS SPACE` / `TO FIRE!` | `TAP THE` / `FIRE BUTTON!` |
-| Arcade Hint, steer | `USE ARROWS` / `TO MOVE!` | `DRAG TO` / `MOVE SHIP!` |
-| `HighScoreEntryNode` | `RETURN WHEN DONE  ·  UP TO 8 CHARACTERS` | `TAP DONE  ·  UP TO 8 CHARACTERS` |
-| How To Play, controls | chips `← →` / `SPACE` / `CLICK` / `ESC` | **built** — `DRAG` / `FIRE` / `TAP` / `KEYS` |
-| `SettingsNode`, log row | `SAME AS THE L KEY` | drop the line |
-| Test Mode gate | `⌘T FIRST` | **built** — `TEST MODE FIRST` |
+**One row of that audit was hiding a hole**, and the audit's own framing is what hid it:
+every other line was a control that existed and was named wrongly, while
+`HighScoreEntryNode` read `KeyPress` and nothing else. A touch-only player who made the
+table could not enter a name at all — a tap fell through to `resetToTitle` and the run
+recorded blank.
 
-**That row was hiding a hole, and the table's own framing is what hid it.** Every other
-line here is a control that exists on iOS and is named wrongly; this one was a control
-that did not exist at all. `HighScoreEntryNode` reads `KeyPress` and nothing else, so a
-touch-only player who made the table could not type a name — a tap fell through to
-`resetToTitle` and the run was recorded blank. Changing `RETURN` to `DONE` would have
-renamed a button nobody could press. (It is eight characters, not three; the table row
-was wrong about that too.)
+**Built: the system keyboard, via `NameEntryField`.** A 1×1 `UITextField` with clear
+colours, holding first responder only while the entry screen is up; input uppercased and
+filtered to printable ASCII, because Press Start 2P has glyphs for nothing else. The
+scene still draws the name — the field is a keyboard, not a text box. Four things are
+load-bearing, all found on device:
 
-**Built: the system keyboard, via `NameEntryField`, summoned by a tap.**
-
-A `UITextField` sized 1×1 with clear colours, living in the `SKView` and holding first
-responder only while the entry screen is up. Input is uppercased and filtered to
-printable ASCII, because Press Start 2P has glyphs for nothing else and an emoji would
-be a blank box in the table forever. The scene still draws the name itself; the field is
-a keyboard, not a text box.
-
-Four things about it are load-bearing, and all four were found on device.
-
-1. **It is summoned by tapping the panel, never automatically.** iOS's *first* keyboard
-   presentation in a session spins up the keyboard process and its layouts, and on an
-   A12 that measured 690ms, 744ms and 4418ms on three runs — main thread blocked, frame
-   rate at 5fps, audio distorting for the duration. Asking for it as part of showing the
-   panel put that squarely on the end of a winning run. The name sits in a bordered
-   field and the footer says `TAP TO TYPE`, so it reads as a control rather than a
-   caret on black.
-2. **The cost is paid on the title screen instead.** `warmKeyboard()` becomes first
-   responder and resigns in the same turn, two seconds after the title draws — no
-   keyboard is ever visible and the setup happens anyway. The title screen specifically,
-   because every run passes through it before a score exists: you can die on level 1 and
-   make the table.
+1. **It is summoned by a tap, never automatically.** iOS's *first* keyboard presentation
+   in a session measured 690ms, 744ms and 4418ms on an A12 — main thread blocked, 5fps,
+   audio distorting throughout. Asking for it while showing the panel put that on the end
+   of a winning run.
+2. **The cost is paid on the title screen.** `warmKeyboard()` becomes first responder and
+   resigns in the same turn, two seconds after the title draws. The title screen
+   specifically, because every run passes through it before a score exists — you can die
+   on level 1 and make the table.
 3. **`claimKeyboard` stands down while name entry is active.** `GameView.updateUIView`
-   claims the keyboard on every SwiftUI pass, and the log panel is `@Observable` — so
-   every logged line redrew it and the view took first responder straight back off the
-   field. The software keyboard could not stay up at all.
-4. **The overlay lifts clear of the keyboard**, by half of what it covers, driven by
+   claims the keyboard on every SwiftUI pass and the log panel is `@Observable`, so every
+   logged line took first responder straight back off the field.
+4. **The overlay lifts clear of the keyboard** by half of what it covers, from
    `keyboardWillChangeFrameNotification` intersected against the view's bounds — which
    handles iPad's floating and split keyboards by the same path as the docked one.
 
-A **DONE** button sits on the panel as well, and is the only way off the screen when no
-keyboard appears — a hardware keyboard that is connected but flat is enough for iOS to
-suppress the software one. It submits rather than discards: anything typed is kept and
-an empty field falls back to PLAYER, since a blank row in the table reads as a bug. A
-hardware keyboard needs none of this and types straight through
-`KeyboardFocusedSKView` → `handleKey`, exactly as on the Mac.
+A **DONE** button is the only way off the screen when no keyboard appears — a connected
+but flat hardware keyboard is enough for iOS to suppress the software one. It submits
+rather than discards, and an empty field falls back to PLAYER.
 
-**The Info screen's own TEST MODE block is rewritten too**, and it had to be: it
-advertised `⌘T` on a device with no ⌘T, and named `P`, `R` and `V` as keys when they are
-now the POWER, RAID and LEVEL chips. iOS reads `HOLD THE VERSION BOX · TAP TO CLEAR` /
-`POWER, RAID AND LEVEL BUTTONS APPEAR` / `LOG AND AUTO CHESS JOIN SETTINGS`. The Mac
-keeps its two key lines and the ⌘ glyph unchanged.
+#### Test Mode without `⌘T`
 
-The CONTROLS list changed for the same reason. It opened with arrows and SPACE — naming
-a keyboard an iPad may not have, while never mentioning the two controls it certainly
-does have. The keyboard chip is down to `SPACE, ARROWS, ESC`: Q, M, S and I all have
-on-screen buttons now, so listing them advertised a second way to do something already
-visible.
+**Built: click and hold the version badge, and Test Mode ships in the release build.**
+The version is drawn on the play screen, **top-left in the band under the HUD bar**, as a
+bordered chip. It earns its place twice: a tester reads the build number straight off the
+screen, and the gesture has something real to aim at. The badge is also the indicator —
+cyan at rest, orange while Test Mode is on, with a bar sweeping it while held.
 
-This is a correction, not the restructure Phase 4 has in mind.
+**Top-left rather than the bottom corner**, for a reason that still binds the iPhone
+passes: `isInShipLane` claims *every* touch below the board across the full width
+(`point.y < boardBottomY`), so a control down there never sees the press without its own
+exception ahead of the lane test. The bottom-left also already holds `ERROR - SEE LOG` at
+(50, 30), and the iOS host sets `ignoresSafeArea` so the scene runs under the home
+indicator. The band under the HUD has none of that: `hudBandHeight` 68 against a 36pt bar
+leaves a clear strip at every size, and nothing claims touches there.
 
-Two notes on that table. The Arcade Hints are the constrained ones —
-`ChessHintNode.ControlPrompt` returns two lines and the column fits about eleven
-characters at 9pt, which the suggestions above respect. And where a keyboard *is*
-attached, the Mac wording is still the better wording, so these want to be a
-`GCKeyboard`-aware lookup rather than a hard swap — one function returning either
-string, not two code paths.
+**A ~1.5s hold to arm, a plain tap to clear.** The hold stops a player stumbling in, and
+that argument is spent once they are in — asking them to hold again on the way out is
+ceremony with nothing left to protect. Two implementation notes, both bugs that were
+fixed: the direction has to be read at *touch-down*, since the hold fires while the
+finger is still down and a lift that re-read the flag would toggle straight back; and the
+deadline must not hang off an `SKAction`, or it only fires while the scene happens to be
+ticking — on a freshly launched Mac it never did.
 
-#### 2. Getting into Test Mode without `⌘T`
+Counted taps, a multi-finger press, a shake and a Settings row were all considered and
+rejected: respectively no mid-gesture feedback, nothing to aim at, fires by accident in a
+game played in motion, and 1.2 moved the log panel *behind* Test Mode precisely because
+players opened it by accident.
 
-`⌘T` is deliberately Command-modified so it cannot collide with gameplay, and it is
-per-session so nobody leaves it on. Neither property survives onto a touch device.
+**`⌘T` stays wherever a keyboard is attached**, and both doors reach the same
+`testMode.toggle()`. On iOS Test Mode doubles as a cheat code — a player stuck on a wave
+can skip it rather than put the game down — which is the argument for shipping it rather
+than hiding it in a separate configuration testers cannot report against.
 
-**Decided, and built: a long press on the version label, and Test Mode ships.** On iOS
-the version is drawn on the play screen as well as in Settings — `V1.2  B9`, 8pt and
-dim, **top-left, in the band under the HUD bar**. That earns its place twice over: a
-tester reporting a bug can read the build number straight off the screen, and it gives
-the gesture something real to aim at.
+#### The debug keys — `L`, `A`, `P`, `R`, `V`
 
-**Top-left, not the bottom-left corner this section first chose.** Three things are
-wrong with the bottom, and the first is disqualifying:
+They split by kind, and the split is the design:
 
-1. `isInShipLane` claims *every* touch below the board, across the full width — it is
-   `point.y < boardBottomY`, not a box around the ship. A label down there never sees
-   the press. It would need its own exception ahead of the lane test, the way FIRE has
-   one.
-2. It would share a 36pt strip with `ERROR - SEE LOG` at (50, 30), so one of them would
-   have to hide the other.
-3. The iOS host sets `ignoresSafeArea`, so the scene runs under the home indicator.
+- **Toggles.** `L` (diagnostics panel) and `A` (Auto Chess) persist, and **Settings
+  already carries both** — the log row behind `SettingsNode(showsLogRow: testMode)` and
+  the CHESS `YOU PLAY / AUTO` row. Nothing to build.
+- **Momentary actions.** `P`, `R` and `V` fire *during play* and are meaningless from a
+  modal panel. **Built as `TestModeStripNode`**: `POWER · RAID · LEVEL` chips under the
+  badge, present only while Test Mode is on and greyed outside `PlayingState`, so a
+  player never sees them and a tester never presses a dead one. They shorten to
+  `PWR · RAID · LVL` when the gutter is too narrow for the words.
 
-The band under the HUD has none of that. `hudBandHeight` is 68 against a 36pt bar, so
-there is always a clear 32pt strip above the board at every size, and the left gutter is
-empty from the Chess Hint up. Nothing claims touches there, so the press simply arrives.
+Both the badge and the chips ship on **macOS as well** — the behaviour is identical on
+both platforms, which is why the Info screen describes one thing rather than two.
 
-The label doubles as the Test Mode indicator: dim cyan when off, lit orange when on. The
-gutter notice says it once; the label keeps saying it.
-
-It is drawn as a **chip**, matching the test strip below it, because as bare text it
-did the reading job and hid the pressing one — nothing about dim type in a corner says
-"hold me".
-
-A **single ~1.5-second press** on it, rather than a tap count. Counted taps were the
-first idea — seven is the Android developer-mode convention — but seven is slow, gives
-no feedback while you are doing it, and feels broken until it suddenly works. A long
-press is one deliberate action, impossible to trigger by accident in a corner nothing
-else uses, and it can show its own progress. Three states, built: cyan at rest, or
-orange once Test Mode is on; **white — border, text and all — with a bar sweeping the
-box left to right while held**; then back to rest in the new colour. The sweep is the
-part that earns its keep. A brightening fade was the first cut and it reads as a glow
-rather than as progress, which is the objection that ruled out counted taps to begin
-with. The confirmation already exists too — `flashGutterNotice("TEST MODE ON")`.
-
-**Leaving is a plain tap, not another hold.** The hold exists to stop a player
-stumbling into Test Mode, and that argument is spent the moment they are in it —
-an orange badge belongs to someone who has already found the control and knows what it
-does. Asking them to hold it again on the way out is ceremony with nothing left to
-protect. Note that the direction has to be read at *touch-down*: the hold fires at 1.5s
-while the finger is still down, so a lift that re-read the flag would turn Test Mode
-straight back off.
-
-The other conventions considered, and why not:
-
-1. **Seven taps on the version.** Slow, no feedback mid-gesture. The convention people
-   know, but the worse interaction.
-2. **Two- or three-finger long press anywhere.** No accidental triggers, but nothing on
-   screen to aim at, so nobody finds it without being told.
-3. **A shake gesture.** The classic debug trigger, and wrong for this game — it is
-   played in motion and would fire by accident.
-4. **A visible Settings row.** Rejected once already: 1.2 moved the log panel *behind*
-   Test Mode precisely because players opened it by accident and had no idea what they
-   were looking at. Putting the gate itself in plain sight undoes that.
-5. **A Konami-style sequence on the virtual stick** — ↑↑↓↓←→←→ and fire. Thematically
-   perfect for an arcade game, and genuinely tempting given what Test Mode now is, but
-   fiddly on a thumbstick and slow to enter. Worth keeping in the back pocket as an
-   easter egg rather than as the only door.
-6. **A URL scheme, `gci://testmode`.** Not a substitute for a gesture, but worth adding
-   alongside one: it is the easiest thing to put in a TestFlight email, and it gives
-   automation a way in.
-
-**`⌘T` stays** wherever a keyboard is attached, and all routes land in the same
-`testMode.toggle()`.
-
-**Test Mode ships in the release build.** This is a decision, not an open question: on
-iOS it doubles as a cheat code. A player stuck on a wave can skip it rather than put the
-game down, and `V` is a better answer to frustration than a difficulty setting. That
-changes how findable it should be — an undocumented gesture nobody discovers helps
-nobody — so the sequence worth considering is: silent at first, then a one-line nudge
-after the player loses the same level three times. App Review sees whatever is behind
-the gesture either way, which is an argument for it being a cheat code rather than a
-developer tool.
-
-#### 3. The debug keys themselves — `L`, `A`, `P`, `R`, `V`
-
-These split cleanly by kind, and the split is the design:
-
-- **Toggles** — `L` (diagnostics panel) and `A` (Auto Chess) are states that persist,
-  and **Settings already carries both**: the log row behind
-  `SettingsNode(showsLogRow: testMode)`, and Auto Chess as the CHESS `YOU PLAY / AUTO`
-  row, which has been there since 1.0. Nothing to build. They stay where they are.
-- **Momentary actions** — `P` (grant the next power-up), `R` (send a raider now) and
-  `V` (skip the level) all fire *during play* and are meaningless from a modal panel: by
-  the time you have closed Settings, the thing you wanted to observe has moved on. They
-  need to be reachable with the game running. **Built** as `TestModeStripNode`: three
-  chips, `PWR · RAID · SKIP`, drawn only while Test Mode is on and greyed outside
-  `PlayingState`, so a player never sees them and a tester never presses a dead one.
-
-**The strip sits at the top of the left gutter, under the version label** — Test Mode's
-indicator and its controls in one place. Not the ship's lane, which this section first
-suggested as the band that survives every orientation. Everything below the board is a
-ship grab (`isInShipLane` is `point.y < boardBottomY`, the full width), so each chip
-would need an exception ahead of the lane test, and they would sit exactly where a
-steering thumb lives.
-
-Nothing has to dodge the board: the row is about 142pt wide at x=10, and `boardOriginX`
-is never less than `minGutterWidth` at 224, so the chips are left of the squares at
-every size. The gutter's own topmost item, the Chess Hint, is hundreds of points lower.
-The row is anchored to the version label rather than to `boardTopY` — in portrait the
-board is centred in the leftover height, so its top edge is nearly 300pt below the HUD
-and a strip hung off it is stranded mid-gutter.
-
-One open placement question remains for **Pass 4**: the left gutter is gone in iPhone
-portrait, so the strip needs a home there — or a single `⚙` that expands.
-
-The keyboard path stays for all five on an iPad with a keyboard, so nothing here is a
-regression for the way the game is tested today.
+**Open for Pass 4:** the left gutter is gone in iPhone portrait, so the chips need a home
+there, or a single `⚙` that expands.
 
 ---
 
-## 5. The four device passes
+## 5. The device passes
 
 ### Pass 1 — iPad landscape
 
@@ -924,141 +619,46 @@ else would notice.
 
 ### The Mac profile
 
-Measured on an M-series Mac in ordinary play: **35–38% of one core**, holding 60fps.
-That is around 6ms of CPU per 16.7ms frame — comfortable on a desktop, and the figure
-to carry into the port as the thing to beat, because a phone has nothing like that
-headroom.
+Measured on an M-series Mac in ordinary play: **35–38% of one core**, holding 60fps —
+about 6ms per 16.7ms frame, and the figure to carry into the port as the thing to beat.
 
-**The bloom is the largest GPU item, and almost nothing on the CPU.** One
-`SKEffectNode` wraps the whole playfield and carries a `CIBloom` at radius 6, intensity
-0.9, re-filtered every frame — `shouldRasterize` is off because the subtree changes
-constantly, so the cache would be invalidated before it was ever read. Switching
-`NEON GLOW` off moves the CPU figure by **0.5–1%**, measured: the filter runs on the
-GPU, and Activity Monitor's CPU percentage never counted it. A full-screen Core Image
-pass per frame is still exactly the kind of thing that throttles a phone and drains its
-battery, so it remains the trade-off the port has to make consciously — but it is a GPU
-and power question, not a frame-time one, and it has to be measured on device with the
-GPU counters rather than inferred from a process total.
+**On the Mac the game is GPU-bound, and the bloom is why.** A 60-second Time Profiler
+run of the Release build on a fanless MacBook Air, Blitz with Rapid Fire: over a third of
+the main thread sits in an IOKit trap with CoreImage on the stack — the CPU submitting
+the full-screen `CIBloom` and waiting on the driver — with a second thread spending 2.38s
+more in GPU submission. SpriteKit's own self time is 8.5% of the main thread against the
+bloom's 35%. None of our own Swift has measurable self time, and the log panel is 0.7%.
 
-**Measured, not inferred.** A 60-second Time Profiler run of the Release build on a
-MacBook Air (fanless), Blitz with Rapid Fire, thermal state Nominal throughout —
-`Documents/GCI 09-14-26.trace`:
+**Two lessons from that trace worth more than the numbers.**
 
-| | CPU over 60s | Share |
-|---|---|---|
-| **Everything** | 24.25s | 40% of one core — matches Activity Monitor |
-| Main thread | 12.46s | 21% of one core |
-| &nbsp;&nbsp;→ in the kernel, `mach_msg2_trap` from IOKit | 4.37s | **35% of the main thread** |
-| &nbsp;&nbsp;→ kernel time with CoreImage on the stack | 4.23s | 34% |
-| &nbsp;&nbsp;→ SpriteKit, self | 1.06s | 8.5% |
-| GPU submission thread, `iokit_user_client_trap` | 2.38s | 10% of all CPU |
-| SwiftUI + AttributeGraph, self — **the log panel** | 0.09s | 0.7% |
-| Our own Swift, self | ~0 | below the sampling floor |
+*A process CPU total cannot see GPU work.* Switching `NEON GLOW` off moved Activity
+Monitor by 0.5–1%, which looked like proof the bloom was cheap. The work is GPU work and
+the CPU's share of it is *waiting* — remove the bloom and the main thread waits on vsync
+instead of the driver, so the wait moves and the percentage does not. Reading a CPU total
+produced two wrong calls during 1.2. Any future measurement has to be frame time or GPU
+counters.
 
-**The game is GPU-bound, and the bloom is why.** Over a third of the main thread is
-spent in an IOKit trap with CoreImage on the stack — the CPU submitting the filter and
-waiting on the driver — and a second thread spends 2.38s more in GPU submission traps.
-That is what the frame rate is paying for, and it is why a 60-second capture on a
-fanless Air shows fps dipping toward 28 while the CPU sits at a comfortable 40%.
+*Anything that animates a label's colour or text per frame is a bug.* The title screen
+measured *higher* than gameplay, 53%, and the cause was two `SKLabelNode`s having
+`fontColor` written every frame by a colour-cycling action — writing it re-renders the
+glyphs, and at 60pt inside the bloom node that was the most expensive thing in the game.
+It is `SKAction.colorize` on white glyphs now.
 
-**It also explains why switching `NEON GLOW` off barely moved Activity Monitor.** The
-work is GPU work; the CPU's share of it is *waiting*. Remove the bloom and the main
-thread waits on vsync instead of on the driver — the wait moves, the percentage does
-not. Any future measurement of this has to be frame time or GPU counters. A process
-CPU total cannot see it, and reading one is what produced two wrong calls during 1.2.
+**On iOS the conclusion does not transfer: the bottleneck was audio, not the GPU** — see
+the SFX engine above. The glow switch does now clear both the filter *and*
+`SKEffectNode.shouldEnableEffects`, which is what makes it actually cheaper (with effects
+enabled, SpriteKit renders the subtree offscreen and composites it back whether there is
+a filter or not). With that fixed, turning the glow off on an iPad mini 5 changes the
+frame rate very little. The remaining question is only the **default** on iPhone, where
+the sprites are neon outlines on black and lose atmosphere rather than legibility without
+it.
 
-**Our own code does not appear.** No function we wrote has measurable self time. The
-largest inclusive entries are `AudioManager.play` at 0.48s (3.9% of the main thread —
-Blitz fires a great many laser sounds), `GameScene.update` at 0.30s (2.4%) and
-`CollisionHandler.didBegin` at 0.28s (2.2%). The loop work done for 1.2 was worth
-doing and is worth keeping, but it was never where the time was.
-
-**The log panel is not expensive**, at 0.7% of the main thread — measured, because it
-was assumed otherwise.
-
-**Everything else the trace turned up, ranked.** All of it is small, because the
-machine is not CPU-bound — but a phone core is slower, so the order is worth keeping:
-
-1. **`SKCShapeNode::getBoundingBox()` — 0.40s, 3.2% of the main thread.** The largest
-   identifiable non-GPU item. SpriteKit re-measures a shape node's path on the CPU, and
-   the scene holds roughly seventy `SKShapeNode`s all the time: the legal-move marker
-   pool alone is 32 markers × (dot + ring) = 64, plus the grid, the selection ring and
-   the deployment bands. The fix is the trick the starfield already uses — draw the dot
-   and ring once into a texture and use sprites — or detach the marker pool while
-   nothing is selected. Another 0.45s of main-thread `malloc` sits mostly underneath
-   this, building `CG::Path` point vectors.
-2. **`AudioManager` — 0.71s, 5.7%, but weaker evidence.** The leaves are `__open`,
-   `pread`, `__sysctl` and `AudioComponentMgr_Base::match`, which is what re-priming an
-   `AVAudioPlayer` looks like: the pool reuses players, but `currentTime = 0` followed
-   by `play()` makes AVFoundation re-buffer from the file. Calling `prepareToPlay()` on
-   a finished player would move that off the frame. Some of the attribution is to
-   unresolved binaries, so confirm before acting.
-3. **`SKCLabelNode::rebuildText()` — 0.05s.** Down from being the most expensive thing
-   in the game before the title fix. Nothing left to take.
-
-**Zero hangs and zero hang risks in 60 seconds**, which matches playing it: the frame
-rate dips without the game ever stuttering, because it is GPU-paced rather than
-stalling.
-
-**What this means for the port.** The single decision that matters on a phone is the
-bloom, and it should be made on measured frame time on the device, not on a CPU
-percentage. If a fanless MacBook Air cannot hold 60fps with it on at Blitz, an iPhone
-will not either. Options 1–3 above stand; option 2 — glow off by default on a phone —
-now looks less like a power optimisation and more like the thing that makes the frame
-rate.
-
-**Node count is a second-order concern.** The census below is still worth knowing,
-because traversal is CPU work that a slower core will feel more than this Air did, but
-the profile puts SpriteKit's self time at 8.5% of the main thread against the bloom's
-35%. Fix the glow first; only then is this worth touching.
-
-| On the title screen, drawing nothing | Nodes |
-|---|---|
-| Laser pool — 40 rounds × (sprite + rig + 3 rig parts) | 200 |
-| Shatter pool — 14 sprays × (flash + 9 shards) | 154 |
-| Starfield — 3 tiers × 2 tiled copies | ~170 |
-| Explosion pool — 8 bursts × (flash + 8 shards) | 80 |
-| Score pops | 20 |
-| **Total** | **~624 of 711** |
-
-All of those are built at launch and hidden until needed, and hidden nodes are still
-walked. The cheap fix, if a phone needs it: park each pool under a container that is
-detached while the pool is idle and re-attached on first use — one `addChild` when
-glass first flies, and 154 nodes leave every frame that has no glass in it, without
-allocating during play.
-
-**The switch works, and the glow is not the bottleneck on iOS.**
-`GameSettings.neonGlow` clears the `CIBloom` *and* sets
-`SKEffectNode.shouldEnableEffects` — both are needed, because with effects still
-enabled SpriteKit renders the subtree to an offscreen texture and composites it back
-whether there is a filter or not, which is the expensive half.
-
-With that working, turning the glow off on an iPad mini 5 — A12, 2048×1536 — changes the
-frame rate very little. §6a's Mac conclusion does not transfer: the bottleneck on iOS
-was audio, not the GPU (see below). The remaining question is the **default**:
-
-1. **Glow on** for iPad, which has the die and the thermal envelope for it.
-2. **Glow off by default on iPhone**, or on any scene below some width, with the
-   setting still there for anyone who wants it. The sprites are neon outlines on black
-   and read perfectly well without the bloom; they lose atmosphere, not legibility.
-3. If losing it entirely is too much, the cheaper substitutes are a **pre-blurred
-   sprite behind each piece** (a texture, drawn once, no per-frame filter) or simply a
-   smaller `inputRadius`. Both are worth measuring before accepting option 2.
-
-**The other two per-frame costs, in order.** The starfield is 84 sprites in three
-parallax tiers, batched into one draw call because they share a texture — cheap, but
-84 nodes is 84 nodes on a phone, and the tier counts are the obvious dial. The nebula
-is a single additive sprite on slow `SKAction`s, which costs almost nothing and can
-stay. Both are rebuilt by `rebuildSky()` when the scene's size changes, which is also
-where a per-device star count would belong if one is wanted.
-
-**A caution from the Mac.** The title screen measured *higher* than gameplay — 53% —
-and the cause was not the bloom but two `SKLabelNode`s having their `fontColor` written
-every frame by a colour-cycling `customAction`. Writing `fontColor` re-renders the
-glyphs; at 60pt and 48pt, inside the bloom node, that was the most expensive thing in
-the game. It is `SKAction.colorize` on white glyphs now. **Anything that animates a
-label's colour or text per frame is a bug**, and a phone will punish it far harder than
-a Mac did.
+**Node count is second-order but worth knowing**, because traversal is CPU work a slower
+core feels: ~624 of 711 nodes on the title screen are pooled objects drawing nothing —
+200 laser, 154 shatter, ~170 starfield, 80 explosion, 20 score pops — all built at launch
+and hidden, and hidden nodes are still walked. The cheap fix if a phone needs it: park
+each pool under a container detached while idle, so 154 nodes leave every frame with no
+glass in it without allocating during play.
 
 ---
 
@@ -1116,17 +716,18 @@ landscape. Portrait screenshots are the title and gameplay, which do fill it.
 
 ## 8. Refactoring worth doing regardless
 
-**`GameScene.swift` is 4,826 lines.** It is the single biggest obstacle to a clean port
+**`GameScene.swift` is 6,228 lines** — it was 4,826 when this was written, so the
+problem has grown rather than shrunk. It is the single biggest obstacle to a clean port
 and the thing most likely to make the iOS work painful. It currently holds the update
 loop, all input entry points, layout, chess flow, fleet coordination, power-ups,
 effects, banners, high-score prompting and game-over handling.
 
 Proposed split, in the order that pays off soonest:
 
-1. **`SceneLayout`** — §3. Do this first; everything else is easier afterwards.
-2. **Input adapters** — lift the five `NSEvent` overrides into a `MacInputAdapter`, and
-   add `TouchInputAdapter` and `ControllerInputAdapter` beside it. All three emit
-   `GameAction`. `InputHandler` already has the `#if os(macOS)` seam.
+1. ~~**`SceneLayout`**~~ — done in 1.2.
+2. ~~**Input adapters**~~ — done: `MacInputAdapter`, `TouchInputAdapter`,
+   `KeyboardInputAdapter` and `NameEntryField` all live in `Game/Input` and emit
+   `GameAction`. A `ControllerInputAdapter` would slot in beside them.
 3. **`HUDCoordinator`** — the turn timer, status banner, power-up alley, Chess Hints and
    Arcade Hints are all gutter furniture with their own lifecycle. They are the parts
    that move most between layouts, and they are currently interleaved with gameplay.
@@ -1135,8 +736,7 @@ Proposed split, in the order that pays off soonest:
 
 **Two smaller items:**
 
-- `HighScoreEntryNode.handleKey(_ event: NSEvent)` should take a character and a key
-  code, not an `NSEvent`. It is the only node that reads raw events.
+- ~~`HighScoreEntryNode.handleKey(_ event: NSEvent)`~~ — done; it takes a `KeyPress`.
 - ~~`HowToPlayNode`'s single `NSColor.white`~~ — done, along with the Zudio credit link.
   `HowToPlayNode.MusicCredit` now owns both the URL and the opener, so the scene's click
   handler is platform-free. One universal App Store link serves every platform, since
@@ -1144,12 +744,18 @@ Proposed split, in the order that pays off soonest:
   because `NSWorkspace` does not exist on iOS. That is the pattern the rest of the port
   wants — the `#if` lives with the thing it describes, not at the call site.
 
-**A note on tests.** The 388-test suite is a real asset here and most of it is
-platform-agnostic. Two tests are known-flaky by design
-(`EngineVariationTests.testAutoPlayUsesManyPiecesAndSquares` and
-`DrawRuleTests.testNormalPlayIsNotFalselyDrawn`) because they make statistical
-assertions over the engine's random tie-break. Worth seeding the RNG under test before
-this work starts, so that a port failure is never confused with a coin flip.
+**A note on tests.** The suite is 442 tests and most of it is platform-agnostic. Two
+are known-flaky by design (`EngineVariationTests.testAutoPlayUsesManyPiecesAndSquares`
+and `DrawRuleTests.testNormalPlayIsNotFalselyDrawn`) because they assert statistically
+over the engine's random tie-break. **This is no longer hypothetical** — the first was
+observed failing on 1 Oct, asserting 20 distinct moves and getting 15 while the engine
+shuffled knights. Seed the RNG under test, so a port failure is never confused with a
+coin flip.
+
+A third flake was fixed on 1 Oct and is worth not reintroducing: six classes each
+presented the singleton `GameScene` into their own throwaway `SKView`, which the app
+never does — it presents once and keeps the view. `GlowSwitchTests` crashed the host on
+2 of 9 suite runs on that arrangement. `SharedSceneHost` presents once and holds it.
 
 ---
 
