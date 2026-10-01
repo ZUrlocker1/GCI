@@ -166,7 +166,17 @@ final class RaiderController {
         case .overTheBoard:
             // Between the board's top edge and the HUD, so it clears every
             // piece however far the fleet has descended.
-            entryY = boardBottomY + BoardNode.boardSize + 14
+            //
+            // Clamped so the *sprite* fits, not just its centre. 14pt above
+            // the board put the middle of the scout in a band only 32pt tall
+            // — `hudBandHeight` 68 less the 36pt bar — so its top half slid
+            // under the HUD and the raider read as cut in two. The clamp
+            // keeps the whole silhouette below the bar, and if the band is
+            // too tight for that it sits lower, overlapping the board's top
+            // rank rather than vanishing behind chrome.
+            let ceiling = SceneLayout.current.size.height
+                - HUDNode.height - scout.size.height / 2 - 2
+            entryY = min(boardBottomY + BoardNode.boardSize + 14, ceiling)
         case .rank(let rank):
             entryY = boardBottomY + (CGFloat(rank) - 0.5) * BoardNode.squareSize
         }
