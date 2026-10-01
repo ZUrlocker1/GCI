@@ -7011,3 +7011,69 @@ final class VersionBadgeHoldTests: XCTestCase {
         XCTAssertEqual(changed, true, "the hold never completed at 640pt")
     }
 }
+
+// MARK: - The sweep bar stays inside the badge
+
+/// Zack saw the grey progress bar drawn "way outside the box" after resizing
+/// the window smaller. The bar is a plain sprite inset inside the box, so
+/// anything that changes one without the other shows up as spill — these try
+/// the orders a resize and a press can arrive in.
+@MainActor
+final class VersionBadgeSweepTests: XCTestCase {
+
+    private let long = "GCI Mac V1.3  Build 10"
+    private let short = "GCI V1.3 B10"
+
+    /// Everything the badge draws, against the box it is supposed to fit in.
+    private func spill(_ badge: VersionBadgeNode) -> CGFloat {
+        badge.calculateAccumulatedFrame().width - badge.width
+    }
+
+    /// Compared against a pristine badge showing the same text rather than
+    /// against zero: the *label* overhangs the box by about 3pt in this face,
+    /// which is how it has always drawn and not what is being tested here.
+    private func check(_ name: String, endingAs text: String,
+                       _ body: (VersionBadgeNode) -> Void) {
+        let badge = VersionBadgeNode(text: long)
+        body(badge)
+        let baseline = spill(VersionBadgeNode(text: text))
+        XCTAssertLessThanOrEqual(
+            spill(badge), baseline + 0.5,
+            "\(name): drew \(spill(badge))pt past a \(badge.width)pt box, "
+            + "where an untouched badge draws \(baseline)pt past it")
+    }
+
+    func testTheBarNeverSpillsPastTheBox() {
+        check("shrink while idle", endingAs: short) { $0.setText(short) }
+        check("press, then shrink", endingAs: short) {
+            $0.beginPress(duration: 1.5) {}
+            $0.setText(short)
+        }
+        check("tap, then shrink", endingAs: short) {
+            $0.beginTap()
+            $0.setText(short)
+        }
+        check("shrink, then press", endingAs: short) {
+            $0.setText(short)
+            $0.beginPress(duration: 1.5) {}
+        }
+        check("shrink, then tap", endingAs: short) {
+            $0.setText(short)
+            $0.beginTap()
+        }
+        check("tap, shrink, cancel", endingAs: short) {
+            $0.beginTap()
+            $0.setText(short)
+            $0.cancelPress()
+        }
+        check("grow back after a tap", endingAs: long) {
+            $0.beginTap()
+            $0.setText(short)
+            $0.setText(self.long)
+        }
+        check("repeated resize while held", endingAs: short) {
+            $0.beginTap()
+            for t in [self.short, self.long, self.short] { $0.setText(t) }
+        }
+    }
+}

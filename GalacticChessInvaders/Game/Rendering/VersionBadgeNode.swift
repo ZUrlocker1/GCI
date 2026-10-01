@@ -108,9 +108,22 @@ final class VersionBadgeNode: SKNode {
         box.path = CGPath(roundedRect: rect, cornerWidth: 3, cornerHeight: 3,
                           transform: nil)
         // The sweep is a plain sprite inset inside the box, so it has to be
-        // re-sized by hand; `xScale` is left alone, since a press in flight
-        // during a resize is not worth preserving.
+        // re-sized by hand — and `xScale` has to be normalised first.
+        //
+        // `SKSpriteNode.size` is the node's *scaled* size, so assigning it
+        // while the sweep is part-way across divides through by that scale.
+        // At the start of a hold xScale is 0.001, so a resize there left the
+        // sprite a thousand times too wide, and the bar shot 134,000pt across
+        // the screen the moment anything put xScale back to 1. That is the
+        // "grey bar way outside the box" Zack saw after resizing smaller.
+        //
+        // Resetting the bar rather than preserving it is deliberate and also
+        // free: holding the badge and resizing the window both need the
+        // pointer, so a press cannot actually be in flight here.
+        fill.removeAction(forKey: Self.sweepKey)
+        fill.xScale = 1
         fill.size = CGSize(width: rect.width - 2, height: rect.height - 2)
+        fill.alpha = 0
         label.text = text
         label.position = CGPoint(x: rect.midX, y: 0)
     }
