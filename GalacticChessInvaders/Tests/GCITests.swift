@@ -6792,8 +6792,9 @@ final class GutterFitTests: XCTestCase {
 /// portrait the board is centred in the leftover height and its top sits a long
 /// way below the HUD.
 ///
-/// `TestModeStripNode` is iOS-only, so this is the geometry rather than the
-/// node. The two figures are its own: 10pt from the left edge, 166 wide.
+/// Both nodes ship on macOS and iOS now, so this measures the real ones
+/// rather than restating their numbers. Only the 10pt left inset is written
+/// here, because that lives in `layOutTestStrip` rather than in the node.
 @MainActor
 final class TestModeStripClearsTheBoardTests: XCTestCase {
 
@@ -6803,8 +6804,6 @@ final class TestModeStripClearsTheBoardTests: XCTestCase {
     }
 
     private static let stripLeft: CGFloat = 10
-    private static let stripWidth: CGFloat = 166
-    private static let chipHeight: CGFloat = 22
 
     func testTheStripNeverLandsOnTheBoard() {
         for (name, size) in [("mini portrait",   CGSize(width: 744,  height: 1133)),
@@ -6819,10 +6818,14 @@ final class TestModeStripClearsTheBoardTests: XCTestCase {
 
             // Where `layOutVersionBadge` and `layOutTestStrip` put it.
             let badgeY = size.height - HUDNode.height - 16
-            // `VersionBadgeNode.height`, which is iOS-only like the strip.
-            let stripY = badgeY - 24 / 2 - 6
-            let stripBottom = stripY - Self.chipHeight
-            let stripRight = Self.stripLeft + Self.stripWidth
+            let stripY = badgeY - VersionBadgeNode.height / 2 - 6
+            // The chips are built from x = 0 rightwards and hang below the
+            // anchor, from -chipHeight to 0 — so the node's own frame gives
+            // both figures, and a longer chip label cannot silently outgrow
+            // this test the way a hardcoded 166 would have let it.
+            let frame = TestModeStripNode().calculateAccumulatedFrame()
+            let stripBottom = stripY - frame.height
+            let stripRight = Self.stripLeft + frame.width
 
             let clearsSideways = stripRight <= l.boardOriginX
             let clearsAbove = stripBottom >= l.boardTopY + 20

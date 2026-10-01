@@ -357,16 +357,22 @@ class GameScene: SKScene {
     var fireButton: FireButtonNode?
     var shipDragTouch: ObjectIdentifier?
     var fireTouch: ObjectIdentifier?
-    /// The version string, top-left, and the only way into Test Mode on a
-    /// device with no keyboard. See `setupVersionBadge`.
-    var versionBadge: VersionBadgeNode?
-    /// `P`, `R` and `V` as buttons, under the version label. Exists only
-    /// while Test Mode is on. `L` and `A` are Settings rows and stay there.
-    var testStrip: TestModeStripNode?
     /// How far the ship sits from the finger steering it, fixed at the moment
     /// of the grab. See `beginShipDrag`.
     var shipDragOffset: CGFloat = 0
     #endif
+    /// The version string, top-left. On iOS it is the only way into Test Mode,
+    /// on a device that has no ⌘T; on the Mac ⌘T is still the way in and this
+    /// is what tells you the mode is *on* — see `setupVersionBadge`.
+    var versionBadge: VersionBadgeNode?
+    /// `P`, `R` and `V` as buttons, under the version label. Exists only while
+    /// Test Mode is on, so an ordinary player never sees it on either
+    /// platform. `L` and `A` are Settings rows and stay there.
+    ///
+    /// On the Mac the keys are always faster than clicking these. They ship
+    /// anyway so that Test Mode looks and reads the same on both platforms,
+    /// and How To Play can describe one thing instead of two.
+    var testStrip: TestModeStripNode?
     private var highScoreEntry: HighScoreEntryNode?
     /// One name entry per game. `isHighScore` stays true while the table has free
     /// slots, so without this the prompt reappeared immediately after submitting
@@ -551,9 +557,7 @@ class GameScene: SKScene {
         setupBloomNode()
         setupPools()
         setupStarfield()
-        #if os(iOS)
         setupVersionBadge()
-        #endif
     }
 
     /// The object pools, built once for the life of the scene.
@@ -975,11 +979,11 @@ class GameScene: SKScene {
         // The FIRE button is the third piece of chrome a panel covers, and
         // the only one that could still be pressed through it.
         syncFireButtonVisibility()
+        #endif
         let panelUp = settingsNode != nil || howToPlayNode != nil
         versionBadge?.isHidden = panelUp
         testStrip?.isHidden = panelUp
         syncTestStripState()
-        #endif
     }
 
     private func syncTitleNavVisibility() {
@@ -1287,17 +1291,24 @@ class GameScene: SKScene {
     // always a clear strip above the board, and the left gutter is empty from
     // the Chess Hint up.
 
+    #endif
+
     /// Long enough not to happen by accident, short enough that nobody lets
     /// go first.
     private static let testModeHold: TimeInterval = 1.5
 
     private func setupVersionBadge() {
         // Spelled out rather than abbreviated. It costs nothing — the band it
-        // sits in is empty for the full width of the scene — and "GCI iOS" is
-        // the part that tells a bug report which build of which app it is
-        // looking at.
+        // sits in is empty for the full width of the scene — and the platform
+        // word is the part that tells a bug report which build of which app it
+        // is looking at, now that the same badge ships on both.
+        #if os(macOS)
+        let platform = "Mac"
+        #else
+        let platform = "iOS"
+        #endif
         let badge = VersionBadgeNode(
-            text: "GCI iOS V\(Bundle.main.appVersion)  Build \(Bundle.main.appBuild)")
+            text: "GCI \(platform) V\(Bundle.main.appVersion)  Build \(Bundle.main.appBuild)")
         addChild(badge)
         versionBadge = badge
         badge.setTestMode(testMode)
@@ -1314,6 +1325,7 @@ class GameScene: SKScene {
         versionBadge?.position = CGPoint(x: 10, y: size.height - HUDNode.height - 16)
     }
 
+    #if os(iOS)
     // MARK: - Name entry on a touch device
     //
     // `HighScoreEntryNode` reads `KeyPress` and nothing else, so on an iPad
@@ -1379,6 +1391,8 @@ class GameScene: SKScene {
     }
 
     private static let nameLiftKey = "nameLift"
+
+    #endif
 
     // MARK: - The test strip
     //
@@ -1490,7 +1504,6 @@ class GameScene: SKScene {
         versionTapExits = false
         versionBadge?.cancelPress()
     }
-    #endif
 
     /// The one thing on screen that should show a pointing hand: the Zudio
     /// link on the info panel. `KeyboardFocusedSKView` turns this into a cursor
@@ -3274,9 +3287,9 @@ class GameScene: SKScene {
 
         #if os(iOS)
         layOutFireButton()
+        #endif
         layOutVersionBadge()
         layOutTestStrip()      // hangs off the badge, so it follows it
-        #endif
 
         if let ship {
             // The ship belongs to the board's scale, not the window's — it sits
@@ -3697,10 +3710,10 @@ class GameScene: SKScene {
 
     /// The one place Test Mode goes on and off.
     ///
-    /// Two doors reach it and they are not interchangeable: ⌘T wherever a
-    /// keyboard is attached, and — on iOS — a long press on the version
-    /// label, which is the only way in on a device that has no ⌘T at all.
-    /// See the version-label section for why the gesture is what it is.
+    /// Two doors reach it, and both work on both platforms now: ⌘T wherever a
+    /// keyboard is attached, and a long press on the version label, which is
+    /// the only way in on a device that has no ⌘T at all. See the
+    /// version-label section for why the gesture is what it is.
     func toggleTestMode() {
         testMode.toggle()
         NotificationCenter.default.post(name: .gciTestModeChanged, object: testMode)
@@ -3710,10 +3723,8 @@ class GameScene: SKScene {
             GameSettings.shared.logPanel = false
             NotificationCenter.default.post(name: .gciSidebarChanged, object: nil)
         }
-        #if os(iOS)
         versionBadge?.setTestMode(testMode)
         syncTestStripPresence()
-        #endif
         flashGutterNotice(testMode ? "TEST MODE ON" : "TEST MODE OFF")
         DiagnosticsLog.shared.log(.info, "test mode \(testMode ? "on" : "off")")
     }
@@ -5527,8 +5538,8 @@ class GameScene: SKScene {
 
         #if os(iOS)
         syncFireButtonVisibility()
-        syncTestStripState()
         #endif
+        syncTestStripState()
 
         if stateMachine.currentState is PlayingState {
             syncRespawnWarnings()
@@ -6007,19 +6018,16 @@ class GameScene: SKScene {
         if let settingsNode {
             settingsNode.handleDrag(at: settingsNode.convert(location, from: self))
         }
-        #if os(iOS)
         // Slid off the label: a hold that has wandered is not a hold. Cheap
         // to check, and it stops a drag that happens to begin in the corner
-        // from arming Test Mode on the way past.
+        // from arming Test Mode on the way past. The same rule serves a mouse
+        // that is dragged off the badge mid-hold.
         if !versionBadgeContains(location) { cancelVersionPress() }
-        #endif
     }
 
     func pointerUp() {
         settingsNode?.endDrag()
-        #if os(iOS)
         endVersionPress()
-        #endif
     }
 
     func handle(keyUp key: KeyPress) {
@@ -6057,7 +6065,6 @@ class GameScene: SKScene {
             return
         }
 
-        #if os(iOS)
         // Ahead of every other target. Nothing else claims this corner, and
         // the press has to start the hold rather than fall through.
         // The chips first. They are explicit targets sitting just under the
@@ -6072,7 +6079,6 @@ class GameScene: SKScene {
             beginVersionPress()
             return
         }
-        #endif
 
         // INFO button opens How To Play from any game state.
         let hit = atPoint(location)

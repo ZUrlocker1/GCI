@@ -28,7 +28,6 @@
 
 import SpriteKit
 
-#if os(iOS)
 
 @MainActor
 final class TestModeStripNode: SKNode {
@@ -139,4 +138,3 @@ final class TestModeStripNode: SKNode {
         return chips.first { $0.rect.insetBy(dx: -2, dy: -6).contains(local) }?.action
     }
 }
-#endif

@@ -24,7 +24,6 @@
 
 import SpriteKit
 
-#if os(iOS)
 
 @MainActor
 final class VersionBadgeNode: SKNode {
@@ -157,4 +156,3 @@ final class VersionBadgeNode: SKNode {
         return box.frame.insetBy(dx: -6, dy: -6).contains(local)
     }
 }
-#endif
