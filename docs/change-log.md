@@ -1,8 +1,10 @@
 # Galactic Chess Invaders Change Log
 
-## V 1.3 (Build 10)  Sound Without the Stutter
+## V 1.3 (Build 10)  iPad, and Sound Without the Stutter
 
-*One fix, and it is the whole release: the game stopped doing file and codec work every time it played a sound.*
+*Two things: the game runs on iPad, and it stopped doing file and codec work every time it played a sound.*
+
+- **It runs on iPad.** The whole game is playable by touch — drag the ship, hold FIRE, tap or drag a piece to its square — and it has been checked on five iPad sizes in both orientations. The DMG here is macOS; the iPad build is in testing.
 
 - **The frame rate, fixed.** Heavy fire used to drop the Mac into the 40s and the iPad mini into the 20s. Both now hold 60. Every sound effect is decoded once at launch into memory and played from a pool of audio voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot. Measured: **11.7ms a shot, down to 0.03ms.**
 - **It was never the graphics.** The glow, the nebula and the board all had a turn as the suspect. Turning each of them off changed nothing, and the log is what settled it — the frame rate tracked the *sound*, not the picture. There is a note in [IOS-Port.md](IOS-Port.md) §6a about why the Mac profile pointed the wrong way for so long.

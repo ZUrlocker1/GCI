@@ -30,10 +30,17 @@ clock and comes apart as you play it.
 
 Or [download the DMG for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.3.dmg) directly.
 
-Current release: `1.3` (build 10) — the DMG above. 
+Current release: `1.3` (build 10) — the DMG above.
 Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
+
+**1.3 runs on iPad as well as the Mac.** The same codebase builds for both: the whole game
+is playable by touch — drag the ship, hold FIRE, tap or drag a piece to its square — and it
+has been checked on five iPad sizes in both orientations. The DMG above is macOS, as is the
+App Store listing; the iPad build is in testing and not yet on the store. Build it for an
+iPad from source today (see [SETUP.md](SETUP.md)), or see
+[IOS-Port.md](docs/IOS-Port.md) for where the port stands.
 
 **What's new in v1.3** — iPad Port and optimized sound engine:
 
