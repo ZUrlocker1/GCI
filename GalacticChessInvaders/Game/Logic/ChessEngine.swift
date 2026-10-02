@@ -301,10 +301,37 @@ final class ChessEngine {
     /// No explicit check constraint is needed: `legalMoves` already excludes
     /// anything leaving the king attacked, so when White is in check every
     /// candidate necessarily resolves it (§25.4).
+    /// The tie-break below draws from the system generator. Tests that assert
+    /// over the *spread* of the engine's play need the same draw every run, or
+    /// they are measuring a random variable against a fixed bar — see the
+    /// overload taking a generator.
     nonisolated static func searchBestMove(in position: Chess.Position,
                                            depth: Int,
                                            constraints: SearchConstraints = .none,
                                            avoiding history: [Chess.Board] = []) -> (from: String, to: String)? {
+        var rng = SystemRandomNumberGenerator()
+        return searchBestMove(in: position, depth: depth, constraints: constraints,
+                              avoiding: history, using: &rng)
+    }
+
+    /// The same search, drawing its tie-break from `rng`.
+    ///
+    /// Injected rather than held in a global: this is `nonisolated` and
+    /// `GCIBoard` runs it inside `Task.detached`, so a shared mutable generator
+    /// would be a data race rather than a convenience.
+    ///
+    /// Seeding it is what makes the variation tests deterministic. They assert
+    /// that auto-play ranges over many pieces and squares, which is true of the
+    /// distribution and not of every draw from it — one run in nine produced 15
+    /// distinct moves against a bar of 20, with the engine shuffling knights.
+    /// With a seed the claim becomes checkable: this seed plays this game, and
+    /// two seeds play different ones.
+    nonisolated static func searchBestMove<R: RandomNumberGenerator>(
+        in position: Chess.Position,
+        depth: Int,
+        constraints: SearchConstraints = .none,
+        avoiding history: [Chess.Board] = [],
+        using rng: inout R) -> (from: String, to: String)? {
         var moves = ChessRules.legalMoves(in: position)
 
         if let origin = constraints.restrictedTo {
@@ -347,7 +374,7 @@ final class ChessEngine {
         // deterministic winner the engine replays the same game every time; this
         // is what makes successive auto-moves and Black replies vary.
         let contenders = scored.filter { $0.score >= bestScore - tieBreakEpsilon }
-        let choice = contenders.randomElement() ?? scored[0]
+        let choice = contenders.randomElement(using: &rng) ?? scored[0]
         return (choice.move.from.coordinate, choice.move.to.coordinate)
     }
 

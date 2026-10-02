@@ -1295,19 +1295,48 @@ final class StarfieldTilingTests: XCTestCase {
 /// auto-move play: material-only evaluation scored every quiet move at 0, the
 /// first of those always won the tie, and nothing discouraged revisiting a
 /// position. These pin the three fixes.
+/// A seeded generator, so tests that assert over the engine's *spread* draw the
+/// same sequence every run.
+///
+/// `ChessEngine.searchBestMove` picks at random among near-equal moves, which is
+/// deliberate — without it the engine replays the same game every time. The cost is
+/// that any test of how varied its play is was measuring a random variable against a
+/// fixed bar. `testAutoPlayUsesManyPiecesAndSquares` wants 20 distinct moves out of 40
+/// and drew 15 on 1 Oct, with the engine shuffling knights: the engine was fine, the
+/// test just had no grip on the dice.
+///
+/// SplitMix64 — small, well-distributed, and fixed forever, which matters more here
+/// than quality. If a seeded game ever fails, it fails identically on the next run.
+/// `nonisolated` because the engine is: `searchBestMove` runs inside
+/// `Task.detached`, so a main-actor-isolated generator could not be handed to it.
+nonisolated struct SeededRNG: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed }
+
+    mutating func next() -> UInt64 {
+        state &+= 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
+    }
+}
+
 @MainActor
 final class EngineVariationTests: XCTestCase {
 
     /// Plays `count` engine moves from the opening and returns them as
     /// "kind from-to" strings.
-    private func autoPlay(_ count: Int) -> [String] {
+    private func autoPlay(_ count: Int, seed: UInt64 = 20_260_101) -> [String] {
         let board = GCIBoard()
         board.setupStandardPosition()
+        var rng = SeededRNG(seed: seed)
         var moves: [String] = []
         for _ in 0..<count {
             guard let found = ChessEngine.searchBestMove(in: board.currentPosition,
                                                         depth: 2,
-                                                        avoiding: board.currentHistory),
+                                                        avoiding: board.currentHistory,
+                                                        using: &rng),
                   let outcome = board.applyChessMove(from: found.from, to: found.to)
             else { break }
             moves.append("\(outcome.moved.type.rawValue) \(outcome.from)-\(outcome.to)")
@@ -1327,12 +1356,34 @@ final class EngineVariationTests: XCTestCase {
         XCTAssertLessThan(echoes, 6, "looks like an A-B-A-B shuffle: \(moves)")
     }
 
+    /// Checked across several fixed seeds rather than one unseeded run. Every seed
+    /// has to clear the bar, so this is a stronger claim than the flaky version made
+    /// and it gives the same answer every time.
     func testAutoPlayUsesManyPiecesAndSquares() {
-        let moves = autoPlay(40)
-        XCTAssertGreaterThanOrEqual(Set(moves).count, 20, "too repetitive: \(moves)")
-        let kinds = Set(moves.compactMap { $0.split(separator: " ").first })
-        XCTAssertGreaterThanOrEqual(kinds.count, 3, "only \(kinds) ever moved")
+        for seed in Self.seeds {
+            let moves = autoPlay(40, seed: seed)
+            XCTAssertGreaterThanOrEqual(Set(moves).count, 20,
+                                        "seed \(seed) too repetitive: \(moves)")
+            let kinds = Set(moves.compactMap { $0.split(separator: " ").first })
+            XCTAssertGreaterThanOrEqual(kinds.count, 3,
+                                        "seed \(seed): only \(kinds) ever moved")
+        }
     }
+
+    /// The claim the random tie-break actually exists to support, and which the old
+    /// test only gestured at: two seeds must not play the same game.
+    func testDifferentSeedsPlayDifferentGames() {
+        let games = Set(Self.seeds.map { autoPlay(12, seed: $0).joined(separator: ",") })
+        XCTAssertEqual(games.count, Self.seeds.count,
+                       "two seeds produced the same opening")
+    }
+
+    /// One seed must always play the *same* game, or nothing above is deterministic.
+    func testASeedIsReproducible() {
+        XCTAssertEqual(autoPlay(12, seed: 99), autoPlay(12, seed: 99))
+    }
+
+    private static let seeds: [UInt64] = [20_260_101, 7, 1_234_567, 88_888]
 
     func testOpeningVariesBetweenGames() {
         var openings: Set<String> = []
@@ -2921,15 +2972,20 @@ final class DrawRuleTests: XCTestCase {
     }
 
     @MainActor
+    /// Ten fixed seeds rather than ten unseeded games: same coverage, same answer
+    /// every run. This asserts over the engine's random tie-break too, so it was the
+    /// other test the port plan listed as flaky by design.
     func testNormalPlayIsNotFalselyDrawn() {
-        for _ in 0..<10 {
+        for seed in UInt64(1)...10 {
             let board = GCIBoard()
             board.setupStandardPosition()
+            var rng = SeededRNG(seed: seed)
             for ply in 0..<30 {
                 guard let move = ChessEngine.searchBestMove(in: board.currentPosition, depth: 2,
-                                                           avoiding: board.currentHistory),
+                                                           avoiding: board.currentHistory,
+                                                           using: &rng),
                       board.applyChessMove(from: move.from, to: move.to) != nil else { break }
-                XCTAssertFalse(board.isDrawn, "false draw at ply \(ply)")
+                XCTAssertFalse(board.isDrawn, "seed \(seed): false draw at ply \(ply)")
             }
         }
     }
