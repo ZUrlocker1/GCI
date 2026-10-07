@@ -962,6 +962,31 @@ portrait, and it is the same problem as Pass 4 on iPhone rather than a separate
 one: content that has to reflow rather than sit in a fixed composition. Worth
 doing once, for both.
 
+**And "fine in landscape" meant *iPad* landscape.** Both panels are composed on the
+960×700 canvas and scaled to fit with
+`min(1, min(width / 960, height / 700))`, so what a phone gets is not a layout, it is
+a photographic reduction:
+
+| | Panel scale | 10pt body renders at |
+|---|---|---|
+| Mac design 960×700 | 1.00 | 10.0pt |
+| iPad mini landscape | 1.06 | 10.6pt |
+| iPad Pro 13 landscape | 1.42 | 14.2pt |
+| **iPhone 15 landscape** | **0.56** | **5.6pt** |
+| **iPhone 17 Pro Max landscape** | 0.63 | 6.3pt |
+| **Duo folded landscape** | 0.67 | 6.7pt |
+
+**Decided (7 Oct): How To Play and Settings are restructured completely for iPhone, in
+both orientations.** Not reflowed, not scaled — rebuilt. A 0.56 reduction of a dense
+two-column screen is unreadable in any orientation, so there is nothing to salvage by
+rotating it. §7's suggestions are the starting point: How To Play becomes paged cards,
+Settings becomes a single scrolling sectioned list, the key legends become contextual,
+and Press Start 2P stops being the body font outside the title screen.
+
+That makes the panels a Pass 3 problem as well as a Pass 4 one. Everything else in Pass 3
+is geometry that `SceneLayout` can absorb; these two screens cannot be absorbed and have
+to be rewritten.
+
 Consequence for the store listing: How To Play and Settings are shot in
 landscape. Portrait screenshots are the title and gameplay, which do fill it.
 
