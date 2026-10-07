@@ -981,8 +981,10 @@ class GameScene: SKScene {
         syncFireButtonVisibility()
         #endif
         let panelUp = settingsNode != nil || howToPlayNode != nil
-        versionBadge?.isHidden = panelUp
-        testStrip?.isHidden = panelUp
+        // The badge also hides where the band is too short to hold it; the two
+        // reasons have to be combined, or whichever ran last would win.
+        versionBadge?.isHidden = panelUp || !versionBadgeFits
+        testStrip?.isHidden = panelUp || !versionBadgeFits
         syncTestStripState()
     }
 
@@ -1319,8 +1321,27 @@ class GameScene: SKScene {
     /// the band is empty all the way across.
     func layOutVersionBadge() {
         versionBadge?.setText(versionBadgeText)
-        versionBadge?.position = CGPoint(x: 10, y: size.height - HUDNode.height - 16)
+        // Centred in the air between the HUD bar and the board, rather than a
+        // fixed 16 below the bar. Identical on every screen that shipped — the
+        // band is 68 against a 36pt bar, so half of 32 *is* 16 — but the band
+        // now shrinks on a phone, and a fixed offset put the badge on the board.
+        versionBadge?.position = CGPoint(x: 10,
+                                         y: size.height - HUDNode.height - hudAir / 2)
+        versionBadge?.isHidden = !versionBadgeFits || panelIsUp
     }
+
+    /// The gap between the bottom of the HUD bar and the top of the board.
+    private var hudAir: CGFloat { layout.hudBandHeight - HUDNode.height }
+
+    /// Whether the badge can sit in that gap without touching the board.
+    ///
+    /// False on a phone in landscape, where the band is down to 44 against a
+    /// 36pt bar and 8pt of air cannot hold a 24pt chip. The badge is Test Mode's
+    /// only door on a touch device, so a phone needs another one — that is Pass
+    /// 4's problem, and §4 says so rather than leaving it to be rediscovered.
+    var versionBadgeFits: Bool { hudAir >= VersionBadgeNode.height + 4 }
+
+    private var panelIsUp: Bool { settingsNode != nil || howToPlayNode != nil }
 
     /// How much of the window's width the badge may occupy. The one number
     /// to turn if the wording should give way sooner or later than it does:

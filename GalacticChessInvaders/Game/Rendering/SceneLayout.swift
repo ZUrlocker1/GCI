@@ -88,7 +88,8 @@ struct SceneLayout {
         let clamped = CGSize(width: max(size.width, Self.minimumSize.width),
                              height: max(size.height, Self.minimumSize.height))
         self.size = clamped
-        let fromHeight = (clamped.height - Self.hudBandHeight - Self.shipBandHeight) / 8
+        let bands = Self.bands(forHeight: clamped.height)
+        let fromHeight = (clamped.height - bands.hud - bands.ship) / 8
 
         // Width is the binding constraint on every iPad in portrait, and the
         // gutter's share of it depends on the scale its type is drawn at —
@@ -119,16 +120,50 @@ struct SceneLayout {
     // MARK: - Bands
     //
     // The scene is three horizontal bands: a HUD strip along the top, the ship's
-    // lane along the bottom, and the board between them. The two chrome bands
-    // are fixed in points on purpose — they hold type and the ship, and neither
-    // should shrink because a window got shorter. Only the board flexes.
+    // lane along the bottom, and the board between them. The bands held their
+    // design size at every height until 1.4, on the grounds that they carry type
+    // and the ship and should not shrink because a window got shorter.
+    //
+    // A phone in landscape broke that. The board needs 256pt at the 32pt square
+    // floor, and 68 + 120 of chrome on top of it comes to 444 — against an
+    // iPhone 15's 393pt and a 17 Pro Max's 440. Every landscape phone failed on
+    // height while having width to spare, and the Pro Max failed by four points.
+    //
+    // So the bands give way before the board does, but only once there is no
+    // alternative: full size above 500pt of height, which is the Mac's own
+    // minimum window and below every iPad, so nothing that shipped moves.
 
     /// 700 − 632, the gap above the board on the design canvas.
     static let hudBandHeight: CGFloat = 68
-    var hudBandHeight: CGFloat { Self.hudBandHeight }
     /// The design `boardBottomY`: everything below the board.
     static let shipBandHeight: CGFloat = 120
-    var shipBandHeight: CGFloat { Self.shipBandHeight }
+
+    /// What the bands shrink to when a screen cannot hold them.
+    ///
+    /// 44 still clears the 36pt HUD bar. 70 is the contentious one: §4 wants the
+    /// ship's band generous on a phone *because* it is the drag region, and this
+    /// halves the thumb's working area on the device with least of it. It is the
+    /// first thing to judge on hardware rather than on paper.
+    static let compactHudBandHeight: CGFloat = 44
+    static let compactShipBandHeight: CGFloat = 70
+
+    /// Above this the bands are untouched; below `compactBandsBelow` they are
+    /// fully compact; between, they ramp.
+    static let fullBandsAbove: CGFloat = 500
+    static let compactBandsBelow: CGFloat = 400
+
+    /// Ramped rather than switched, because the alternative is a step: at a
+    /// threshold the board would jump *larger* as the screen got one point
+    /// shorter. A Mac window drag and a Duo hinge both cross this continuously.
+    static func bands(forHeight height: CGFloat) -> (hud: CGFloat, ship: CGFloat) {
+        let span = fullBandsAbove - compactBandsBelow
+        let t = min(1, max(0, (fullBandsAbove - height) / span))
+        return (hud: hudBandHeight - (hudBandHeight - compactHudBandHeight) * t,
+                ship: shipBandHeight - (shipBandHeight - compactShipBandHeight) * t)
+    }
+
+    var hudBandHeight: CGFloat { Self.bands(forHeight: size.height).hud }
+    var shipBandHeight: CGFloat { Self.bands(forHeight: size.height).ship }
     /// What the left gutter needs for the widest thing it carries, **at the
     /// largest square the game allows**. Kept as the headline number because
     /// that is the case the gutter was designed against.
