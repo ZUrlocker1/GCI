@@ -526,11 +526,127 @@ losing their caption; the caption does not survive losing its space.
 
 ### Pass 5 — iPhone Duo
 
-I do not have reliable specifications for this device — see the open questions at the
-end. Structurally, if it is a fold, the port needs to handle a **live size change while
-running**, not just at launch. That is exactly what `didChangeSize` is for, and it is
-another argument for doing the layout refactor properly rather than caching a layout at
-startup.
+Apple shipped the Duo in September 2026, so this is no longer guesswork. **Decided: GCI
+runs full screen on whichever display is active.** No two-screen mode, no side-by-side,
+no treating the fold as multitasking. `UIRequiresFullScreen` stays `true`.
+
+#### The numbers
+
+From Apple's own specifications:
+
+| | Diagonal | Pixels | ppi |
+|---|---|---|---|
+| Outer (cover) | 5.4" | 1398 × 2034 | 460 |
+| Inner (unfolded) | 7.6" | 1878 × 2670 | 430 |
+
+Folded 117.8 × 84.1 × 11.3 mm; open 164.6 × 117.8 × 5.2 mm.
+
+**In points, at ×3 — which is an inference, not an Apple figure:**
+
+- **Outer: 466 × 678 pt**
+- **Inner: 626 × 890 pt**
+
+Apple has not published point dimensions. The scale factor is derived from the pixel
+counts and the density used on its 460-ppi iPhones; an independent developer write-up
+reaches the same numbers. Everything below rests on it, so it is the first thing to
+confirm when the simulator ships.
+
+#### Where the current layout stands
+
+GCI's composition cannot go below **497 × 444 pt** — a 145pt gutter at its smallest
+type, a 256pt board at the 32pt square floor, and a 96pt right margin.
+
+| State | Size | Square | Board | Verdict |
+|---|---|---|---|---|
+| Outer portrait | 466 × 678 | 32 | 256 | **overflows by 31pt** |
+| Outer landscape | 678 × 466 | 34 | 272 | fits, 165pt spare |
+| Inner portrait | 626 × 890 | 48 | 384 | fits — 129pt above the minimum |
+| Inner landscape | 890 × 626 | 54 | 432 | fits, 217pt spare |
+
+**Three of the four states already work**, and the inner display — where the game will
+actually be played — is comfortable in both orientations. A 48pt square in inner
+portrait is larger than an iPad mini gave before the gutter change in 1.3.
+
+**Only the folded cover display fails, and only by 31pt.** That is a third of iPhone
+portrait's 104pt shortfall. Folded, the Duo is a slightly roomier iPhone, and it is the
+same problem Pass 4 exists to solve.
+
+#### Why the cheap fixes are not good enough
+
+The obvious tweaks all land in the same uncomfortable place:
+
+| Remedy | Spare at 466pt | Square |
+|---|---|---|
+| Right margin 96 → 80 | −15pt | still fails |
+| Right margin 96 → 65 | 0pt | 32 |
+| Min square 32 → 28 | +1pt | 28 |
+| Min square 28 + margin 80 | +17pt | 28 |
+
+Every one of them buys the fit by shrinking the square to 28–32pt. Apple's touch
+guidance is 44pt, and GCI punishes a mis-tap specifically: the five-second clock expires
+and the engine moves for you. A 28pt chess square under a running clock is a worse game,
+not a smaller one.
+
+**Pass 4's restructure is the answer**, and the gap is not close:
+
+| Side margins | Board | Square |
+|---|---|---|
+| 16pt | 432pt | **54pt** |
+| 24pt | 416pt | **52pt** |
+| 32pt | 400pt | **50pt** |
+
+Moving the readouts to a bar above the board turns a 28pt square into a 50–54pt one on
+the same display. So the cover display is not separate work — **solve iPhone portrait
+and the Duo's folded state comes free**, with far more headroom than the phone has.
+
+#### The genuinely new work: folding while running
+
+This is the part no other device asks for, and it is the real risk. `SceneLayout`
+recomputes from whatever size it is handed and `didChangeSize` is wired, so the geometry
+is in good shape. The rebuild code *around* it is not proven:
+
+Three bugs in the resize path turned up in a single day on 1 Oct, all found by resizing
+a Mac window by hand — `applyLayout()` rebuilding the HUD and resurrecting the nav
+buttons and FIRE over open panels; the version badge's sweep bar drawing 134,000pt wide
+because a sprite's `size` was assigned while its `xScale` was mid-animation; the Test
+Mode chips running onto the board once the gutter narrowed.
+
+A folding phone exercises that path several times a session, mid-game and mid-panel, not
+once at launch. Hardening it is the Duo-specific work:
+
+- Every `applyLayout()` path must be idempotent and safe while a panel is open.
+- Anything cached against size — `rebuildSky()`, the node pools, the version badge's
+  wording, the chip row's compact/full choice — has to survive repeated flips.
+- A fold during the high-score keyboard, during a wave banner, or mid-explosion are all
+  states worth trying deliberately.
+
+#### To verify when the simulator ships
+
+Nothing below can be settled from published specifications.
+
+1. **The point dimensions and scale factor.** Everything above assumes ×3. Confirm
+   466 × 678 and 626 × 890 from `UIScreen` rather than arithmetic.
+2. **One display or two.** Whether the Duo presents as a single `UIScreen` that changes
+   size, or two screens. A resize is a layout problem; two screens is an architecture
+   problem. This decides whether any of the above holds.
+3. **What the app actually receives on a fold.** A `didChangeSize`, a scene disconnect
+   and reconnect, or a full relaunch. Each needs different handling, and only the first
+   is already covered.
+4. **Safe-area insets on both displays** — the crease, any camera cutout, the home
+   indicator. The ship lane lives exactly where a home indicator wants to be; §5 Pass 3
+   already flags this for iPhone.
+5. **Whether `UIRequiresFullScreen` is honoured** on a folding device, or quietly
+   ignored the way iPadOS 26 windowing might.
+6. **The size class the cover display reports.** Compact width would change what UIKit
+   hands the SwiftUI chrome around the scene.
+7. **Whether the cover display rotates at all**, or is portrait-locked by the hardware.
+   The table above assumes both orientations are reachable.
+8. **Touch-target reality on the cover display** at 460 ppi — whether a 44pt target is
+   genuinely comfortable there, since the whole argument against the cheap fixes rests
+   on it.
+
+Until a simulator exists, none of this is actionable beyond Pass 4, which the phone
+needs anyway.
 
 ---
 
@@ -836,9 +952,11 @@ build is TestFlight-able.
 
 ## Still open
 
-1. **iPhone Duo.** I do not have dependable specifications. Folded and unfolded point
-   dimensions, and whether it presents as one continuous display or two, changes Pass 5
-   completely.
+1. ~~**iPhone Duo specifications.**~~ **Shipped Sept 2026; measured in §5 Pass 5.**
+   466 × 678 outer and 626 × 890 inner, at an inferred ×3. Decided: full screen on
+   whichever display is active, never two screens or multitasking. What is still open is
+   narrower — whether it presents as one `UIScreen` or two, and what the app receives on
+   a fold. Pass 5 lists eight things to confirm when the simulator ships.
 2. **One app or two?** A universal bundle means one listing, one set of reviews, and
    users get every platform. A separate iOS app versions independently. Zudio is a third
    model — one project, separate targets, one App Store record.
