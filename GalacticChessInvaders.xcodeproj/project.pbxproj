@@ -632,28 +632,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_1920EAB6-CE83-4803-8CFE-73D619B8BDC6" /* .claude */ = {
+		"TEMP_25B0BC6B-8B93-40A7-A1AD-4A55443C7DED" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_46697C53-0BFE-4D77-AEAF-6B3E88DE7A13" /* .claude */ = {
+		"TEMP_92B964D1-6460-4DA2-A7A4-2B1F8A6A5FE0" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_CBE384BF-584F-48EF-ABD5-7453065C168E" /* .claude */ = {
+		"TEMP_A0C04F76-2615-4D97-AD7D-1BDA0CB0DF82" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_F4FBC2AE-6CC3-477D-8227-722BE0167CFB" /* .claude */ = {
+		"TEMP_C3915E8E-C379-444B-B6EB-894FF8EECB44" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -1061,7 +1061,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Debug;
 		};
@@ -1109,7 +1109,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Release;
 		};

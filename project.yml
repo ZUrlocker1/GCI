@@ -121,7 +121,14 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
         DEVELOPMENT_TEAM: K66MA9TR8Z
         CODE_SIGN_STYLE: Automatic        # the way ZudioiOS is signed
-        TARGETED_DEVICE_FAMILY: "1,2"     # iPhone and iPad
+        # iPad only for 1.3. The game does not fit an iPhone yet — at 393pt
+        # the gutter, board and right margin need 497, so the board overflows
+        # by 104pt in portrait. Shipping "1,2" would offer it to every iPhone.
+        #
+        # This is the safe direction: Apple lets you ADD a device family later
+        # but not remove one, since removing orphans people who already have
+        # it. Widen to "1,2" when the iPhone passes land.
+        TARGETED_DEVICE_FAMILY: "2"           # iPad only
         # The same artwork the Mac ships, extracted from AppIcon.icns and
         # flattened onto black: iOS rejects an icon with alpha, and applies
         # its own rounded mask.
