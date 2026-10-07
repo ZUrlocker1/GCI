@@ -490,6 +490,31 @@ for the scene, which reads its own size in `didChangeSize`.
 pins 4pt of clearance from the board's rank labels — the guard against the earlier squeeze
 that clipped "OR KNIGHT" off the left edge of an iPad.
 
+### The Dynamic Island will land on the HUD
+
+Not a Duo problem — an **every-iPhone** problem that iPad has been hiding, and it applies
+from Pass 3 onward.
+
+`GCIiOSApp.swift:48` sets `.ignoresSafeArea()`, so the scene draws edge to edge. That has
+been free so far because an iPad has nothing at the top to avoid. Every modern iPhone has
+a Dynamic Island, and Apple's specifications list one on **both** of the Duo's displays.
+
+The HUD is a 36pt bar at the very top of the 68pt band, running SCORE · HI · lives ·
+LEVEL left to right with the nav buttons at the right. **LEVEL is centred in the gap
+between the lives and the nav** — which is where an island sits. SCORE and the lives are
+far enough left to survive; the level readout is not.
+
+Three ways out, and it is a Pass 3 decision rather than a Duo one:
+
+1. **Inset the HUD band by `safeAreaInsets.top`**, keeping `ignoresSafeArea` for the
+   playfield so the starfield still runs to the edge. Most faithful, most work.
+2. **Grow `hudBandHeight` where there is a top inset**, pushing the bar below the island.
+   Cheap, and costs vertical space a phone cannot spare.
+3. **Move LEVEL out of the centre.** It is the only casualty and the HUD has room right.
+
+Worth settling before the phone passes: all three change `SceneLayout`, and the third
+changes a composition everyone is used to.
+
 ### Pass 3 — iPhone landscape
 
 2.17:1 on modern phones. Very wide, not very tall. The board is height-constrained, so
@@ -650,13 +675,18 @@ Nothing below can be settled from published specifications.
    466 × 678 and 626 × 890 from `UIScreen` rather than arithmetic.
 2. **One display or two.** Whether the Duo presents as a single `UIScreen` that changes
    size, or two screens. A resize is a layout problem; two screens is an architecture
-   problem. This decides whether any of the above holds.
+   problem. This decides whether any of the above holds. Apple's specifications do not
+   settle it — they list "Inner display" and "Outer display" separately, then a "Both
+   displays" section of shared features.
 3. **What the app actually receives on a fold.** A `didChangeSize`, a scene disconnect
    and reconnect, or a full relaunch. Each needs different handling, and only the first
    is already covered.
-4. **Safe-area insets on both displays** — the crease, any camera cutout, the home
-   indicator. The ship lane lives exactly where a home indicator wants to be; §5 Pass 3
-   already flags this for iPhone.
+4. **Safe-area insets on both displays** — the crease, the Dynamic Island that Apple
+   lists on *both* screens, and the home indicator. The ship lane sits where a home
+   indicator wants to be and LEVEL sits where an island does; both are written up under
+   "The Dynamic Island will land on the HUD" above, because they are iPhone problems
+   first. The specs page is silent on where the island sits on each display, and on the
+   crease entirely.
 5. **Whether `UIRequiresFullScreen` is honoured** on a folding device, or quietly
    ignored the way iPadOS 26 windowing might.
 6. **The size class the cover display reports.** Compact width would change what UIKit
