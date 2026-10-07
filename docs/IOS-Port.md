@@ -490,7 +490,7 @@ for the scene, which reads its own size in `didChangeSize`.
 pins 4pt of clearance from the board's rank labels — the guard against the earlier squeeze
 that clipped "OR KNIGHT" off the left edge of an iPad.
 
-### The Dynamic Island will land on the HUD
+### The HUD does not fit a phone, and an island is only half of why
 
 Not a Duo problem — an **every-iPhone** problem that iPad has been hiding, and it applies
 from Pass 3 onward.
@@ -512,8 +512,40 @@ Three ways out, and it is a Pass 3 decision rather than a Duo one:
    Cheap, and costs vertical space a phone cannot spare.
 3. **Move LEVEL out of the centre.** It is the only casualty and the HUD has room right.
 
-Worth settling before the phone passes: all three change `SceneLayout`, and the third
-changes a composition everyone is used to.
+**Decided (7 Oct): abbreviate and move off centre on iPhone and Duo.** `L 01` rather than
+`LEVEL 01`, and left-aligned instead of centred in the gap. The abbreviation already
+exists — `levelIsAbbreviated` switches to the short form whenever the gap cannot hold
+100pt — so only the alignment is new.
+
+**But LEVEL is not the real problem, and fixing it alone would be cosmetic.** Measured
+across the HUD's own constants: the left block (SCORE at 0, HI at 120, five life ships
+from 215) ends at **312pt**, and the nav cluster is **296pt** wide. So the bar needs
+**608pt** before LEVEL is allocated a single point:
+
+| Screen | Gap left for LEVEL | |
+|---|---|---|
+| Mac design 960 | 304pt | spelled out, centred |
+| iPad mini landscape 1133 | 477pt | spelled out, centred |
+| iPhone landscape 852 | 196pt | spelled out, centred |
+| **Duo inner portrait 626** | **−30pt** | SCORE / lives / nav collide |
+| **Duo outer portrait 466** | **−190pt** | collide |
+| **iPhone 15 portrait 393** | **−263pt** | collide |
+
+Every landscape case is comfortable; **every portrait phone case overflows**, including
+the Duo's large inner display. The fixed widths are what break: `livesX` 215 with five
+ships at a 22pt step, and a nav cluster that does not shrink.
+
+So the HUD needs to *reflow* for phone widths, not relocate one label — which makes it a
+Pass 3/4 structural job rather than a tweak. Things that will have to give, roughly in
+order of how little they cost:
+
+- **The lives.** Five ships at 22pt is 88pt of fixed width. A `×3` glyph is about 30.
+- **The nav cluster.** 296pt of PAUSE / SET / INFO. Icons without words, or a single
+  menu button, is the obvious saving.
+- **HI.** It duplicates what the title screen shows and is the least useful mid-run.
+
+Note the Duo inner display misses by only 30pt — so the same reflow that rescues an
+iPhone leaves the Duo's main screen with room to spare.
 
 ### Pass 3 — iPhone landscape
 
