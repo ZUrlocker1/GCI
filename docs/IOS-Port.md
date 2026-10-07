@@ -526,9 +526,26 @@ losing their caption; the caption does not survive losing its space.
 
 ### Pass 5 — iPhone Duo
 
-Apple shipped the Duo in September 2026, so this is no longer guesswork. **Decided: GCI
-runs full screen on whichever display is active.** No two-screen mode, no side-by-side,
-no treating the fold as multitasking. `UIRequiresFullScreen` stays `true`.
+Announced September 2026, **shipping 23 October 2026** — so this is no longer guesswork,
+and a simulator already exists. **Decided: GCI runs full screen on whichever display is
+active.** No two-screen mode, no side-by-side, no treating the fold as multitasking.
+`UIRequiresFullScreen` stays `true`.
+
+**The simulator shipped in the Xcode 27.1 beta on 18 September**, five weeks ahead of the
+hardware — the Vision Pro pattern rather than the usual few-days-ahead one. It needs
+Apple silicon and macOS 26.6 or later, which this machine meets. Three things about it
+change the work below:
+
+- **It simulates *poses*, not two sizes.** Open, closed, rotation and *partial* folding,
+  driven from on-screen controls. The four-state table below is therefore the corners of
+  a continuum, not the whole story — see "folding while running".
+- **The controls live in Device Hub**, which is the component that would not launch on
+  this machine after the Xcode 27 install went wrong. Fixing that is a prerequisite for
+  any Duo work, not an optional tidy-up.
+- **SDK floor.** Apps built against the iOS 26 SDK need rebuilding against iOS 27 for
+  basic Duo support, and against **iOS 27.1 or later** to take full advantage of the
+  larger display. GCI 1.3 was built with Xcode 27.0, so it should have basic support;
+  what "full advantage" buys has to be confirmed rather than assumed.
 
 #### The numbers
 
@@ -612,7 +629,12 @@ because a sprite's `size` was assigned while its `xScale` was mid-animation; the
 Mode chips running onto the board once the gutter narrowed.
 
 A folding phone exercises that path several times a session, mid-game and mid-panel, not
-once at launch. Hardening it is the Duo-specific work:
+once at launch. Worse than that: the simulator exposes *partial* folds, so the scene may
+be resized continuously through a hinge movement rather than jumping between two sizes.
+That is the same shape as a live Mac window drag, which is exactly how all three of
+those bugs were found.
+
+Hardening it is the Duo-specific work:
 
 - Every `applyLayout()` path must be idempotent and safe while a panel is open.
 - Anything cached against size — `rebuildSky()`, the node pools, the version badge's
@@ -645,8 +667,9 @@ Nothing below can be settled from published specifications.
    genuinely comfortable there, since the whole argument against the cheap fixes rests
    on it.
 
-Until a simulator exists, none of this is actionable beyond Pass 4, which the phone
-needs anyway.
+All of it is answerable today: install the Xcode 27.1 beta alongside the release Xcode
+and run the Duo simulator. The sequencing argument is unchanged, though — Pass 4 is what
+the cover display actually needs, and the phone needs it anyway.
 
 ---
 
