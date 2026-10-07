@@ -547,18 +547,69 @@ order of how little they cost:
 Note the Duo inner display misses by only 30pt — so the same reflow that rescues an
 iPhone leaves the Duo's main screen with room to spare.
 
-### Pass 3 — iPhone landscape
+### Pass 3 — iPhone landscape — **in progress, 1.4**
 
-2.17:1 on modern phones. Very wide, not very tall. The board is height-constrained, so
-it will be small; the compensation is that both gutters become usable.
+2.17:1 on modern phones. Very wide, not very tall. The board is height-constrained, so it
+will be small; the compensation is that both gutters finally become usable.
 
-Layout: board centred, readouts in the left gutter as on the Mac, and the right gutter
-finally earns its keep — power-ups, or the hints, or the score.
+**The blocker is vertical, and it is the whole of Pass 3.** The layout's height floor is
+444pt — a 256pt board at the 32pt square minimum, plus `hudBandHeight` 68 and
+`shipBandHeight` 120. Measured against real phones in landscape:
 
-Watch the safe areas. In landscape, the Dynamic Island eats one end and the home
-indicator the bottom edge, and the ship lane lives exactly where the home indicator
-wants to be. The ship lane needs to respect `safeAreaInsets.bottom` or people will
+| Device | Landscape | Width | Height |
+|---|---|---|---|
+| iPhone 15 / 16 | 852 × 393 | fine | **51pt short** |
+| iPhone 16 / 17 Pro Max | 956 × 440 | fine | **4pt short** |
+| Duo folded | 678 × 466 | fine | fits |
+| Duo open | 890 × 626 | fine | fits |
+
+Width is never the problem in landscape — 852pt against a 497pt floor. Every landscape
+phone fails on height, and the Pro Max fails by **four points**, which is the kind of
+margin that makes a single constant worth arguing about.
+
+Where the 51pt can come from:
+
+| | Height floor | iPhone 15 at 393 |
+|---|---|---|
+| As shipped | 444 | 51pt short |
+| Ship band 120 → 70 | 394 | 1pt short |
+| HUD band 68 → 44 | 420 | 27pt short |
+| **Both** | **386** | **fits, 7pt spare** |
+
+So Pass 3 needs **both** bands trimmed; neither alone is enough. The HUD trim is required
+anyway — see "The HUD does not fit a phone" above, where the bar overflows every portrait
+phone width regardless of height.
+
+**The ship band trim is the contentious one.** §4 argues for keeping that band generous
+on a phone precisely because it is the drag region: `point.y < boardBottomY` is what
+makes a drag over the squares a chess move rather than ship steering. Cutting it from 120
+to 70 halves the thumb's working area on the device with the least room. That trade is
+the first thing to test on hardware rather than settle on paper.
+
+At 32pt squares the board is 256pt inside an 852pt screen, which leaves roughly 300pt of
+gutter on each side. That is the Pass 3 bargain as originally written: a small board, and
+both gutters earning their keep for the first time.
+
+Still open from the original plan, unchanged: the home indicator sits exactly where the
+ship lane wants to be, so the lane has to respect `safeAreaInsets.bottom` or people will
 swipe the app away mid-wave.
+
+#### No diagnostics log on iPhone or Duo
+
+**Decided (7 Oct): the log panel is iPad-only.** It is already landscape-only on iOS
+(`GCIiOSApp.swift:149`); on a phone there is no width to spare for a sidebar beside a
+board that is already at its minimum.
+
+Two ways to gate it, and the choice matters for the Duo:
+
+1. **By idiom** — `userInterfaceIdiom == .pad`. Simple, and reads as the intent. It rests
+   on the Duo reporting `.phone`, which is an assumption: unfolded it is 626 × 890, close
+   to an iPad mini, and nobody has confirmed what it claims to be.
+2. **By width** — show it only above some scene width. Self-correcting whatever the Duo
+   reports, and it degrades sensibly if Apple ships a larger fold later.
+
+Width is the safer rule. Idiom is the clearer one to read. Settle it when the Duo
+simulator can answer which idiom it reports — that is now on the Pass 5 list.
 
 ### Pass 4 — iPhone portrait
 
@@ -721,8 +772,9 @@ Nothing below can be settled from published specifications.
    crease entirely.
 5. **Whether `UIRequiresFullScreen` is honoured** on a folding device, or quietly
    ignored the way iPadOS 26 windowing might.
-6. **The size class the cover display reports.** Compact width would change what UIKit
-   hands the SwiftUI chrome around the scene.
+6. **The size class and `userInterfaceIdiom` the Duo reports**, on each display. Compact
+   width would change what UIKit hands the SwiftUI chrome, and the idiom decides whether
+   an `== .pad` test is a safe way to gate the diagnostics log — see Pass 3.
 7. **Whether the cover display rotates at all**, or is portrait-locked by the hardware.
    The table above assumes both orientations are reachable.
 8. **Touch-target reality on the cover display** at 460 ppi — whether a 44pt target is
