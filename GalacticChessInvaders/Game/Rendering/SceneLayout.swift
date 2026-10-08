@@ -451,7 +451,15 @@ struct SceneLayout {
     var powerUpAlleyLines: Int { 3 }
     /// The block stacks *upward* from this floor, so the first line the player
     /// earns stays where they last read it and later ones go above it.
-    var powerUpAlleyBottomY: CGFloat { boardBottomY + 76 * gutterScale }
+    ///
+    /// Hung off `readoutAnchorY`, not `boardBottomY`. The two are the same thing
+    /// wherever there is a gutter, so this is identical on a Mac and an iPad —
+    /// but stacked mode moves the readout column to a fixed offset from the
+    /// bottom of the screen, and the alley stayed behind on the board. With a
+    /// power-up held it drew about 100pt up onto the squares and straight
+    /// through the Chess Hint, whose whole job is to sit clear of a full stack.
+    /// `PowerUpAlleyClearanceTests` measures both.
+    var powerUpAlleyBottomY: CGFloat { readoutAnchorY + 76 * gutterScale }
     var powerUpAlleyStep: CGFloat { 14 * gutterScale }   // 9pt of type, 5pt of air
     var powerUpAlleyFontSize: CGFloat { 9 * gutterScale }
     var powerUpBarWidth: CGFloat { 84 * gutterScale }

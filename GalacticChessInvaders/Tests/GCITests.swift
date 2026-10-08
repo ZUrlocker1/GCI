@@ -7645,3 +7645,92 @@ final class PortraitPanelTests: XCTestCase {
                       "no control was reachable inside the panel's own bounds")
     }
 }
+
+
+/// The power-up alley against the readout column it has to clear.
+///
+/// `chessHintY` is documented as sitting "above everything else in the gutter,
+/// clearing a full power-up stack" — an invariant that held because every
+/// readout hung off `boardBottomY`. Stacked mode moved the column to
+/// `readoutAnchorY` and left the alley behind on the old anchor.
+@MainActor
+final class PowerUpAlleyClearanceTests: XCTestCase {
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    private static let sizes: [(String, CGSize)] = [
+        ("Mac design canvas",      CGSize(width: 960, height: 700)),
+        ("Mac narrow + sidebar",   CGSize(width: 490, height: 587)),
+        ("iPhone 15 portrait",     CGSize(width: 393, height: 852)),
+        ("iPhone Pro Max portrait", CGSize(width: 440, height: 956)),
+        ("iPad mini portrait",     CGSize(width: 744, height: 1133)),
+    ]
+
+    /// The alley grows upward from its floor; the hint has to start above the
+    /// top of a full stack of it.
+    func testTheHintClearsAFullPowerUpStack() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            let alleyTop = l.powerUpAlleyBottomY
+                + CGFloat(l.powerUpAlleyLines - 1) * l.powerUpAlleyStep
+                + l.powerUpAlleyFontSize
+            XCTAssertGreaterThan(
+                l.chessHintY, alleyTop,
+                "\(name): hint at \(Int(l.chessHintY)) is inside the alley, "
+                + "which reaches \(Int(alleyTop))")
+        }
+    }
+
+    /// Every slot in the readout column, against every other one.
+    ///
+    /// The alley was the one that showed, because it is the one with a
+    /// power-up behind it. This checks the whole column so the next item that
+    /// forgets to move is caught by the suite rather than by a screenshot.
+    func testNoTwoReadoutSlotsOverlap() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            let alleyTop = l.powerUpAlleyBottomY
+                + CGFloat(l.powerUpAlleyLines - 1) * l.powerUpAlleyStep
+                + l.powerUpAlleyFontSize
+            // Bottom to top, as the column reads.
+            let slots: [(String, CGFloat, CGFloat)] = [
+                ("status banner", l.statusBannerY - 8 * l.gutterScale, l.statusBannerY + 8 * l.gutterScale),
+                ("turn timer",    l.turnTimerY - 10 * l.gutterScale,   l.turnTimerY + 10 * l.gutterScale),
+                ("power-up alley", l.powerUpBarY, alleyTop),
+                ("chess hint",    l.chessHintY - 6 * l.gutterScale,    l.chessHintY + 6 * l.gutterScale),
+            ]
+            for (i, a) in slots.enumerated() {
+                for b in slots.dropFirst(i + 1) {
+                    XCTAssertFalse(a.1 < b.2 && b.1 < a.2,
+                                   "\(name): \(a.0) and \(b.0) overlap")
+                }
+            }
+        }
+    }
+
+    /// The column is left-aligned exactly where it has been stacked, and
+    /// centred exactly where there is a gutter to centre it in.
+    func testAlignmentFollowsTheLayout() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            XCTAssertEqual(l.readoutsAreLeftAligned, l.usesStackedReadouts,
+                           "\(name): alignment and layout disagree")
+        }
+    }
+
+    /// And the alley has to stay off the board.
+    func testTheAlleyStaysBelowTheBoard() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            guard l.usesStackedReadouts else { continue }
+            let alleyTop = l.powerUpAlleyBottomY
+                + CGFloat(l.powerUpAlleyLines - 1) * l.powerUpAlleyStep
+                + l.powerUpAlleyFontSize
+            XCTAssertLessThan(alleyTop, l.boardBottomY,
+                              "\(name): the alley is drawn over the squares")
+        }
+    }
+}

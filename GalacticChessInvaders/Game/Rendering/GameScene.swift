@@ -1978,7 +1978,7 @@ class GameScene: SKScene {
         label.text = text
         label.fontSize = 9
         label.fontColor = color
-        label.horizontalAlignmentMode = .center
+        label.horizontalAlignmentMode = layout.readoutsAreLeftAligned ? .left : .center
         label.verticalAlignmentMode = .center
         // Sits just under the AUTO MODE slot so both can show at once.
         label.setScale(layout.gutterScale)
@@ -2179,7 +2179,7 @@ class GameScene: SKScene {
         autoLabel.text = "AUTO CHESS"
         autoLabel.fontSize = 9
         autoLabel.fontColor = NeonPalette.orange
-        autoLabel.horizontalAlignmentMode = .center
+        autoLabel.horizontalAlignmentMode = layout.readoutsAreLeftAligned ? .left : .center
         autoLabel.verticalAlignmentMode = .center
         autoLabel.position = CGPoint(x: layout.gutterCentreX, y: Self.boardBottomY + 46 - Self.gutterDrop)
         autoLabel.isHidden = !isAutoMode
@@ -4485,7 +4485,8 @@ class GameScene: SKScene {
                                shield: powerUps.hasShield,
                                timed: powerUps.active,
                                scale: SceneLayout.current.gutterScale,
-                               centreX: layout.gutterCentreX)
+                               centreX: layout.gutterCentreX,
+                               leftAligned: layout.readoutsAreLeftAligned)
 
         // The bar is the one part that changes every frame — it is a countdown.
         var countdown: (progress: CGFloat, color: SKColor)?
@@ -4529,8 +4530,7 @@ class GameScene: SKScene {
                                      size: CGSize(width: Self.powerUpBarWidth, height: 3))
             fresh.name = Self.powerUpBarName
             fresh.anchorPoint = CGPoint(x: 0, y: 0.5)
-            fresh.position = CGPoint(x: layout.gutterCentreX - Self.powerUpBarWidth / 2,
-                                     y: Self.powerUpBarY)
+            fresh.position = CGPoint(x: self.powerUpBarX, y: Self.powerUpBarY)
             fresh.zPosition = 12
             bloomNode.addChild(fresh)
             return fresh
@@ -4539,8 +4539,16 @@ class GameScene: SKScene {
         bar.size.width = max(0, Self.powerUpBarWidth * countdown.progress)
         // Placed every time rather than at creation: two float writes, against
         // a bar that was otherwise left behind by a resize.
-        bar.position = CGPoint(x: layout.gutterCentreX - Self.powerUpBarWidth / 2,
-                               y: Self.powerUpBarY)
+        bar.position = CGPoint(x: powerUpBarX, y: Self.powerUpBarY)
+    }
+
+    /// The bar's left edge. It is anchored at 0, so centred mode has to take
+    /// half its width off and stacked mode — where the column is left-aligned —
+    /// must not, or the bar sits half a bar-width left of the text it belongs to.
+    private var powerUpBarX: CGFloat {
+        layout.readoutsAreLeftAligned
+            ? layout.gutterCentreX
+            : layout.gutterCentreX - Self.powerUpBarWidth / 2
     }
 
     /// What the alley is currently showing.
@@ -4560,6 +4568,10 @@ class GameScene: SKScene {
         var timed: PowerUp?
         var scale: CGFloat = 0
         var centreX: CGFloat = 0
+        /// Stacked under the board there is no gutter to centre in — `centreX`
+        /// is the column's left edge, and text centred on it runs off the
+        /// screen. Part of the state so a resize redraws on it.
+        var leftAligned = false
     }
     private var shownAlley = AlleyState()
 
@@ -4592,6 +4604,7 @@ class GameScene: SKScene {
             label.text = lines[index].text
             label.fontColor = lines[index].color
             label.fontSize = Self.powerUpAlleyFontSize
+            label.horizontalAlignmentMode = state.leftAligned ? .left : .center
             // Bottom-up from a fixed floor, so the first line the player earns
             // stays where they last read it and later ones stack above it.
             label.position = CGPoint(
@@ -4668,8 +4681,12 @@ class GameScene: SKScene {
         // rule — it shares the column with the turn clock and the hints.
         label.setScale(layout.gutterScale)
         let inset = 40 * layout.gutterScale
+        // This one does not join the stacked column, because it is not a
+        // readout: it names a *rank*, and its y says which one. Stacked under
+        // the board there is no gutter at that height — the board is there —
+        // so it centres over the board instead of being drawn across it.
         label.position = CGPoint(
-            x: layout.gutterCentreX,
+            x: layout.readoutsAreLeftAligned ? size.width / 2 : layout.gutterCentreX,
             y: side == .black ? Self.boardBottomY + BoardNode.boardSize - inset
                               : Self.boardBottomY - inset)
         label.run(.repeatForever(.sequence([
