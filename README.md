@@ -85,7 +85,18 @@ and How To Play become one readable column.
 frames: sound effects are decoded once at launch and played from a pool of running voices —
 11.7ms a shot down to 0.03ms.
 
-Every release is in the [change log](docs/change-log.md).
+**1.2 — better window resizing.** The board and the readouts lay themselves out from the space
+available instead of being scaled into a fixed canvas, and everything on the playfield is sized
+against the board. The title screen stopped re-rendering its own type sixty times a second — 53%
+CPU down to under 40%.
+
+**1.1 — Cadet and Ace.** Cadet became the default difficulty and the harder mode became Ace. Chess
+Hints glow the pieces worth moving and name them in the gutter; Arcade Hints prompt a player who
+goes three moves without firing.
+
+**1.0 — the first official release.**
+
+Every release is in the [change log](docs/change-log.md), in full.
 
 ## History
 
