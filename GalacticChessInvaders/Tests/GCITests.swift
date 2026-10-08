@@ -6485,6 +6485,18 @@ final class PanelChromeAcrossResizeTests: XCTestCase {
         GameScene.shared.size = SceneLayout.designSize
     }
 
+    /// Rotate whatever the scene is currently at, rather than naming a size.
+    ///
+    /// These tests need the resize to *be* a resize: assigning the size the
+    /// scene already has fires no `didChangeSize`, so nothing rebuilds and the
+    /// assertion fails for a reason that has nothing to do with the HUD. The
+    /// `setUp` above was meant to guarantee that and does not, because the host
+    /// view can resize the scene straight back to its own bounds. Swapping the
+    /// two axes is a change whatever it is handed.
+    static func rotated(_ size: CGSize) -> CGSize {
+        CGSize(width: size.height, height: size.width)
+    }
+
     private func nav(_ scene: GameScene) -> SKNode? {
         scene.children
             .compactMap { $0 as? HUDNode }
@@ -6521,7 +6533,7 @@ final class PanelChromeAcrossResizeTests: XCTestCase {
         scene.showSettings()
 
         let before = nav(scene).map(ObjectIdentifier.init)
-        scene.size = CGSize(width: 700, height: 960)
+        scene.size = Self.rotated(scene.size)
         let after = nav(scene).map(ObjectIdentifier.init)
         XCTAssertNotEqual(before, after,
                           "the resize must actually rebuild the HUD, or this "
@@ -6538,7 +6550,7 @@ final class PanelChromeAcrossResizeTests: XCTestCase {
         scene.showHowToPlay()
         defer { scene.hideHowToPlay() }
 
-        scene.size = CGSize(width: 700, height: 960)
+        scene.size = Self.rotated(scene.size)
 
         XCTAssertEqual(nav(scene)?.isHidden, true,
                        "How To Play is covered by the same rebuild")
@@ -6549,7 +6561,7 @@ final class PanelChromeAcrossResizeTests: XCTestCase {
     func testNavReturnsAfterThePanelCloses() throws {
         let scene = try playing()
         scene.showSettings()
-        scene.size = CGSize(width: 700, height: 960)
+        scene.size = Self.rotated(scene.size)
         scene.hideSettings()
         XCTAssertEqual(nav(scene)?.isHidden, false)
     }
@@ -7890,8 +7902,11 @@ final class MacResizeSweepTests: XCTestCase {
 /// the board sits far higher than on the design canvas, so a stale anchor put
 /// the raider a whole board out of position.
 ///
-/// The `.overTheBoard` raiders were unaffected, which is why the green
-/// top-of-screen one never misbehaved: they clamp against a live scene height.
+/// It reaches the `.overTheBoard` raiders too, by a second route: their dive
+/// depth is a fraction of `headroom`, and headroom is measured down to
+/// `boardBottomY - 10`. A stale anchor inflates it, so a Shield glide that
+/// should bottom out just above the board carries on past the ship. Zack saw
+/// that one as well, after this file first claimed they were safe.
 @MainActor
 final class RaiderLaneTests: XCTestCase {
 
@@ -7942,6 +7957,62 @@ final class RaiderLaneTests: XCTestCase {
         }
     }
 
+    /// A dive is a fraction of the room beneath the raider, so the floor of
+    /// the deepest one still has to clear the ship.
+    ///
+    /// Shield glides and Nuke swoops take up to 0.95 of `headroom`, measured
+    /// from the entry down to `boardBottomY - 10`. This is the invariant the
+    /// `.rank` entry test cannot see, and it is the half Zack hit second.
+    func testTheDeepestDiveStaysAboveTheShip() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            for p in [PowerUp.shield, .nuke] {
+                let entry = self.entry(p, l)
+                let headroom = entry - (l.boardBottomY - 10)
+                let deepest = entry - headroom * 0.95
+                XCTAssertGreaterThan(deepest, l.shipLaneY,
+                                     "\(name): \(p) bottoms out at \(Int(deepest)), "
+                                     + "ship lane is \(Int(l.shipLaneY))")
+            }
+        }
+    }
+
+    /// And the same dive on a stale anchor is the bug, so the test above is
+    /// measuring something that can actually fail.
+    ///
+    /// On every device, not just the phone. The ranked raiders only cross below
+    /// the ship on a phone — an iPad's squares are big enough that rank 4 still
+    /// clears it — but the *dive* goes through the ship everywhere, which is
+    /// why an iPad is no safer here than an iPhone.
+    func testAStaleAnchorDivesThroughTheShipOnEveryDevice() {
+        let rotations: [(String, CGSize, CGSize)] = [
+            ("iPhone 15",   CGSize(width: 393, height: 852),  CGSize(width: 852, height: 393)),
+            ("iPad mini",   CGSize(width: 744, height: 1133), CGSize(width: 1133, height: 744)),
+            ("iPad Pro 13", CGSize(width: 1032, height: 1376), CGSize(width: 1376, height: 1032)),
+        ]
+        for (name, portrait, landscape) in rotations {
+            let p = SceneLayout(size: portrait)
+            let stale = SceneLayout(size: landscape).boardBottomY
+
+            let entry = RaiderRules.entryY(for: .shield,
+                                           boardBottomY: stale,
+                                           boardSize: p.boardSize,
+                                           squareSize: p.squareSize,
+                                           sceneHeight: p.size.height,
+                                           hudHeight: HUDNode.height,
+                                           scoutHeight: 28)
+            let deepest = entry - (entry - (stale - 10)) * 0.95
+            XCTAssertLessThan(deepest, p.shipLaneY,
+                              "\(name): the old behaviour is supposed to be broken here")
+
+            // And the same rotation with the anchor kept up to date is not.
+            let fixedEntry = self.entry(.shield, p)
+            let fixedDeepest = fixedEntry - (fixedEntry - (p.boardBottomY - 10)) * 0.95
+            XCTAssertGreaterThan(fixedDeepest, p.shipLaneY,
+                                 "\(name): and the new one is supposed to be fixed")
+        }
+    }
+
     /// The fix itself: the controller's anchor follows the layout.
     ///
     /// Given the design canvas and then told about a phone in portrait, it has
@@ -7964,20 +8035,21 @@ final class RaiderLaneTests: XCTestCase {
     }
 
     /// What the bug actually looked like, so the regression is unmistakable.
+    ///
+    /// The rank is computed rather than taken from `lane(for:)`, which picks at
+    /// random between two ranks — this test asserted through it at first and
+    /// passed or failed on the coin toss.
     func testAStaleAnchorPutsTheRaiderUnderTheShip() {
         let phone = SceneLayout(size: CGSize(width: 393, height: 852))
-        let stale = SceneLayout(size: SceneLayout.designSize).boardBottomY
+        let stale = SceneLayout(size: CGSize(width: 852, height: 393)).boardBottomY
 
-        let wrong = RaiderRules.entryY(for: .gatling,
-                                       boardBottomY: stale,
-                                       boardSize: phone.boardSize,
-                                       squareSize: phone.squareSize,
-                                       sceneHeight: phone.size.height,
-                                       hudHeight: HUDNode.height,
-                                       scoutHeight: 28)
+        // Rank 4 is the shallowest a weaver flies — Time Freeze's lower option.
+        let wrong = stale + (4 - 0.5) * phone.squareSize
         XCTAssertLessThan(wrong, phone.shipLaneY,
                           "the old behaviour is supposed to be broken here")
-        XCTAssertGreaterThan(entry(.gatling, phone), phone.shipLaneY,
+
+        let right = phone.boardBottomY + (4 - 0.5) * phone.squareSize
+        XCTAssertGreaterThan(right, phone.shipLaneY,
                              "and the new one is supposed to be fixed")
     }
 }
@@ -8027,3 +8099,5 @@ final class LayoutStalenessTests: XCTestCase {
         XCTAssertEqual(raiders.currentBoardBottomY, Self.portrait.boardBottomY)
     }
 }
+
+

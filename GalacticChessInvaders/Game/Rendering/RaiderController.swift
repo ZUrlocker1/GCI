@@ -32,8 +32,14 @@ final class RaiderController {
     ///
     /// A `var`, and refreshed by `adopt` along with the lane. It was a `let`
     /// captured at construction, and `adopt` updated only the x lane — so a
-    /// board that moved after the controller was built left every ranked
-    /// raider positioned against where the board used to be.
+    /// board that moved after the controller was built left every raider
+    /// placed against where the board used to be.
+    ///
+    /// Two separate routes, which is why this is worth the comment. A `.rank`
+    /// raider takes its *entry* from here. Every raider also takes its dive
+    /// depth from `flightBounds`, which hangs off the same number — so a
+    /// stale anchor inflates the headroom and a Shield glide carries on past
+    /// the player's ship even though its entry was fine.
     private var boardBottomY: CGFloat
     private var scouts: [RaiderNode] = []
     private var schedule = RaiderSchedule()
