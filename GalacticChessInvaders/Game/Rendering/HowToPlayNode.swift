@@ -245,7 +245,7 @@ final class HowToPlayNode: SKNode {
         flowHeading(flow, "TEST MODE", Self.cyan.withAlphaComponent(0.55), x: x)
         for line in ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
                      "POWER, RAIDER AND LEVEL BUTTONS APPEAR",
-                     "LOG AND AUTO CHESS JOIN SETTINGS"] {
+                     "LOG, AUTO CHESS ARE ON SETTINGS PAGE."] {
             flowSmall(flow, line, SKColor.white.withAlphaComponent(0.6), x: x)
         }
 
@@ -581,11 +581,11 @@ final class HowToPlayNode: SKNode {
         #else
         let testLines = ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
                          "POWER, RAIDER AND LEVEL BUTTONS APPEAR",
-                         "LOG AND AUTO CHESS JOIN SETTINGS"]
+                         "LOG, AUTO CHESS ARE ON SETTINGS PAGE."]
         #endif
         for (i, line) in testLines.enumerated() {
-            // 10pt, not 11: at 11 the longer line is 440pt against a 410pt
-            // column and runs off the panel.
+            // 10pt, not 11. The longest line is 38 characters, which is 380pt
+            // at 10 against a 410pt column and 418 at 11 — over the edge.
             let keys = label(line, bodyEm, testBody, .left)
             keys.position = CGPoint(x: x, y: 137 - CGFloat(i) * 17)
             addChild(keys)
