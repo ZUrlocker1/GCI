@@ -1053,6 +1053,38 @@ to be rewritten.
 Consequence for the store listing: How To Play and Settings are shot in
 landscape. Portrait screenshots are the title and gameplay, which do fill it.
 
+### Where this landed, and the one question still open
+
+**The phone was rewritten** (1.4): in portrait both panels compose as one tall column at
+their own width rather than being scaled down from the 960pt canvas. That was the fix for
+body text rendering at 5.6pt.
+
+**iPad kept the two-column layout**, deliberately. Measured across every supported size in
+portrait, with the one-column treatment for comparison:
+
+| Device | Today — two columns | One column |
+|---|---|---|
+| iPad Pro 13" | **12.0pt** body, 36pt side bands | 14.0pt, **236pt** bands |
+| iPad Pro 11" | 10.4pt, 0 | 14.0pt, 137pt |
+| iPad (A16) | 10.2pt, 0 | 14.0pt, 130pt |
+| iPad mini 6 | **9.3pt**, 0 | 14.0pt, 92pt |
+| iPad mini 5 | 9.6pt, 0 | 12.8pt, 128pt |
+
+Reflowing iPad would buy a couple of points of type and pay for it with a phone-shaped
+column down the middle of a tablet — on the Pro 13" nearly half the width left black, for
++2pt. iPad landscape is already at scale 1.0 and is unaffected either way, so this only
+ever concerned portrait. Nothing here is the 5.6pt that justified the phone rewrite.
+
+**Open: does the iPad mini read acceptably in portrait at 9.3–9.6pt?** The mini is the
+only size where this is a real question. Zack is checking it on the physical mini 5 on
+**Sunday 11 October 2026**.
+
+If it does not read well, the fix is **not** one column — it is to compose the two columns
+at the device's own width, the way the phone column already does. That stops the scale-down
+entirely: roughly 340pt a column on a mini, body stays 12pt, the screen stays full, and no
+iPad gets side bands. It is the better answer at every size in the table; it just has to
+earn a moderate change to the wide layout, which 9.3pt may or may not justify.
+
 ---
 
 ## 8. Refactoring: measured, and mostly declined
