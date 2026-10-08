@@ -7514,13 +7514,29 @@ final class PortraitPanelTests: XCTestCase {
         super.tearDown()
     }
 
-    func testOnlyAPhoneInPortraitReflows() {
-        XCTAssertTrue(HowToPlayNode.usesPortraitLayout(sceneSize: Self.phone))
-        XCTAssertFalse(HowToPlayNode.usesPortraitLayout(
-            sceneSize: CGSize(width: 956, height: 440)), "the same phone on its side")
-        XCTAssertFalse(HowToPlayNode.usesPortraitLayout(sceneSize: Self.pad))
-        XCTAssertFalse(HowToPlayNode.usesPortraitLayout(
-            sceneSize: CGSize(width: 744, height: 1133)), "an iPad upright has the width")
+    /// The *shape* the reflow is for, which the macOS suite can measure.
+    func testOnlyANarrowUprightSceneIsPortraitShaped() {
+        XCTAssertTrue(HowToPlayNode.isPortraitShaped(Self.phone))
+        XCTAssertFalse(HowToPlayNode.isPortraitShaped(CGSize(width: 956, height: 440)),
+                       "the same phone on its side")
+        XCTAssertFalse(HowToPlayNode.isPortraitShaped(Self.pad))
+        XCTAssertFalse(HowToPlayNode.isPortraitShaped(CGSize(width: 744, height: 1133)),
+                       "an iPad upright has the width")
+    }
+
+    /// And the Mac does not reflow at any of them.
+    ///
+    /// A window dragged tall and narrow is the same *shape* as a phone and is
+    /// not a phone — the one-column builder writes DRAG, FIRE and TAP, which is
+    /// wrong on a machine with no touchscreen, and Zack had a skinny window
+    /// telling him to drag a ship under a clipped header. This test runs on
+    /// macOS, so it asserts the thing it is standing on.
+    func testTheMacNeverReflows() {
+        for size in [Self.phone, CGSize(width: 400, height: 900),
+                     CGSize(width: 359, height: 1200)] {
+            XCTAssertFalse(HowToPlayNode.usesPortraitLayout(sceneSize: size),
+                           "\(Int(size.width))×\(Int(size.height)) reflowed on a Mac")
+        }
     }
 
     /// Roughly the height a portrait panel actually gets: the screen less the
@@ -7537,7 +7553,7 @@ final class PortraitPanelTests: XCTestCase {
     /// `W / H ≥ phoneWidth / A`, not `W ≤ phoneWidth`. A wider design wraps
     /// into fewer lines, which is what buys the scale back.
     func testThePortraitPanelFillsTheWidthOnceScaled() {
-        let panel = HowToPlayNode(sceneSize: Self.phone)
+        let panel = HowToPlayNode(sceneSize: Self.phone, forcePortrait: true)
         let scale = min(Self.phone.width / panel.designSize.width,
                         Self.usableHeight / panel.designSize.height)
         let rendered = panel.designSize.width * scale
@@ -7554,7 +7570,7 @@ final class PortraitPanelTests: XCTestCase {
     /// The reason the width was widened at all: readable body type. 12pt at the
     /// old 430pt design rendered at about 8.6; the bar is what that became.
     func testThePortraitBodyTypeIsActuallyBigger() {
-        let panel = HowToPlayNode(sceneSize: Self.phone)
+        let panel = HowToPlayNode(sceneSize: Self.phone, forcePortrait: true)
         let scale = min(Self.phone.width / panel.designSize.width,
                         Self.usableHeight / panel.designSize.height)
         XCTAssertGreaterThan(14 * scale, 9.5,
@@ -7598,7 +7614,7 @@ final class PortraitPanelTests: XCTestCase {
     /// the portrait panel is 430pt wide and BACK is drawn at x=820, so without
     /// a re-anchor it vanished on the first tap.
     func testSettingsAsksToBeReAnchoredAfterEveryRebuild() {
-        let panel = SettingsNode(sceneSize: Self.phone)
+        let panel = SettingsNode(sceneSize: Self.phone, forcePortrait: true)
         let before = GameSettings.shared.neonGlow
         defer { GameSettings.shared.neonGlow = before }
 
@@ -7635,7 +7651,7 @@ final class PortraitPanelTests: XCTestCase {
     /// The controls have to keep working after the flow shifts everything up
     /// into the panel — the hit rects were built from the pre-shift y values.
     func testTheControlsStillRespondAfterTheFlowIsShifted() {
-        let panel = SettingsNode(sceneSize: Self.phone)
+        let panel = SettingsNode(sceneSize: Self.phone, forcePortrait: true)
         let before = GameSettings.shared.neonGlow
         defer { GameSettings.shared.neonGlow = before }
 

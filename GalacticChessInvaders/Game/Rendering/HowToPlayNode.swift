@@ -73,8 +73,32 @@ final class HowToPlayNode: SKNode {
     /// matches the screen it is on.
     var isPortraitLayout: Bool { isPortrait }
 
+    /// The shape the reflow is for: upright, and too narrow for two columns.
+    ///
+    /// Separate from the platform test below so it can be measured from the
+    /// macOS suite, which is where the tests run.
+    static func isPortraitShaped(_ size: CGSize) -> Bool {
+        size.height > size.width && HUDNode.isCompact(sceneWidth: size.width)
+    }
+
+    /// Whether *this* build reflows at that shape.
+    ///
+    /// Phones only. A Mac window dragged tall and narrow is the same shape as a
+    /// phone and is not a phone: the one-column builder writes the touch
+    /// wording — DRAG, FIRE, TAP, "HOLD THE VERSION BOX" — because that is the
+    /// only platform it serves. A skinny Mac window reached it and was told to
+    /// drag a ship it has no touchscreen for, under a clipped header. The Mac
+    /// keeps the two-column panel at every window size; it is composed for a
+    /// 960pt canvas and scales down, which is what it has always done.
+    ///
+    /// Gated here rather than inside the builder so there is one answer rather
+    /// than a platform `#if` per string.
     static func usesPortraitLayout(sceneSize: CGSize) -> Bool {
-        sceneSize.height > sceneSize.width && HUDNode.isCompact(sceneWidth: sceneSize.width)
+        #if os(iOS)
+        return isPortraitShaped(sceneSize)
+        #else
+        return false
+        #endif
     }
 
     /// Wider than the phone on purpose.
@@ -101,8 +125,11 @@ final class HowToPlayNode: SKNode {
     private static let lw: CGFloat = 420   // left column max text width
     private static let rw: CGFloat = 410   // right column max text width
 
-    init(sceneSize: CGSize) {
-        isPortrait = HowToPlayNode.usesPortraitLayout(sceneSize: sceneSize)
+    /// `forcePortrait` exists for the suite, which runs on macOS and still has
+    /// to be able to measure the column a phone will get.
+    init(sceneSize: CGSize, forcePortrait: Bool = false) {
+        isPortrait = forcePortrait
+            || HowToPlayNode.usesPortraitLayout(sceneSize: sceneSize)
         super.init()
         if isPortrait {
             buildPortrait()

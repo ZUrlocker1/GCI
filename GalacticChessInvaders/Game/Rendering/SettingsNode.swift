@@ -94,9 +94,12 @@ final class SettingsNode: SKNode {
     /// Whether the LOG PANEL row is offered. True only in Test Mode.
     private let showsLogRow: Bool
 
-    init(showsLogRow: Bool = false, sceneSize: CGSize = SettingsNode.designSize) {
+    /// `forcePortrait`: see `HowToPlayNode.init`.
+    init(showsLogRow: Bool = false, sceneSize: CGSize = SettingsNode.designSize,
+         forcePortrait: Bool = false) {
         self.showsLogRow = showsLogRow
-        isPortrait = HowToPlayNode.usesPortraitLayout(sceneSize: sceneSize)
+        isPortrait = forcePortrait
+            || HowToPlayNode.usesPortraitLayout(sceneSize: sceneSize)
         super.init()
         addChild(content)
         rebuild()
