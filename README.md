@@ -35,11 +35,17 @@ Universal binary — runs natively on both Apple Silicon and Intel
 Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
 Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
 
-**1.3 runs on iPad as well as the Mac.** The same codebase builds for both: the whole game
-is playable by touch — drag the ship, hold FIRE, tap or drag a piece to its square — and it
-has been checked on five iPad sizes in both orientations. The DMG above is macOS, as is the
-App Store listing; the iPad build is in testing and not yet on the store. Build it for an
-iPad from source today (see [SETUP.md](SETUP.md)), or see
+**It also runs on iPad and iPhone.** The same codebase builds for all three: the whole game
+is playable by touch — drag the ship, hold FIRE, tap or drag a piece to its square. iPad has
+been checked on five sizes in both orientations (1.3); iPhone works in both orientations and
+has been checked on an iPhone SE, a 16e and a 17 Pro Max (1.4, in testing).
+
+On a phone the game lays itself out differently rather than shrinking: in portrait the board
+takes the full width and the hints move underneath it, the top bar reflows to fit, and
+Settings and How To Play become one readable column instead of two tiny ones.
+
+The DMG above is macOS, as is the App Store listing; the touch builds are in testing and not
+yet on the store. Build one from source today (see [SETUP.md](SETUP.md)), or see
 [IOS-Port.md](docs/IOS-Port.md) for where the port stands.
 
 **What's new in v1.3** — iPad Port and optimized sound engine:

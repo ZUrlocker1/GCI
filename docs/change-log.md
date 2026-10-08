@@ -1,5 +1,45 @@
 # Galactic Chess Invaders Change Log
 
+## V 1.4 (Build 11)  iPhone — *in testing, not yet released*
+
+*The game runs on iPhone, in both orientations. A phone is not a small iPad: the board
+needs the whole width, so the column of hints that sits beside it on every other device
+has nowhere to go, and a settings screen laid out in two columns renders at 5pt. Those
+are the two problems this release is about.*
+
+- **It runs on iPhone.** Portrait and landscape, tested on an iPhone SE, a 16e and a
+  17 Pro Max — the smallest, middle and largest screens the game supports — in both
+  orientations.
+
+- **In portrait, the gutter moved under the board.** The chess hint, the turn count and
+  the status line stack below the ship instead of beside the squares, which is what lets
+  the board have the full width. Flush left, so they read as a column rather than three
+  centred lines.
+
+- **The board stays narrow enough to fly around.** The ship can reach outside the a-file
+  and the h-file on every phone size, so you are never forced to shoot through your own
+  pieces.
+
+- **Settings and How To Play are one long column on a phone**, at full-size type. They
+  were two columns scaled down to fit a 440pt screen, which drew body text at about 5.6pt
+  — legible in a screenshot and not on a phone.
+
+- **The top bar fits a phone.** Five ship sprites become one ship and a count, the buttons
+  lose their padding, and LEVEL shortens to `L 01` or steps aside when there is no room
+  for it. Everything that was on the bar is still on it.
+
+- **Nothing hides under the camera housing.** The score, the buttons and the version badge
+  all step in past the sensor housing and the rounded corners — in landscape, where the
+  housing is on the side and the first two letters of SCORE used to be cut off.
+
+- **Test Mode and the diagnostics log both work on a phone.** Hold the version badge to
+  arm Test Mode, exactly as on iPad; the log panel opens in landscape.
+
+- **Same controls in the same corner, everywhere.** SET, INFO and BACK sit in one place
+  across gameplay, Settings and How To Play, on every device and orientation.
+
+---
+
 ## V 1.3 (Build 10)  iPad, and Sound Without the Stutter
 
 *Two things: the game runs on iPad, and it stopped doing file and codec work every time it played a sound.*

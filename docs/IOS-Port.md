@@ -1,8 +1,8 @@
 # Porting Galactic Chess Invaders to iPad and iPhone
 
-*Written 13 September 2026 against v1.1. Rewritten 1 October 2026: the layout refactor
-and Phase 1 are built and shipping, iPad is done, and the roads not taken have been cut
-back to the reasoning that still earns its place. What is left is the phone.*
+*Written 13 September 2026 against v1.1. Rewritten 1 October 2026 when iPad was done.
+Updated 8 October 2026: **the phone is done too.** iPhone runs in both orientations and
+has been tested across the three representative models. What is left is the Duo.*
 
 ---
 
@@ -20,14 +20,28 @@ luck. It does not survive portrait, and it wastes a third of an iPhone screen.
 
 So the port was one substantial refactor — make the scene lay itself out from its own
 size — followed by increasingly fiddly device passes. **The refactor shipped in 1.2**
-(§3), and **iPad is done**: the game plays by touch, Test Mode has a door that needs no
-keyboard, and all five iPad sizes have been checked in both orientations (§5). iPad
-portrait was closed as unnecessary rather than built, because the restructure it called
-for turned out to be answering a gutter bug rather than a shape problem.
+(§3), and both device families are now done.
 
-**What is left is the phone**, and it is where the geometry actually bites: 393pt has no
-room for a left gutter at all, and that is the one case the uniform-scale approach could
-never have served.
+**iPad**: the game plays by touch, Test Mode has a door that needs no keyboard, and all
+five iPad sizes have been checked in both orientations (§5). iPad portrait was closed as
+unnecessary rather than built.
+
+**iPhone** (1.4): both orientations, tested on the SE, the 16e and the 17 Pro Max. The
+phone is where the geometry actually bit — 375pt has no room for a left gutter at all —
+and it took four things the larger screens never needed:
+
+- **The gutter moved under the board** in portrait. The hints, the turn count and the
+  status line stack below the ship rather than beside the squares, left-aligned.
+- **The HUD bar reflows** below 700pt: one ship and a count in place of five ship
+  sprites, tighter buttons, and LEVEL shortening to `L 01` or hiding when even that will
+  not fit.
+- **Settings and How To Play reflow into one tall column**, composed at their own width
+  rather than scaled down from the 960pt canvas — which is what makes the type readable
+  rather than 5.6pt.
+- **Everything pinned to a screen edge steps in** past the sensor housing and the rounded
+  corners, which a Mac and an iPad have no equivalent of.
+
+**What is left is the Duo**, which has no hardware and no simulator yet (§5 Pass 5).
 
 ---
 
@@ -1139,12 +1153,12 @@ never does — it presents once and keeps the view. `GlowSwitchTests` crashed th
 |---|---|---|
 | 0 | `SceneLayout` refactor, validated on macOS at the existing size | macOS 1.2 |
 | 1 | iOS target, audio session, lifecycle, touch controls, touch chess | **done** |
-| 2 | iPad landscape, all four sizes + physical mini | TestFlight |
+| 2 | iPad landscape, all four sizes + physical mini | **done**, 1.3 |
 | 3 | ~~iPad portrait~~ — **closed, not needed**; see Pass 2 | — |
 | 4 | How To Play and Settings — landscape done; both reflow to one column on a phone in portrait | **done** |
 | 5 | iPhone landscape | **done**, 1.4 |
 | 6 | iPhone portrait | **done**, 1.4 |
-| 7 | iPhone Duo | — |
+| 7 | iPhone Duo — no hardware and no simulator yet | — |
 
 Phase 0 is the one that is easy to skip and expensive to skip.
 

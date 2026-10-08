@@ -245,11 +245,15 @@ Signed, notarized, and also distributed as a DMG. Ten levels play end to end
 with every mechanic, all five power-ups, a settings screen, its own soundtrack
 and full arcade audio.
 
-**There is an iPad build.** The game plays by touch — drag the ship, hold FIRE,
-tap a piece and tap its square — with its own Test Mode, name entry and
-end-of-run buttons. It has not shipped. `docs/IOS-Port.md` is the plan and the
-record of where it landed; the remaining Phase 1 work is a sweep across the
-four iPad sizes.
+**There are iPad and iPhone builds.** The game plays by touch — drag the ship,
+hold FIRE, tap a piece and tap its square — with its own Test Mode, name entry
+and end-of-run buttons. Neither has shipped. iPad is done across five sizes in
+both orientations; iPhone is done in both orientations and checked on an SE, a
+16e and a 17 Pro Max. On a phone the scene reflows rather than scales: the
+gutter moves below the board in portrait, the HUD bar compacts, and the panels
+compose as one tall column. `docs/IOS-Port.md` is the plan and the record of
+where it landed; what remains is the iPhone Duo, which has no hardware or
+simulator yet.
 
 Read `docs/implementation.md` for the current state; it is kept accurate and
 this file is not a substitute for it.
