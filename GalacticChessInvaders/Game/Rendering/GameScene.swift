@@ -3530,6 +3530,32 @@ class GameScene: SKScene {
         statusNode?.position    = CGPoint(x: layout.gutterCentreX, y: layout.statusBannerY)
         hintNode?.position      = CGPoint(x: layout.gutterCentreX, y: layout.chessHintY)
 
+        // Where there is no column, there is nothing to put in it. A window too
+        // narrow for a gutter and too short to stack one has the board and the
+        // ship and nothing else — and it only happens on a Mac with the log
+        // sidebar open, where the panel is already saying everything these
+        // would. Hidden rather than moved: there is nowhere to move them to
+        // that is not the board.
+        let noColumn = layout.hidesReadouts
+        turnTimerNode?.isHidden = noColumn
+        statusNode?.isHidden    = noColumn
+        hintNode?.isHidden      = noColumn
+        if noColumn { autoModeLabel?.isHidden = true }
+        // Hidden in place rather than rebuilt. Calling `syncPowerUpAlley` from
+        // here reaches for `bloomNode`, which `applyLayout` can run before
+        // `setupScene` has made — it crashed the scene on launch — and it
+        // churns nodes on every resize besides. The next ordinary sync applies
+        // the same rule from `AlleyState`; this just makes it immediate.
+        if let bloomNode {
+            for i in 0..<Self.powerUpAlleyLines {
+                bloomNode.childNode(withName: "\(Self.powerUpLineName)\(i)")?
+                    .isHidden = noColumn
+            }
+            if noColumn {
+                bloomNode.childNode(withName: Self.powerUpBarName)?.isHidden = true
+            }
+        }
+
         // The power-up alley is rebuilt from the layout every frame by
         // `syncPowerUpAlley`, so it needs nothing here.
 
@@ -4481,9 +4507,11 @@ class GameScene: SKScene {
     private func syncPowerUpAlley() {
         let stacks = (shipState?.laserCap ?? SpaceshipState.baseLaserCap)
             - SpaceshipState.baseLaserCap
-        let state = AlleyState(rapidFire: stacks > 0,
-                               shield: powerUps.hasShield,
-                               timed: powerUps.active,
+        // No column means no alley — see `applyLayout`.
+        let visible = !layout.hidesReadouts
+        let state = AlleyState(rapidFire: visible && stacks > 0,
+                               shield: visible && powerUps.hasShield,
+                               timed: visible ? powerUps.active : nil,
                                scale: SceneLayout.current.gutterScale,
                                centreX: layout.gutterCentreX,
                                leftAligned: layout.readoutsAreLeftAligned)

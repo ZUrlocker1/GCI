@@ -94,7 +94,11 @@ struct SceneLayout {
                              height: max(size.height, Self.minimumSize.height))
         self.size = clamped
         let bands = Self.bands(forHeight: clamped.height)
-        let stacked = Self.usesStackedReadouts(width: clamped.width)
+        let hidden = Self.hidesReadouts(width: clamped.width, height: clamped.height)
+        let stacked = Self.usesStackedReadouts(width: clamped.width) && !hidden
+        // Either way the column is not beside the board, so the board has the
+        // width; only a stacked column costs height.
+        let fullWidth = stacked || hidden
         let bottom = bands.ship + (stacked ? Self.stackedReadoutBandHeight : 0)
         let fromHeight = (clamped.height - bands.hud - bottom) / 8
 
@@ -117,7 +121,7 @@ struct SceneLayout {
             - Self.rightMarginWidth) / 8
         let flooredCeiling = Self.minGutterScale * Self.designSquareSize
         // Stacked: the board owns the width, less a margin each side.
-        let fromWidth = stacked
+        let fromWidth = fullWidth
             ? (clamped.width - Self.stackedSideMargin * 2) / 8
             : (ifScaling >= flooredCeiling ? ifScaling : min(ifFloored, flooredCeiling))
 
@@ -245,7 +249,39 @@ struct SceneLayout {
         width < gutterWidth(atScale: minGutterScale) + minSquareSize * 8 + rightMarginWidth
     }
 
-    var usesStackedReadouts: Bool { Self.usesStackedReadouts(width: size.width) }
+    /// The height a stacked column needs before it can be afforded: the two
+    /// bands, the column's own band, and a board at its minimum square.
+    ///
+    /// 614 on the full bands. Every phone in portrait clears it comfortably —
+    /// the shortest is an SE at 667 — and the only thing that does not is a Mac
+    /// window, whose minimum is 500.
+    static var stackedReadoutsNeedHeight: CGFloat {
+        let bands = Self.bands(forHeight: fullBandsAbove)
+        return bands.hud + bands.ship + stackedReadoutBandHeight + minSquareSize * 8
+    }
+
+    /// Too narrow for a gutter beside the board *and* too short to put one
+    /// under it — so there is no column at all and the board takes the scene.
+    ///
+    /// Reachable on a Mac and nowhere else: it needs a window under 497 wide,
+    /// which only happens with the log sidebar open, and under 614 tall, which
+    /// is near the 500 minimum. Zack's call, and the right one — stacking there
+    /// drove the board 82pt up under the HUD bar, and the log panel beside it
+    /// is already showing everything the column would have said.
+    static func hidesReadouts(width: CGFloat, height: CGFloat) -> Bool {
+        usesStackedReadouts(width: width) && height < stackedReadoutsNeedHeight
+    }
+
+    var hidesReadouts: Bool { Self.hidesReadouts(width: size.width, height: size.height) }
+
+    /// Stacked only where the column is both needed and affordable.
+    var usesStackedReadouts: Bool {
+        Self.usesStackedReadouts(width: size.width) && !hidesReadouts
+    }
+
+    /// True wherever the column is not beside the board — stacked under it, or
+    /// gone — because in both cases the board has the whole width.
+    var boardTakesFullWidth: Bool { usesStackedReadouts || hidesReadouts }
 
     /// Everything below the board: the ship's lane, plus the readout column on a
     /// screen that has had to stack it.
@@ -299,7 +335,7 @@ struct SceneLayout {
     /// Centred where there is room, and never further left than the gutter
     /// needs — otherwise a narrow window slides the board over the readouts.
     var boardOriginX: CGFloat {
-        usesStackedReadouts ? (size.width - boardSize) / 2
+        boardTakesFullWidth ? (size.width - boardSize) / 2
                             : max(minGutterWidth, (size.width - boardSize) / 2)
     }
     var boardOrigin: CGPoint { CGPoint(x: boardOriginX, y: boardBottomY) }
@@ -348,10 +384,10 @@ struct SceneLayout {
     /// 2.6× as long and thinned the raider cadence to match. The box puts both
     /// back where they were composed.
     var playfieldMinX: CGFloat {
-        usesStackedReadouts ? 0 : max(0, boardOriginX - playfieldMargin)
+        boardTakesFullWidth ? 0 : max(0, boardOriginX - playfieldMargin)
     }
     var playfieldMaxX: CGFloat {
-        usesStackedReadouts ? size.width : min(size.width, boardTopX + playfieldMargin)
+        boardTakesFullWidth ? size.width : min(size.width, boardTopX + playfieldMargin)
     }
     var playfieldWidth: CGFloat { playfieldMaxX - playfieldMinX }
 

@@ -7734,3 +7734,132 @@ final class PowerUpAlleyClearanceTests: XCTestCase {
         }
     }
 }
+
+
+/// The Mac resizes continuously, so the layout has to hold at every size the
+/// window can reach — not just at the handful of device sizes the phones and
+/// tablets come in.
+///
+/// The reachable floor is narrower than any phone: the minimum window is
+/// 640×500 and the log sidebar takes 281 of the width, so the scene can be
+/// 359×500. That is where this sweeps from.
+@MainActor
+final class MacResizeSweepTests: XCTestCase {
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    private static let widths  = Array(stride(from: CGFloat(359), through: 1600, by: 23))
+    private static let heights = Array(stride(from: CGFloat(500), through: 1200, by: 29))
+
+    private func eachSize(_ check: (String, SceneLayout) -> Void) {
+        for w in Self.widths {
+            for h in Self.heights {
+                check("\(Int(w))×\(Int(h))", SceneLayout(size: CGSize(width: w, height: h)))
+            }
+        }
+    }
+
+    /// Nothing in the readout column may land on top of anything else in it,
+    /// at any size the window can be dragged to.
+    func testTheReadoutColumnNeverCollides() {
+        var worst: String?
+        eachSize { name, l in
+            guard worst == nil else { return }
+            let alleyTop = l.powerUpAlleyBottomY
+                + CGFloat(l.powerUpAlleyLines - 1) * l.powerUpAlleyStep
+                + l.powerUpAlleyFontSize
+            let slots: [(String, CGFloat, CGFloat)] = [
+                ("status", l.statusBannerY - 8 * l.gutterScale, l.statusBannerY + 8 * l.gutterScale),
+                ("timer",  l.turnTimerY - 10 * l.gutterScale,   l.turnTimerY + 10 * l.gutterScale),
+                ("alley",  l.powerUpBarY, alleyTop),
+                ("hint",   l.chessHintY - 6 * l.gutterScale,    l.chessHintY + 6 * l.gutterScale),
+            ]
+            for (i, a) in slots.enumerated() {
+                for b in slots.dropFirst(i + 1) where a.1 < b.2 && b.1 < a.2 {
+                    worst = "\(name): \(a.0) overlaps \(b.0)"
+                }
+            }
+        }
+        XCTAssertNil(worst)
+    }
+
+    /// The column has to stay on screen — its lowest item is the status
+    /// banner, which drops a further `gutterDrop` below its anchor.
+    func testTheColumnStaysOnScreen() {
+        var worst: String?
+        eachSize { name, l in
+            guard worst == nil else { return }
+            if l.statusBannerY < 0 { worst = "\(name): status banner at \(Int(l.statusBannerY))" }
+        }
+        XCTAssertNil(worst)
+    }
+
+    /// Where it has been stacked, the column is under the board rather than
+    /// through it.
+    func testTheStackedColumnStaysOffTheBoard() {
+        var worst: String?
+        eachSize { name, l in
+            guard worst == nil, l.usesStackedReadouts else { return }   // skips the no-column case
+            let alleyTop = l.powerUpAlleyBottomY
+                + CGFloat(l.powerUpAlleyLines - 1) * l.powerUpAlleyStep
+                + l.powerUpAlleyFontSize
+            if alleyTop >= l.boardBottomY {
+                worst = "\(name): alley reaches \(Int(alleyTop)), board bottom \(Int(l.boardBottomY))"
+            }
+            if l.chessHintY >= l.boardBottomY {
+                worst = "\(name): hint at \(Int(l.chessHintY)), board bottom \(Int(l.boardBottomY))"
+            }
+        }
+        XCTAssertNil(worst)
+    }
+
+    /// The board has to fit between the HUD and the chrome under it.
+    func testTheBoardFitsBetweenTheChrome() {
+        var worst: String?
+        eachSize { name, l in
+            guard worst == nil else { return }
+            let top = l.boardBottomY + l.boardSize
+            if top > CGFloat(l.size.height) - HUDNode.height {
+                worst = "\(name): board top \(Int(top)) is under the HUD at "
+                    + "\(Int(CGFloat(l.size.height) - HUDNode.height))"
+            }
+        }
+        XCTAssertNil(worst)
+    }
+
+    /// Where there is no column, the board has the whole scene and still fits.
+    func testTheNoColumnCaseIsReachableAndFits() {
+        let tight = SceneLayout(size: CGSize(width: 359, height: 500))
+        XCTAssertTrue(tight.hidesReadouts,
+                      "the narrowest the Mac scene can get should drop the column")
+        XCTAssertFalse(tight.usesStackedReadouts, "and must not also stack it")
+        XCTAssertTrue(tight.boardTakesFullWidth, "the board takes the width either way")
+        XCTAssertGreaterThanOrEqual(tight.squareSize, SceneLayout.minSquareSize,
+                                    "and no longer has to be clamped to fit")
+
+        // Nothing on a device drops it: every phone in portrait is tall enough.
+        for (name, size) in [("iPhone SE", CGSize(width: 375, height: 667)),
+                             ("iPhone 15", CGSize(width: 393, height: 852)),
+                             ("Duo folded", CGSize(width: 466, height: 678))] {
+            XCTAssertFalse(SceneLayout(size: size).hidesReadouts,
+                           "\(name) has the height to stack a column")
+        }
+    }
+
+    /// Crossing the stacking threshold must not teleport the board — a drag
+    /// through it should look like a resize, not a jump.
+    func testTheThresholdIsNotACliff() {
+        let h: CGFloat = 700
+        let below = SceneLayout(size: CGSize(width: 496, height: h))
+        let above = SceneLayout(size: CGSize(width: 498, height: h))
+        XCTAssertNotEqual(below.usesStackedReadouts, above.usesStackedReadouts,
+                          "this pair is supposed to straddle the threshold")
+        XCTAssertLessThan(abs(below.squareSize - above.squareSize), 12,
+                          "the board jumps \(abs(below.squareSize - above.squareSize))pt "
+                          + "a square across the threshold")
+    }
+}
+
