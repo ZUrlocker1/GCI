@@ -40,7 +40,11 @@ final class HUDNode: SKNode {
 
     /// Compact geometry, in the same order as the design constants above.
     static let compactHiX: CGFloat = 84
-    static let compactLivesX: CGFloat = 150
+    /// Moved left from 150 to pay for the ship glyph below, so LEVEL keeps the
+    /// gap it needs on a Pro Max.
+    static let compactLivesX: CGFloat = 126
+    /// One ship, a gap, and a digit.
+    static let compactLivesWidth: CGFloat = 35
     static let compactButtonWidth: CGFloat = 50
     static let compactButtonGap: CGFloat = 6
     static let compactNavRightMargin: CGFloat = 8
@@ -73,9 +77,20 @@ final class HUDNode: SKNode {
         // the block, so nothing downstream of them has to move when a life is
         // lost.
         if isCompact {
-            // One glyph instead of five sprites: 88pt of fixed width becomes
-            // about 30, which is most of what the bar needed to find.
-            place(lifeCount, "x3", HUDNode.cyan, 11, HUDNode.compactLivesX, 12)
+            // One ship and a number rather than five ships: 88pt of fixed width
+            // becomes 35, which is most of what the bar needed to find.
+            //
+            // A ship and a numeral, not "x5" — Zack's call, and he is right that
+            // the multiplication sign reads as arithmetic on a bar that already
+            // carries a score. The glyph says what the number counts.
+            let ship = SKSpriteNode(imageNamed: "ship-player")
+            if ship.size.height > 0 { ship.setScale(18 / ship.size.height) }
+            ship.color = HUDNode.cyan; ship.colorBlendFactor = 0.2
+            ship.position = CGPoint(x: HUDNode.compactLivesX + 9, y: 18)
+            ship.name = "lifeCountShip"
+            addChild(ship)
+
+            place(lifeCount, "3", HUDNode.cyan, 11, HUDNode.compactLivesX + 24, 12)
             lifeCount.name = "lifeCount"
         } else {
             for i in 0..<HUDNode.maxLives {
@@ -90,7 +105,7 @@ final class HUDNode: SKNode {
         // LEVEL takes the gap between the lives and the nav, centred in it, and
         // drops to "L 01" when that gap will not hold the long form.
         let livesRight = isCompact
-            ? HUDNode.compactLivesX + 24
+            ? HUDNode.compactLivesX + HUDNode.compactLivesWidth
             : HUDNode.livesX + CGFloat(HUDNode.maxLives - 1) * HUDNode.livesStep + 9
         let navLeft = HUDNode.navLeftEdge(forSceneWidth: sceneWidth)
         let gapLeft = livesRight + HUDNode.levelGap
@@ -350,6 +365,6 @@ final class HUDNode: SKNode {
     }
     func updateLives(_ count: Int) {
         lifeShips.enumerated().forEach { $1.isHidden = $0 >= count }
-        lifeCount.text = "x\(max(0, count))"
+        lifeCount.text = "\(max(0, count))"
     }
 }

@@ -7311,7 +7311,7 @@ final class CompactHUDTests: XCTestCase {
             let hud = HUDNode(sceneWidth: w)
             let navLeft = HUDNode.navLeftEdge(forSceneWidth: w)
             let leftEnd = HUDNode.isCompact(sceneWidth: w)
-                ? HUDNode.compactLivesX + 24
+                ? HUDNode.compactLivesX + HUDNode.compactLivesWidth
                 : HUDNode.livesX + CGFloat(HUDNode.maxLives - 1) * HUDNode.livesStep + 9
             XCTAssertGreaterThan(navLeft, leftEnd,
                                  "\(name): the nav cluster overlaps the lives")
@@ -7352,6 +7352,8 @@ final class CompactHUDTests: XCTestCase {
                       "a wide bar should still draw ships")
         XCTAssertTrue(labels(HUDNode(sceneWidth: 393)).contains("lifeCount"),
                       "a narrow bar should draw the count")
+        XCTAssertTrue(labels(HUDNode(sceneWidth: 393)).contains("lifeCountShip"),
+                      "and the ship glyph the count belongs to")
         XCTAssertFalse(labels(HUDNode(sceneWidth: 393)).contains("lifeShip0"),
                        "a narrow bar should not draw ships as well")
     }

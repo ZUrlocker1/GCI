@@ -1306,6 +1306,7 @@ class GameScene: SKScene {
     /// Air between the button and both the board and the screen edge.
     private static let fireButtonInset: CGFloat = 8
 
+
     // MARK: - The version label, and the door into Test Mode
     //
     // docs/IOS-Port.md §4: ⌘T is the Mac's way in, and an iPad without a
@@ -3230,6 +3231,12 @@ class GameScene: SKScene {
     /// laid over the whole scene behind it. The shade is the part that makes
     /// the panel opaque at any size; the panel's own backdrop only ever covered
     /// its own 960×700.
+    /// How far a panel's content drops below BACK on a compact screen.
+    ///
+    /// Phone-only: a narrow Mac window is "compact" by the same width test, but
+    /// it has no notch and the gap would only eat the panel's own room.
+    private static let compactPanelTopGap: CGFloat = 52
+
     private func layOutPanel(_ panel: SKNode, designSize: CGSize) {
         let shade = panelShade ?? {
             let node = SKSpriteNode(color: .black, size: size)
@@ -3252,8 +3259,21 @@ class GameScene: SKScene {
         // Dropped by the same inset as the HUD: the panel is top-aligned so its
         // own BACK button lands where SET and INFO are during play, and an
         // island over one is an island over the other.
-        panel.position = CGPoint(x: (size.width - designSize.width * scale) / 2,
-                                 y: size.height - designSize.height * scale - topInsetDrop)
+        // On a phone the panel is drawn at about 0.46, so its title renders
+        // small and lands a few points under a BACK button that is full size —
+        // which reads as jammed. BACK is positioned separately below, so
+        // dropping the panel opens the gap without moving the button out of
+        // line with the HUD's own. There is room: the panel only fills the top
+        // third of a portrait phone.
+        #if os(iOS)
+        let contentGap = HUDNode.isCompact(sceneWidth: size.width)
+            ? Self.compactPanelTopGap : 0
+        #else
+        let contentGap: CGFloat = 0
+        #endif
+        panel.position = CGPoint(
+            x: (size.width - designSize.width * scale) / 2,
+            y: size.height - designSize.height * scale - topInsetDrop - contentGap)
 
         // BACK is drawn in the panel's own top-right, which on a wide scene is
         // well inboard of where the HUD's INFO button sits. Anchor it to the
