@@ -7188,3 +7188,77 @@ final class VersionBadgeSweepTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Stacked readouts on a narrow screen
+
+/// A phone in portrait cannot carry a gutter beside the board — 145 + 256 + 96
+/// wants 497pt against an iPhone 15's 393. The readouts move below the ship and
+/// the board takes the width. These pin which screens that applies to, that it
+/// actually fixes the overflow, and that nothing wider changes.
+@MainActor
+final class StackedReadoutTests: XCTestCase {
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    /// Only the screens that cannot hold a gutter, and all of them.
+    func testWhichScreensStack() {
+        let stacked: [(String, CGSize)] = [
+            ("iPhone 15 portrait",       CGSize(width: 393, height: 852)),
+            ("iPhone 17 Pro Max portrait", CGSize(width: 440, height: 956)),
+            ("Duo folded portrait",      CGSize(width: 466, height: 678)),
+        ]
+        let notStacked: [(String, CGSize)] = [
+            ("iPhone 15 landscape",      CGSize(width: 852, height: 393)),
+            ("Duo inner portrait",       CGSize(width: 626, height: 890)),
+            ("iPad mini portrait",       CGSize(width: 744, height: 1133)),
+            ("iPad Pro 13 landscape",    CGSize(width: 1366, height: 1024)),
+            ("Mac design canvas",        SceneLayout.designSize),
+            ("Mac minimum window",       CGSize(width: 640, height: 500)),
+        ]
+        for (name, size) in stacked {
+            XCTAssertTrue(SceneLayout(size: size).usesStackedReadouts, "\(name) should stack")
+        }
+        for (name, size) in notStacked {
+            XCTAssertFalse(SceneLayout(size: size).usesStackedReadouts, "\(name) should not stack")
+        }
+    }
+
+    /// The point of it: the board fits, and is bigger than the floor it could
+    /// not reach before.
+    func testStackingFitsTheBoardAndGrowsIt() {
+        for (name, size) in [("iPhone 15", CGSize(width: 393, height: 852)),
+                             ("iPhone 17 Pro Max", CGSize(width: 440, height: 956))] {
+            let l = SceneLayout(size: size)
+            XCTAssertLessThanOrEqual(l.boardOriginX + l.boardSize, size.width,
+                                     "\(name): board runs off the screen")
+            XCTAssertGreaterThanOrEqual(l.boardOriginX, 0, "\(name): board starts off-screen")
+            XCTAssertGreaterThan(l.squareSize, SceneLayout.minSquareSize,
+                                 "\(name): stacking should buy more than the floor")
+        }
+    }
+
+    /// The column sits below the ship, and clear of the board above it.
+    func testTheColumnSitsUnderEverything() {
+        let l = SceneLayout(size: CGSize(width: 393, height: 852))
+        SceneLayout.adopt(l)
+        XCTAssertLessThan(l.chessHintY, l.boardBottomY,
+                          "the top of the column overlaps the board")
+        XCTAssertGreaterThan(l.statusBannerY, 0, "the bottom of the column is off-screen")
+        XCTAssertEqual(l.gutterCentreX, 393 / 2, accuracy: 0.5,
+                       "the column should centre under the board")
+    }
+
+    /// Nothing that already shipped moves.
+    func testWiderScreensAreUntouched() {
+        for (name, size, square) in [("design canvas", SceneLayout.designSize, CGFloat(64)),
+                                     ("iPad mini landscape", CGSize(width: 1133, height: 744), 69)] {
+            let l = SceneLayout(size: size)
+            XCTAssertFalse(l.usesStackedReadouts, "\(name)")
+            XCTAssertEqual(l.squareSize, square, "\(name) square changed")
+            XCTAssertEqual(l.readoutAnchorY, l.boardBottomY, "\(name) anchor moved")
+        }
+    }
+}

@@ -1260,6 +1260,21 @@ class GameScene: SKScene {
     func layOutFireButton() {
         guard let fireButton else { return }
         let layout = self.layout
+
+        // Stacked: there is no right margin to sit in, because the board has
+        // taken the width. It goes bottom-right instead, inside the readout
+        // band and below the ship's lane — so it is under a right thumb, clear
+        // of the centred readout column, and out of the lane the ship is
+        // dragged along rather than sitting in the middle of it.
+        if layout.usesStackedReadouts {
+            let radius = FireButtonNode.diameter * layout.fireButtonScale / 2
+            fireButton.adopt(scale: layout.fireButtonScale)
+            fireButton.position = CGPoint(
+                x: size.width - radius - Self.fireButtonInset,
+                y: radius + Self.fireButtonInset)
+            return
+        }
+
         let margin = size.width - layout.boardTopX
         let fits = (margin - Self.fireButtonInset * 2) / FireButtonNode.diameter
         fireButton.adopt(scale: max(0.6, min(layout.contentScale, fits)))

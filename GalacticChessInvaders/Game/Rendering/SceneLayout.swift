@@ -82,14 +82,21 @@ struct SceneLayout {
     /// been laid out — a path that simply did not exist while the canvas was a
     /// fixed 960×700. Clamping here means no consumer ever sees a zero or
     /// negative dimension, rather than each of them guarding separately.
-    static let minimumSize = CGSize(width: 480, height: 360)
+    /// 480 until 1.4, which silently widened every iPhone in portrait: a 393pt
+    /// scene was clamped to 480, so the board was sized for a screen 87pt wider
+    /// than the one it was drawn on and ran off the right edge. Nothing enforced
+    /// 480 — the Mac's own minimum window is 640 — so it was only ever a guard
+    /// against a zero size, and 320 is the narrowest iPhone Apple has shipped.
+    static let minimumSize = CGSize(width: 320, height: 360)
 
     init(size: CGSize = SceneLayout.designSize) {
         let clamped = CGSize(width: max(size.width, Self.minimumSize.width),
                              height: max(size.height, Self.minimumSize.height))
         self.size = clamped
         let bands = Self.bands(forHeight: clamped.height)
-        let fromHeight = (clamped.height - bands.hud - bands.ship) / 8
+        let stacked = Self.usesStackedReadouts(width: clamped.width)
+        let bottom = bands.ship + (stacked ? Self.stackedReadoutBandHeight : 0)
+        let fromHeight = (clamped.height - bands.hud - bottom) / 8
 
         // Width is the binding constraint on every iPad in portrait, and the
         // gutter's share of it depends on the scale its type is drawn at —
@@ -109,9 +116,10 @@ struct SceneLayout {
         let ifFloored = (clamped.width - Self.gutterWidth(atScale: Self.minGutterScale)
             - Self.rightMarginWidth) / 8
         let flooredCeiling = Self.minGutterScale * Self.designSquareSize
-        let fromWidth = ifScaling >= flooredCeiling
-            ? ifScaling
-            : min(ifFloored, flooredCeiling)
+        // Stacked: the board owns the width, less a margin each side.
+        let fromWidth = stacked
+            ? (clamped.width - Self.stackedSideMargin * 2) / 8
+            : (ifScaling >= flooredCeiling ? ifScaling : min(ifFloored, flooredCeiling))
 
         let fitted = floor(min(fromHeight, fromWidth))
         self.squareSize = min(Self.maxSquareSize, max(Self.minSquareSize, fitted))
@@ -189,6 +197,46 @@ struct SceneLayout {
     static func gutterWidth(atScale scale: CGFloat) -> CGFloat {
         gutterContentWidth * scale + gutterAir
     }
+
+    // MARK: - Stacked readouts, for a screen too narrow to carry a gutter
+    //
+    // A phone in portrait cannot hold the composition at all: the smallest
+    // gutter is 145, the smallest board 256 and the right margin 96, which wants
+    // 497pt against an iPhone 15's 393. Nothing survives trimming — every
+    // variant buys the fit by shrinking the square below the 44pt touch floor,
+    // and GCI punishes a mis-tap specifically, because the five-second clock
+    // expires and the engine moves for you.
+    //
+    // So on those screens the readouts come out from beside the board and go
+    // underneath it, below the ship, and the board takes the full width. An
+    // iPhone 15 goes from a 32pt square that does not fit to a 47pt one that
+    // does.
+    //
+    // The column itself is unchanged. Its four items already sit between −4 and
+    // +172 of a single anchor, so this moves the anchor rather than relaying out
+    // the contents — see `readoutAnchorY`.
+
+    /// What the stacked column needs, at the 0.9 gutter floor: the −4…+172
+    /// spread scaled, plus air top and bottom.
+    static let stackedReadoutBandHeight: CGFloat = 170
+    /// Air either side of a full-width board.
+    static let stackedSideMargin: CGFloat = 8
+
+    /// True where the gutter cannot fit beside the board at any square size.
+    ///
+    /// Width alone decides it, so it is answerable before `squareSize` exists.
+    /// 497 is the floor: 145 of gutter, 256 of board, 96 of right margin.
+    static func usesStackedReadouts(width: CGFloat) -> Bool {
+        width < gutterWidth(atScale: minGutterScale) + minSquareSize * 8 + rightMarginWidth
+    }
+
+    var usesStackedReadouts: Bool { Self.usesStackedReadouts(width: size.width) }
+
+    /// Everything below the board: the ship's lane, plus the readout column on a
+    /// screen that has had to stack it.
+    var bottomChrome: CGFloat {
+        shipBandHeight + (usesStackedReadouts ? Self.stackedReadoutBandHeight : 0)
+    }
     /// Breathing room to the right of the board.
     ///
     /// Reserving a second *full* gutter here was tried and reverted: at 224 it
@@ -230,12 +278,15 @@ struct SceneLayout {
 
     /// Centred in whatever vertical space the two chrome bands leave.
     var boardBottomY: CGFloat {
-        let available = size.height - hudBandHeight - shipBandHeight
-        return shipBandHeight + max(0, (available - boardSize) / 2)
+        let available = size.height - hudBandHeight - bottomChrome
+        return bottomChrome + max(0, (available - boardSize) / 2)
     }
     /// Centred where there is room, and never further left than the gutter
     /// needs — otherwise a narrow window slides the board over the readouts.
-    var boardOriginX: CGFloat { max(minGutterWidth, (size.width - boardSize) / 2) }
+    var boardOriginX: CGFloat {
+        usesStackedReadouts ? (size.width - boardSize) / 2
+                            : max(minGutterWidth, (size.width - boardSize) / 2)
+    }
     var boardOrigin: CGPoint { CGPoint(x: boardOriginX, y: boardBottomY) }
     var boardTopY: CGFloat { boardBottomY + boardSize }
 
@@ -281,8 +332,12 @@ struct SceneLayout {
     /// is measured in points, so a wide window quietly made every scout take
     /// 2.6× as long and thinned the raider cadence to match. The box puts both
     /// back where they were composed.
-    var playfieldMinX: CGFloat { max(0, boardOriginX - playfieldMargin) }
-    var playfieldMaxX: CGFloat { min(size.width, boardTopX + playfieldMargin) }
+    var playfieldMinX: CGFloat {
+        usesStackedReadouts ? 0 : max(0, boardOriginX - playfieldMargin)
+    }
+    var playfieldMaxX: CGFloat {
+        usesStackedReadouts ? size.width : min(size.width, boardTopX + playfieldMargin)
+    }
     var playfieldWidth: CGFloat { playfieldMaxX - playfieldMinX }
 
     /// The board's right edge.
@@ -317,7 +372,9 @@ struct SceneLayout {
     /// 2560pt monitor put it at 448 and the turn clock drifted hundreds of
     /// points away from the board it belongs to. Inside the box the column
     /// keeps a constant distance from the board's edge at any size.
-    var gutterCentreX: CGFloat { (playfieldMinX + boardOriginX) / 2 }
+    var gutterCentreX: CGFloat {
+        usesStackedReadouts ? size.width / 2 : (playfieldMinX + boardOriginX) / 2
+    }
 
     /// How much to scale everything that is not the board itself: the gutter
     /// readouts, and the centred banners.
@@ -345,13 +402,28 @@ struct SceneLayout {
     /// four move together or the timer's digits land on the transient notice.
     var gutterDrop: CGFloat { 8 * gutterScale }
 
-    var turnTimerY: CGFloat { boardBottomY + 46 * gutterScale - gutterDrop }
-    var gutterNoticeY: CGFloat { boardBottomY + 30 * gutterScale - gutterDrop }
-    var statusBannerY: CGFloat { boardBottomY - 4 * gutterScale - gutterDrop }
+    /// What the readout column hangs from.
+    ///
+    /// The board's bottom edge where there is a gutter, and a fixed offset from
+    /// the bottom of the screen where the column has been stacked underneath
+    /// instead. 10 puts the scaled −4…+172 spread inside the 170pt band with air
+    /// at both ends, so nothing below needed re-deriving.
+    /// 24 rather than 10: the column's lowest item is `statusBannerY`, which
+    /// sits at −4 × scale and then drops a further `gutterDrop`, so a smaller
+    /// anchor put it below the bottom of the screen.
+    var readoutAnchorY: CGFloat { usesStackedReadouts ? 24 : boardBottomY }
+
+    /// How big FIRE is drawn where it has no margin to be measured against.
+    /// Capped so it cannot crowd the readout column beside it.
+    var fireButtonScale: CGFloat { min(1, max(0.6, contentScale)) }
+
+    var turnTimerY: CGFloat { readoutAnchorY + 46 * gutterScale - gutterDrop }
+    var gutterNoticeY: CGFloat { readoutAnchorY + 30 * gutterScale - gutterDrop }
+    var statusBannerY: CGFloat { readoutAnchorY - 4 * gutterScale - gutterDrop }
 
     /// Chess Hints sit above everything else in the gutter, clearing a full
     /// power-up stack.
-    var chessHintY: CGFloat { boardBottomY + 172 * gutterScale }
+    var chessHintY: CGFloat { readoutAnchorY + 172 * gutterScale }
 
     // MARK: - Power-up alley
 
