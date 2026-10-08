@@ -9,7 +9,7 @@ left is the iPhone Duo.*
 
 | | State |
 |---|---|
-| macOS | Shipped. 1.3 is the current DMG; the App Store carries 1.2. |
+| macOS | Shipped. 1.4 is the current DMG; the App Store track runs behind. |
 | iPad | Done. Five sizes, both orientations. Not yet on the store. |
 | iPhone | Done in 1.4, in testing. Three sizes, both orientations. |
 | iPhone Duo | Open. No hardware; the simulator needs Xcode 27.1. |

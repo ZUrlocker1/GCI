@@ -33,11 +33,13 @@ clock and comes apart as you play it.
 **Mac App Store** — [Galactic Chess Invaders](https://apps.apple.com/us/app/galactic-chess-invaders/id6811389163).
 Free, no ads, no in-app purchases, and nothing collected.
 
-Or [download the DMG for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.3.dmg) directly.
+Or [download the DMG for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.4.dmg) directly.
 Open it and drag Galactic Chess Invaders to your Applications folder.
 
-**Current release: 1.3 (build 10)** — a universal binary, signed and notarized, running natively on
+**Current release: 1.4 (build 11)** — a universal binary, signed and notarized, running natively on
 Apple Silicon and Intel. You can also build it from source with Xcode; see [SETUP.md](SETUP.md).
+
+The App Store listing updates on its own schedule and may be a release behind the DMG above.
 
 ## Platforms
 
@@ -45,9 +47,9 @@ The same codebase builds for Mac, iPad and iPhone.
 
 | | State |
 |---|---|
-| **Mac** | Shipped. The DMG above and the App Store listing. |
+| **Mac** | Shipped. The DMG above, and on the Mac App Store. |
 | **iPad** | Playable by touch, checked on five sizes in both orientations. In testing. |
-| **iPhone** | Playable by touch, both orientations, checked on three sizes. In testing (1.4). |
+| **iPhone** | Playable by touch, both orientations, checked on three sizes. In testing. |
 
 On a phone the game lays itself out differently rather than shrinking: in portrait the board takes
 the full width and the readouts move underneath it, the top bar reflows to fit, and the Settings and
@@ -77,7 +79,7 @@ full arcade audio. Play testing feedback is welcome.
 
 ## What's new
 
-**1.4 — iPhone** *(in testing)*. The game runs on iPhone in both orientations. In portrait the
+**1.4 — iPhone.** The game runs on iPhone in both orientations. In portrait the
 readouts move under the board so the squares get the full width, the top bar reflows, and Settings
 and How To Play become one readable column.
 
