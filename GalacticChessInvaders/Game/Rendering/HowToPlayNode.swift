@@ -220,10 +220,12 @@ final class HowToPlayNode: SKNode {
         flowBody(flow, "A real chess game plays out — but Black's army is also an invader fleet. It slides sideways, drops down, and fires at you. You command White's moves and a laser ship at the bottom of the screen.", x: x, w: cw)
 
         flowHeading(flow, "CONTROLS", Self.cyan, x: x)
-        flowChip(flow, "DRAG", "Move the ship", x: x)
-        flowChip(flow, "FIRE", "Hold to shoot", x: x)
-        flowChip(flow, "TAP", "Piece, then square", x: x)
-        flowChip(flow, "KEYS", "SPACE, ARROWS, ESC", x: x)
+        let keys = ["DRAG", "FIRE", "TAP", "KEYS"]
+        let kw = keys.map(\.count).max() ?? 1
+        flowChip(flow, keys[0], "Move the ship",      keyChars: kw, x: x)
+        flowChip(flow, keys[1], "Hold to shoot",      keyChars: kw, x: x)
+        flowChip(flow, keys[2], "Piece, then square", keyChars: kw, x: x)
+        flowChip(flow, keys[3], "SPACE, ARROWS, ESC", keyChars: kw, x: x)
 
         flowHeading(flow, "HOW TO WIN", Self.cyan, x: x)
         flowBody(flow, "Clear the board: destroy every black piece by shooting it or capturing it in chess. Landing a shot on the black King ends the wave with a huge bonus.", x: x, w: cw)
@@ -242,7 +244,7 @@ final class HowToPlayNode: SKNode {
 
         flowHeading(flow, "TEST MODE", Self.cyan.withAlphaComponent(0.55), x: x)
         for line in ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
-                     "POWER, RAID AND LEVEL BUTTONS APPEAR",
+                     "POWER, RAIDER AND LEVEL BUTTONS APPEAR",
                      "LOG AND AUTO CHESS JOIN SETTINGS"] {
             flowSmall(flow, line, SKColor.white.withAlphaComponent(0.6), x: x)
         }
@@ -350,9 +352,11 @@ final class HowToPlayNode: SKNode {
         flow.addChild(node)
     }
 
-    private func flowChip(_ flow: SKNode, _ key: String, _ desc: String, x: CGFloat) {
+    private func flowChip(_ flow: SKNode, _ key: String, _ desc: String,
+                          keyChars: Int, x: CGFloat) {
         let size: CGFloat = 12
-        let chipW = CGFloat(key.count) * size + 14
+        // See `chip` above for why this is a width rather than a padded string.
+        let chipW = CGFloat(keyChars) * size + 14
         let chipH: CGFloat = 26
         flowY += chipH / 2 + 8
         let y = -flowY
@@ -462,12 +466,14 @@ final class HowToPlayNode: SKNode {
         // the one place that carries the detail.
         heading("CONTROLS", Self.cyan, x: x, y: 408)
         #if os(macOS)
-        chip("← →",    "Arrows or A / D move the ship",      x: x, y: 388)
-        chip("SPACE",  "Fire laser",                         x: x, y: 344)
-        chip("CLICK",  "Pick piece, then new square",        x: x, y: 300)
+        let keys = ["← →", "SPACE", "CLICK", "ESC"]
+        let kw = keys.map(\.count).max() ?? 1
+        chip(keys[0], "Arrows or A / D move the ship", keyChars: kw, x: x, y: 388)
+        chip(keys[1], "Fire laser",                    keyChars: kw, x: x, y: 344)
+        chip(keys[2], "Pick piece, then new square",   keyChars: kw, x: x, y: 300)
         // Two keys on one row: a fifth chip would run into the HISTORY heading
         // below, and 25 characters at 12pt still clears the column.
-        chip("ESC",    "Pause  ·  Q quits  ·  M mutes",      x: x, y: 256)
+        chip(keys[3], "Pause  ·  Q quits  ·  M mutes", keyChars: kw, x: x, y: 256)
         #else
         // Touch first. This list used to lead with arrows and SPACE, which
         // named a keyboard an iPad may not have while leaving the two
@@ -479,10 +485,12 @@ final class HowToPlayNode: SKNode {
         // twice quits, mute is a Settings row, and SET and INFO are in the
         // HUD — so listing them named a second way to do things the player
         // can already see.
-        chip("DRAG",   "Move the ship left or right",        x: x, y: 388)
-        chip("FIRE",   "Hold the button to shoot",           x: x, y: 344)
-        chip("TAP",    "Pick piece, then new square",        x: x, y: 300)
-        chip("KEYS",   "Optional: SPACE, ARROWS, ESC",       x: x, y: 256)
+        let keys = ["DRAG", "FIRE", "TAP", "KEYS"]
+        let kw = keys.map(\.count).max() ?? 1      // TAP is the short one
+        chip(keys[0], "Move the ship left or right",  keyChars: kw, x: x, y: 388)
+        chip(keys[1], "Hold the button to shoot",     keyChars: kw, x: x, y: 344)
+        chip(keys[2], "Pick piece, then new square",  keyChars: kw, x: x, y: 300)
+        chip(keys[3], "Optional: SPACE, ARROWS, ESC", keyChars: kw, x: x, y: 256)
         #endif
 
         // — HISTORY —
@@ -572,7 +580,7 @@ final class HowToPlayNode: SKNode {
                          "P  PowerUp  ·  R  Raider  ·  V  Level"]
         #else
         let testLines = ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
-                         "POWER, RAID AND LEVEL BUTTONS APPEAR",
+                         "POWER, RAIDER AND LEVEL BUTTONS APPEAR",
                          "LOG AND AUTO CHESS JOIN SETTINGS"]
         #endif
         for (i, line) in testLines.enumerated() {
@@ -743,9 +751,17 @@ final class HowToPlayNode: SKNode {
         addChild(node)
     }
 
-    private func chip(_ key: String, _ desc: String, x: CGFloat, y: CGFloat) {
-        // Box sized to the key text, centered on y
-        let chipW = CGFloat(key.count) * 10 + 18
+    /// Every chip in a block is the width of the longest key in it, so the
+    /// descriptions start on one column instead of stepping in and out with the
+    /// length of the word beside them. Zack's note, and it is the difference
+    /// between a list and four loose rows.
+    ///
+    /// Sized rather than padded: a trailing space in an `SKLabelNode` does not
+    /// advance the glyph, so " TAP " would have widened the box without moving
+    /// the word inside it. The key is centred in whatever width it is given.
+    private func chip(_ key: String, _ desc: String, keyChars: Int,
+                      x: CGFloat, y: CGFloat) {
+        let chipW = CGFloat(keyChars) * 10 + 18
         let chipH: CGFloat = 30
         let box = SKShapeNode(rect: CGRect(x: 0, y: -chipH / 2, width: chipW, height: chipH),
                               cornerRadius: 3)

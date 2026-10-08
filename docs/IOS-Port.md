@@ -594,22 +594,44 @@ Still open from the original plan, unchanged: the home indicator sits exactly wh
 ship lane wants to be, so the lane has to respect `safeAreaInsets.bottom` or people will
 swipe the app away mid-wave.
 
-#### No diagnostics log on iPhone or Duo
+#### The diagnostics log on iPhone — **reversed, it stays**
 
-**Decided (7 Oct): the log panel is iPad-only.** It is already landscape-only on iOS
-(`GCIiOSApp.swift:149`); on a phone there is no width to spare for a sidebar beside a
-board that is already at its minimum.
+On 7 Oct this section decided the log panel should be iPad-only, on the reasoning that a
+phone has no width to spare for a sidebar beside a board already at its minimum. **That
+was never implemented, and on 8 Oct Zack ran it on an iPhone in landscape and reported it
+works fine.** The decision is withdrawn: the log is available on every iOS device.
 
-Two ways to gate it, and the choice matters for the Duo:
+The one rule is the one that was already there — **landscape only**, enforced at
+`GCIiOSApp.swift:149` by a plain `geometry.size.width > geometry.size.height` test. No
+idiom check and no width threshold were ever added, which is why this reversal costs
+nothing: there is no gate to remove.
 
-1. **By idiom** — `userInterfaceIdiom == .pad`. Simple, and reads as the intent. It rests
-   on the Duo reporting `.phone`, which is an assumption: unfolded it is 626 × 890, close
-   to an iPad mini, and nobody has confirmed what it claims to be.
-2. **By width** — show it only above some scene width. Self-correcting whatever the Duo
-   reports, and it degrades sensibly if Apple ships a larger fold later.
+That also settles the Duo question this section used to turn on. The orientation test is
+self-correcting whatever idiom the Duo reports, so nothing here has to wait for that
+simulator. It stays on the Pass 5 list for the chrome questions, not for this one.
 
-Width is the safer rule. Idiom is the clearer one to read. Settle it when the Duo
-simulator can answer which idiom it reports — that is now on the Pass 5 list.
+Worth keeping in mind for a phone: the sidebar takes real width off the board, so it is a
+diagnostic posture rather than a way to play. That is already true on an iPad mini.
+
+#### Which iPhones to test on
+
+Measured from the simulators on 8 Oct, the same way the iPad list was built — boot it and
+read the framebuffer rather than trusting a spec page. Three cover the range:
+
+| Device | Portrait | Landscape | Why this one |
+|---|---|---|---|
+| **iPhone SE (3rd gen)** | 375 × 667 | 667 × 375 | The floor, and the only one with no safe-area insets and a home button. Shortest landscape height in the lineup — if the HUD, board and ship lane fit here they fit anywhere. |
+| **iPhone 16e** | 390 × 844 | 844 × 390 | The modern baseline: notch, standard insets, the width most phones sit near. |
+| **iPhone 17 Pro Max** | 440 × 956 | 956 × 440 | The ceiling, and the deepest insets — this is where the landscape housing clipped SCORE. |
+
+Everything else falls between the second and third rows: iPhone 17 and 16 Pro are
+402 × 874, the Plus and non-Pro Max models 430 × 932. A layout that holds at 390 and 440
+holds at 402 and 430; there is no cliff in between, because the two rules that bite —
+`HUDNode.compactBelowWidth` at 700 and `SceneLayout.usesStackedReadouts` at 497 — are
+both far below this whole range.
+
+Test each in **both orientations**. The portrait and landscape compositions are different
+layouts, not scaled versions of each other.
 
 ### Pass 4 — iPhone portrait
 
@@ -773,8 +795,9 @@ Nothing below can be settled from published specifications.
 5. **Whether `UIRequiresFullScreen` is honoured** on a folding device, or quietly
    ignored the way iPadOS 26 windowing might.
 6. **The size class and `userInterfaceIdiom` the Duo reports**, on each display. Compact
-   width would change what UIKit hands the SwiftUI chrome, and the idiom decides whether
-   an `== .pad` test is a safe way to gate the diagnostics log — see Pass 3.
+   width would change what UIKit hands the SwiftUI chrome. This no longer decides anything
+   about the diagnostics log — that is gated on orientation alone and stays on every
+   device; see Pass 3.
 7. **Whether the cover display rotates at all**, or is portrait-locked by the hardware.
    The table above assumes both orientations are reachable.
 8. **Touch-target reality on the cover display** at 460 ppi — whether a 44pt target is
