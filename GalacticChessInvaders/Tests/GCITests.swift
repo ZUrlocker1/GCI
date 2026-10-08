@@ -7262,3 +7262,83 @@ final class StackedReadoutTests: XCTestCase {
         }
     }
 }
+
+// MARK: - The HUD bar on a narrow screen
+
+/// The bar was composed on a 960pt canvas and never reflowed: its left block
+/// ends at 312 and the nav cluster is 226 wide with a 70pt right margin, so it
+/// wanted 608pt before LEVEL got a point. On a 440pt phone PAUSE / SET / INFO
+/// drew on top of the life ships. These pin that it fits, and that nothing
+/// wider moved.
+@MainActor
+final class CompactHUDTests: XCTestCase {
+
+    private static let narrow: [(String, CGFloat)] = [
+        ("iPhone 15 portrait", 393), ("iPhone 17 Pro Max portrait", 440),
+        ("Duo folded portrait", 466), ("Duo inner portrait", 626),
+    ]
+    private static let wide: [(String, CGFloat)] = [
+        ("iPhone 15 landscape", 852), ("Mac design canvas", 960),
+        ("iPad mini landscape", 1133), ("iPad Pro 13 landscape", 1366),
+    ]
+
+    func testOnlyNarrowScreensGoCompact() {
+        for (name, w) in Self.narrow {
+            XCTAssertTrue(HUDNode.isCompact(sceneWidth: w), "\(name) should be compact")
+        }
+        for (name, w) in Self.wide {
+            XCTAssertFalse(HUDNode.isCompact(sceneWidth: w), "\(name) should not be compact")
+        }
+    }
+
+    /// The whole point: the left block and the nav cluster stop overlapping.
+    func testTheBarFitsAtEveryWidth() {
+        for (name, w) in Self.narrow + Self.wide {
+            let hud = HUDNode(sceneWidth: w)
+            let navLeft = HUDNode.navLeftEdge(forSceneWidth: w)
+            let leftEnd = HUDNode.isCompact(sceneWidth: w)
+                ? HUDNode.compactLivesX + 24
+                : HUDNode.livesX + CGFloat(HUDNode.maxLives - 1) * HUDNode.livesStep + 9
+            XCTAssertGreaterThan(navLeft, leftEnd,
+                                 "\(name): the nav cluster overlaps the lives")
+            XCTAssertLessThanOrEqual(navLeft, w, "\(name): the nav starts off-screen")
+            _ = hud
+        }
+    }
+
+    /// Every control survives compacting — nothing is dropped, only shrunk.
+    func testCompactKeepsEveryControl() {
+        let hud = HUDNode(sceneWidth: 393)
+        var names: Set<String> = []
+        var stack = Array(hud.children)
+        while let next = stack.popLast() {
+            if let n = next.name { names.insert(n) }
+            stack.append(contentsOf: next.children)
+        }
+        for required in ["settingsButton", "infoButton", "scoreValue", "hiValue"] {
+            XCTAssertTrue(names.contains(required), "compact HUD lost \(required)")
+        }
+        #if os(iOS)
+        XCTAssertTrue(names.contains(HUDNode.pauseButtonName), "compact HUD lost PAUSE")
+        #endif
+    }
+
+    /// Wide screens keep the ships; narrow ones get the count glyph instead.
+    func testLivesBecomeAGlyphOnlyWhenCompact() {
+        func labels(_ node: SKNode) -> Set<String> {
+            var out: Set<String> = []
+            var stack = Array(node.children)
+            while let n = stack.popLast() {
+                if let name = n.name { out.insert(name) }
+                stack.append(contentsOf: n.children)
+            }
+            return out
+        }
+        XCTAssertTrue(labels(HUDNode(sceneWidth: 960)).contains("lifeShip0"),
+                      "a wide bar should still draw ships")
+        XCTAssertTrue(labels(HUDNode(sceneWidth: 393)).contains("lifeCount"),
+                      "a narrow bar should draw the count")
+        XCTAssertFalse(labels(HUDNode(sceneWidth: 393)).contains("lifeShip0"),
+                       "a narrow bar should not draw ships as well")
+    }
+}

@@ -8,12 +8,47 @@ final class HUDNode: SKNode {
     private let hiValue    = SKLabelNode()
     private let levelLabel = SKLabelNode()
     private var lifeShips: [SKSpriteNode] = []
+    /// Stands in for the ships where there is no room for five of them.
+    private let lifeCount = SKLabelNode()
+    private let isCompact: Bool
 
     private static let cyan   = NeonPalette.cyan
     private static let orange = NeonPalette.orange
     private static let font   = "PressStart2P-Regular"
 
+    // MARK: - Compact mode
+    //
+    // The bar was composed on a 960pt canvas and never reflowed. Its left block
+    // ends at 312 and the nav cluster is 226 wide with a 70pt right margin, so
+    // it wants 608pt before LEVEL is allocated a single point. A phone in
+    // portrait has 393 or 440, and the result is PAUSE / SET / INFO drawn on
+    // top of the life ships.
+    //
+    // Compact keeps every control and takes the width out of the three things
+    // that are pure width: five ships become "x3", the buttons lose their
+    // padding, and the 70pt right margin becomes 8. LEVEL keeps the behaviour
+    // it already had — it shortens, and now it also hides when even the short
+    // form will not fit, which Zack judged acceptable since it is the least
+    // critical readout on the bar.
+
+    /// Below this the bar cannot hold its design layout. 700 rather than 608:
+    /// at exactly 608 LEVEL would be allocated nothing, and the margin above
+    /// keeps a landscape phone out of a layout it does not need.
+    static let compactBelowWidth: CGFloat = 700
+
+    static func isCompact(sceneWidth: CGFloat) -> Bool { sceneWidth < compactBelowWidth }
+
+    /// Compact geometry, in the same order as the design constants above.
+    static let compactHiX: CGFloat = 84
+    static let compactLivesX: CGFloat = 150
+    static let compactButtonWidth: CGFloat = 50
+    static let compactButtonGap: CGFloat = 6
+    static let compactNavRightMargin: CGFloat = 8
+    /// "L 01" at 11pt, which is the shortest LEVEL ever renders.
+    static let compactLevelMinWidth: CGFloat = 48
+
     init(sceneWidth: CGFloat) {
+        isCompact = HUDNode.isCompact(sceneWidth: sceneWidth)
         super.init()
 
         let bg = SKShapeNode(rect: CGRect(x: 0, y: 0, width: sceneWidth, height: HUDNode.height))
@@ -27,43 +62,57 @@ final class HUDNode: SKNode {
         scoreValue.name = "scoreValue"
 
         // Hi-score
+        let hiX = isCompact ? HUDNode.compactHiX : HUDNode.hiX
         let hiTitleLbl = SKLabelNode()
-        place(hiTitleLbl, "HI",     HUDNode.orange, 8,  HUDNode.hiX, 24)
-        place(hiValue,    "0",      HUDNode.orange, 11, HUDNode.hiX, 10)
+        place(hiTitleLbl, "HI",     HUDNode.orange, 8,  hiX, 24)
+        place(hiValue,    "0",      HUDNode.orange, 11, hiX, 10)
         hiValue.name = "hiValue"
 
         // Level
         // Life ships sit between HI and LEVEL, left-anchored with the rest of
         // the block, so nothing downstream of them has to move when a life is
         // lost.
-        for i in 0..<HUDNode.maxLives {
-            let ship = SKSpriteNode(imageNamed: "ship-player")
-            if ship.size.height > 0 { ship.setScale(18 / ship.size.height) }
-            ship.color = HUDNode.cyan; ship.colorBlendFactor = 0.2
-            ship.position = CGPoint(x: HUDNode.livesX + CGFloat(i) * HUDNode.livesStep, y: 18)
-            ship.name = "lifeShip\(i)"; addChild(ship); lifeShips.append(ship)
+        if isCompact {
+            // One glyph instead of five sprites: 88pt of fixed width becomes
+            // about 30, which is most of what the bar needed to find.
+            place(lifeCount, "x3", HUDNode.cyan, 11, HUDNode.compactLivesX, 12)
+            lifeCount.name = "lifeCount"
+        } else {
+            for i in 0..<HUDNode.maxLives {
+                let ship = SKSpriteNode(imageNamed: "ship-player")
+                if ship.size.height > 0 { ship.setScale(18 / ship.size.height) }
+                ship.color = HUDNode.cyan; ship.colorBlendFactor = 0.2
+                ship.position = CGPoint(x: HUDNode.livesX + CGFloat(i) * HUDNode.livesStep, y: 18)
+                ship.name = "lifeShip\(i)"; addChild(ship); lifeShips.append(ship)
+            }
         }
 
         // LEVEL takes the gap between the lives and the nav, centred in it, and
         // drops to "L 01" when that gap will not hold the long form.
-        let livesRight = HUDNode.livesX + CGFloat(HUDNode.maxLives - 1) * HUDNode.livesStep + 9
-        let navLeft = HUDNode.navOriginX(forSceneWidth: sceneWidth)
-            + (HUDNode.includesPauseButton ? HUDNode.navDesignLeftWithPause
-                                           : HUDNode.navDesignLeft)
+        let livesRight = isCompact
+            ? HUDNode.compactLivesX + 24
+            : HUDNode.livesX + CGFloat(HUDNode.maxLives - 1) * HUDNode.livesStep + 9
+        let navLeft = HUDNode.navLeftEdge(forSceneWidth: sceneWidth)
         let gapLeft = livesRight + HUDNode.levelGap
         let gapRight = navLeft - HUDNode.levelGap
-        levelIsAbbreviated = (gapRight - gapLeft) < HUDNode.levelFullWidth
+        let gap = gapRight - gapLeft
+        levelIsAbbreviated = gap < HUDNode.levelFullWidth
 
         place(levelLabel, "LEVEL 01", HUDNode.cyan, 11,
               max(gapLeft, (gapLeft + gapRight) / 2), 18, align: .center)
         levelLabel.verticalAlignmentMode = .center
         levelLabel.name = "levelLabel"
+        // Hidden rather than overlapped where even "L 01" will not fit.
+        levelLabel.isHidden = gap < HUDNode.compactLevelMinWidth
 
         // The gameplay HUD carries PAUSE; the title screen's copy does not,
         // because there is no game to pause or leave.
-        let nav = HUDNode.makeNavButtons(includePause: HUDNode.includesPauseButton)
+        let nav = HUDNode.makeNavButtons(includePause: HUDNode.includesPauseButton,
+                                         compact: isCompact)
         nav.name = HUDNode.navName
-        nav.position.x = HUDNode.navOriginX(forSceneWidth: sceneWidth)
+        nav.position.x = isCompact
+            ? HUDNode.navLeftEdge(forSceneWidth: sceneWidth)
+            : HUDNode.navOriginX(forSceneWidth: sceneWidth)
         addChild(nav)
 
         // Bottom separator
@@ -133,6 +182,23 @@ final class HUDNode: SKNode {
     /// Below this, "LEVEL 01" does not fit and it becomes "L 01".
     static let levelFullWidth: CGFloat = 100
 
+    /// Total width of the compact cluster, buttons and gaps.
+    static func compactNavWidth(includePause: Bool) -> CGFloat {
+        let n = CGFloat(includePause ? 3 : 2)
+        return n * compactButtonWidth + (n - 1) * compactButtonGap
+    }
+
+    /// Where the leftmost button starts on screen, in either mode. LEVEL
+    /// measures its gap against this, so the two cannot disagree.
+    static func navLeftEdge(forSceneWidth width: CGFloat) -> CGFloat {
+        if isCompact(sceneWidth: width) {
+            return width - compactNavWidth(includePause: includesPauseButton)
+                 - compactNavRightMargin
+        }
+        return navOriginX(forSceneWidth: width)
+             + (includesPauseButton ? navDesignLeftWithPause : navDesignLeft)
+    }
+
     static func navOriginX(forSceneWidth width: CGFloat) -> CGFloat {
         width - navDesignRight - navRightMargin      // 0 at the design width
     }
@@ -152,8 +218,10 @@ final class HUDNode: SKNode {
         }
     }
 
-    static func makeNavButtons(includePause: Bool = false) -> SKNode {
+    static func makeNavButtons(includePause: Bool = false,
+                               compact: Bool = false) -> SKNode {
         let nav = SKNode()
+        if compact { return makeCompactNavButtons(includePause: includePause) }
         // `hotkey` is the index of the character that is also the keyboard
         // shortcut. Press Start 2P advances exactly one em per character, so
         // the rule under it is arithmetic rather than a measured guess.
@@ -222,6 +290,46 @@ final class HUDNode: SKNode {
         return node
     }
 
+    /// Laid out from x = 0 rather than against the design canvas, so the caller
+    /// positions the whole cluster and the buttons need no absolute numbers.
+    ///
+    /// "? INFO" loses its question mark here: six characters at 8pt is 48, which
+    /// does not fit a 50pt button with any padding left. The gear stays, because
+    /// it is the one button people find by its icon rather than its word.
+    private static func makeCompactNavButtons(includePause: Bool) -> SKNode {
+        let nav = SKNode()
+        var specs: [(String, String)] = [("settingsButton", "SET"),
+                                         ("infoButton", "INFO")]
+        if includePause { specs.insert((pauseButtonName, "PAUSE"), at: 0) }
+
+        for (index, spec) in specs.enumerated() {
+            let x = CGFloat(index) * (compactButtonWidth + compactButtonGap)
+            let btn = SKShapeNode(rect: CGRect(x: x, y: 7,
+                                               width: compactButtonWidth, height: 22),
+                                  cornerRadius: 3)
+            btn.fillColor = cyan.withAlphaComponent(0.12)
+            btn.strokeColor = cyan; btn.lineWidth = 1; btn.name = spec.0
+            nav.addChild(btn)
+
+            let lbl = SKLabelNode(fontNamed: font)
+            lbl.text = spec.1; lbl.fontSize = 8; lbl.fontColor = cyan
+            lbl.horizontalAlignmentMode = .center; lbl.verticalAlignmentMode = .center
+            // SET shares its button with the gear, so its text sits right of centre.
+            lbl.position = CGPoint(x: x + compactButtonWidth / 2 + (spec.0 == "settingsButton" ? 6 : 0),
+                                   y: 18)
+            lbl.name = spec.0
+            nav.addChild(lbl)
+
+            if spec.0 == "settingsButton" {
+                let gear = gearIcon()
+                gear.position = CGPoint(x: x + 12, y: 18)
+                gear.name = spec.0
+                nav.addChild(gear)
+            }
+        }
+        return nav
+    }
+
     private func place(_ node: SKLabelNode, _ text: String, _ color: SKColor,
                        _ size: CGFloat, _ x: CGFloat, _ y: CGFloat,
                        align: SKLabelHorizontalAlignmentMode = .left) {
@@ -240,5 +348,8 @@ final class HUDNode: SKNode {
     func updateLevel(_ level: Int) {
         levelLabel.text = String(format: levelIsAbbreviated ? "L %02d" : "LEVEL %02d", level)
     }
-    func updateLives(_ count: Int)   { lifeShips.enumerated().forEach { $1.isHidden = $0 >= count } }
+    func updateLives(_ count: Int) {
+        lifeShips.enumerated().forEach { $1.isHidden = $0 >= count }
+        lifeCount.text = "x\(max(0, count))"
+    }
 }
