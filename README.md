@@ -82,8 +82,10 @@ readouts move under the board so the squares get the full width, the top bar ref
 and How To Play become one readable column.
 
 **1.3 — iPad, and sound without the stutter.** The game runs on iPad. Heavy fire no longer costs
-frames: sound effects are decoded once at launch and played from a pool of running voices —
-11.7ms a shot down to 0.03ms.
+frames: sound effects are decoded once at launch and played from a pool of voices that are already
+running, 11.7ms a shot down to 0.03ms. **The frame rate now stays well above 50 on both Mac and
+iPad, including Level 10 at full strength** — where the Mac used to drop into the 40s and an iPad
+mini into the 20s.
 
 **1.2 — better window resizing, and the groundwork for touch.** The board and the readouts lay
 themselves out from the space available instead of being scaled into a fixed canvas, and everything
