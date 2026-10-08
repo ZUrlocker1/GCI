@@ -38,6 +38,12 @@ are the two problems this release is about.*
 - **Same controls in the same corner, everywhere.** SET, INFO and BACK sit in one place
   across gameplay, Settings and How To Play, on every device and orientation.
 
+- **A minor fix for a rotation bug** *(after the build 11 DMG).* Turning the device
+  mid-wave left the raiders flying against where the board used to be — one of them could
+  end up below the player's ship — and left the fleet sweeping and descending in the old
+  orientation's squares. Both now follow the board. iPhone and iPad; the Mac does not
+  rotate, though it reaches the same path by resizing a window mid-game.
+
 ---
 
 ## V 1.3 (Build 10)  iPad, and Sound Without the Stutter
