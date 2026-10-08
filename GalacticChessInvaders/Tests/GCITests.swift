@@ -7561,6 +7561,20 @@ final class PortraitPanelTests: XCTestCase {
                              "body type is back under what the two-column panel managed")
     }
 
+    /// The panel chrome added for the phone must cost the wide layout nothing.
+    ///
+    /// It did, briefly: the bottom margin reserved for a reflowed column was
+    /// subtracted on every platform, which took the Mac's panel from exactly
+    /// 1.0 at the design canvas to 0.983. Nobody would have reported a 1.7%
+    /// shrink; it would just have looked very slightly wrong forever.
+    func testTheDesignCanvasStillDrawsPanelsAtFullSize() {
+        let scene = GameScene(size: SceneLayout.designSize)
+        scene.adoptSafeArea(top: 0, bottom: 0, left: 0, right: 0)
+        XCTAssertEqual(scene.panelScale(designSize: HowToPlayNode.designSize), 1.0,
+                       accuracy: 0.0001,
+                       "the Mac's own canvas is where the panel was composed")
+    }
+
     func testTheWideLayoutIsUntouched() {
         let panel = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
         XCTAssertEqual(panel.designSize, HowToPlayNode.designSize)

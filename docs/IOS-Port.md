@@ -547,7 +547,7 @@ order of how little they cost:
 Note the Duo inner display misses by only 30pt — so the same reflow that rescues an
 iPhone leaves the Duo's main screen with room to spare.
 
-### Pass 3 — iPhone landscape — **in progress, 1.4**
+### Pass 3 — iPhone landscape — **done, 1.4**
 
 2.17:1 on modern phones. Very wide, not very tall. The board is height-constrained, so it
 will be small; the compensation is that both gutters finally become usable.
@@ -633,9 +633,17 @@ both far below this whole range.
 Test each in **both orientations**. The portrait and landscape compositions are different
 layouts, not scaled versions of each other.
 
-**Result, 8 Oct — the SE passes, both orientations.** Zack ran 1.4 build 11 at 375 × 667
-and 667 × 375. His verdict: *"seems to work. its a bit cramped but its ok."* Accepted as
-shipped; nothing was changed for it.
+**Result, 8 Oct — all three pass, both orientations.** Zack ran 1.4 build 11 across the
+whole table: SE at 375 × 667, 16e at 390 × 844, 17 Pro Max at 440 × 956, each upright and
+on its side. All good. The SE's verdict was *"seems to work. its a bit cramped but its
+ok"* — accepted as shipped, and nothing was changed for it.
+
+**This is what closed the landscape safe-area work.** The inset fixes made that day — the
+HUD stepping in past the sensor housing, the rounded-corner floor, the version badge
+clearing the board sideways rather than from above — were covered by tests and had never
+been seen on a notched phone on its side, because the simulator cannot be rotated from the
+agent's side of the tooling. The 16e and the 17 Pro Max runs are what actually verified
+them.
 
 That was the run worth having, because the SE is the only supported phone with **no
 safe-area insets at all** — no island, no home indicator, square corners. Every rule added
@@ -1133,9 +1141,9 @@ never does — it presents once and keeps the view. `GlowSwitchTests` crashed th
 | 1 | iOS target, audio session, lifecycle, touch controls, touch chess | **done** |
 | 2 | iPad landscape, all four sizes + physical mini | TestFlight |
 | 3 | ~~iPad portrait~~ — **closed, not needed**; see Pass 2 | — |
-| 4 | How To Play and Settings — **landscape done**; both are short in portrait (§7a); revisit for iPhone | — |
-| 5 | iPhone landscape | TestFlight |
-| 6 | iPhone portrait, or the decision not to | — |
+| 4 | How To Play and Settings — landscape done; both reflow to one column on a phone in portrait | **done** |
+| 5 | iPhone landscape | **done**, 1.4 |
+| 6 | iPhone portrait | **done**, 1.4 |
 | 7 | iPhone Duo | — |
 
 Phase 0 is the one that is easy to skip and expensive to skip.

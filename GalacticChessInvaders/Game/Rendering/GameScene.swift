@@ -3273,6 +3273,37 @@ class GameScene: SKScene {
         }
     }
 
+    /// How far a panel's content drops below BACK, and the air left under it.
+    ///
+    /// Both are phone-only, and that matters: the margin reserves room beneath a
+    /// reflowed column, and subtracting it on every platform took the Mac's
+    /// panel from exactly 1.0 at the design canvas to 0.983 — a silent 1.7%
+    /// shrink of How To Play and Settings on a platform none of that work was
+    /// for. `PortraitPanelTests` pins the 1.0.
+    private var panelTopGap: CGFloat {
+        #if os(iOS)
+        return HUDNode.isCompact(sceneWidth: size.width) ? Self.compactPanelTopGap : 0
+        #else
+        return 0
+        #endif
+    }
+
+    private var panelBottomGap: CGFloat {
+        #if os(iOS)
+        return HUDNode.isCompact(sceneWidth: size.width) ? Self.panelBottomMargin : 0
+        #else
+        return 0
+        #endif
+    }
+
+    /// The height a panel actually gets is the screen less the chrome above and
+    /// below it, not the whole screen — see `layOutPanel`.
+    func panelScale(designSize: CGSize) -> CGFloat {
+        let available = max(1, size.height - topInsetDrop - panelTopGap - panelBottomGap)
+        return min(1, min(size.width / designSize.width,
+                          available / designSize.height))
+    }
+
     private func layOutPanel(_ panel: SKNode, designSize: CGSize) {
         let shade = panelShade ?? {
             let node = SKSpriteNode(color: .black, size: size)
@@ -3292,16 +3323,8 @@ class GameScene: SKScene {
         // let a tall panel run off the bottom by exactly the chrome above it —
         // harmless while every panel was 700pt against a 960pt design and shrank
         // anyway, and not harmless once portrait reflows into one long column.
-        #if os(iOS)
-        let contentGap = HUDNode.isCompact(sceneWidth: size.width)
-            ? Self.compactPanelTopGap : 0
-        #else
-        let contentGap: CGFloat = 0
-        #endif
-        let available = max(1, size.height - topInsetDrop - contentGap
-                               - Self.panelBottomMargin)
-        let scale = min(1, min(size.width / designSize.width,
-                               available / designSize.height))
+        let contentGap = panelTopGap
+        let scale = panelScale(designSize: designSize)
         panel.setScale(scale)
         // Centred across, pinned to the top. Centring vertically left a band of
         // dead space above the panel and pushed BACK down the screen; BACK sits
