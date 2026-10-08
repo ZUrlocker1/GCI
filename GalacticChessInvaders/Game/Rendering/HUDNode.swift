@@ -11,6 +11,11 @@ final class HUDNode: SKNode {
     /// Stands in for the ships where there is no room for five of them.
     private let lifeCount = SKLabelNode()
     private let isCompact: Bool
+    /// Everything pinned to the bar's left edge, so a landscape inset can move
+    /// the block without the background or the separator going with it.
+    private var leftGroup: [SKNode] = []
+    private var navNode: SKNode?
+    private var sideInsets = (left: CGFloat(0), right: CGFloat(0))
 
     private static let cyan   = NeonPalette.cyan
     private static let orange = NeonPalette.orange
@@ -64,6 +69,7 @@ final class HUDNode: SKNode {
         place(scoreTitleLbl, "SCORE", HUDNode.orange, 8,  10,  24)
         place(scoreValue,    "0",      .white,         11, 10,  10)
         scoreValue.name = "scoreValue"
+        leftGroup += [scoreTitleLbl, scoreValue]
 
         // Hi-score
         let hiX = isCompact ? HUDNode.compactHiX : HUDNode.hiX
@@ -71,6 +77,7 @@ final class HUDNode: SKNode {
         place(hiTitleLbl, "HI",     HUDNode.orange, 8,  hiX, 24)
         place(hiValue,    "0",      HUDNode.orange, 11, hiX, 10)
         hiValue.name = "hiValue"
+        leftGroup += [hiTitleLbl, hiValue]
 
         // Level
         // Life ships sit between HI and LEVEL, left-anchored with the rest of
@@ -88,10 +95,11 @@ final class HUDNode: SKNode {
             ship.color = HUDNode.cyan; ship.colorBlendFactor = 0.2
             ship.position = CGPoint(x: HUDNode.compactLivesX + 9, y: 18)
             ship.name = "lifeCountShip"
-            addChild(ship)
+            addChild(ship); leftGroup.append(ship)
 
             place(lifeCount, "3", HUDNode.cyan, 11, HUDNode.compactLivesX + 24, 12)
             lifeCount.name = "lifeCount"
+            leftGroup.append(lifeCount)
         } else {
             for i in 0..<HUDNode.maxLives {
                 let ship = SKSpriteNode(imageNamed: "ship-player")
@@ -99,6 +107,7 @@ final class HUDNode: SKNode {
                 ship.color = HUDNode.cyan; ship.colorBlendFactor = 0.2
                 ship.position = CGPoint(x: HUDNode.livesX + CGFloat(i) * HUDNode.livesStep, y: 18)
                 ship.name = "lifeShip\(i)"; addChild(ship); lifeShips.append(ship)
+                leftGroup.append(ship)
             }
         }
 
@@ -125,6 +134,7 @@ final class HUDNode: SKNode {
         let nav = HUDNode.makeNavButtons(includePause: HUDNode.includesPauseButton,
                                          compact: isCompact)
         nav.name = HUDNode.navName
+        navNode = nav
         nav.position.x = isCompact
             ? HUDNode.navLeftEdge(forSceneWidth: sceneWidth)
             : HUDNode.navOriginX(forSceneWidth: sceneWidth)
@@ -140,6 +150,24 @@ final class HUDNode: SKNode {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Step the bar's contents in from the screen's own edges.
+    ///
+    /// A phone in landscape puts the sensor housing and the rounded corners
+    /// over the bar's two ends. The scene draws edge to edge on purpose — the
+    /// starfield should reach the corners — so the background and the separator
+    /// stay where they are and only the readouts move: SCORE in from the left,
+    /// PAUSE / SET / INFO in from the right. LEVEL is centred in the gap
+    /// between them, so it takes half the difference and stays centred.
+    func setSideInsets(left: CGFloat, right: CGFloat) {
+        guard (left, right) != sideInsets else { return }
+        let dLeft = left - sideInsets.left
+        let dRight = right - sideInsets.right
+        sideInsets = (left, right)
+        leftGroup.forEach { $0.position.x += dLeft }
+        navNode?.position.x -= dRight
+        levelLabel.position.x += (dLeft - dRight) / 2
+    }
 
     /// SET and INFO, in the top right corner and nowhere else — the same corner
     /// a panel's BACK returns to, so the control that gets you in and the one

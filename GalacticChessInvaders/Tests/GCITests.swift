@@ -7416,3 +7416,94 @@ final class ShipCanClearTheBoardTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Landscape safe area
+//
+// A phone in landscape puts the sensor housing and the rounded corners over the
+// two ends of the HUD bar, and `safeAreaInsets.top` — the only inset the scene
+// used to adopt — is ~0 there. The simulator draws the full rectangle, so SCORE
+// and the version badge looked right in a screenshot and were invisible on
+// Zack's hardware. These pin the two rules that fixes: everything pinned to an
+// edge steps in by that edge's inset, and the badge is allowed to clear the
+// board sideways rather than only from above.
+@MainActor
+final class LandscapeSafeAreaTests: XCTestCase {
+
+    /// An iPhone 17 Pro Max on its side, with the housing on the left.
+    private static let landscape = CGSize(width: 956, height: 440)
+    private static let inset: CGFloat = 59
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    private func scene(_ size: CGSize = landscape,
+                       left: CGFloat = inset, right: CGFloat = inset) -> GameScene {
+        let scene = GameScene(size: size)
+        scene.adoptSafeArea(top: 0, bottom: 21, left: left, right: right)
+        return scene
+    }
+
+    func testTheGutterStepsInPastTheHousing() {
+        XCTAssertEqual(scene().gutterPinX, 10 + Self.inset,
+                       "the badge and the test chips are pinned to the left edge")
+        XCTAssertEqual(scene(left: 0, right: 0).gutterPinX, 10,
+                       "and an iPad, which has no housing, is untouched")
+    }
+
+    /// The bug Zack reported: the badge hid itself because the landscape band
+    /// is 44pt against a 36pt bar, without noticing it had a gutter to sit in.
+    func testTheBadgeIsDrawnInLandscape() {
+        let scene = scene()
+        XCTAssertTrue(scene.versionBadgeFits,
+                      "a landscape phone has hundreds of points of gutter")
+        // The rule it now passes on: clears the board sideways inside the
+        // gutter, rather than from above inside a 44pt band.
+        let gutter = SceneLayout(size: Self.landscape).boardOriginX
+        XCTAssertLessThan(scene.gutterPinX + VersionBadgeNode.width(of: scene.versionBadgeText) + 8,
+                          gutter, "and it clears the board inside the gutter")
+    }
+
+    /// The badge still hides where it would actually land on the squares.
+    func testTheBadgeStillHidesWhereItCannotFit() {
+        let narrow = GameScene(size: CGSize(width: 393, height: 300))
+        XCTAssertFalse(narrow.versionBadgeFits,
+                       "no air above and no gutter beside is still no room")
+    }
+
+    func testTheBarStepsInFromBothEdges() {
+        let bar = HUDNode(sceneWidth: Self.landscape.width)
+        let score = bar.childNode(withName: "scoreValue")
+        let nav = bar.childNode(withName: HUDNode.navName)
+        XCTAssertNotNil(score); XCTAssertNotNil(nav)
+        let scoreX = score?.position.x ?? 0
+        let navX = nav?.position.x ?? 0
+
+        bar.setSideInsets(left: Self.inset, right: Self.inset)
+        XCTAssertEqual(score?.position.x, scoreX + Self.inset,
+                       "SCORE moves in by the left inset")
+        XCTAssertEqual(nav?.position.x, navX - Self.inset,
+                       "and PAUSE / SET / INFO by the right one")
+    }
+
+    /// Applied as a delta, so a rotation that reports its insets twice — or
+    /// reports them again after the bar was rebuilt — does not move twice.
+    func testApplyingTheSameInsetsTwiceMovesNothing() {
+        let bar = HUDNode(sceneWidth: Self.landscape.width)
+        bar.setSideInsets(left: Self.inset, right: Self.inset)
+        let x = bar.childNode(withName: "scoreValue")?.position.x
+        bar.setSideInsets(left: Self.inset, right: Self.inset)
+        XCTAssertEqual(bar.childNode(withName: "scoreValue")?.position.x, x)
+    }
+
+    /// LEVEL is centred in the gap between the two blocks, so it takes half the
+    /// difference rather than following either one.
+    func testLevelStaysCentredBetweenThem() {
+        let bar = HUDNode(sceneWidth: Self.landscape.width)
+        let before = bar.childNode(withName: "levelLabel")?.position.x
+        bar.setSideInsets(left: 40, right: 20)
+        XCTAssertEqual(bar.childNode(withName: "levelLabel")?.position.x,
+                       (before ?? 0) + 10)
+    }
+}

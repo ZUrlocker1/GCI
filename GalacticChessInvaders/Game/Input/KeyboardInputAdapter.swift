@@ -54,7 +54,8 @@ final class KeyboardFocusedSKView: SKView {
 
     private func pushSafeArea() {
         guard let scene = scene as? GameScene else { return }
-        scene.adoptSafeArea(top: safeAreaInsets.top, bottom: safeAreaInsets.bottom)
+        scene.adoptSafeArea(top: safeAreaInsets.top, bottom: safeAreaInsets.bottom,
+                            left: safeAreaInsets.left, right: safeAreaInsets.right)
     }
 
     override init(frame: CGRect) {

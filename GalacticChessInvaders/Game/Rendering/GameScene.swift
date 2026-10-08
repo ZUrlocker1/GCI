@@ -1127,6 +1127,7 @@ class GameScene: SKScene {
         guard hudNode == nil else { return }
         let hud = HUDNode(sceneWidth: size.width)
         hud.position = CGPoint(x: 0, y: size.height - HUDNode.height - topInsetDrop)
+        hud.setSideInsets(left: safeAreaLeft, right: safeAreaRight)
         hud.zPosition = 10
         addChild(hud)
         hudNode = hud
@@ -1358,18 +1359,28 @@ class GameScene: SKScene {
     /// the band is empty all the way across.
     // MARK: - What the system is covering
     //
-    // Only the top matters so far: a Dynamic Island sits over the HUD bar, and
-    // `LEVEL` is centred exactly where it goes. The bottom is stored because the
-    // ship's lane is where a home indicator wants to be, which §5 Pass 3 flags
-    // and nothing has needed yet.
+    // In portrait a Dynamic Island sits over the HUD bar, and `LEVEL` is centred
+    // exactly where it goes. In landscape the same housing is on a side edge
+    // instead and `top` is ~0, which is why SCORE and the version badge — both
+    // pinned 10pt from the left — were invisible on hardware while the
+    // simulator's screenshot showed them perfectly well.
+    //
+    // The bottom is stored because the ship's lane is where a home indicator
+    // wants to be, which §5 Pass 3 flags and nothing has needed yet.
 
     private(set) var safeAreaTop: CGFloat = 0
     private(set) var safeAreaBottom: CGFloat = 0
+    private(set) var safeAreaLeft: CGFloat = 0
+    private(set) var safeAreaRight: CGFloat = 0
 
-    func adoptSafeArea(top: CGFloat, bottom: CGFloat) {
-        guard top != safeAreaTop || bottom != safeAreaBottom else { return }
+    func adoptSafeArea(top: CGFloat, bottom: CGFloat,
+                       left: CGFloat = 0, right: CGFloat = 0) {
+        guard (top, bottom, left, right)
+                != (safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight) else { return }
         safeAreaTop = top
         safeAreaBottom = bottom
+        safeAreaLeft = left
+        safeAreaRight = right
         applyLayout()
     }
 
@@ -1390,8 +1401,14 @@ class GameScene: SKScene {
         // fixed 16 below the bar. Identical on every screen that shipped — the
         // band is 68 against a 36pt bar, so half of 32 *is* 16 — but the band
         // now shrinks on a phone, and a fixed offset put the badge on the board.
-        versionBadge?.position = CGPoint(
-            x: 10, y: size.height - HUDNode.height - topInsetDrop - hudAir / 2)
+        // Where there is no vertical air to centre in, the badge hangs just
+        // under the bar instead: in landscape it clears the board sideways, so
+        // the band's height is not what decides whether it can be drawn.
+        let barBottom = size.height - HUDNode.height - topInsetDrop
+        let y = hudAir >= VersionBadgeNode.height + 4
+            ? barBottom - hudAir / 2
+            : barBottom - VersionBadgeNode.height / 2 - 4
+        versionBadge?.position = CGPoint(x: gutterPinX, y: y)
         versionBadge?.isHidden = !versionBadgeFits || panelIsUp
     }
 
@@ -1404,7 +1421,20 @@ class GameScene: SKScene {
     /// 36pt bar and 8pt of air cannot hold a 24pt chip. The badge is Test Mode's
     /// only door on a touch device, so a phone needs another one — that is Pass
     /// 4's problem, and §4 says so rather than leaving it to be rediscovered.
-    var versionBadgeFits: Bool { hudAir >= VersionBadgeNode.height + 4 }
+    var versionBadgeFits: Bool {
+        if hudAir >= VersionBadgeNode.height + 4 { return true }
+        // Landscape on a phone: the band is down to 44 against a 36pt bar, so
+        // there is no air to centre in — but the badge lives in the gutter
+        // beside the board, and in landscape the gutter is hundreds of points
+        // wide. Clearing the board sideways is just as good as clearing it
+        // vertically, and this is Test Mode's only door on a touch device.
+        return gutterPinX + VersionBadgeNode.width(of: versionBadgeText) + 8
+            <= layout.boardOriginX
+    }
+
+    /// The left edge everything in the gutter is pinned to, stepped in past a
+    /// landscape phone's sensor housing.
+    var gutterPinX: CGFloat { 10 + safeAreaLeft }
 
     private var panelIsUp: Bool { settingsNode != nil || howToPlayNode != nil }
 
@@ -1569,10 +1599,10 @@ class GameScene: SKScene {
         // row sits in the gutter beside the board, and the spelled-out wording
         // runs onto the squares in a 640pt Mac window. 8pt of air beyond the
         // board's own edge, so the chips never touch the rank labels either.
-        let available = layout.boardOriginX - 10 - 8
+        let available = layout.boardOriginX - gutterPinX - 8
         testStrip.setCompact(TestModeStripNode.width(compact: false) > available)
         testStrip.position = CGPoint(
-            x: 10, y: versionBadge.position.y - VersionBadgeNode.height / 2 - 6)
+            x: gutterPinX, y: versionBadge.position.y - VersionBadgeNode.height / 2 - 6)
     }
 
     /// All three are dead outside play, exactly as the keys are — every one
@@ -3294,7 +3324,7 @@ class GameScene: SKScene {
                 ? HUDNode.compactNavRightMargin
                 : HUDNode.navRightMargin
             let target = CGPoint(
-                x: size.width - HUDNode.navDesignRight - rightMargin,
+                x: size.width - HUDNode.navDesignRight - rightMargin - safeAreaRight,
                 y: size.height - designSize.height - topInsetDrop)
             nav.position = CGPoint(x: (target.x - panel.position.x) / scale,
                                    y: (target.y - panel.position.y) / scale)
@@ -3429,6 +3459,12 @@ class GameScene: SKScene {
         if layout.squareSize != builtSquareSize || size != skyBuiltSize {
             rescaleDueAt = CACurrentMediaTime() + Self.rescaleSettleDelay
         }
+
+        // Idempotent, and cheap when nothing changed. `showHUD` applies the
+        // insets to a bar it has just built, but a rotation can report the new
+        // size before it reports the new insets, which leaves the rebuilt bar
+        // holding the old pair.
+        hudNode?.setSideInsets(left: safeAreaLeft, right: safeAreaRight)
 
         // The board carries its pieces with it — they are its children — so one
         // assignment moves the whole position.
