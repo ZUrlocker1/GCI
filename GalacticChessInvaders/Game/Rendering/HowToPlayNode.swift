@@ -49,6 +49,30 @@ final class HowToPlayNode: SKNode {
     /// `SKView` reads it to lay a cursor rect over the word.
     private(set) var linkRect: CGRect = .zero
 
+    /// The prose, written once.
+    ///
+    /// Both compositions say the same four things — the wide one in two columns,
+    /// the phone's in one — and they were two copies of the same sentences until
+    /// a wording change would have had to be made twice.
+    ///
+    /// Only the prose is shared. The control chips deliberately read differently
+    /// between the two ("Move the ship" against "Move the ship left or right"),
+    /// because the phone's column is narrower, and the Test Mode lines differ by
+    /// platform rather than by layout.
+    enum Copy {
+        static let twist = "A real chess game plays out — but Black's army is also an invader fleet. It slides sideways, drops down, and fires at you. You command White's moves and a laser ship at the bottom of the screen."
+
+        static let howToWin = "Clear the board: destroy every black piece by shooting it or capturing it in chess. Landing a shot on the black King ends the wave with a huge bonus."
+
+        static let history = "GCI began as a prototype in 1983 on the Apple II, written in TASC compiled BASIC. Now, with the help of Claude, you can experience a modern recharged version."
+
+        /// Read, not written: Cadet gets five lives and Ace three, and this said
+        /// "3" flatly for a while — wrong on Cadet, which is the default.
+        static func stayAlive(lives: Int) -> String {
+            "Guard your White King and your ship. You have \(lives) lives — lose one if a shot hits your ship or an invader reaches the bottom row."
+        }
+    }
+
     // Hardcoded layout coordinates derived from 960×700 scene with 36px HUD at top.
     // All y values are scene-space (0 = bottom, 700 = top).
     /// The panel's own composition. The scene scales and centres it, and
@@ -244,7 +268,7 @@ final class HowToPlayNode: SKNode {
         flowRule(flow, x: x, w: cw)
 
         flowHeading(flow, "THE TWIST", Self.cyan, x: x)
-        flowBody(flow, "A real chess game plays out — but Black's army is also an invader fleet. It slides sideways, drops down, and fires at you. You command White's moves and a laser ship at the bottom of the screen.", x: x, w: cw)
+        flowBody(flow, Copy.twist, x: x, w: cw)
 
         flowHeading(flow, "CONTROLS", Self.cyan, x: x)
         let keys = ["DRAG", "FIRE", "TAP", "KEYS"]
@@ -255,19 +279,19 @@ final class HowToPlayNode: SKNode {
         flowChip(flow, keys[3], "SPACE, ARROWS, ESC", keyChars: kw, x: x)
 
         flowHeading(flow, "HOW TO WIN", Self.cyan, x: x)
-        flowBody(flow, "Clear the board: destroy every black piece by shooting it or capturing it in chess. Landing a shot on the black King ends the wave with a huge bonus.", x: x, w: cw)
+        flowBody(flow, Copy.howToWin, x: x, w: cw)
 
         flowHeading(flow, "STAY ALIVE", Self.magenta, x: x)
         // Read, not written — `GameSettings.lives` gives Cadet five and Ace
         // three, exactly as the wide layout does.
         let lives = GameSettings.shared.lives
-        flowBody(flow, "Guard your White King and your ship. You have \(lives) lives — lose one if a shot hits your ship or an invader reaches the bottom row.", x: x, w: cw)
+        flowBody(flow, Copy.stayAlive(lives: lives), x: x, w: cw)
 
         flowHeading(flow, "SCORING", Self.magenta, x: x)
         flowScoring(flow, x: x, w: cw)
 
         flowHeading(flow, "HISTORY", Self.magenta, x: x)
-        flowBody(flow, "GCI began as a prototype in 1983 on the Apple II, written in TASC compiled BASIC. Now, with the help of Claude, you can experience a modern recharged version.", x: x, w: cw)
+        flowBody(flow, Copy.history, x: x, w: cw)
 
         flowHeading(flow, "TEST MODE", Self.cyan.withAlphaComponent(0.55), x: x)
         for line in ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
@@ -481,7 +505,7 @@ final class HowToPlayNode: SKNode {
         let x = Self.lx
         // — THE TWIST —
         heading("THE TWIST", Self.cyan, x: x, y: 562)
-        multiline("A real chess game plays out — but Black's army is also an invader fleet. It slides sideways, drops down, and fires at you. You command White's moves and a laser ship at the bottom of the screen.",
+        multiline(Copy.twist,
                   size: 12, maxW: Self.lw, x: x, y: 548)
 
         // — CONTROLS —
@@ -522,7 +546,7 @@ final class HowToPlayNode: SKNode {
 
         // — HISTORY —
         heading("HISTORY", Self.magenta, x: x, y: 203)
-        multiline("GCI began as a prototype in 1983 on the Apple II, written in TASC compiled BASIC. Now, with the help of Claude, you can experience a modern recharged version.",
+        multiline(Copy.history,
                   size: 12, maxW: Self.lw, x: x, y: 189)
     }
 
@@ -532,7 +556,7 @@ final class HowToPlayNode: SKNode {
         let x = Self.rx
         // — HOW TO WIN —
         heading("HOW TO WIN", Self.cyan, x: x, y: 562)
-        multiline("Clear the board: destroy every black piece by shooting it or capturing it in chess. Landing a shot on the black King ends the wave with a huge bonus.",
+        multiline(Copy.howToWin,
                   size: 12, maxW: Self.rw, x: x, y: 548)
 
         // — STAY ALIVE —
@@ -543,7 +567,7 @@ final class HowToPlayNode: SKNode {
         // lands. The HUD has always drawn the real number; this screen was the
         // only place claiming otherwise.
         let lives = GameSettings.shared.lives
-        multiline("Guard your White King and your ship. You have \(lives) lives — lose one if a shot hits your ship or an invader reaches the bottom row.",
+        multiline(Copy.stayAlive(lives: lives),
                   size: 12, maxW: Self.rw, x: x, y: 414)
 
         // — SCORING —

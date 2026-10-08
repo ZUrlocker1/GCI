@@ -171,6 +171,182 @@ final class SettingsNode: SKNode {
         addChild(bg)
     }
 
+    // MARK: - The controls, declared once
+    //
+    // Two compositions draw this screen — two columns on a Mac or an iPad, one
+    // long column on a phone in portrait — and each used to restate every row:
+    // its label, its value, its setter and the grey line under it, fourteen
+    // times over. Adding a setting meant two edits, and nothing made them agree.
+    //
+    // Only the *geometry* is per-layout now. Each builder below says where a row
+    // goes; what the row is lives here.
+
+    private enum ControlID {
+        case difficulty, chess, chessHints
+        case music, musicVolume, soundFX, soundVolume
+        case neonGlow, boardGrid, nebula, logPanel
+        case shipSpeed, highScores, allSettings
+    }
+
+    private struct Control {
+        enum Kind {
+            case segment(options: [String], selected: Int, set: (Int) -> Void)
+            case toggle(value: Bool, set: (Bool) -> Void)
+            case slider(fraction: CGFloat, readout: String, dimmed: Bool,
+                        defaultMark: CGFloat, set: (CGFloat) -> Void)
+            case button(title: String, tint: SKColor, action: () -> Void)
+        }
+        let label: String
+        let kind: Kind
+        /// The grey line under the row, where there is one.
+        let explain: String?
+    }
+
+    private func control(_ id: ControlID) -> Control {
+        // Both audio sliders are shown as a fraction of `audioMax`, so the
+        // shipped level reads as 75% with room above it.
+        let top = CGFloat(GameSettings.audioMax)
+        let shipped = 1.0 / top
+
+        switch id {
+        case .difficulty:
+            return Control(label: "DIFFICULTY",
+                           kind: .segment(options: ["CADET", "ACE"],
+                                          selected: settings.difficulty == .cadet ? 0 : 1) { index in
+                               self.settings.difficulty = index == 0 ? .cadet : .ace
+                           },
+                           explain: "SELECT CADET FOR AN EASIER ON RAMP.")
+
+        case .chess:
+            return Control(label: "CHESS",
+                           kind: .segment(options: ["YOU PLAY", "AUTO"],
+                                          selected: settings.autoChess ? 1 : 0) { index in
+                               self.settings.autoChess = index == 1
+                           },
+                           explain: "AUTOMATIC FAST CHESS PLAY FOR WHITE.")
+
+        case .chessHints:
+            return Control(label: "CHESS HINTS",
+                           kind: .toggle(value: settings.chessHints) {
+                               // Throwing the switch is what claims it from
+                               // difficulty. Set first, so the assignment below
+                               // does not look like difficulty's doing.
+                               self.settings.chessHintsUserSet = true
+                               self.settings.chessHints = $0
+                           },
+                           explain: "PULSE THE BEST PIECES TO MOVE")
+
+        case .music:
+            return Control(label: "MUSIC",
+                           kind: .toggle(value: settings.musicOn) { self.settings.musicOn = $0 },
+                           explain: nil)
+
+        case .musicVolume:
+            let fraction = CGFloat(settings.musicVolume) / top
+            return Control(label: "VOLUME",
+                           kind: .slider(fraction: fraction, readout: percent(fraction),
+                                         dimmed: !settings.musicOn, defaultMark: shipped) {
+                               self.settings.musicVolume = Float($0 * top)
+                           },
+                           explain: nil)
+
+        case .soundFX:
+            return Control(label: "SOUND FX",
+                           kind: .toggle(value: settings.soundOn) { self.settings.soundOn = $0 },
+                           explain: nil)
+
+        case .soundVolume:
+            let fraction = CGFloat(settings.soundVolume) / top
+            return Control(label: "VOLUME",
+                           kind: .slider(fraction: fraction, readout: percent(fraction),
+                                         dimmed: !settings.soundOn, defaultMark: shipped) {
+                               self.settings.soundVolume = Float($0 * top)
+                           },
+                           explain: nil)
+
+        case .neonGlow:
+            #if os(macOS)
+            let why = "TURN OFF ON A SLOWER MAC"
+            #else
+            let why = "TURN OFF ON A SLOWER DEVICE"
+            #endif
+            return Control(label: "NEON GLOW",
+                           kind: .toggle(value: settings.neonGlow) { self.settings.neonGlow = $0 },
+                           explain: why)
+
+        case .boardGrid:
+            return Control(label: "BOARD GRID",
+                           kind: .slider(fraction: settings.boardGrid,
+                                         readout: percent(settings.boardGrid),
+                                         dimmed: false, defaultMark: 0.5) {
+                               self.settings.boardGrid = $0
+                           },
+                           explain: "0% OPEN SPACE · 100% ROWS AND COLS")
+
+        case .nebula:
+            return Control(label: "NEBULA",
+                           kind: .toggle(value: settings.nebula) { self.settings.nebula = $0 },
+                           explain: "COLORED HAZE IN LATER LEVELS")
+
+        case .logPanel:
+            #if os(macOS)
+            let why = "SAME AS THE L KEY"
+            #else
+            let why = "LANDSCAPE ONLY · ALSO THE L KEY"
+            #endif
+            return Control(label: "LOG PANEL",
+                           kind: .toggle(value: settings.logPanel) { self.settings.logPanel = $0 },
+                           explain: why)
+
+        case .shipSpeed:
+            let range = GameSettings.shipSpeedRange
+            let span = range.upperBound - range.lowerBound
+            return Control(label: "SHIP SPEED",
+                           kind: .slider(fraction: (settings.shipSpeedScale - range.lowerBound) / span,
+                                         readout: percent(settings.shipSpeedScale),
+                                         dimmed: false, defaultMark: 0.5) { fraction in
+                               self.settings.shipSpeedScale = range.lowerBound + fraction * span
+                           },
+                           explain: "DEFAULT IS PLAYTESTED")
+
+        case .highScores:
+            return Control(label: "HIGH SCORES",
+                           kind: .button(title: "RESET", tint: Self.magenta) {
+                               ScoreManager.shared.clearHighScores()
+                           },
+                           explain: "BACK TO ORIGINAL SCORES")
+
+        case .allSettings:
+            return Control(label: "ALL SETTINGS",
+                           kind: .button(title: "RESTORE", tint: Self.cyan) {
+                               self.settings.restoreDefaults()
+                           },
+                           explain: nil)
+        }
+    }
+
+    /// Draws one control at the position the caller chose.
+    private func place(_ id: ControlID, x: CGFloat, w: CGFloat, y: CGFloat) {
+        let c = control(id)
+        switch c.kind {
+        case let .segment(options, selected, set):
+            segmentRow(c.label, x: x, w: w, y: y, options: options, selected: selected, set: set)
+        case let .toggle(value, set):
+            toggleRow(c.label, x: x, w: w, y: y, value: value, set: set)
+        case let .slider(fraction, readout, dimmed, defaultMark, set):
+            sliderRow(c.label, x: x, w: w, y: y, fraction: fraction, readout: readout,
+                      dimmed: dimmed, defaultMark: defaultMark, set: set)
+        case let .button(title, tint, action):
+            buttonRow(c.label, title, x: x, w: w, y: y, tint: tint, run: action)
+        }
+    }
+
+    /// The grey line under a control, where the caller wants one drawn.
+    private func explain(_ id: ControlID, x: CGFloat, y: CGFloat) {
+        guard let text = control(id).explain else { return }
+        explain(text, x: x, y: y)
+    }
+
     private func rebuild() {
         content.removeAllChildren()
         hits.removeAll()
@@ -209,121 +385,30 @@ final class SettingsNode: SKNode {
         flowY += 14
         content.addChild(hline(x: x, y: -flowY, w: w))
 
+        // The same order as the two-column layout read in, down one column.
         flowHeading("GAMEPLAY", Self.magenta, x: x)
-        flowRow { y in
-            self.segmentRow("DIFFICULTY", x: x, w: w, y: y,
-                            options: ["CADET", "ACE"],
-                            selected: self.settings.difficulty == .cadet ? 0 : 1) { index in
-                self.settings.difficulty = index == 0 ? .cadet : .ace
-            }
-        }
-        flowExplain("SELECT CADET FOR AN EASIER ON RAMP.", x: x)
-        flowRow { y in
-            self.segmentRow("CHESS", x: x, w: w, y: y,
-                            options: ["YOU PLAY", "AUTO"],
-                            selected: self.settings.autoChess ? 1 : 0) { index in
-                self.settings.autoChess = index == 1
-            }
-        }
-        flowExplain("AUTOMATIC FAST CHESS PLAY FOR WHITE.", x: x)
-        flowRow { y in
-            self.toggleRow("CHESS HINTS", x: x, w: w, y: y,
-                           value: self.settings.chessHints) {
-                self.settings.chessHintsUserSet = true
-                self.settings.chessHints = $0
-            }
-        }
-        flowExplain("PULSE THE BEST PIECES TO MOVE", x: x)
+        flowControl(.difficulty, x: x, w: w)
+        flowControl(.chess, x: x, w: w)
+        flowControl(.chessHints, x: x, w: w)
 
         flowHeading("AUDIO", Self.cyan, x: x)
-        let top = CGFloat(GameSettings.audioMax)
-        let shipped = 1.0 / top
-        flowRow { y in
-            self.toggleRow("MUSIC", x: x, w: w, y: y, value: self.settings.musicOn) {
-                self.settings.musicOn = $0
-            }
-        }
-        let music = CGFloat(settings.musicVolume) / top
-        flowRow { y in
-            self.sliderRow("VOLUME", x: x, w: w, y: y, fraction: music,
-                           readout: self.percent(music), dimmed: !self.settings.musicOn,
-                           defaultMark: shipped) {
-                self.settings.musicVolume = Float($0 * top)
-            }
-        }
-        flowRow { y in
-            self.toggleRow("SOUND FX", x: x, w: w, y: y, value: self.settings.soundOn) {
-                self.settings.soundOn = $0
-            }
-        }
-        let effects = CGFloat(settings.soundVolume) / top
-        flowRow { y in
-            self.sliderRow("VOLUME", x: x, w: w, y: y, fraction: effects,
-                           readout: self.percent(effects), dimmed: !self.settings.soundOn,
-                           defaultMark: shipped) {
-                self.settings.soundVolume = Float($0 * top)
-            }
-        }
+        flowControl(.music, x: x, w: w)
+        flowControl(.musicVolume, x: x, w: w)
+        flowControl(.soundFX, x: x, w: w)
+        flowControl(.soundVolume, x: x, w: w)
 
         flowHeading("DISPLAY", Self.cyan, x: x)
-        flowRow { y in
-            self.toggleRow("NEON GLOW", x: x, w: w, y: y, value: self.settings.neonGlow) {
-                self.settings.neonGlow = $0
-            }
-        }
-        flowExplain("TURN OFF ON A SLOWER DEVICE", x: x)
-        flowRow { y in
-            self.sliderRow("BOARD GRID", x: x, w: w, y: y,
-                           fraction: self.settings.boardGrid,
-                           readout: self.percent(self.settings.boardGrid),
-                           dimmed: false, defaultMark: 0.5) {
-                self.settings.boardGrid = $0
-            }
-        }
-        flowExplain("0% OPEN SPACE · 100% ROWS AND COLS", x: x)
-        flowRow { y in
-            self.toggleRow("NEBULA", x: x, w: w, y: y, value: self.settings.nebula) {
-                self.settings.nebula = $0
-            }
-        }
-        flowExplain("COLORED HAZE IN LATER LEVELS", x: x)
-        if showsLogRow {
-            flowRow { y in
-                self.toggleRow("LOG PANEL", x: x, w: w, y: y,
-                               value: self.settings.logPanel) {
-                    self.settings.logPanel = $0
-                }
-            }
-            flowExplain("LANDSCAPE ONLY · ALSO THE L KEY", x: x)
-        }
+        flowControl(.neonGlow, x: x, w: w)
+        flowControl(.boardGrid, x: x, w: w)
+        flowControl(.nebula, x: x, w: w)
+        if showsLogRow { flowControl(.logPanel, x: x, w: w) }
 
         flowHeading("CONTROLS", Self.cyan, x: x)
-        let range = GameSettings.shipSpeedRange
-        let span = range.upperBound - range.lowerBound
-        flowRow { y in
-            self.sliderRow("SHIP SPEED", x: x, w: w, y: y,
-                           fraction: (self.settings.shipSpeedScale - range.lowerBound) / span,
-                           readout: self.percent(self.settings.shipSpeedScale),
-                           dimmed: false, defaultMark: 0.5) { fraction in
-                self.settings.shipSpeedScale = range.lowerBound + fraction * span
-            }
-        }
-        flowExplain("DEFAULT IS PLAYTESTED", x: x)
+        flowControl(.shipSpeed, x: x, w: w)
 
         flowHeading("DATA", Self.magenta, x: x)
-        flowRow { y in
-            self.buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: y,
-                           tint: Self.magenta) {
-                ScoreManager.shared.clearHighScores()
-            }
-        }
-        flowExplain("BACK TO ORIGINAL SCORES", x: x)
-        flowRow { y in
-            self.buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: y,
-                           tint: Self.cyan) {
-                self.settings.restoreDefaults()
-            }
-        }
+        flowControl(.highScores, x: x, w: w)
+        flowControl(.allSettings, x: x, w: w)
 
         flowY += 26
         content.addChild(hline(x: x, y: -flowY, w: w))
@@ -359,22 +444,20 @@ final class SettingsNode: SKNode {
         buildPortraitBackButton()
     }
 
-    /// Advances the cursor by one row's height and hands the builder the
-    /// baseline to draw on. The rows centre themselves on the y they are given.
-    private func flowRow(_ build: (CGFloat) -> Void) {
+    /// One control and its explanatory line, placed at the cursor.
+    private func flowControl(_ id: ControlID, x: CGFloat, w: CGFloat) {
         flowY += 20
-        build(-flowY)
+        place(id, x: x, w: w, y: -flowY)
         flowY += 12
+        if control(id).explain != nil {
+            flowY += 18
+            explain(id, x: x, y: -flowY)
+        }
     }
 
     private func flowHeading(_ text: String, _ color: SKColor, x: CGFloat) {
         flowY += 32
         heading(text, color, x: x, y: -flowY)
-    }
-
-    private func flowExplain(_ text: String, x: CGFloat) {
-        flowY += 18
-        explain(text, x: x, y: -flowY)
     }
 
     private func buildPortraitBackButton() {
@@ -418,91 +501,31 @@ final class SettingsNode: SKNode {
         // Gameplay leads. Difficulty is the most consequential control on the
         // screen, and it used to sit underneath two volume sliders.
         heading("GAMEPLAY", Self.magenta, x: x, y: 540)
-        segmentRow("DIFFICULTY", x: x, w: w, y: 512,
-                   options: ["CADET", "ACE"],
-                   selected: settings.difficulty == .cadet ? 0 : 1) { index in
-            self.settings.difficulty = index == 0 ? .cadet : .ace
-        }
-        explain("SELECT CADET FOR AN EASIER ON RAMP.", x: x, y: 488)
-
-        segmentRow("CHESS", x: x, w: w, y: 456,
-                   options: ["YOU PLAY", "AUTO"],
-                   selected: settings.autoChess ? 1 : 0) { index in
-            self.settings.autoChess = index == 1
-        }
-        explain("AUTOMATIC FAST CHESS PLAY FOR WHITE.", x: x, y: 432)
-
-        toggleRow("CHESS HINTS", x: x, w: w, y: 400, value: settings.chessHints) {
-            // Throwing the switch is what claims it from difficulty. Set first,
-            // so the assignment below does not look like difficulty's doing.
-            self.settings.chessHintsUserSet = true
-            self.settings.chessHints = $0
-        }
-        explain("PULSE THE BEST PIECES TO MOVE", x: x, y: 376)
+        place(.difficulty, x: x, w: w, y: 512);   explain(.difficulty, x: x, y: 488)
+        place(.chess, x: x, w: w, y: 456);        explain(.chess, x: x, y: 432)
+        place(.chessHints, x: x, w: w, y: 400);   explain(.chessHints, x: x, y: 376)
 
         heading("AUDIO", Self.cyan, x: x, y: 340)
-        // Both audio sliders are shown as a fraction of `audioMax`, so the
-        // shipped level reads as 75% with room above it — see `audioMax`.
-        let top = CGFloat(GameSettings.audioMax)
-        let shipped = 1.0 / top
-
-        toggleRow("MUSIC", x: x, w: w, y: 312, value: settings.musicOn) {
-            self.settings.musicOn = $0
-        }
-        let music = CGFloat(settings.musicVolume) / top
-        sliderRow("VOLUME", x: x, w: w, y: 280, fraction: music,
-                  readout: percent(music), dimmed: !settings.musicOn,
-                  defaultMark: shipped) {
-            self.settings.musicVolume = Float($0 * top)
-        }
-        toggleRow("SOUND FX", x: x, w: w, y: 244, value: settings.soundOn) {
-            self.settings.soundOn = $0
-        }
-        let effects = CGFloat(settings.soundVolume) / top
-        sliderRow("VOLUME", x: x, w: w, y: 212, fraction: effects,
-                  readout: percent(effects), dimmed: !settings.soundOn,
-                  defaultMark: shipped) {
-            self.settings.soundVolume = Float($0 * top)
-        }
+        place(.music, x: x, w: w, y: 312)
+        place(.musicVolume, x: x, w: w, y: 280)
+        place(.soundFX, x: x, w: w, y: 244)
+        place(.soundVolume, x: x, w: w, y: 212)
     }
 
     private func buildRightColumn() {
         let x = Self.rx, w = Self.rw
 
         heading("DISPLAY", Self.cyan, x: x, y: 540)
-        toggleRow("NEON GLOW", x: x, w: w, y: 512, value: settings.neonGlow) {
-            self.settings.neonGlow = $0
-        }
-        #if os(macOS)
-        explain("TURN OFF ON A SLOWER MAC", x: x, y: 490)
-        #else
-        explain("TURN OFF ON A SLOWER DEVICE", x: x, y: 490)
-        #endif
-
-        sliderRow("BOARD GRID", x: x, w: w, y: 460, fraction: settings.boardGrid,
-                  readout: percent(settings.boardGrid), dimmed: false, defaultMark: 0.5) {
-            self.settings.boardGrid = $0
-        }
-        explain("0% OPEN SPACE · 100% ROWS AND COLS", x: x, y: 435)
-
-        toggleRow("NEBULA", x: x, w: w, y: 408, value: settings.nebula) {
-            self.settings.nebula = $0
-        }
-        explain("COLORED HAZE IN LATER LEVELS", x: x, y: 386)
+        place(.neonGlow, x: x, w: w, y: 512);  explain(.neonGlow, x: x, y: 490)
+        place(.boardGrid, x: x, w: w, y: 460); explain(.boardGrid, x: x, y: 435)
+        place(.nebula, x: x, w: w, y: 408);    explain(.nebula, x: x, y: 386)
 
         // Only inside Test Mode — see `GameScene.toggleDiagnostics`. The row
         // is omitted rather than dimmed, because a disabled switch invites the
         // question "how do I enable this?" for a control nobody outside
         // testing wants.
         if showsLogRow {
-            toggleRow("LOG PANEL", x: x, w: w, y: 358, value: settings.logPanel) {
-                self.settings.logPanel = $0
-            }
-            #if os(macOS)
-            explain("SAME AS THE L KEY", x: x, y: 336)
-            #else
-            explain("LANDSCAPE ONLY · ALSO THE L KEY", x: x, y: 336)
-            #endif
+            place(.logPanel, x: x, w: w, y: 358); explain(.logPanel, x: x, y: 336)
         }
 
         // The right column closes up when the LOG PANEL row is absent, so Test
@@ -510,24 +533,13 @@ final class SettingsNode: SKNode {
         let drop: CGFloat = showsLogRow ? 0 : 52
 
         heading("CONTROLS", Self.cyan, x: x, y: 305 + drop)
-        let range = GameSettings.shipSpeedRange
-        let span = range.upperBound - range.lowerBound
-        sliderRow("SHIP SPEED", x: x, w: w, y: 277 + drop,
-                  fraction: (settings.shipSpeedScale - range.lowerBound) / span,
-                  readout: percent(settings.shipSpeedScale), dimmed: false,
-                  defaultMark: 0.5) { fraction in
-            self.settings.shipSpeedScale = range.lowerBound + fraction * span
-        }
-        explain("DEFAULT IS PLAYTESTED", x: x, y: 252 + drop)
+        place(.shipSpeed, x: x, w: w, y: 277 + drop)
+        explain(.shipSpeed, x: x, y: 252 + drop)
 
         heading("DATA", Self.magenta, x: x, y: 199 + drop)
-        buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: 171 + drop, tint: Self.magenta) {
-            ScoreManager.shared.clearHighScores()
-        }
-        explain("BACK TO ORIGINAL SCORES", x: x, y: 149 + drop)
-        buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: 121 + drop, tint: Self.cyan) {
-            self.settings.restoreDefaults()
-        }
+        place(.highScores, x: x, w: w, y: 171 + drop)
+        explain(.highScores, x: x, y: 149 + drop)
+        place(.allSettings, x: x, w: w, y: 121 + drop)
     }
 
     private func buildFooter() {
