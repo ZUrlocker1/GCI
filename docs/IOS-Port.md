@@ -60,6 +60,11 @@ chrome, and that crossing a threshold does not make the board jump.
 
 ### The HUD bar
 
+The bar was composed on a 960pt canvas. Its left block ends at 312 and the nav
+cluster is 226 wide with a 70pt right margin, so it wants 608pt before LEVEL is
+given a single point — and a phone has 375 to 440. The threshold is 700 rather
+than 608 to keep a margin either side of the exact fit.
+
 Below 700pt wide the bar reflows: five life sprites become one ship and a count,
 the buttons lose their padding, the right margin goes from 70pt to 8, and LEVEL
 shortens to `L 01` or hides when even that will not fit. Nothing is dropped.
@@ -88,15 +93,57 @@ every size, so the player is never forced to shoot through their own pieces.
 ## Touch input
 
 Every input arrives as a `GameAction`, so the Logic layer is unchanged from the
-Mac. `TouchInputAdapter` and `KeyboardInputAdapter` are the iOS halves.
+Mac. `TouchInputAdapter` and `KeyboardInputAdapter` are the iOS halves, and the
+whole of the macOS coupling is six things outside the app shell: five event
+overrides in `GameScene` and one method on `HighScoreEntryNode`.
 
 - **Drag** the ship left and right.
 - **Hold FIRE** to shoot. There is no auto-fire.
 - **Tap** a piece and tap its square; dragging a piece works too.
 - A hardware keyboard drives everything it does on the Mac — SPACE, arrows, ESC.
 
-Name entry uses the system keyboard, raised on a tap and warmed at the title
-screen.
+### Keyboard handlers stay; the affordances go
+
+Every `keyDown` path is kept, so an iPad in a Magic Keyboard behaves exactly as
+the Mac does — `⌘T` and the debug keys included. What comes off on iOS is the
+*advertising*: the underlined hotkey letter in SET and INFO, because a button
+that sometimes claims a shortcut is worse than one that never does.
+
+The copy that named keys was rewritten for touch — `TAP TO START`, `TAP BACK TO
+RESUME`, `TAP THE FIRE BUTTON!` — as one function returning either string
+rather than two code paths, since the Mac wording is still better where a
+keyboard is attached.
+
+### Name entry
+
+A touch-only player has to be able to type a high-score name, and this is the
+one place that needs the system keyboard. `NameEntryField` is a 1×1
+`UITextField` in clear colours holding first responder only while the entry
+screen is up; input is uppercased and filtered to printable ASCII, because
+Press Start 2P has glyphs for nothing else. The scene still draws the name —
+the field is a keyboard, not a text box.
+
+Four things about it are load-bearing, and all four were found on device:
+
+1. **It is summoned by a tap, never automatically.** The first keyboard
+   presentation in a session measured 690ms to 4.4s on an A12, main thread
+   blocked and audio distorting throughout. That cannot land on the end of a
+   winning run.
+2. **The cost is paid at the title screen.** `warmKeyboard()` takes first
+   responder and resigns in the same turn, two seconds after the title draws.
+   The title screen specifically, because every run passes through it before a
+   score exists.
+3. **`claimKeyboard` stands down while name entry is active.** The view claims
+   the keyboard on every SwiftUI pass, so without this every logged line took
+   first responder straight back off the field.
+4. **The overlay lifts clear of the keyboard** by half of what it covers, from
+   `keyboardWillChangeFrameNotification` intersected against the view's bounds.
+   That handles iPad's floating and split keyboards by the same path as the
+   docked one.
+
+A **DONE** button is the only way off the screen when no keyboard appears — a
+connected but flat hardware keyboard is enough for iOS to suppress the software
+one. It submits rather than discards, and an empty field falls back to PLAYER.
 
 ---
 
@@ -112,6 +159,73 @@ The **diagnostics log is landscape only**, on every device including iPhone. The
 rule is a plain orientation test in `GCIiOSApp.swift`; there is no device check.
 On a phone the sidebar takes real width off the board, so it is a diagnostic
 posture rather than a way to play.
+
+---
+
+## What iOS needs that the Mac does not
+
+These have no macOS equivalent and are all built.
+
+**The audio session.** `AVAudioPlayer` makes no sound on iOS until a session is
+configured and active, and that is the most common reason a ported game ships
+silent. GCI uses `.ambient` with `.mixWithOthers`: a game with a soundtrack
+should let someone keep their own music playing underneath, and should respect
+the ringer switch.
+
+**Interruptions.** A phone call, Siri, or another app taking the route stops
+every player without telling the game. Reactivating the session on return is
+what brings the soundtrack back; without it the music simply never comes back.
+
+**App lifecycle.** Backgrounding is aggressive and common on a phone, so a
+`scenePhase` change pauses the beat clock and the fleet. The `maxFrameDelta`
+clamp already protects against a huge `dt` on resume, but pausing is the
+correct behaviour rather than relying on the clamp to absorb it.
+
+**Not built, and optional: haptics.** A laser shot and a piece destroyed are
+natural taps, and `CoreHaptics` is cheap to add. It would make the game feel
+better on a phone and nothing depends on it.
+
+---
+
+## The sound engine
+
+Worth understanding before touching audio, because the shape of it is what
+holds the frame rate.
+
+`AudioManager` plays every effect through one `AVAudioEngine`. Each sound is
+decoded once at launch into an `AVAudioPCMBuffer`, and a fixed pool of **eight**
+`AVAudioPlayerNode`s stays running for the life of the app. Firing a sound is
+`scheduleBuffer` on a node that is already going.
+
+The alternative — a pool of `AVAudioPlayer` per sound — costs far too much per
+call. Medians of 20, file already loaded, player reused:
+
+| | |
+|---|---|
+| `AVAudioPlayer.play()` | **11.7ms**, every call |
+| starting a stopped `AVAudioPlayerNode` | 10.9ms |
+| `scheduleBuffer` on a running node | **0.000ms** |
+
+Two sounds in a frame was the whole 16.7ms budget. Four things about the design
+are load-bearing:
+
+- **One canonical format** — mono, 44.1kHz, float32 — converted at load. The
+  source assets are not uniform and a node is wired to the mixer in a single
+  format, so converting once is what buys a *shared* pool. Resident cost is
+  8.2MB for 48.9 seconds of audio.
+- **Eight voices, not more.** Every running node is pulled by the render thread
+  each cycle and summed whether or not it has anything to play, so an idle pool
+  is not free. Twenty-four overloaded an A12, audible as distortion at the title
+  screen with nothing playing. They cannot be started on demand instead — that
+  is the 10.9ms above.
+- **Dropped, not stolen, when the pool is full.** Stealing a live voice measured
+  23ms.
+- **The engine stops when SOUND FX is off**, rather than mixing eight silent
+  voices every cycle.
+
+`AudioEnginePathTests` pins both halves: firing costs under 1ms, and voices come
+back when a sound ends. A pool that leaks them goes silent after eight sounds
+and nothing else would notice.
 
 ---
 
