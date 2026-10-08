@@ -633,6 +633,24 @@ both far below this whole range.
 Test each in **both orientations**. The portrait and landscape compositions are different
 layouts, not scaled versions of each other.
 
+**Result, 8 Oct — the SE passes, both orientations.** Zack ran 1.4 build 11 at 375 × 667
+and 667 × 375. His verdict: *"seems to work. its a bit cramped but its ok."* Accepted as
+shipped; nothing was changed for it.
+
+That was the run worth having, because the SE is the only supported phone with **no
+safe-area insets at all** — no island, no home indicator, square corners. Every rule added
+on 8 Oct for the notch collapses to its floor there: `edgeInsetLeft/Right` fall back to
+the landscape corner clearance, `topInsetDrop` is zero, and the version badge sits where
+it was drawn. Those paths had been reasoned about and never seen until this run.
+
+Two observations kept rather than acted on, since the screens were accepted as they are:
+
+- **Landscape has dead space under the board**, roughly 100pt between the last rank and
+  the ship's lane. If "cramped" ever becomes "too cramped", that is where the room is —
+  the board could take some of it rather than the squares getting smaller.
+- **The version badge draws its long form in landscape** (`GCI V1.4 B11`) and its short
+  one in portrait (`V1.4 B11`), which is the width-driven behaviour working, not a bug.
+
 ### Pass 4 — iPhone portrait
 
 The hard one, and the one to decide honestly rather than force.
