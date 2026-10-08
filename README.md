@@ -1,13 +1,13 @@
 # Galactic Chess Invaders
 
-Galactic Chess Invaders is an arcade–chess hybrid for macOS. A real game of chess plays out on
-screen — legal moves, real check and checkmate, a live engine playing Black — except Black's pieces
-are simultaneously an arcade invader fleet, sweeping sideways, descending a rank at a time, and
+Galactic Chess Invaders is an arcade–chess hybrid. A real game of chess plays out on screen —
+legal moves, real check and checkmate, a live engine playing Black — except Black's pieces are
+simultaneously an arcade invader fleet, sweeping sideways, descending a rank at a time, and
 shooting at you.
 
-You play both halves at once. You command White's moves with the mouse, and a laser ship at the
-bottom of the board with the keyboard, against a five-second turn clock. Arcade reflex decides
-whether you survive; the chess decides what you are surviving against.
+You play both halves at once. You command White's moves, and a laser ship at the bottom of the
+board, against a five-second turn clock. Arcade reflex decides whether you survive; the chess
+decides what you are surviving against.
 
 ![Galactic Chess Invaders title screen](docs/GCI%20title.jpg)
 
@@ -26,75 +26,68 @@ clock and comes apart as you play it.
 
 <a href="https://www.youtube.com/watch?v=yVaNIPDnGa0"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
 
-**Available on the Mac App Store** — [Galactic Chess Invaders](https://apps.apple.com/us/app/galactic-chess-invaders/id6811389163). Free, no ads, no in-app purchases, and nothing collected.
+---
+
+## Getting it
+
+**Mac App Store** — [Galactic Chess Invaders](https://apps.apple.com/us/app/galactic-chess-invaders/id6811389163).
+Free, no ads, no in-app purchases, and nothing collected.
 
 Or [download the DMG for macOS](https://github.com/ZUrlocker1/GCI/raw/main/GCI-1.3.dmg) directly.
+Open it and drag Galactic Chess Invaders to your Applications folder.
 
-Current release: `1.3` (build 10) — the DMG above.
-Universal binary — runs natively on both Apple Silicon and Intel
-Macs, signed and notarized. Download the DMG disk image file, open it, and drag Galactic Chess
-Invaders to your Applications folder. Or build it from source with Xcode (see [SETUP.md](SETUP.md)).
+**Current release: 1.3 (build 10)** — a universal binary, signed and notarized, running natively on
+Apple Silicon and Intel. You can also build it from source with Xcode; see [SETUP.md](SETUP.md).
 
-**It also runs on iPad and iPhone.** The same codebase builds for all three: the whole game
-is playable by touch — drag the ship, hold FIRE, tap or drag a piece to its square. iPad has
-been checked on five sizes in both orientations (1.3); iPhone works in both orientations and
-has been checked on an iPhone SE, a 16e and a 17 Pro Max (1.4, in testing).
+## Platforms
 
-On a phone the game lays itself out differently rather than shrinking: in portrait the board
-takes the full width and the hints move underneath it, the top bar reflows to fit, and
-Settings and How To Play become one readable column instead of two tiny ones.
+The same codebase builds for Mac, iPad and iPhone.
 
-The DMG above is macOS, as is the App Store listing; the touch builds are in testing and not
-yet on the store. Build one from source today (see [SETUP.md](SETUP.md)), or see
+| | State |
+|---|---|
+| **Mac** | Shipped. The DMG above and the App Store listing. |
+| **iPad** | Playable by touch, checked on five sizes in both orientations. In testing. |
+| **iPhone** | Playable by touch, both orientations, checked on three sizes. In testing (1.4). |
+
+On a phone the game lays itself out differently rather than shrinking: in portrait the board takes
+the full width and the readouts move underneath it, the top bar reflows to fit, and the Settings and
+How To Play screens become one readable column instead of two small ones.
+
+The touch builds are not on the store yet. Build one from source today, or see
 [IOS-Port.md](docs/IOS-Port.md) for where the port stands.
 
-**What's new in v1.3** — iPad Port and optimized sound engine:
+## Playing it
 
-- **Heavy fire no longer costs frames.** Sound effects are decoded once at launch and played from a pool of voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot — **11.7ms a shot, down to 0.03ms**. A Mac that dropped into the 40fps under sustained fire, and an iPad mini that dropped into the 20s, both hold 60 fps now.
-- **Clearing the last wave says so** instead of holding on a silent board until the high score panel appears.
-- **A bigger board on iPad in portrait**, and in any narrow window — the left column was reserving space for type larger than it ever draws there. Up to 64pt more board; landscape is unchanged.
-- **Test Mode is the same on both platforms** — click and hold the version badge to arm it, tap it to clear. The Mac keeps `⌘T` and the keys too.
-- **Tested on five iPad sizes**, both orientations — iPad Pro 13-inch and 11-inch (M5), iPad (A16) and iPad mini 6 in the simulator, plus a physical iPad mini 5.
+| | |
+|---|---|
+| **Mac** | Arrows or `A`/`D` move the ship, `SPACE` fires, click a piece then its square. `ESC` pauses, `Q` quits, `M` mutes. |
+| **Touch** | Drag the ship, hold FIRE, tap a piece then its square. A hardware keyboard works too. |
 
-**What's new in v1.2** — the release that prepares the Mac game for iPad and iPhone:
+**Test Mode** is a cheat mode and a diagnostic. Press `⌘T` on a Mac, or hold the version badge on
+any device. It unlocks four debug keys and a log panel:
 
-- **Better window resizing.** The board and the readouts lay themselves out from the space available instead of being scaled into a fixed canvas. Everything on the playfield — the ship, the lasers, the raiders, the explosions — is sized against the board rather than staying as drawn.
-- **Lighter on the CPU.** Readouts redraw when they change rather than on every frame, and the title screen no longer re-renders its own type sixty times a second — that alone took it from 53% CPU to under 40%. Steady 60fps throughout.
-- **The Nuke hits harder.** Its own screen shake, and slow motion that no longer snaps.
-- **The log panel moved behind Test Mode.** Press `⌘T`, then `L`.
-- Groundwork for the iPad and iPhone port — see [IOS-Port.md](docs/IOS-Port.md).
-
-**What's new in v1.1:**
-
-- **Cadet is now the default difficulty**, and the harder mode is **Ace**.
-  Chess Hints are on for Cadet, off for Ace by default, but can be changed.
-- **Chess Hints** — the pieces worth moving glow, and the gutter names them:
-  `MOVE A PAWN`, or `MOVE A PAWN / OR KNIGHT` etc.
-- **Arcade Hints** — Similarly a message is displayed if the user goes 3 moves
-  without firing, or does not use the arrow keys. A message is also displayed
-  in red if they hit their own piece a second time. Hints rearm at each level.
-
-**What's new in v1.0:**
-
-- Minor edits. First official release.
-
-Earlier releases are in the [change log](docs/change-log.md).
-
-**Status:** The game is fully functional and feature complete. It is playable with all ten levels,
-power-ups and full arcade audio. `M` mutes the music from anywhere. Press `⌘T` for Test Mode, which
-unlocks the diagnostics log on `L` and 4 debug keys:
-
+- `L` the diagnostics log (landscape only on iOS)
 - `A` plays White automatically, at speed
 - `P` grants the next power-up
 - `R` sends the next raider
 - `V` skips to the next level
 
-**Next steps:**
+The game is feature complete: ten levels, every power-up, a settings screen, its own soundtrack and
+full arcade audio. Play testing feedback is welcome.
 
-- Play testing to adjust levels, speed, difficulty, etc. Feedback welcome!
-- Add arcade soundtrack for each specific level
+## What's new
 
-**History:**
+**1.4 — iPhone** *(in testing)*. The game runs on iPhone in both orientations. In portrait the
+readouts move under the board so the squares get the full width, the top bar reflows, and Settings
+and How To Play become one readable column.
+
+**1.3 — iPad, and sound without the stutter.** The game runs on iPad. Heavy fire no longer costs
+frames: sound effects are decoded once at launch and played from a pool of running voices —
+11.7ms a shot down to 0.03ms.
+
+Every release is in the [change log](docs/change-log.md).
+
+## History
 
 The original was prototyped in 1983 on an Apple II in TASC-compiled Applesoft BASIC. This version is
 written in Swift 6 and SpriteKit with no third-party dependencies, and was developed with Claude —
@@ -105,22 +98,22 @@ this repository.
 
 ## Documentation
 
-### Design
+**Design**
 
 - [gci-design-brief.pdf](docs/gci-design-brief.pdf) — the original design brief, and the best short
   introduction to what the game is trying to be.
 - [gci-game-design.md](docs/gci-game-design.md) — the full design document: every rule, mechanic,
   level, sprite spec, sound and screen. The authoritative source, and what the code cites by section
-  number throughout. Appendix A covers an eventual iOS and iPadOS port, which is not scheduled — the
-  architecture rules that keep it possible are followed in the macOS build regardless.
+  number throughout.
 - [art-handoff.md](docs/art-handoff.md) — the visual handoff written before any code existed: screen
   layouts, HUD, FX language, design tokens and the sprite system.
 
-### Build
+**Build**
 
 - [implementation.md](docs/implementation.md) — what is actually built, phase by phase, against the
-  design doc's plan. Includes every deviation from the spec and why it was taken, and the playtest
-  fixes that shaped the game.
+  design doc's plan. Includes every deviation from the spec and why it was taken.
+- [IOS-Port.md](docs/IOS-Port.md) — how the scene lays itself out, what is tested on which device,
+  and what is left.
 - [change-log.md](docs/change-log.md) — every release, newest first.
 - [SETUP.md](SETUP.md) — building from a fresh clone.
 - [CLAUDE.md](CLAUDE.md) — architecture rules, layer separation and performance constraints. Written
