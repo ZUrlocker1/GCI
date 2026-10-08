@@ -992,29 +992,76 @@ landscape. Portrait screenshots are the title and gameplay, which do fill it.
 
 ---
 
-## 8. Refactoring worth doing regardless
+## 8. Refactoring: measured, and mostly declined
 
-**`GameScene.swift` is 6,228 lines** — it was 4,826 when this was written, so the
-problem has grown rather than shrunk. It is the single biggest obstacle to a clean port
-and the thing most likely to make the iOS work painful. It currently holds the update
-loop, all input entry points, layout, chess flow, fleet coordination, power-ups,
-effects, banners, high-score prompting and game-over handling.
+**`GameScene.swift` was 6,390 lines.** Earlier revisions of this section proposed
+splitting it into `HUDCoordinator` and `BeatCoordinator`. **That plan is withdrawn.**
+On 8 October 2026 it was measured rather than estimated, and the measurements do not
+support it.
 
-Proposed split, in the order that pays off soonest:
+### What the measurement found
 
-1. ~~**`SceneLayout`**~~ — done in 1.2.
-2. ~~**Input adapters**~~ — done: `MacInputAdapter`, `TouchInputAdapter`,
-   `KeyboardInputAdapter` and `NameEntryField` all live in `Game/Input` and emit
-   `GameAction`. A `ControllerInputAdapter` would slot in beside them.
-3. **`HUDCoordinator`** — the turn timer, status banner, power-up alley, Chess Hints and
-   Arcade Hints are all gutter furniture with their own lifecycle. They are the parts
-   that move most between layouts, and they are currently interleaved with gameplay.
-4. **`BeatCoordinator`** — `beginBeat` / `resolveBeat` / `playBlackMoves` are the game's
-   clock and the least visual part of the scene.
+One class body, no extensions: 136 stored properties and 211 methods, all mutually
+visible. The obvious move is to split it into `extension GameScene` files. Swift's
+`private` is visible to extensions **only in the same file**, so that split has a price:
 
-**Two smaller items:**
+| | |
+|---|---|
+| private members | 279 of 404 |
+| referenced across section boundaries | **203** |
+| widening 47 of them to `internal` frees | **4 sections, 448 lines** |
 
-- ~~`HighScoreEntryNode.handleKey(_ event: NSEvent)`~~ — done; it takes a `KeyPress`.
+Opening 203 members — or 47 for 448 lines — is a worse state than one long file. A file
+you can grep is better than a module whose every internal is reachable from anywhere.
+
+Two further findings, both of which invalidate the old plan directly:
+
+1. **The `// MARK:` headers are stale.** "Slow motion" is followed by ~170 lines of
+   unrelated state; "Regeneration (§23.9) and armored pawns" is actually the power-up
+   alley's HUD. Any plan written by reading the section headers — which is what the
+   `HUDCoordinator` / `BeatCoordinator` proposal was — is planning against labels rather
+   than against code.
+2. **The extractable logic has already been extracted.** `Game/Logic/` holds twenty-one
+   files: `FleetRules`, `RaiderRules`, `Regeneration`, `PowerUps`, `CollisionResolver`,
+   `SpaceshipState`, `TurnTimer` and the rest. What is left in `GameScene` is the part
+   that drives nodes. 103 of its methods touch SpriteKit directly (3,661 lines), and the
+   largest method that touches *none* is 71 lines. There is no second `SlowMotion` in
+   there waiting to be found.
+
+Chess Beat and Board & Ship — the two the old plan aimed at — have 45 and **80**
+references out to the rest of the class. They are the most entangled regions in the
+file, not the least.
+
+### What was done instead, and what to do next
+
+Done on 8 October 2026:
+
+- **`SlowMotion`** extracted to `Game/Logic/SlowMotion.swift`. It qualified because it
+  genuinely owned its state: two stored properties, a tuning table and a curve, with
+  nothing else reading them. The node work — `bloomNode.speed`, the starfield, the music
+  rate — stayed in the scene, where it belongs.
+- **The PERF-INSTRUMENTATION block deleted** (~220 lines across six files). The frame-rate
+  question it was opened for is closed: the cause was audio, the fix is structural, and
+  `SFXEngineTests` guards it. `Category.perf` stays — the iOS keyboard warm-up and the
+  end-of-run music load both still log through it.
+
+**The standing recommendation is to stop here.** `GameScene` is long because it
+coordinates a scene graph, and that coordination does not decompose without inventing
+back-references that are worse than the status quo. Do not open this up again on the
+strength of the line count alone. If it is reopened, the bar is a *measurement* showing
+a seam — a region whose references out are in single figures — not a reading of the
+section headers.
+
+What is legitimately worth doing, cheaply, at any time:
+
+1. **Fix the stale `// MARK:` headers** so the file navigates honestly. No code moves, no
+   access changes, and it removes the thing that produced two wrong plans.
+2. **Take any genuinely pure helper that appears** out to `Game/Logic/` as it is written,
+   rather than retrofitting. That is how the twenty-one files there arrived.
+
+**Two smaller items, both done:**
+
+- ~~`HighScoreEntryNode.handleKey(_ event: NSEvent)`~~ — it takes a `KeyPress`.
 - ~~`HowToPlayNode`'s single `NSColor.white`~~ — done, along with the Zudio credit link.
   `HowToPlayNode.MusicCredit` now owns both the URL and the opener, so the scene's click
   handler is platform-free. One universal App Store link serves every platform, since
@@ -1022,13 +1069,13 @@ Proposed split, in the order that pays off soonest:
   because `NSWorkspace` does not exist on iOS. That is the pattern the rest of the port
   wants — the `#if` lives with the thing it describes, not at the call site.
 
-**A note on tests.** The suite is 442 tests and most of it is platform-agnostic. Two
-are known-flaky by design (`EngineVariationTests.testAutoPlayUsesManyPiecesAndSquares`
+**A note on tests.** The suite is 461 tests and most of it is platform-agnostic. Two
+were known-flaky by design (`EngineVariationTests.testAutoPlayUsesManyPiecesAndSquares`
 and `DrawRuleTests.testNormalPlayIsNotFalselyDrawn`) because they assert statistically
-over the engine's random tie-break. **This is no longer hypothetical** — the first was
+over the engine's random tie-break. **This was not hypothetical** — the first was
 observed failing on 1 Oct, asserting 20 distinct moves and getting 15 while the engine
-shuffled knights. Seed the RNG under test, so a port failure is never confused with a
-coin flip.
+shuffled knights. Both now seed the RNG (`SeededRNG`), so a port failure is never
+confused with a coin flip.
 
 A third flake was fixed on 1 Oct and is worth not reintroducing: six classes each
 presented the singleton `GameScene` into their own throwaway `SKView`, which the app

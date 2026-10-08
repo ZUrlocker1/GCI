@@ -151,6 +151,9 @@ final class HUDNode: SKNode {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    /// The bar's own left margin, which SCORE is drawn against.
+    static let leftMargin: CGFloat = 10
+
     /// Step the bar's contents in from the screen's own edges.
     ///
     /// A phone in landscape puts the sensor housing and the rounded corners
@@ -159,14 +162,30 @@ final class HUDNode: SKNode {
     /// stay where they are and only the readouts move: SCORE in from the left,
     /// PAUSE / SET / INFO in from the right. LEVEL is centred in the gap
     /// between them, so it takes half the difference and stays centred.
+    ///
+    /// An inset is a *floor* on the margin the bar already has, not something
+    /// added to it. The nav cluster is 70pt in from the right by design, which
+    /// is already outside a 59pt inset — adding them put it 129pt in, visibly
+    /// adrift of the corner it is supposed to sit in. The left block has 10pt
+    /// and genuinely needs the help; that asymmetry is the whole point.
     func setSideInsets(left: CGFloat, right: CGFloat) {
-        guard (left, right) != sideInsets else { return }
-        let dLeft = left - sideInsets.left
-        let dRight = right - sideInsets.right
-        sideInsets = (left, right)
+        let rightMargin = isCompact
+            ? HUDNode.compactNavRightMargin : HUDNode.navRightMargin
+        let shift = (left: max(0, left - HUDNode.leftMargin),
+                     right: max(0, right - rightMargin))
+        guard shift != sideInsets else { return }
+        let dLeft = shift.left - sideInsets.left
+        let dRight = shift.right - sideInsets.right
+        sideInsets = shift
         leftGroup.forEach { $0.position.x += dLeft }
         navNode?.position.x -= dRight
         levelLabel.position.x += (dLeft - dRight) / 2
+    }
+
+    /// What the bar actually shifted by, for the tests and for a panel's BACK —
+    /// which has to land on the same column as SET and INFO.
+    static func navShift(forInset right: CGFloat, compact: Bool) -> CGFloat {
+        max(0, right - (compact ? compactNavRightMargin : navRightMargin))
     }
 
     /// SET and INFO, in the top right corner and nowhere else — the same corner

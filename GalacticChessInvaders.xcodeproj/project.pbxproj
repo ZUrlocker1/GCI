@@ -49,6 +49,7 @@
 		24500C21167BA8483E94FE3B /* ScoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */; };
 		24504D91A558934DBB087723 /* chess-b-king.png in Resources */ = {isa = PBXBuildFile; fileRef = 21E7C6E4E5697A906A277064 /* chess-b-king.png */; };
 		251070EF8C182A0192C1AC5F /* RaiderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4C7B6130F1ECEECE00289 /* RaiderNode.swift */; };
+		25C3CC085BE2AA4DDE44EB47 /* SlowMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F2A0487A2C97C7DEC463601 /* SlowMotion.swift */; };
 		26B4796FB28870EC93F1DA61 /* CollisionResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D61821669CACEBC196A65C /* CollisionResolver.swift */; };
 		287D223989B63F5263041B93 /* LogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E6B81BC9D85555BA341E47 /* LogPanelView.swift */; };
 		2D6AEAFFDB4E3817A7AA8A3F /* HowToPlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */; };
@@ -222,6 +223,7 @@
 		F103B3B733CE7CCE6C8D1944 /* ship-camel-b.png in Resources */ = {isa = PBXBuildFile; fileRef = C9811D7E64799129FF1929B9 /* ship-camel-b.png */; };
 		F16167CD5B548B86C6C1F21D /* PressStart2P-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A215EE3EF5A3B60A3369E69B /* PressStart2P-Regular.ttf */; };
 		F28B706B8AC3C2EFAC8481CC /* VersionBadgeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E3C304E0FE24C01DCBA828 /* VersionBadgeNode.swift */; };
+		F2D0A4C260750282DF6C3C75 /* SlowMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F2A0487A2C97C7DEC463601 /* SlowMotion.swift */; };
 		F53A8FD80E91731A2F3B94DF /* chess-b-king-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = D13B99E1EDEA04DAF03E1E7F /* chess-b-king-d2.png */; };
 		F5E7E86A0D475BA04EA0BB23 /* chess-b-queen.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DD23AB303F49EBE6977A6D4 /* chess-b-queen.png */; };
 		F6CA92FE0D8631965A645E24 /* HighScoreEntryNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6BD913BC0D0EB5692D30572 /* HighScoreEntryNode.swift */; };
@@ -325,6 +327,7 @@
 		89C03C76F77C2116A0D5D2BB /* chess-b-bishop.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop.png"; sourceTree = "<group>"; };
 		8AF0FC132D54FB3D89851A9D /* CollisionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollisionHandler.swift; sourceTree = "<group>"; };
 		8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		8F2A0487A2C97C7DEC463601 /* SlowMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowMotion.swift; sourceTree = "<group>"; };
 		95CE9C9E6605254BA0A685BC /* GameSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSettings.swift; sourceTree = "<group>"; };
 		96341566A1F2EF47B4EBC715 /* MusicLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicLibrary.swift; sourceTree = "<group>"; };
 		978A170453B8B07C0F41C526 /* chess-b-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d1.png"; sourceTree = "<group>"; };
@@ -484,6 +487,7 @@
 				D52D7B60FB53896B80DB403D /* RaiderRules.swift */,
 				4B58B64ABA847AF8604BB2BF /* Regeneration.swift */,
 				321BDD32091EB26B8CAE06C2 /* ScoreManager.swift */,
+				8F2A0487A2C97C7DEC463601 /* SlowMotion.swift */,
 				7F23F101018F26837A222949 /* SpaceshipState.swift */,
 				2CAF566BD8F26FECE2DB1C25 /* TurnTimer.swift */,
 				78F90743A10BA81399860425 /* Chess */,
@@ -632,28 +636,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_6DFCC990-C891-4A07-9BB1-CD453EE96BA6" /* .claude */ = {
+		"TEMP_4D52778D-467A-45D1-BB28-EA996B7DE47C" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_7494B111-FF44-4281-91F5-19B00AA678A2" /* .claude */ = {
+		"TEMP_55F4DA1A-573C-4CBA-AF2F-09BACEF3DEF5" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_DA145949-3FA6-412D-AF17-0E5252E11ABB" /* .claude */ = {
+		"TEMP_6E831BBA-961F-44AD-ABA0-87629AF7F5CF" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_F8EC8EFF-3349-41CF-BC7C-09FFB86B4F1C" /* .claude */ = {
+		"TEMP_806A8A46-22C9-4E20-899C-81FE58B0BF53" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -940,6 +944,7 @@
 				E417F771A182BF6A6C7A8D29 /* ScorePopPool.swift in Sources */,
 				51DBACEE06DE99EE2BCD7260 /* SettingsNode.swift in Sources */,
 				EF4BE7455C8F7D6914EFAF95 /* Silhouette.swift in Sources */,
+				25C3CC085BE2AA4DDE44EB47 /* SlowMotion.swift in Sources */,
 				92F5117575286012F40FFBAC /* SoundKey.swift in Sources */,
 				E08464B23F92D11F3F247DAB /* SpaceshipNode.swift in Sources */,
 				1105DF500AABD684C9DF74CD /* SpaceshipState.swift in Sources */,
@@ -1017,6 +1022,7 @@
 				582585A1C43F8C8744BEB1D4 /* ScorePopPool.swift in Sources */,
 				F09EC490E3C28D31771DC570 /* SettingsNode.swift in Sources */,
 				8C86C07E5531623B307FB91E /* Silhouette.swift in Sources */,
+				F2D0A4C260750282DF6C3C75 /* SlowMotion.swift in Sources */,
 				2D759A6F7DC0767BC11E05DD /* SoundKey.swift in Sources */,
 				68F50FA3CDA0B3307474CA56 /* SpaceshipNode.swift in Sources */,
 				AE5E482AE217E7882271387B /* SpaceshipState.swift in Sources */,

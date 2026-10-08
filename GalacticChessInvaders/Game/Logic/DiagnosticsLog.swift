@@ -38,7 +38,9 @@ enum LogCategory: String {
     case restart = "RESTART  "
     case auto    = "AUTOMODE "
     case info    = "INFO     "
-    /// PERF-INSTRUMENTATION — temporary, see `GameScene.logPerformanceSample`.
+    /// Timings worth a log line: the keyboard warm-up on iOS and the
+    /// end-of-run music load. The frame-rate sampler that used to write here
+    /// was removed once the audio fix closed that question.
     case perf    = "PERF     "
 }
 
@@ -63,9 +65,7 @@ final class DiagnosticsLog {
     private(set) var errorCount = 0
     var fps: Double = 60.0
     var nodeCount: Int = 0
-    /// Worst `AudioManager.play` call in the last sampling window, in ms.
-    /// Sits beside fps because the two were confused for three rounds.
-    var sfxWorstMs: Double = 0
+
     var isEnabled: Bool = {
         // On in release builds too. The panel is closed unless someone presses
         // `L`, and a tester who can send back a log is worth far more than the

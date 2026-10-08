@@ -239,82 +239,25 @@ class GameScene: SKScene {
     private var afterFreeze: (() -> Void)?
 
     // MARK: - Slow motion (§13.2's Nuke)
+    //
+    // The arithmetic lives in `SlowMotion`; what stays here is the part that
+    // reaches into nodes, which is the scene's job and nothing else's.
 
-    /// How long the blast's slow motion has left, in real seconds.
-    private var slowMoRemaining: TimeInterval = 0
-    private var appliedTimeScale: Double = 1
-    /// Long enough for the ring to cross the board and the fragments to land
-    /// inside it; short enough that it is a moment rather than an interlude.
-    static let slowMoDuration: TimeInterval = 1.3
-    /// Roughly a third speed. Deeper than this and the ship stops answering the
-    /// keys in a way that reads as a hang rather than as an effect.
-    /// How far the music slows under the Nuke and Time Freeze.
-    ///
-    /// 0.9, not §13.2's 0.5–0.7. Those were tuned against the single ambient
-    /// track the game shipped with — an 88 BPM Kosmic pad barely registers a
-    /// time-stretch. The Motorik Arcade soundtrack is built on a steady kick,
-    /// and a 140 BPM track dropping to 98 does not read as slow motion; it
-    /// reads as the machine struggling, which is a bad impression for this game
-    /// in particular. One depth for both effects: this shallow there is no
-    /// telling 0.9 from 0.85, and the blue wash, the ring and the world at 0.3x
-    /// are what tell them apart.
-    static let slowMoMusicRate: Float = 0.9
-    static let slowMoFloor: Double = 0.3
-    /// The share of the window spent at full slow before the ramp back begins.
-    static let slowMoHold = 0.45
-
-    /// The curve, as a pure function of how far into the window we are, so the
-    /// shape can be checked without a running scene.
-    static func slowMoScale(elapsed: TimeInterval) -> Double {
-        guard elapsed > 0 else { return slowMoFloor }
-        guard elapsed < slowMoDuration else { return 1 }
-        let hold = slowMoDuration * slowMoHold
-        guard elapsed > hold else { return slowMoFloor }
-        let progress = (elapsed - hold) / (slowMoDuration - hold)
-        // Smoothstep, not `progress * progress`.
-        //
-        // A squared ramp is an ease-*in*, which puts all of the acceleration at
-        // the end: the scale was still climbing at 1.93 per second on the last
-        // frame of the window and then went flat, a jerk discontinuity right at
-        // the boundary. Held flat for 585ms and then whipped back, the blast
-        // read as a drift that snapped rather than as slow motion — and the
-        // shockwave ring, which runs on this clock, visibly sped up as it
-        // expanded, which is backwards for a shockwave.
-        //
-        // Smoothstep leaves the floor and arrives at 1 with zero slope at both
-        // ends, so nothing changes gear on a single frame.
-        return slowMoFloor + (1 - slowMoFloor) * progress * progress * (3 - 2 * progress)
-    }
-
-    /// The clock everything else runs on: 1 normally, less during a blast.
-    ///
-    /// Holds at the floor, then eases back to speed at both ends. Coming *out*
-    /// of slow motion is the part that sells it, and what sells it is that the
-    /// recovery is never visible as an event: the moment the world audibly
-    /// changes gear is the moment it reads as a stall being recovered from
-    /// rather than as an effect ending.
-    private var timeScale: Double {
-        guard slowMoRemaining > 0 else { return 1 }
-        return Self.slowMoScale(elapsed: Self.slowMoDuration - slowMoRemaining)
-    }
+    private var slowMo = SlowMotion()
 
     /// Slows the SKAction world to match. `dt` covers everything the update loop
     /// drives — the ship, the beat, the raider clock — but the fleet's sweep,
     /// the lasers, the explosions and the blast's own ring are all actions, and
     /// `speed` is the only thing that reaches them.
     private func applyTimeScale() {
-        let scale = timeScale
-        guard abs(scale - appliedTimeScale) > 0.001 else { return }
-        appliedTimeScale = scale
+        guard let scale = slowMo.advance() else { return }
         bloomNode.speed = CGFloat(scale)
         starfieldNode.speed = starfieldRate * CGFloat(scale)
         syncMusicRate()
     }
 
-    /// Drops the world into slow motion. Called by the Nuke, and deliberately
-    /// not by anything else: it is what makes that one power-up a set piece.
     private func beginSlowMotion() {
-        slowMoRemaining = Self.slowMoDuration
+        slowMo.begin()
         applyTimeScale()
     }
 
@@ -324,18 +267,17 @@ class GameScene: SKScene {
     /// answers "is anything slowing time right now" every time the scale moves,
     /// which cannot drift out of step with itself.
     private func syncMusicRate() {
-        let slowed = appliedTimeScale < 0.999 || powerUps.isFrozen
-        AudioManager.shared.setMusicRate(slowed ? Self.slowMoMusicRate : 1.0)
+        let slowed = slowMo.isSlowing || powerUps.isFrozen
+        AudioManager.shared.setMusicRate(slowed ? SlowMotion.musicRate : 1.0)
     }
 
     private func cancelSlowMotion() {
-        guard slowMoRemaining > 0 || appliedTimeScale != 1 else { return }
-        slowMoRemaining = 0
-        appliedTimeScale = 1
+        guard slowMo.cancel() else { return }
         bloomNode.speed = 1
         starfieldNode.speed = starfieldRate
         syncMusicRate()
     }
+
 
     /// §13's power-ups. The clock and the shield charge; everything the effects
     /// actually *do* to the world lives in the Power-Ups section below.
@@ -697,7 +639,7 @@ class GameScene: SKScene {
                      starSize: 2.4, drift:  0.30, twinkleShare: 0.30)
         addStarLayer(texture: dot, count: 12, speed: 140, alpha: 0.92,
                      starSize: 3.4, drift: -0.16, twinkleShare: 0.45)
-        starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
+        starfieldNode.speed = starfieldRate * CGFloat(slowMo.applied)
 
         backdropNode.resize(to: size)
         refreshBackdrop()
@@ -1127,7 +1069,7 @@ class GameScene: SKScene {
         guard hudNode == nil else { return }
         let hud = HUDNode(sceneWidth: size.width)
         hud.position = CGPoint(x: 0, y: size.height - HUDNode.height - topInsetDrop)
-        hud.setSideInsets(left: safeAreaLeft, right: safeAreaRight)
+        hud.setSideInsets(left: edgeInsetLeft, right: edgeInsetRight)
         hud.zPosition = 10
         addChild(hud)
         hudNode = hud
@@ -1433,8 +1375,36 @@ class GameScene: SKScene {
     }
 
     /// The left edge everything in the gutter is pinned to, stepped in past a
-    /// landscape phone's sensor housing.
-    var gutterPinX: CGFloat { 10 + safeAreaLeft }
+    /// landscape phone's sensor housing and its rounded corner.
+    /// The inset is a floor on the 10pt margin, not an addition to it — the
+    /// same rule the HUD bar follows, so the badge stays in SCORE's column.
+    var gutterPinX: CGFloat { max(HUDNode.leftMargin, edgeInsetLeft) }
+
+    /// A phone on its side has a rounded corner at *each* end, whether or not
+    /// the sensor housing is at that end. iOS reports an inset for the housing
+    /// and nothing for the corner, so with the phone held housing-right the
+    /// left inset is 0 and the corner still clips about two characters off
+    /// SCORE — which is what Zack saw on an iPhone 15 after the inset fix.
+    ///
+    /// 24: the corner radius is 55pt on these devices, but the clip at the
+    /// vertical middle of the bar — which is where the type sits — is a chord
+    /// of it, not the radius.
+    static let landscapeCornerClearance: CGFloat = 24
+
+    /// A phone on its side. An iPad in landscape is 744pt tall at its shortest,
+    /// and the Mac window carries `.frame(minHeight: 500)` under
+    /// `.windowResizability(.contentMinSize)`, so neither can reach this — the
+    /// size test alone is the platform test, and an `#if` here would only make
+    /// the rule untestable from the macOS suite.
+    private var isPhoneLandscape: Bool {
+        size.width > size.height && size.height < 500
+    }
+
+    var edgeInsetLeft: CGFloat { max(safeAreaLeft, cornerClearance) }
+    var edgeInsetRight: CGFloat { max(safeAreaRight, cornerClearance) }
+    private var cornerClearance: CGFloat {
+        isPhoneLandscape ? Self.landscapeCornerClearance : 0
+    }
 
     private var panelIsUp: Bool { settingsNode != nil || howToPlayNode != nil }
 
@@ -2134,7 +2104,7 @@ class GameScene: SKScene {
         AudioManager.shared.fadeTo(pool: MusicVariants.beginLevel(levels.level),
                                    over: MusicLibrary.levelFade,
                                    gap: MusicLibrary.levelGap)
-        starfieldNode.speed = starfieldRate * CGFloat(appliedTimeScale)
+        starfieldNode.speed = starfieldRate * CGFloat(slowMo.applied)
 
         let node = BoardNode()
         node.position = SceneLayout(size: size).boardOrigin
@@ -3320,11 +3290,13 @@ class GameScene: SKScene {
             // it has to use the same right margin, which is 8 on a compact bar
             // and 70 on the design one. Before this it was 59pt high and 62pt
             // inboard of where SET and INFO are on a phone.
-            let rightMargin = HUDNode.isCompact(sceneWidth: size.width)
+            let isCompactBar = HUDNode.isCompact(sceneWidth: size.width)
+            let rightMargin = isCompactBar
                 ? HUDNode.compactNavRightMargin
                 : HUDNode.navRightMargin
             let target = CGPoint(
-                x: size.width - HUDNode.navDesignRight - rightMargin - safeAreaRight,
+                x: size.width - HUDNode.navDesignRight - rightMargin
+                    - HUDNode.navShift(forInset: edgeInsetRight, compact: isCompactBar),
                 y: size.height - designSize.height - topInsetDrop)
             nav.position = CGPoint(x: (target.x - panel.position.x) / scale,
                                    y: (target.y - panel.position.y) / scale)
@@ -3464,7 +3436,7 @@ class GameScene: SKScene {
         // insets to a bar it has just built, but a rotation can report the new
         // size before it reports the new insets, which leaves the rebuilt bar
         // holding the old pair.
-        hudNode?.setSideInsets(left: safeAreaLeft, right: safeAreaRight)
+        hudNode?.setSideInsets(left: edgeInsetLeft, right: edgeInsetRight)
 
         // The board carries its pieces with it — they are its children — so one
         // assignment moves the whole position.
@@ -5705,9 +5677,9 @@ class GameScene: SKScene {
         // §13.2's Nuke runs in slow motion. The countdown burns *real* time —
         // scaled time would slow its own ending and it would never finish — and
         // everything after this line runs on the scaled clock.
-        if slowMoRemaining > 0 { slowMoRemaining = max(0, slowMoRemaining - realDt) }
+        slowMo.tick(realDt: realDt)
         applyTimeScale()
-        let dt = realDt * timeScale
+        let dt = realDt * slowMo.scale
 
         // §24.2's hit freeze: the playfield stops, this loop does not — it is
         // what has to notice the freeze is over. Everything below is skipped,
@@ -5877,54 +5849,6 @@ class GameScene: SKScene {
         if GameSettings.shared.logPanel {
             DiagnosticsLog.shared.nodeCount = countAllNodes()
         }
-        DiagnosticsLog.shared.sfxWorstMs = AudioManager.shared.takeWorstPlayMs()
-        if GameSettings.shared.logPanel { logPerformanceSample() }
-    }
-
-    // MARK: - PERF-INSTRUMENTATION (temporary)
-    //
-    // Remove this section, `DiagnosticsLog.sfxWorstMs`, `Category.perf`,
-    // `AudioManager.worstPlayMs` / `takeWorstPlayMs` and the `sfx:` field in
-    // both log panels once the frame-rate question is closed. Grep
-    // PERF-INSTRUMENTATION.
-
-    private var perfTicks = 0
-    private var perfWorstSfx: Double = 0
-
-    /// Writes one performance line a second into the diagnostics log.
-    ///
-    /// The live readout in the panel footer updates four times a second and
-    /// cannot be read while playing — the dips are the whole point and they
-    /// are gone before you can look at them. This keeps the *worst* of each
-    /// second somewhere it can be scrolled back to afterwards.
-    ///
-    /// Gated on the log panel, which is behind Test Mode, so a player never
-    /// pays for it or sees it.
-    /// Starts a fresh second. The counters live on the shared scene, so a
-    /// test has to be able to get to a known boundary.
-    func resetPerformanceSample() {
-        perfTicks = 0
-        perfWorstSfx = 0
-    }
-
-    func logPerformanceSample() {
-        // Nothing is being measured while the game is stopped, and a second
-        // of it is a second of the log gone. The title screen still counts —
-        // it was the most expensive screen in the game once.
-        guard settingsNode == nil, howToPlayNode == nil,
-              !(stateMachine.currentState is PausedState) else { return }
-
-        perfTicks += 1
-        perfWorstSfx = max(perfWorstSfx, DiagnosticsLog.shared.sfxWorstMs)
-        guard perfTicks >= 4 else { return }        // 4 × 250ms
-
-        DiagnosticsLog.shared.log(.perf, String(
-            format: "fps %.0f, nodes %d, sfx %.1fms",
-            DiagnosticsLog.shared.fps,
-            DiagnosticsLog.shared.nodeCount, perfWorstSfx))
-
-        perfTicks = 0
-        perfWorstSfx = 0
     }
 
     /// Catches a piece that is on the board with no hitbox and no beam-in

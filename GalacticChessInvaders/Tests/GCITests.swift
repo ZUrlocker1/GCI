@@ -5212,7 +5212,7 @@ final class JuiceTests: XCTestCase {
         // The shake runs on real time and the hold is real seconds, so these are
         // directly comparable — and the shake has to be spent before the ramp
         // back begins, or the two effects blur into one long wobble.
-        let hold = GameScene.slowMoDuration * GameScene.slowMoHold
+        let hold = SlowMotion.duration * SlowMotion.hold
         XCTAssertLessThan(Juice.blast.duration, hold,
                           "the shake must finish inside the slow-motion hold")
         // Ordered, so "heavy" is always felt as more than "light".
@@ -6156,19 +6156,19 @@ final class PowerUpTests: XCTestCase {
     /// Holds at the floor, then accelerates back to normal — never the other way
     /// round, and never past 1.
     func testTheSlowMotionRampHoldsThenAccelerates() {
-        XCTAssertEqual(GameScene.slowMoScale(elapsed: 0), GameScene.slowMoFloor)
-        let hold = GameScene.slowMoDuration * GameScene.slowMoHold
-        XCTAssertEqual(GameScene.slowMoScale(elapsed: hold * 0.99),
-                       GameScene.slowMoFloor, accuracy: 0.001,
+        XCTAssertEqual(SlowMotion.scale(elapsed: 0), SlowMotion.floor)
+        let hold = SlowMotion.duration * SlowMotion.hold
+        XCTAssertEqual(SlowMotion.scale(elapsed: hold * 0.99),
+                       SlowMotion.floor, accuracy: 0.001,
                        "it must not start climbing during the hold")
-        XCTAssertEqual(GameScene.slowMoScale(elapsed: GameScene.slowMoDuration), 1)
+        XCTAssertEqual(SlowMotion.scale(elapsed: SlowMotion.duration), 1)
 
         var previous = 0.0
         for step in 0...130 {
-            let scale = GameScene.slowMoScale(elapsed: Double(step) / 100)
+            let scale = SlowMotion.scale(elapsed: Double(step) / 100)
             XCTAssertGreaterThanOrEqual(scale, previous, "the ramp went backwards")
             XCTAssertLessThanOrEqual(scale, 1)
-            XCTAssertGreaterThanOrEqual(scale, GameScene.slowMoFloor)
+            XCTAssertGreaterThanOrEqual(scale, SlowMotion.floor)
             previous = scale
         }
     }
@@ -6185,22 +6185,22 @@ final class PowerUpTests: XCTestCase {
     func testTheRampArrivesWithoutSnapping() {
         let step = 0.001
         func slope(at t: TimeInterval) -> Double {
-            (GameScene.slowMoScale(elapsed: t + step)
-             - GameScene.slowMoScale(elapsed: t - step)) / (2 * step)
+            (SlowMotion.scale(elapsed: t + step)
+             - SlowMotion.scale(elapsed: t - step)) / (2 * step)
         }
         // Per second of scale, against a span of 0.7 recovered over ~0.7s — so
         // the ramp's own average rate is about 1.0 and anything approaching that
         // at the boundary is a gear change on one frame.
-        XCTAssertLessThan(slope(at: GameScene.slowMoDuration * 0.99), 0.25,
+        XCTAssertLessThan(slope(at: SlowMotion.duration * 0.99), 0.25,
                           "the world must not still be accelerating as it ends")
 
-        let hold = GameScene.slowMoDuration * GameScene.slowMoHold
+        let hold = SlowMotion.duration * SlowMotion.hold
         XCTAssertLessThan(slope(at: hold * 1.01), 0.25,
                           "nor lurch out of the hold")
 
         // Still a hold-then-recover shape, not a linear crossfade: the middle of
         // the ramp is where the speed comes back.
-        let midpoint = hold + (GameScene.slowMoDuration - hold) / 2
+        let midpoint = hold + (SlowMotion.duration - hold) / 2
         // The ramp's own average rate is 0.7 over 0.715s, near enough 1.0, and
         // smoothstep peaks at 1.47 here — comfortably steeper than a crossfade.
         XCTAssertGreaterThan(slope(at: midpoint), 1.3,
@@ -6210,9 +6210,9 @@ final class PowerUpTests: XCTestCase {
     /// A blast is a moment, not an interlude — and the world has to be running
     /// normally again by the end of it.
     func testTheSlowMotionIsOverInUnderTwoSeconds() {
-        XCTAssertLessThan(GameScene.slowMoDuration, 2)
-        XCTAssertGreaterThan(GameScene.slowMoDuration, 0.8)
-        XCTAssertEqual(GameScene.slowMoScale(elapsed: GameScene.slowMoDuration + 5), 1)
+        XCTAssertLessThan(SlowMotion.duration, 2)
+        XCTAssertGreaterThan(SlowMotion.duration, 0.8)
+        XCTAssertEqual(SlowMotion.scale(elapsed: SlowMotion.duration + 5), 1)
     }
 
     // MARK: - The feint (§6.3)
@@ -6634,51 +6634,6 @@ final class GlowSwitchTests: XCTestCase {
                        "and the pass — clearing the filter alone leaves "
                        + "SpriteKit rendering the subtree offscreen and "
                        + "compositing it back, which is the expensive half")
-    }
-}
-
-/// PERF-INSTRUMENTATION (temporary) — remove with the rest of it.
-///
-/// The live footer readout updates four times a second and cannot be read
-/// while playing, so the numbers also go into the log once a second.
-@MainActor
-final class PerformanceLogTests: XCTestCase {
-
-    override func setUp() async throws {
-        // The counters live on the shared scene and survive between tests.
-        GameScene.shared.resetPerformanceSample()
-        DiagnosticsLog.shared.fps = 60
-        DiagnosticsLog.shared.sfxWorstMs = 0
-    }
-
-    private func perfLines() -> [String] {
-        DiagnosticsLog.shared.lines
-            .filter { $0.category == .perf }
-            .map(\.message)
-    }
-
-    func testOneLinePerSecondNotPerTick() {
-        let before = perfLines().count
-        let scene = GameScene.shared
-        for _ in 0..<3 { scene.logPerformanceSample() }
-        XCTAssertEqual(perfLines().count, before, "three ticks is not a second")
-        scene.logPerformanceSample()
-        XCTAssertEqual(perfLines().count, before + 1, "the fourth closes it")
-    }
-
-    /// The worst `sfx` of the second, not the last — a burst that cost 4ms
-    /// once is the thing worth seeing, and the sample after it is usually 0.
-    func testTheLineReportsTheWorstSfxOfTheSecond() {
-        let scene = GameScene.shared
-        DiagnosticsLog.shared.sfxWorstMs = 4.4      // the spike
-        scene.logPerformanceSample()
-        for _ in 0..<3 {
-            DiagnosticsLog.shared.sfxWorstMs = 0    // and three quiet samples
-            scene.logPerformanceSample()
-        }
-        let line = perfLines().last
-        XCTAssertEqual(line?.contains("sfx 4.4ms"), true,
-                       "got \(line ?? "nothing")")
     }
 }
 
@@ -7445,11 +7400,32 @@ final class LandscapeSafeAreaTests: XCTestCase {
         return scene
     }
 
+    /// Zack's iPhone 15, held with the housing on the right: iOS reports no
+    /// left inset at all and the rounded corner still ate two characters of
+    /// SCORE. The corner is there whichever way round the phone is.
+    func testTheCornerIsClearedWithNoInsetAtAll() {
+        let housingRight = scene(CGSize(width: 852, height: 393), left: 0, right: 59)
+        XCTAssertEqual(housingRight.edgeInsetLeft, GameScene.landscapeCornerClearance,
+                       "no housing on this side, but there is still a corner")
+        XCTAssertEqual(housingRight.edgeInsetRight, 59,
+                       "and the housing side keeps the larger of the two")
+    }
+
+    /// The floor is a phone-landscape rule, not a general one.
+    func testNothingElseGetsTheCornerClearance() {
+        let portrait = scene(CGSize(width: 393, height: 852), left: 0, right: 0)
+        XCTAssertEqual(portrait.edgeInsetLeft, 0, "a phone upright has no side corner to clear")
+        let pad = scene(CGSize(width: 1366, height: 1024), left: 0, right: 0)
+        XCTAssertEqual(pad.edgeInsetLeft, 0, "and an iPad's corners do not reach the bar")
+    }
+
     func testTheGutterStepsInPastTheHousing() {
-        XCTAssertEqual(scene().gutterPinX, 10 + Self.inset,
-                       "the badge and the test chips are pinned to the left edge")
-        XCTAssertEqual(scene(left: 0, right: 0).gutterPinX, 10,
-                       "and an iPad, which has no housing, is untouched")
+        XCTAssertEqual(scene().gutterPinX, Self.inset,
+                       "the badge and the test chips clear the housing")
+        let pad = scene(CGSize(width: 1366, height: 1024), left: 0, right: 0)
+        XCTAssertEqual(pad.gutterPinX, 10,
+                       "and an iPad, which has neither housing nor a corner "
+                       + "that reaches the bar, is untouched")
     }
 
     /// The bug Zack reported: the badge hid itself because the landscape band
@@ -7481,14 +7457,24 @@ final class LandscapeSafeAreaTests: XCTestCase {
         let navX = nav?.position.x ?? 0
 
         bar.setSideInsets(left: Self.inset, right: Self.inset)
-        XCTAssertEqual(score?.position.x, scoreX + Self.inset,
-                       "SCORE moves in by the left inset")
-        XCTAssertEqual(nav?.position.x, navX - Self.inset,
-                       "and PAUSE / SET / INFO by the right one")
+        XCTAssertEqual(score?.position.x, scoreX + Self.inset - HUDNode.leftMargin,
+                       "SCORE lands on the inset, having started 10pt in")
+        // 59pt of inset against a 70pt design margin: the cluster is already
+        // outside it and must not move at all. Adding the two put it 129pt in.
+        XCTAssertEqual(nav?.position.x, navX,
+                       "PAUSE / SET / INFO are already clear and stay put")
     }
 
     /// Applied as a delta, so a rotation that reports its insets twice — or
     /// reports them again after the bar was rebuilt — does not move twice.
+    /// A compact bar has only 8pt on the right, so there the inset does bite.
+    func testACompactBarDoesMoveItsNavCluster() {
+        XCTAssertEqual(HUDNode.navShift(forInset: 59, compact: true),
+                       59 - HUDNode.compactNavRightMargin)
+        XCTAssertEqual(HUDNode.navShift(forInset: 59, compact: false), 0,
+                       "the design bar's 70pt margin already clears it")
+    }
+
     func testApplyingTheSameInsetsTwiceMovesNothing() {
         let bar = HUDNode(sceneWidth: Self.landscape.width)
         bar.setSideInsets(left: Self.inset, right: Self.inset)
@@ -7502,8 +7488,10 @@ final class LandscapeSafeAreaTests: XCTestCase {
     func testLevelStaysCentredBetweenThem() {
         let bar = HUDNode(sceneWidth: Self.landscape.width)
         let before = bar.childNode(withName: "levelLabel")?.position.x
+        // 40 against a 10pt left margin shifts 30; 20 against a 70pt right
+        // margin shifts nothing. LEVEL takes half the difference.
         bar.setSideInsets(left: 40, right: 20)
         XCTAssertEqual(bar.childNode(withName: "levelLabel")?.position.x,
-                       (before ?? 0) + 10)
+                       (before ?? 0) + 15)
     }
 }

@@ -42,19 +42,6 @@ final class AudioManager {
     static let shared = AudioManager()
     private init() {}
 
-    /// The worst single `play(_:)` call since the last time this was read, in
-    /// milliseconds. The log panel shows it beside fps.
-    ///
-    /// Here because the frame-rate question kept being answered with
-    /// impressions. A number that says "4ms" or "0.1ms" ends the argument in
-    /// one run; three separate A/B rounds did not.
-    private(set) var worstPlayMs: Double = 0
-
-    func takeWorstPlayMs() -> Double {
-        defer { worstPlayMs = 0 }
-        return worstPlayMs
-    }
-
     /// Silent under XCTest, and not negotiable.
     ///
     /// The suite launches the app as its test host, so the app starts, the
@@ -419,10 +406,6 @@ final class AudioManager {
     func play(_ key: SoundKey, scale: Float = 1) {
         let settings = GameSettings.shared
         guard settings.soundOn else { return }
-        let began = CACurrentMediaTime()
-        defer {
-            worstPlayMs = max(worstPlayMs, (CACurrentMediaTime() - began) * 1000)
-        }
 
         guard let buffer = buffers[key] else { return }
         // Applied here rather than at preload: the player can move the slider

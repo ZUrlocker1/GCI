@@ -213,8 +213,8 @@ struct DiagnosticsSidebarView: View {
                 .fill(accent)
                 .frame(height: 1)
             HStack(spacing: 8) {
-                Text(String(format: "fps %.0f, nodes %d, sfx %.1fms",
-                            log.fps, log.nodeCount, log.sfxWorstMs))
+                Text(String(format: "fps %.0f, nodes %d",
+                            log.fps, log.nodeCount))
                     .font(.system(size: 13, design: .monospaced))
                     .foregroundColor(accent)
                 Spacer()
