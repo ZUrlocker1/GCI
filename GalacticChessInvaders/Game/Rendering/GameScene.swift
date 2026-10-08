@@ -3561,7 +3561,8 @@ class GameScene: SKScene {
 
         // Both cross the playfield rather than the window, so both have to be
         // told when the window changes what the playfield is.
-        raiders?.adopt(lane: layout.playfieldMinX...layout.playfieldMaxX)
+        raiders?.adopt(lane: layout.playfieldMinX...layout.playfieldMaxX,
+                       boardBottomY: layout.boardBottomY)
 
         #if os(iOS)
         layOutFireButton()

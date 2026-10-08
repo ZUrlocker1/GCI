@@ -161,6 +161,40 @@ enum RaiderRules {
     }
 
     /// The lane each kind enters on.
+    /// Where a crossing starts, in scene y.
+    ///
+    /// Pure, and takes the board's bottom edge as an argument rather than
+    /// reading it from anywhere, because getting that argument wrong is the
+    /// bug this exists to prevent: a `.rank` raider is placed *relative to the
+    /// board*, so a stale board bottom puts it a whole board's height out of
+    /// position — on a phone in portrait, below the player's own ship.
+    ///
+    /// `RaiderLaneTests` checks the result stays between the board and the
+    /// HUD at every size the game runs at.
+    static func entryY(for powerUp: PowerUp,
+                       boardBottomY: CGFloat,
+                       boardSize: CGFloat,
+                       squareSize: CGFloat,
+                       sceneHeight: CGFloat,
+                       hudHeight: CGFloat,
+                       scoutHeight: CGFloat) -> CGFloat {
+        switch lane(for: powerUp) {
+        case .overTheBoard:
+            // Between the board's top edge and the HUD, so it clears every
+            // piece however far the fleet has descended.
+            //
+            // Clamped so the *sprite* fits, not just its centre: 14pt above the
+            // board put the middle of the scout in a band only 32pt tall, so
+            // its top half slid under the HUD and the raider read as cut in
+            // two. If the band is too tight for the whole silhouette it sits
+            // lower, overlapping the board's top rank rather than vanishing.
+            let ceiling = sceneHeight - hudHeight - scoutHeight / 2 - 2
+            return min(boardBottomY + boardSize + 14, ceiling)
+        case .rank(let rank):
+            return boardBottomY + (CGFloat(rank) - 0.5) * squareSize
+        }
+    }
+
     static func lane(for powerUp: PowerUp) -> Lane {
         switch powerUp {
         // The two that come down to the player start from the top, so the

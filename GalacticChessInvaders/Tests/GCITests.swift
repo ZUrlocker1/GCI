@@ -7880,3 +7880,104 @@ final class MacResizeSweepTests: XCTestCase {
 }
 
 
+
+/// Where a raider crosses, against the board and the player's ship.
+///
+/// Zack found an amber disc — Spread Fire, a `.rank` raider — flying well below
+/// his ship on an iPhone 15 in portrait. A ranked raider is placed relative to
+/// the board, and the controller captured the board's bottom edge once at
+/// construction while `adopt` refreshed only the x lane. On a phone in portrait
+/// the board sits far higher than on the design canvas, so a stale anchor put
+/// the raider a whole board out of position.
+///
+/// The `.overTheBoard` raiders were unaffected, which is why the green
+/// top-of-screen one never misbehaved: they clamp against a live scene height.
+@MainActor
+final class RaiderLaneTests: XCTestCase {
+
+    private static let sizes: [(String, CGSize)] = [
+        ("Mac design canvas",      CGSize(width: 960, height: 700)),
+        ("iPhone SE portrait",     CGSize(width: 375, height: 667)),
+        ("iPhone 15 portrait",     CGSize(width: 393, height: 852)),
+        ("iPhone Pro Max portrait", CGSize(width: 440, height: 956)),
+        ("iPhone 15 landscape",    CGSize(width: 852, height: 393)),
+        ("iPad mini portrait",     CGSize(width: 744, height: 1133)),
+        ("iPad Pro 13 landscape",  CGSize(width: 1366, height: 1024)),
+    ]
+
+    private func entry(_ p: PowerUp, _ l: SceneLayout) -> CGFloat {
+        RaiderRules.entryY(for: p,
+                           boardBottomY: l.boardBottomY,
+                           boardSize: l.boardSize,
+                           squareSize: l.squareSize,
+                           sceneHeight: l.size.height,
+                           hudHeight: HUDNode.height,
+                           scoutHeight: 28)
+    }
+
+    /// The one Zack saw break. A raider is an obstacle on the board, so it has
+    /// no business in the lane the player flies in.
+    func testNoRaiderCrossesBelowTheShip() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            for p in [PowerUp.freeze, .gatling, .rapidFire, .shield, .nuke] {
+                XCTAssertGreaterThan(entry(p, l), l.shipLaneY,
+                                     "\(name): \(p) crosses at \(Int(entry(p, l))), "
+                                     + "ship lane is \(Int(l.shipLaneY))")
+            }
+        }
+    }
+
+    /// And stays on the board rather than under the HUD.
+    func testEveryRaiderCrossesOverTheBoard() {
+        for (name, size) in Self.sizes {
+            let l = SceneLayout(size: size)
+            for p in [PowerUp.freeze, .gatling, .rapidFire, .shield, .nuke] {
+                let y = entry(p, l)
+                XCTAssertGreaterThanOrEqual(y, l.boardBottomY,
+                                            "\(name): \(p) is below the board")
+                XCTAssertLessThanOrEqual(y, size.height - HUDNode.height,
+                                         "\(name): \(p) is under the HUD bar")
+            }
+        }
+    }
+
+    /// The fix itself: the controller's anchor follows the layout.
+    ///
+    /// Given the design canvas and then told about a phone in portrait, it has
+    /// to believe the phone. Holding the first value is the bug.
+    func testAdoptRefreshesTheBoardAnchor() {
+        let design = SceneLayout(size: SceneLayout.designSize)
+        let phone  = SceneLayout(size: CGSize(width: 393, height: 852))
+        XCTAssertNotEqual(design.boardBottomY, phone.boardBottomY,
+                          "this pair has to differ for the test to mean anything")
+
+        let controller = RaiderController(parent: SKNode(),
+                                          lane: 0...100,
+                                          boardBottomY: design.boardBottomY)
+        XCTAssertEqual(controller.currentBoardBottomY, design.boardBottomY)
+
+        controller.adopt(lane: phone.playfieldMinX...phone.playfieldMaxX,
+                         boardBottomY: phone.boardBottomY)
+        XCTAssertEqual(controller.currentBoardBottomY, phone.boardBottomY,
+                       "the anchor did not follow the layout")
+    }
+
+    /// What the bug actually looked like, so the regression is unmistakable.
+    func testAStaleAnchorPutsTheRaiderUnderTheShip() {
+        let phone = SceneLayout(size: CGSize(width: 393, height: 852))
+        let stale = SceneLayout(size: SceneLayout.designSize).boardBottomY
+
+        let wrong = RaiderRules.entryY(for: .gatling,
+                                       boardBottomY: stale,
+                                       boardSize: phone.boardSize,
+                                       squareSize: phone.squareSize,
+                                       sceneHeight: phone.size.height,
+                                       hudHeight: HUDNode.height,
+                                       scoutHeight: 28)
+        XCTAssertLessThan(wrong, phone.shipLaneY,
+                          "the old behaviour is supposed to be broken here")
+        XCTAssertGreaterThan(entry(.gatling, phone), phone.shipLaneY,
+                             "and the new one is supposed to be fixed")
+    }
+}

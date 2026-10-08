@@ -28,7 +28,13 @@ final class RaiderController {
     /// every scout take longer and thin the raider cadence to match.
     private var lane: ClosedRange<CGFloat>
     private var laneWidth: CGFloat { lane.upperBound - lane.lowerBound }
-    private let boardBottomY: CGFloat
+    /// The board's bottom edge, which `.rank` raiders are placed against.
+    ///
+    /// A `var`, and refreshed by `adopt` along with the lane. It was a `let`
+    /// captured at construction, and `adopt` updated only the x lane — so a
+    /// board that moved after the controller was built left every ranked
+    /// raider positioned against where the board used to be.
+    private var boardBottomY: CGFloat
     private var scouts: [RaiderNode] = []
     private var schedule = RaiderSchedule()
 
@@ -123,7 +129,15 @@ final class RaiderController {
 
     /// Adopts a new playfield after a resize. A crossing already in the air
     /// keeps the path it launched with; the next one uses the new lane.
-    func adopt(lane: ClosedRange<CGFloat>) { self.lane = lane }
+    /// Both halves of the geometry, together. Taking the lane without the
+    /// board's bottom edge is what let the two drift apart.
+    func adopt(lane: ClosedRange<CGFloat>, boardBottomY: CGFloat) {
+        self.lane = lane
+        self.boardBottomY = boardBottomY
+    }
+
+    /// What the controller currently believes, for the tests.
+    var currentBoardBottomY: CGFloat { boardBottomY }
 
     /// Removes the raiders from the scene. The controller is rebuilt per level,
     /// so without this each level left two more nodes parented and forgotten.
@@ -161,25 +175,13 @@ final class RaiderController {
         let toX = leftToRight ? lane.upperBound + margin : lane.lowerBound - margin
 
         let bounds = flightBounds
-        let entryY: CGFloat
-        switch RaiderRules.lane(for: powerUp) {
-        case .overTheBoard:
-            // Between the board's top edge and the HUD, so it clears every
-            // piece however far the fleet has descended.
-            //
-            // Clamped so the *sprite* fits, not just its centre. 14pt above
-            // the board put the middle of the scout in a band only 32pt tall
-            // — `hudBandHeight` 68 less the 36pt bar — so its top half slid
-            // under the HUD and the raider read as cut in two. The clamp
-            // keeps the whole silhouette below the bar, and if the band is
-            // too tight for that it sits lower, overlapping the board's top
-            // rank rather than vanishing behind chrome.
-            let ceiling = SceneLayout.current.size.height
-                - HUDNode.height - scout.size.height / 2 - 2
-            entryY = min(boardBottomY + BoardNode.boardSize + 14, ceiling)
-        case .rank(let rank):
-            entryY = boardBottomY + (CGFloat(rank) - 0.5) * BoardNode.squareSize
-        }
+        let entryY = RaiderRules.entryY(for: powerUp,
+                                        boardBottomY: boardBottomY,
+                                        boardSize: BoardNode.boardSize,
+                                        squareSize: BoardNode.squareSize,
+                                        sceneHeight: SceneLayout.current.size.height,
+                                        hudHeight: HUDNode.height,
+                                        scoutHeight: scout.size.height)
         let flight = RaiderRules.flight(for: powerUp,
                                        headroom: entryY - bounds.lowerBound)
 
