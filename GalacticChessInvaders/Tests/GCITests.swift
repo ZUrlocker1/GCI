@@ -7981,3 +7981,49 @@ final class RaiderLaneTests: XCTestCase {
                              "and the new one is supposed to be fixed")
     }
 }
+
+/// Geometry that is captured once and then has to keep up.
+///
+/// A player can rotate the phone mid-wave, deliberately or by accident, and a
+/// Mac window resizes continuously. Anything holding a layout number from
+/// construction is wrong from that moment until something rebuilds it, and the
+/// symptom is never "a number is wrong" — it is a sprite in the wrong place.
+@MainActor
+final class LayoutStalenessTests: XCTestCase {
+
+    private static let portrait = SceneLayout(size: CGSize(width: 393, height: 852))
+    private static let landscape = SceneLayout(size: CGSize(width: 852, height: 393))
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    func testTheTwoOrientationsActuallyDiffer() {
+        XCTAssertNotEqual(Self.portrait.squareSize, Self.landscape.squareSize,
+                          "these tests mean nothing if a rotation changes nothing")
+        XCTAssertNotEqual(Self.portrait.boardBottomY, Self.landscape.boardBottomY)
+    }
+
+    /// The fleet sweeps and descends in multiples of the square. Holding the
+    /// old one leaves the pieces off the squares the board thinks they are on.
+    func testTheFleetAdoptsANewSquare() {
+        let fleet = FleetController(board: GCIBoard(), parent: SKNode(),
+                                    squareSize: Self.landscape.squareSize,
+                                    level: LevelManager.parameters(for: 1))
+        XCTAssertEqual(fleet.currentSquareSize, Self.landscape.squareSize)
+
+        fleet.adopt(squareSize: Self.portrait.squareSize)
+        XCTAssertEqual(fleet.currentSquareSize, Self.portrait.squareSize,
+                       "the fleet is still moving in the old orientation's squares")
+    }
+
+    /// Ranked raiders are placed against the board's bottom edge.
+    func testTheRaidersAdoptANewBoardEdge() {
+        let raiders = RaiderController(parent: SKNode(), lane: 0...100,
+                                       boardBottomY: Self.landscape.boardBottomY)
+        raiders.adopt(lane: Self.portrait.playfieldMinX...Self.portrait.playfieldMaxX,
+                      boardBottomY: Self.portrait.boardBottomY)
+        XCTAssertEqual(raiders.currentBoardBottomY, Self.portrait.boardBottomY)
+    }
+}

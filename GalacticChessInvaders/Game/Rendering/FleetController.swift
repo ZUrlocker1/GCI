@@ -25,7 +25,16 @@ final class FleetController {
 
     private let fleetNode = SKNode()
     private unowned let board: GCIBoard
-    private let squareSize: CGFloat
+    /// The square the fleet moves in. A `var`, and refreshed by
+    /// `adopt(squareSize:)` when the board is rescaled.
+    ///
+    /// It drives the sweep's amplitude *and* the distance of a descent, and a
+    /// descent is two half-drops of the parent followed by a compensating move
+    /// of each piece — so a stale value does not merely look wrong, it leaves
+    /// the sprites off the squares the board thinks they are on. The board and
+    /// every piece were already re-fitted on a rescale; this was the one thing
+    /// that kept the old number.
+    private var squareSize: CGFloat
     /// Half the total sweep width. Read from the level rather than fixed —
     /// Level 6 widens it deliberately (`FleetRules.wideSweepAmplitudeRatio`),
     /// and Blitz grows it lap by lap on top of that.
@@ -87,6 +96,13 @@ final class FleetController {
         parent.addChild(fleetNode)
         buildRankNodes()
     }
+
+    /// Takes the board's new square after a rescale — a window resize on the
+    /// Mac, or a rotation on a phone, which a player will do by accident.
+    func adopt(squareSize: CGFloat) { self.squareSize = squareSize }
+
+    /// What the controller currently believes, for the tests.
+    var currentSquareSize: CGFloat { squareSize }
 
     private func buildRankNodes() {
         rankNodes = (0..<Self.rankSlots).map { _ in

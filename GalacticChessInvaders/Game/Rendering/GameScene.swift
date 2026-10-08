@@ -3477,6 +3477,11 @@ class GameScene: SKScene {
         SceneLayout.adopt(layout)
         boardNode?.relayout()
 
+        // The fleet moves in squares — its sweep amplitude and the distance of
+        // a descent are both multiples of this — so it has to be told too. It
+        // was the one thing a rescale left holding the old number.
+        fleet?.adopt(squareSize: layout.squareSize)
+
         for (square, node) in pieceNodes {
             node.adopt(squareSize: layout.squareSize)
             if let centre = boardNode?.center(of: square) { node.position = centre }
