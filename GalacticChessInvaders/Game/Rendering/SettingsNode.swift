@@ -21,6 +21,23 @@ final class SettingsNode: SKNode {
     /// The panel's own composition. The scene scales and centres it, and
     /// paints its own backdrop behind — see `GameScene.layOutPanel`.
     static let designSize = CGSize(width: 960, height: 700)
+
+    /// What this panel was actually built at — see `HowToPlayNode.designSize`
+    /// for why the scene reads it off the node rather than off the type.
+    private(set) var designSize: CGSize = SettingsNode.designSize
+
+    /// One long column of full-size rows, for the same reason How To Play has
+    /// one: two 410pt columns on a 440pt phone scale to about 0.46, and a
+    /// settings row whose label renders at 5pt is not a settings row.
+    private let isPortrait: Bool
+    var isPortraitLayout: Bool { isPortrait }
+
+    private static let pw: CGFloat = 430
+    private static let pm: CGFloat = 22
+    private static var pc: CGFloat { pw - pm * 2 }
+
+    /// Where the portrait cursor is, measured down from the content's top.
+    private var flowY: CGFloat = 0
     private static let W: CGFloat = 960
     private static let H: CGFloat = 700
     private static let hudBase: CGFloat = H - HUDNode.height   // 664
@@ -33,6 +50,16 @@ final class SettingsNode: SKNode {
     /// immediately — the glow, the grid, the volumes.
     var onChange: (() -> Void)?
 
+    /// Fires after every `rebuild`, which is every click on a control.
+    ///
+    /// A rebuild empties `content` and draws a *new* BACK button, and BACK is
+    /// the one control the scene positions rather than this node — so without
+    /// this, the first tap on any setting left the fresh button wherever it was
+    /// drawn. The wide layout survived that because its drawn position is
+    /// already the right one; the portrait panel is 430pt wide and BACK is
+    /// drawn at x=820, so it simply vanished.
+    var onRebuild: (() -> Void)?
+
     // MARK: - Hit targets
     //
     // Built during layout rather than looked up by node name. A settings screen
@@ -41,7 +68,9 @@ final class SettingsNode: SKNode {
     // scene would have to parse.
 
     private struct Hit {
-        let rect: CGRect
+        /// `var` so the portrait flow can shift a whole screen of them at once
+        /// when it finds out how tall it came out — see `buildPortrait`.
+        var rect: CGRect
         let isSlider: Bool
         /// Buttons push in when clicked; a toggle or a segment already shows
         /// what it did by lighting up in its new state. `parts` are the nodes
@@ -65,12 +94,15 @@ final class SettingsNode: SKNode {
     /// Whether the LOG PANEL row is offered. True only in Test Mode.
     private let showsLogRow: Bool
 
-    init(showsLogRow: Bool = false) {
+    init(showsLogRow: Bool = false, sceneSize: CGSize = SettingsNode.designSize) {
         self.showsLogRow = showsLogRow
+        isPortrait = HowToPlayNode.usesPortraitLayout(sceneSize: sceneSize)
         super.init()
-        buildBackground()
         addChild(content)
         rebuild()
+        // After `rebuild`, because in portrait the panel is as tall as whatever
+        // the rows came to and the background has to match.
+        buildBackground()
     }
 
     @available(*, unavailable)
@@ -129,7 +161,7 @@ final class SettingsNode: SKNode {
     // MARK: - Layout
 
     private func buildBackground() {
-        let bg = SKShapeNode(rect: CGRect(x: 0, y: 0, width: Self.W, height: Self.H))
+        let bg = SKShapeNode(rect: CGRect(origin: .zero, size: designSize))
         bg.fillColor = SKColor(white: 0, alpha: 0.97)
         bg.strokeColor = .clear
         bg.zPosition = -1
@@ -139,10 +171,222 @@ final class SettingsNode: SKNode {
     private func rebuild() {
         content.removeAllChildren()
         hits.removeAll()
+        guard !isPortrait else { buildPortrait(); onRebuild?(); return }
         buildHeader()
         buildLeftColumn()
         buildRightColumn()
         buildFooter()
+        onRebuild?()
+    }
+
+    // MARK: - Portrait: one long column
+    //
+    // Every row builder already takes `x:`, `w:` and `y:`, so this is the same
+    // controls in the same order driven by a cursor instead of by hand-written
+    // y values. Nothing about a row's behaviour changes — the hit rects are
+    // built from the same geometry, so the controls stay live.
+
+    private func buildPortrait() {
+        let x = Self.pm, w = Self.pc
+        flowY = 0
+
+        flowY += 24
+        let sub = label("SETTINGS", 10, Self.cyan.withAlphaComponent(0.65), .center)
+        sub.position = CGPoint(x: Self.pw / 2, y: -flowY)
+        content.addChild(sub)
+        flowY += 26
+        let title = label("GALACTIC CHESS INVADERS", 17, Self.cyan, .center)
+        title.position = CGPoint(x: Self.pw / 2, y: -flowY)
+        content.addChild(title)
+        flowY += 14
+        content.addChild(hline(x: x, y: -flowY, w: w))
+
+        flowHeading("GAMEPLAY", Self.magenta, x: x)
+        flowRow { y in
+            self.segmentRow("DIFFICULTY", x: x, w: w, y: y,
+                            options: ["CADET", "ACE"],
+                            selected: self.settings.difficulty == .cadet ? 0 : 1) { index in
+                self.settings.difficulty = index == 0 ? .cadet : .ace
+            }
+        }
+        flowExplain("SELECT CADET FOR AN EASIER ON RAMP.", x: x)
+        flowRow { y in
+            self.segmentRow("CHESS", x: x, w: w, y: y,
+                            options: ["YOU PLAY", "AUTO"],
+                            selected: self.settings.autoChess ? 1 : 0) { index in
+                self.settings.autoChess = index == 1
+            }
+        }
+        flowExplain("AUTOMATIC FAST CHESS PLAY FOR WHITE.", x: x)
+        flowRow { y in
+            self.toggleRow("CHESS HINTS", x: x, w: w, y: y,
+                           value: self.settings.chessHints) {
+                self.settings.chessHintsUserSet = true
+                self.settings.chessHints = $0
+            }
+        }
+        flowExplain("PULSE THE BEST PIECES TO MOVE", x: x)
+
+        flowHeading("AUDIO", Self.cyan, x: x)
+        let top = CGFloat(GameSettings.audioMax)
+        let shipped = 1.0 / top
+        flowRow { y in
+            self.toggleRow("MUSIC", x: x, w: w, y: y, value: self.settings.musicOn) {
+                self.settings.musicOn = $0
+            }
+        }
+        let music = CGFloat(settings.musicVolume) / top
+        flowRow { y in
+            self.sliderRow("VOLUME", x: x, w: w, y: y, fraction: music,
+                           readout: self.percent(music), dimmed: !self.settings.musicOn,
+                           defaultMark: shipped) {
+                self.settings.musicVolume = Float($0 * top)
+            }
+        }
+        flowRow { y in
+            self.toggleRow("SOUND FX", x: x, w: w, y: y, value: self.settings.soundOn) {
+                self.settings.soundOn = $0
+            }
+        }
+        let effects = CGFloat(settings.soundVolume) / top
+        flowRow { y in
+            self.sliderRow("VOLUME", x: x, w: w, y: y, fraction: effects,
+                           readout: self.percent(effects), dimmed: !self.settings.soundOn,
+                           defaultMark: shipped) {
+                self.settings.soundVolume = Float($0 * top)
+            }
+        }
+
+        flowHeading("DISPLAY", Self.cyan, x: x)
+        flowRow { y in
+            self.toggleRow("NEON GLOW", x: x, w: w, y: y, value: self.settings.neonGlow) {
+                self.settings.neonGlow = $0
+            }
+        }
+        flowExplain("TURN OFF ON A SLOWER DEVICE", x: x)
+        flowRow { y in
+            self.sliderRow("BOARD GRID", x: x, w: w, y: y,
+                           fraction: self.settings.boardGrid,
+                           readout: self.percent(self.settings.boardGrid),
+                           dimmed: false, defaultMark: 0.5) {
+                self.settings.boardGrid = $0
+            }
+        }
+        flowExplain("0% OPEN SPACE · 100% ROWS AND COLS", x: x)
+        flowRow { y in
+            self.toggleRow("NEBULA", x: x, w: w, y: y, value: self.settings.nebula) {
+                self.settings.nebula = $0
+            }
+        }
+        flowExplain("COLORED HAZE IN LATER LEVELS", x: x)
+        if showsLogRow {
+            flowRow { y in
+                self.toggleRow("LOG PANEL", x: x, w: w, y: y,
+                               value: self.settings.logPanel) {
+                    self.settings.logPanel = $0
+                }
+            }
+            flowExplain("LANDSCAPE ONLY · ALSO THE L KEY", x: x)
+        }
+
+        flowHeading("CONTROLS", Self.cyan, x: x)
+        let range = GameSettings.shipSpeedRange
+        let span = range.upperBound - range.lowerBound
+        flowRow { y in
+            self.sliderRow("SHIP SPEED", x: x, w: w, y: y,
+                           fraction: (self.settings.shipSpeedScale - range.lowerBound) / span,
+                           readout: self.percent(self.settings.shipSpeedScale),
+                           dimmed: false, defaultMark: 0.5) { fraction in
+                self.settings.shipSpeedScale = range.lowerBound + fraction * span
+            }
+        }
+        flowExplain("DEFAULT IS PLAYTESTED", x: x)
+
+        flowHeading("DATA", Self.magenta, x: x)
+        flowRow { y in
+            self.buttonRow("HIGH SCORES", "RESET", x: x, w: w, y: y,
+                           tint: Self.magenta) {
+                ScoreManager.shared.clearHighScores()
+            }
+        }
+        flowExplain("BACK TO ORIGINAL SCORES", x: x)
+        flowRow { y in
+            self.buttonRow("ALL SETTINGS", "RESTORE", x: x, w: w, y: y,
+                           tint: Self.cyan) {
+                self.settings.restoreDefaults()
+            }
+        }
+
+        flowY += 26
+        content.addChild(hline(x: x, y: -flowY, w: w))
+        flowY += 18
+        let hint = label(InputPrompts.resumeFromPanel, 9,
+                         Self.cyan.withAlphaComponent(0.65), .left)
+        hint.position = CGPoint(x: x, y: -flowY)
+        content.addChild(hint)
+        let saved = label("SAVED AUTOMATICALLY", 9,
+                          Self.cyan.withAlphaComponent(0.65), .right)
+        saved.position = CGPoint(x: Self.pw - x, y: -flowY)
+        content.addChild(saved)
+        flowY += 9 + Self.pm
+
+        let h = flowY
+        designSize = CGSize(width: Self.pw, height: h)
+
+        // The flow laid itself out downward from zero because it could not know
+        // its own height until it finished. Now it does, so everything it drew
+        // moves up into the panel — the drawing *and* the hit rects, which were
+        // built from the same y values and have to keep matching them.
+        //
+        // Moving `content` instead would have been one line, and wrong: the
+        // scene anchors BACK by setting the position of whatever node carries
+        // `backNavName`, and that arithmetic assumes the node's parent sits at
+        // the panel's origin. Offsetting `content` silently cost the panel its
+        // BACK button.
+        for child in content.children { child.position.y += h }
+        hits = hits.map { var hit = $0; hit.rect.origin.y += h; return hit }
+
+        // After the shift, so it lands where it is put rather than being moved
+        // with the rows.
+        buildPortraitBackButton()
+    }
+
+    /// Advances the cursor by one row's height and hands the builder the
+    /// baseline to draw on. The rows centre themselves on the y they are given.
+    private func flowRow(_ build: (CGFloat) -> Void) {
+        flowY += 20
+        build(-flowY)
+        flowY += 12
+    }
+
+    private func flowHeading(_ text: String, _ color: SKColor, x: CGFloat) {
+        flowY += 32
+        heading(text, color, x: x, y: -flowY)
+    }
+
+    private func flowExplain(_ text: String, x: CGFloat) {
+        flowY += 18
+        explain(text, x: x, y: -flowY)
+    }
+
+    private func buildPortraitBackButton() {
+        let rect = HowToPlayNode.navRect(designHeight: designSize.height)
+        let nav = SKNode()
+        nav.name = HowToPlayNode.backNavName
+        content.addChild(nav)
+
+        let box = SKShapeNode(rect: rect, cornerRadius: 3)
+        box.fillColor   = Self.cyan.withAlphaComponent(0.18)
+        box.strokeColor = Self.cyan
+        box.lineWidth   = 1
+        box.name        = "backButton"
+        nav.addChild(box)
+
+        let lbl = label("• BACK", 8, Self.cyan, .center)
+        lbl.verticalAlignmentMode = .center
+        lbl.position = CGPoint(x: rect.midX, y: rect.midY)
+        lbl.name = "backButton"
+        nav.addChild(lbl)
     }
 
     private func buildHeader() {
@@ -295,7 +539,7 @@ final class SettingsNode: SKNode {
         content.addChild(hline(x: 40, y: 70, w: Self.W - 80))
 
         // Top right, in the same box the HUD's SETTINGS button occupies.
-        let rect = HowToPlayNode.navRect
+        let rect = HowToPlayNode.navRect(designHeight: Self.H)
         let nav = SKNode()
         nav.name = HowToPlayNode.backNavName
         content.addChild(nav)

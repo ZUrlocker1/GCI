@@ -7495,3 +7495,111 @@ final class LandscapeSafeAreaTests: XCTestCase {
                        (before ?? 0) + 15)
     }
 }
+
+// MARK: - The portrait panels
+//
+// Two 410pt columns scaled to fit a 440pt phone land at about 0.46, which draws
+// 12pt body text at 5.6pt. Portrait reflows both panels into one tall column at
+// a 430pt design width instead, so the scale is near 1 and the type is close to
+// the size it was authored at. These pin the decision and the two bugs the
+// reflow turned up.
+@MainActor
+final class PortraitPanelTests: XCTestCase {
+
+    private static let phone = CGSize(width: 440, height: 956)
+    private static let pad   = CGSize(width: 1133, height: 744)
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    func testOnlyAPhoneInPortraitReflows() {
+        XCTAssertTrue(HowToPlayNode.usesPortraitLayout(sceneSize: Self.phone))
+        XCTAssertFalse(HowToPlayNode.usesPortraitLayout(
+            sceneSize: CGSize(width: 956, height: 440)), "the same phone on its side")
+        XCTAssertFalse(HowToPlayNode.usesPortraitLayout(sceneSize: Self.pad))
+        XCTAssertFalse(HowToPlayNode.usesPortraitLayout(
+            sceneSize: CGSize(width: 744, height: 1133)), "an iPad upright has the width")
+    }
+
+    /// The point of the exercise: the panel has to be narrow enough that it is
+    /// not shrunk to fit, which is what made the two-column version unreadable.
+    func testThePortraitPanelIsNotShrunkSideways() {
+        let panel = HowToPlayNode(sceneSize: Self.phone)
+        XCTAssertLessThanOrEqual(panel.designSize.width, Self.phone.width,
+                                 "a column wider than the phone is the old bug again")
+        XCTAssertGreaterThan(panel.designSize.height, HowToPlayNode.designSize.height,
+                             "one column of the same words is taller than two")
+    }
+
+    func testTheWideLayoutIsUntouched() {
+        let panel = HowToPlayNode(sceneSize: CGSize(width: 960, height: 700))
+        XCTAssertEqual(panel.designSize, HowToPlayNode.designSize)
+        XCTAssertFalse(panel.isPortraitLayout)
+        let settings = SettingsNode(sceneSize: CGSize(width: 960, height: 700))
+        XCTAssertEqual(settings.designSize, SettingsNode.designSize)
+    }
+
+    /// BACK is measured from the panel's top, not its origin, because the scene
+    /// anchors it there — a 1,200pt portrait panel has to put it 29pt below its
+    /// own top exactly as a 700pt one does.
+    func testBackSitsTheSameDistanceBelowAnyPanelTop() {
+        for h in [700, 1100, 1480] as [CGFloat] {
+            let rect = HowToPlayNode.navRect(designHeight: h)
+            XCTAssertEqual(h - rect.maxY, 7, "BACK drifted on a \(Int(h))pt panel")
+        }
+    }
+
+    /// Settings redraws itself on every click, BACK included. The wide layout
+    /// survived that because BACK's drawn position is already its final one;
+    /// the portrait panel is 430pt wide and BACK is drawn at x=820, so without
+    /// a re-anchor it vanished on the first tap.
+    func testSettingsAsksToBeReAnchoredAfterEveryRebuild() {
+        let panel = SettingsNode(sceneSize: Self.phone)
+        let before = GameSettings.shared.neonGlow
+        defer { GameSettings.shared.neonGlow = before }
+
+        var rebuilds = 0
+        panel.onRebuild = { rebuilds += 1 }
+
+        panel.handleClick(at: CGPoint(x: -9999, y: -9999))
+        XCTAssertEqual(rebuilds, 0, "a miss redraws nothing")
+
+        XCTAssertTrue(Self.clickAnyControl(in: panel), "found a control to click")
+
+        // Waited for rather than asserted outright: a control that pushes in
+        // when clicked defers its redraw by 90ms so the push is visible, and
+        // the settings panel runs with the scene paused — so that deferral is a
+        // real timer rather than an SKAction.
+        let redrawn = expectation(description: "the panel asked to be re-anchored")
+        redrawn.assertForOverFulfill = false   // a sweep can land on more than one
+        panel.onRebuild = { redrawn.fulfill() }
+        _ = Self.clickAnyControl(in: panel)
+        wait(for: [redrawn], timeout: 1)
+    }
+
+    /// Clicks down the right-hand edge until something takes it. Used by two
+    /// tests, both of which care only that *a* live control was reached.
+    private static func clickAnyControl(in panel: SettingsNode) -> Bool {
+        for y in stride(from: CGFloat(0), through: panel.designSize.height, by: 4) {
+            if panel.handleClick(at: CGPoint(x: panel.designSize.width - 40, y: y)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// The controls have to keep working after the flow shifts everything up
+    /// into the panel — the hit rects were built from the pre-shift y values.
+    func testTheControlsStillRespondAfterTheFlowIsShifted() {
+        let panel = SettingsNode(sceneSize: Self.phone)
+        let before = GameSettings.shared.neonGlow
+        defer { GameSettings.shared.neonGlow = before }
+
+        // Sweep the column for a live row. If the hit rects had not moved up
+        // with the drawing, nothing inside the panel's own bounds would hit.
+        XCTAssertTrue(Self.clickAnyControl(in: panel),
+                      "no control was reachable inside the panel's own bounds")
+    }
+}

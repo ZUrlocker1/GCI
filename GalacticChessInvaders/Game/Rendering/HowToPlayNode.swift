@@ -53,7 +53,35 @@ final class HowToPlayNode: SKNode {
     // All y values are scene-space (0 = bottom, 700 = top).
     /// The panel's own composition. The scene scales and centres it, and
     /// paints its own backdrop behind — see `GameScene.layOutPanel`.
+    /// The two-column composition, which is what every screen but a phone in
+    /// portrait gets.
     static let designSize = CGSize(width: 960, height: 700)
+
+    /// What this particular panel was actually built at. A phone in portrait
+    /// reflows into one tall column and is nothing like 960×700, and the scene
+    /// scales whatever it is handed — so the size has to travel with the node
+    /// rather than being read off the type.
+    private(set) var designSize: CGSize = HowToPlayNode.designSize
+
+    /// One long column, larger type. Two 410pt columns scaled to fit a 440pt
+    /// phone land at about 0.46, which renders 12pt body text at 5.6pt — too
+    /// small to read and the reason this exists. Portrait has the height to
+    /// spend instead, so the panel spends it.
+    private let isPortrait: Bool
+
+    /// What the scene asks on a rotation, to decide whether this node still
+    /// matches the screen it is on.
+    var isPortraitLayout: Bool { isPortrait }
+
+    static func usesPortraitLayout(sceneSize: CGSize) -> Bool {
+        sceneSize.height > sceneSize.width && HUDNode.isCompact(sceneWidth: sceneSize.width)
+    }
+
+    /// Narrow enough to scale up rather than down on a 393–466pt phone, wide
+    /// enough that 12pt body text still gets 32 characters to a line.
+    private static let pw: CGFloat = 430
+    private static let pm: CGFloat = 22            // side margin
+    private static var pc: CGFloat { pw - pm * 2 } // content width
     private static let W: CGFloat = 960
     private static let H: CGFloat = 700
     private static let hudBase: CGFloat = H - HUDNode.height   // 664
@@ -63,14 +91,20 @@ final class HowToPlayNode: SKNode {
     private static let rw: CGFloat = 410   // right column max text width
 
     init(sceneSize: CGSize) {
+        isPortrait = HowToPlayNode.usesPortraitLayout(sceneSize: sceneSize)
         super.init()
-        let w = Self.W, h = Self.H
-        buildBackground(w: w, h: h)
-        buildBackButton(w: w, h: h)
-        buildHeader(w: w, h: h)
-        buildLeftColumn()
-        buildRightColumn()
-        buildFooter(w: w)
+        if isPortrait {
+            buildPortrait()
+        } else {
+            let w = Self.W, h = Self.H
+            designSize = Self.designSize
+            buildBackground(w: w, h: h)
+            buildBackButton(w: w, h: h)
+            buildHeader(w: w, h: h)
+            buildLeftColumn()
+            buildRightColumn()
+            buildFooter(w: w)
+        }
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -90,7 +124,15 @@ final class HowToPlayNode: SKNode {
     /// Exactly where the HUD's INFO button was a moment ago — same corner, same
     /// box, same type size. The control that opens the panel and the control
     /// that closes it are the same shape in the same place.
-    static let navRect = CGRect(x: 820, y: 671, width: 70, height: 22)
+    /// Measured from the panel's *top*, not from its origin: the scene anchors
+    /// this container by the panel's top edge, so a 1,200pt portrait panel has
+    /// to put BACK 29pt below its own top exactly as a 700pt one does. The x is
+    /// deliberately left at the wide design's 820 — the container is positioned
+    /// by the scene and is not clipped to the panel, and `HUDNode.navDesignRight`
+    /// is the constant both ends agree on.
+    static func navRect(designHeight h: CGFloat) -> CGRect {
+        CGRect(x: 820, y: h - 29, width: 70, height: 22)
+    }
 
     /// The container holding BACK, so the scene can anchor it to the same
     /// corner the HUD's INFO button occupies rather than leaving it adrift in
@@ -102,14 +144,15 @@ final class HowToPlayNode: SKNode {
         nav.name = Self.backNavName
         addChild(nav)
 
-        let btn = SKShapeNode(rect: Self.navRect, cornerRadius: 3)
+        let rect = Self.navRect(designHeight: h)
+        let btn = SKShapeNode(rect: rect, cornerRadius: 3)
         btn.fillColor   = Self.cyan.withAlphaComponent(0.18)
         btn.strokeColor = Self.cyan; btn.lineWidth = 1; btn.name = "backButton"
         nav.addChild(btn)
 
         let lbl = label("• BACK", 8, Self.cyan, .center)
         lbl.verticalAlignmentMode = .center
-        lbl.position = CGPoint(x: Self.navRect.midX, y: Self.navRect.midY)
+        lbl.position = CGPoint(x: rect.midX, y: rect.midY)
         lbl.name = "backButton"
         nav.addChild(lbl)
     }
@@ -133,6 +176,257 @@ final class HowToPlayNode: SKNode {
         addChild(title)
 
         addChild(hline(x: 40, y: hud - 84, w: w - 80))
+    }
+
+    // MARK: - Portrait: one long column
+
+    // Built with a cursor rather than the hardcoded y values the wide layout
+    // uses, because the height is an output here, not an input: the panel is as
+    // tall as its content, and the scene scales whatever that comes to. Every
+    // primitive below returns what it consumed so the cursor can advance.
+    //
+    // Reading order is not the two-column order read down one side and then the
+    // other. CONTROLS comes second, straight after the premise — on a phone it
+    // is the thing you opened this screen to find.
+
+    /// Where the cursor is, measured down from the content's top.
+    private var flowY: CGFloat = 0
+
+    private func buildPortrait() {
+        let w = Self.pw, x = Self.pm, cw = Self.pc
+
+        // Laid out downward from 0, then shifted into place once the height is
+        // known. Everything the flow draws goes in here; the background, BACK
+        // and the footer are drawn in panel space around it.
+        let flow = SKNode()
+        addChild(flow)
+        flowY = 0
+
+        flowHeader(flow, w: w)
+        flowRule(flow, x: x, w: cw)
+
+        flowHeading(flow, "THE TWIST", Self.cyan, x: x)
+        flowBody(flow, "A real chess game plays out — but Black's army is also an invader fleet. It slides sideways, drops down, and fires at you. You command White's moves and a laser ship at the bottom of the screen.", x: x, w: cw)
+
+        flowHeading(flow, "CONTROLS", Self.cyan, x: x)
+        flowChip(flow, "DRAG", "Move the ship", x: x)
+        flowChip(flow, "FIRE", "Hold to shoot", x: x)
+        flowChip(flow, "TAP", "Piece, then square", x: x)
+        flowChip(flow, "KEYS", "SPACE, ARROWS, ESC", x: x)
+
+        flowHeading(flow, "HOW TO WIN", Self.cyan, x: x)
+        flowBody(flow, "Clear the board: destroy every black piece by shooting it or capturing it in chess. Landing a shot on the black King ends the wave with a huge bonus.", x: x, w: cw)
+
+        flowHeading(flow, "STAY ALIVE", Self.magenta, x: x)
+        // Read, not written — `GameSettings.lives` gives Cadet five and Ace
+        // three, exactly as the wide layout does.
+        let lives = GameSettings.shared.lives
+        flowBody(flow, "Guard your White King and your ship. You have \(lives) lives — lose one if a shot hits your ship or an invader reaches the bottom row.", x: x, w: cw)
+
+        flowHeading(flow, "SCORING", Self.magenta, x: x)
+        flowScoring(flow, x: x, w: cw)
+
+        flowHeading(flow, "HISTORY", Self.magenta, x: x)
+        flowBody(flow, "GCI began as a prototype in 1983 on the Apple II, written in TASC compiled BASIC. Now, with the help of Claude, you can experience a modern recharged version.", x: x, w: cw)
+
+        flowHeading(flow, "TEST MODE", Self.cyan.withAlphaComponent(0.55), x: x)
+        for line in ["HOLD THE VERSION BOX  ·  TAP TO CLEAR",
+                     "POWER, RAID AND LEVEL BUTTONS APPEAR",
+                     "LOG AND AUTO CHESS JOIN SETTINGS"] {
+            flowSmall(flow, line, SKColor.white.withAlphaComponent(0.6), x: x)
+        }
+
+        flowY += 16
+        flowCredit(flow, x: x)
+
+        // The footer rule and its two lines, then the panel is as tall as all
+        // of it plus a margin.
+        flowY += 20
+        flowRule(flow, x: x, w: cw)
+        // Stacked, not opposite ends of the line: 18 characters and 30 at 9pt
+        // is 432pt against 386 of column, so side by side they overlapped in
+        // the middle — "TAP BACK TO RESUME" ran straight through the copyright.
+        flowY += 16
+        let hint = label(InputPrompts.resumeFromPanel, 9,
+                         Self.cyan.withAlphaComponent(0.65), .left)
+        hint.position = CGPoint(x: x, y: -flowY)
+        flow.addChild(hint)
+        flowY += 14
+        let copyright = label("(C) 1983-2026 M. Zack Urlocker", 9,
+                              SKColor.white.withAlphaComponent(0.75), .left)
+        copyright.position = CGPoint(x: x, y: -flowY)
+        flow.addChild(copyright)
+        flowY += 9 + Self.pm
+
+        let h = flowY
+        designSize = CGSize(width: w, height: h)
+        flow.position = CGPoint(x: 0, y: h)
+        // The flow laid itself out downward from its own origin; now that the
+        // origin is known, the link's rect moves with it. The *click* goes
+        // through the named node and was always right — this is the Mac's
+        // cursor rect, which is a plain rectangle and has to be told.
+        linkRect.origin.y += h
+        buildBackground(w: w, h: h)
+        buildBackButton(w: w, h: h)
+    }
+
+    // MARK: - Portrait primitives
+    //
+    // Each draws at the cursor and advances it by what it used, so inserting or
+    // reordering a block needs no arithmetic anywhere else.
+
+    private static let pBody: CGFloat = 12
+    private static let pHeading: CGFloat = 16
+
+    private func flowHeader(_ flow: SKNode, w: CGFloat) {
+        flowY += 24
+        let sub = label("HOW TO PLAY", 10, Self.cyan.withAlphaComponent(0.65), .center)
+        sub.position = CGPoint(x: w / 2, y: -flowY)
+        flow.addChild(sub)
+        flowY += 26
+        // 17pt over 23 characters is 391pt against 386pt of content — one point
+        // over, and the title is the one thing allowed the full panel width.
+        let title = label("GALACTIC CHESS INVADERS", 17, Self.cyan, .center)
+        title.position = CGPoint(x: w / 2, y: -flowY)
+        flow.addChild(title)
+        flowY += 16
+    }
+
+    private func flowRule(_ flow: SKNode, x: CGFloat, w: CGFloat) {
+        flowY += 10
+        flow.addChild(hline(x: x, y: -flowY, w: w))
+    }
+
+    private func flowHeading(_ flow: SKNode, _ text: String, _ color: SKColor, x: CGFloat) {
+        flowY += 32
+        let node = label(text, Self.pHeading, color, .left)
+        node.position = CGPoint(x: x, y: -flowY)
+        flow.addChild(node)
+        flowY += 10
+    }
+
+    /// Measured rather than predicted: the node is created, added and then
+    /// asked how tall it came out, so a wrap that lands on a different number
+    /// of lines than expected cannot push the rest of the column out of step.
+    private func flowBody(_ flow: SKNode, _ text: String, x: CGFloat, w: CGFloat) {
+        let node = SKLabelNode(fontNamed: Self.font)
+        node.numberOfLines = 0
+        node.preferredMaxLayoutWidth = w
+        node.horizontalAlignmentMode = .left
+        node.verticalAlignmentMode   = .top
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = 4.0
+        node.attributedText = NSAttributedString(string: text, attributes: [
+            .font: PlatformFont(name: Self.font, size: Self.pBody)
+                ?? PlatformFont.monospacedSystemFont(ofSize: Self.pBody, weight: .regular),
+            .foregroundColor: SKColor.white.withAlphaComponent(0.85),
+            .paragraphStyle: style,
+        ])
+        flowY += 8
+        node.position = CGPoint(x: x, y: -flowY)
+        flow.addChild(node)
+        flowY += node.frame.height
+    }
+
+    private func flowSmall(_ flow: SKNode, _ text: String, _ color: SKColor, x: CGFloat) {
+        flowY += 15
+        let node = label(text, 9, color, .left)
+        node.position = CGPoint(x: x, y: -flowY)
+        flow.addChild(node)
+    }
+
+    private func flowChip(_ flow: SKNode, _ key: String, _ desc: String, x: CGFloat) {
+        let size: CGFloat = 11
+        let chipW = CGFloat(key.count) * size + 14
+        let chipH: CGFloat = 24
+        flowY += chipH / 2 + 8
+        let y = -flowY
+
+        let box = SKShapeNode(rect: CGRect(x: 0, y: -chipH / 2, width: chipW, height: chipH),
+                              cornerRadius: 3)
+        box.fillColor   = Self.cyan.withAlphaComponent(0.14)
+        box.strokeColor = Self.cyan.withAlphaComponent(0.65); box.lineWidth = 0.75
+        box.position    = CGPoint(x: x, y: y)
+        flow.addChild(box)
+
+        let k = label(key, size, Self.cyan, .center)
+        k.verticalAlignmentMode = .center
+        k.position = CGPoint(x: x + chipW / 2, y: y)
+        flow.addChild(k)
+
+        let d = label(desc, size, SKColor.white.withAlphaComponent(0.88), .left)
+        d.verticalAlignmentMode = .center
+        d.position = CGPoint(x: x + chipW + 12, y: y)
+        flow.addChild(d)
+        flowY += chipH / 2
+    }
+
+    /// Three across, two rows, same as the wide layout — the grid is already
+    /// the compact form of this information and does not want unstacking.
+    private func flowScoring(_ flow: SKNode, x: CGFloat, w: CGFloat) {
+        let items: [(String, String)] = [
+            ("king", "500"), ("queen", "150"), ("rook", "75"),
+            ("knight", "50"), ("bishop", "50"), ("pawn", "25"),
+        ]
+        let colW = w / 3
+        let rowH: CGFloat = 40
+        let iconH: CGFloat = 28
+        flowY += 24
+        let topY = -flowY
+        for (i, (piece, pts)) in items.enumerated() {
+            let px = x + CGFloat(i % 3) * colW
+            let py = topY - CGFloat(i / 3) * rowH
+
+            let tex = SKTexture(imageNamed: "chess-b-\(piece)")
+            let ts  = tex.size()
+            let sc  = ts.height > 0 ? iconH / ts.height : 1
+            let node = SKSpriteNode(texture: tex,
+                                    size: CGSize(width: ts.width * sc, height: iconH))
+            node.position = CGPoint(x: px + 20, y: py)
+            node.color = Self.magenta; node.colorBlendFactor = 0.15
+            flow.addChild(node)
+
+            let lbl = label(pts, 14, .white, .left)
+            lbl.position = CGPoint(x: px + 44, y: py - 7)
+            flow.addChild(lbl)
+        }
+        flowY += rowH + 14
+    }
+
+    /// Two lines here rather than the wide layout's one: "All music created by
+    /// Zudio available on Mac, iPhone, iPad." is 58 characters, which at 11pt
+    /// is 638pt against 386 of column. The link keeps its own hit target.
+    private func flowCredit(_ flow: SKNode, x: CGFloat) {
+        let em: CGFloat = 11
+        flowY += 18
+        let lead = label("All music created by ", em, .white, .left)
+        lead.position = CGPoint(x: x, y: -flowY)
+        flow.addChild(lead)
+
+        let linkX = x + 21 * em
+        let linkW = 5 * em
+        let link = label("Zudio", em, Self.cyan.withAlphaComponent(0.9), .left)
+        link.position = CGPoint(x: linkX, y: -flowY)
+        flow.addChild(link)
+
+        let underline = SKShapeNode(rect: CGRect(x: linkX, y: -flowY - 3,
+                                                 width: linkW, height: 0.9))
+        underline.fillColor = Self.cyan.withAlphaComponent(0.9)
+        underline.strokeColor = .clear
+        flow.addChild(underline)
+
+        // Held in the node's own space and converted once the flow is placed,
+        // so the hit target cannot drift from the word it covers.
+        linkRect = CGRect(x: linkX - 6, y: -flowY - 8, width: linkW + 12, height: 24)
+        let hit = SKShapeNode(rect: linkRect)
+        hit.fillColor = .clear; hit.strokeColor = .clear
+        hit.name = Self.musicLinkName
+        flow.addChild(hit)
+
+        flowY += 18
+        let tail = label("available on Mac, iPhone, iPad.", em, .white, .left)
+        tail.position = CGPoint(x: x, y: -flowY)
+        flow.addChild(tail)
     }
 
     // MARK: - Left column

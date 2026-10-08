@@ -1755,10 +1755,11 @@ class GameScene: SKScene {
         endLevelAnnouncement()
         removeEndBanner()
 
-        let panel = SettingsNode(showsLogRow: testMode)
+        let panel = SettingsNode(showsLogRow: testMode, sceneSize: size)
         panel.position = .zero
         panel.zPosition = 20
         panel.onChange = { [weak self] in self?.applyLiveSettings() }
+        panel.onRebuild = { [weak self] in self?.layOutPanels() }
         addChild(panel)
         settingsNode = panel
 
@@ -3237,6 +3238,36 @@ class GameScene: SKScene {
     /// it has no notch and the gap would only eat the panel's own room.
     private static let compactPanelTopGap: CGFloat = 52
 
+    /// Air under the longest panel, so a reflowed column does not sit flush on
+    /// the bottom edge.
+    private static let panelBottomMargin: CGFloat = 12
+
+    /// A panel composed for portrait is a different panel, not a scaled one —
+    /// one long column against two — so a rotation has to rebuild rather than
+    /// re-place. Cheap: it happens on the orientation change, not per frame.
+    private func rebuildPanelsIfCompositionChanged() {
+        let wantsPortrait = HowToPlayNode.usesPortraitLayout(sceneSize: size)
+        if let open = howToPlayNode, open.isPortraitLayout != wantsPortrait {
+            open.removeFromParent()
+            let fresh = HowToPlayNode(sceneSize: size)
+            fresh.position = .zero
+            fresh.zPosition = open.zPosition
+            addChild(fresh)
+            howToPlayNode = fresh
+            refreshCursorRects()
+        }
+        if let open = settingsNode, open.isPortraitLayout != wantsPortrait {
+            open.removeFromParent()
+            let fresh = SettingsNode(showsLogRow: testMode, sceneSize: size)
+            fresh.position = .zero
+            fresh.zPosition = open.zPosition
+            fresh.onChange = open.onChange
+            fresh.onRebuild = open.onRebuild
+            addChild(fresh)
+            settingsNode = fresh
+        }
+    }
+
     private func layOutPanel(_ panel: SKNode, designSize: CGSize) {
         let shade = panelShade ?? {
             let node = SKSpriteNode(color: .black, size: size)
@@ -3250,7 +3281,22 @@ class GameScene: SKScene {
         shade.position = .zero
         shade.isHidden = false
 
-        let scale = min(1, min(size.width / designSize.width, size.height / designSize.height))
+        // Declared before the scale because the scale depends on it: the panel
+        // is top-aligned under the HUD's inset and this gap, so the height it
+        // actually gets is the screen minus both. Scaling against `size.height`
+        // let a tall panel run off the bottom by exactly the chrome above it —
+        // harmless while every panel was 700pt against a 960pt design and shrank
+        // anyway, and not harmless once portrait reflows into one long column.
+        #if os(iOS)
+        let contentGap = HUDNode.isCompact(sceneWidth: size.width)
+            ? Self.compactPanelTopGap : 0
+        #else
+        let contentGap: CGFloat = 0
+        #endif
+        let available = max(1, size.height - topInsetDrop - contentGap
+                               - Self.panelBottomMargin)
+        let scale = min(1, min(size.width / designSize.width,
+                               available / designSize.height))
         panel.setScale(scale)
         // Centred across, pinned to the top. Centring vertically left a band of
         // dead space above the panel and pushed BACK down the screen; BACK sits
@@ -3265,12 +3311,6 @@ class GameScene: SKScene {
         // dropping the panel opens the gap without moving the button out of
         // line with the HUD's own. There is room: the panel only fills the top
         // third of a portrait phone.
-        #if os(iOS)
-        let contentGap = HUDNode.isCompact(sceneWidth: size.width)
-            ? Self.compactPanelTopGap : 0
-        #else
-        let contentGap: CGFloat = 0
-        #endif
         panel.position = CGPoint(
             x: (size.width - designSize.width * scale) / 2,
             y: size.height - designSize.height * scale - topInsetDrop - contentGap)
@@ -3389,9 +3429,9 @@ class GameScene: SKScene {
     /// Re-fits whichever panel is up, and hides the shade when none is.
     private func layOutPanels() {
         if let settingsNode {
-            layOutPanel(settingsNode, designSize: SettingsNode.designSize)
+            layOutPanel(settingsNode, designSize: settingsNode.designSize)
         } else if let howToPlayNode {
-            layOutPanel(howToPlayNode, designSize: HowToPlayNode.designSize)
+            layOutPanel(howToPlayNode, designSize: howToPlayNode.designSize)
         } else {
             panelShade?.isHidden = true
         }
@@ -3421,6 +3461,7 @@ class GameScene: SKScene {
     /// Moves the furniture to wherever the current layout puts it.
     private func applyLayout() {
         let layout = self.layout
+        rebuildPanelsIfCompositionChanged()
 
         // A square-size change means the board is the wrong size for the
         // window, not merely in the wrong place, so it has to be remade — but
