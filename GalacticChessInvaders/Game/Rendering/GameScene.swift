@@ -1105,7 +1105,7 @@ class GameScene: SKScene {
         #endif
         guard hudNode == nil else { return }
         let hud = HUDNode(sceneWidth: size.width)
-        hud.position = CGPoint(x: 0, y: size.height - HUDNode.height)
+        hud.position = CGPoint(x: 0, y: size.height - HUDNode.height - topInsetDrop)
         hud.zPosition = 10
         addChild(hud)
         hudNode = hud
@@ -1334,14 +1334,42 @@ class GameScene: SKScene {
     /// the 36pt bar — so it clears `boardTopY` by 4pt and the board never has
     /// to make room for it. Its width is unconstrained for the same reason:
     /// the band is empty all the way across.
+    // MARK: - What the system is covering
+    //
+    // Only the top matters so far: a Dynamic Island sits over the HUD bar, and
+    // `LEVEL` is centred exactly where it goes. The bottom is stored because the
+    // ship's lane is where a home indicator wants to be, which §5 Pass 3 flags
+    // and nothing has needed yet.
+
+    private(set) var safeAreaTop: CGFloat = 0
+    private(set) var safeAreaBottom: CGFloat = 0
+
+    func adoptSafeArea(top: CGFloat, bottom: CGFloat) {
+        guard top != safeAreaTop || bottom != safeAreaBottom else { return }
+        safeAreaTop = top
+        safeAreaBottom = bottom
+        applyLayout()
+    }
+
+    /// How far the HUD and the panels drop to clear the island.
+    ///
+    /// Clamped to the air above the board, so a device with a deep inset and a
+    /// short screen pushes the bar onto nothing rather than onto the squares.
+    /// In landscape the island is on a side edge, `safeAreaInsets.top` is ~0,
+    /// and this is a no-op.
+    var topInsetDrop: CGFloat {
+        let airAboveBoard = size.height - HUDNode.height - layout.boardTopY
+        return max(0, min(safeAreaTop, airAboveBoard - 4))
+    }
+
     func layOutVersionBadge() {
         versionBadge?.setText(versionBadgeText)
         // Centred in the air between the HUD bar and the board, rather than a
         // fixed 16 below the bar. Identical on every screen that shipped — the
         // band is 68 against a 36pt bar, so half of 32 *is* 16 — but the band
         // now shrinks on a phone, and a fixed offset put the badge on the board.
-        versionBadge?.position = CGPoint(x: 10,
-                                         y: size.height - HUDNode.height - hudAir / 2)
+        versionBadge?.position = CGPoint(
+            x: 10, y: size.height - HUDNode.height - topInsetDrop - hudAir / 2)
         versionBadge?.isHidden = !versionBadgeFits || panelIsUp
     }
 
@@ -3200,8 +3228,11 @@ class GameScene: SKScene {
         // dead space above the panel and pushed BACK down the screen; BACK sits
         // in the panel's own HUD band, so top-aligning puts it exactly where
         // SET and INFO are during play, which is where the eye looks for it.
+        // Dropped by the same inset as the HUD: the panel is top-aligned so its
+        // own BACK button lands where SET and INFO are during play, and an
+        // island over one is an island over the other.
         panel.position = CGPoint(x: (size.width - designSize.width * scale) / 2,
-                                 y: size.height - designSize.height * scale)
+                                 y: size.height - designSize.height * scale - topInsetDrop)
 
         // BACK is drawn in the panel's own top-right, which on a wide scene is
         // well inboard of where the HUD's INFO button sits. Anchor it to the
@@ -3358,6 +3389,14 @@ class GameScene: SKScene {
         for node in [turnTimerNode, autoModeLabel, statusNode, hintNode].compactMap({ $0 }) {
             node.setScale(layout.gutterScale)
         }
+        // Flush left where the column has been stacked under the board, so the
+        // readouts are not sitting under a thumb.
+        let leftAligned = layout.readoutsAreLeftAligned
+        turnTimerNode?.setLeftAligned(leftAligned)
+        statusNode?.setLeftAligned(leftAligned)
+        hintNode?.setLeftAligned(leftAligned)
+        autoModeLabel?.horizontalAlignmentMode = leftAligned ? .left : .center
+
         turnTimerNode?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
         autoModeLabel?.position = CGPoint(x: layout.gutterCentreX, y: layout.turnTimerY)
         statusNode?.position    = CGPoint(x: layout.gutterCentreX, y: layout.statusBannerY)

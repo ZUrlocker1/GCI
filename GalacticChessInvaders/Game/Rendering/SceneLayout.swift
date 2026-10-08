@@ -219,8 +219,23 @@ struct SceneLayout {
     /// What the stacked column needs, at the 0.9 gutter floor: the −4…+172
     /// spread scaled, plus air top and bottom.
     static let stackedReadoutBandHeight: CGFloat = 170
-    /// Air either side of a full-width board.
-    static let stackedSideMargin: CGFloat = 8
+    /// How close to the wall the ship may get. Shared with `shipMargin`, since
+    /// the board's inset below is derived from it.
+    static let shipWallMargin: CGFloat = 30
+
+    /// How far past each board edge the ship must still be able to sit.
+    ///
+    /// **This is a gameplay rule, not spacing.** The ship fires straight up, and
+    /// White's own pawns stand on every file. If the ship cannot leave the
+    /// board's columns there is nowhere it can shoot from without one of its own
+    /// pieces in the way — the fleet sweeps out past the files and the player
+    /// cannot follow it. A full-width board trapped the ship 21pt inside its own
+    /// edges, which Zack caught on a phone.
+    static let stackedShipClearance: CGFloat = 14
+
+    /// Air either side of the board once the readouts have been stacked. Wide
+    /// enough that the ship's centre clears the outermost file.
+    static let stackedSideMargin: CGFloat = shipWallMargin + stackedShipClearance
 
     /// True where the gutter cannot fit beside the board at any square size.
     ///
@@ -349,7 +364,7 @@ struct SceneLayout {
     /// the window's bottom edge as the board moves.
     var shipLaneY: CGFloat { boardBottomY - 58 }
     /// How close to the wall the ship may get.
-    var shipMargin: CGFloat { 30 }
+    var shipMargin: CGFloat { Self.shipWallMargin }
 
     /// Where the ship may fly: the playfield box, inset by its own margin.
     /// 30…930 at the design size, which is exactly what the fixed canvas gave.
@@ -373,8 +388,14 @@ struct SceneLayout {
     /// points away from the board it belongs to. Inside the box the column
     /// keeps a constant distance from the board's edge at any size.
     var gutterCentreX: CGFloat {
-        usesStackedReadouts ? size.width / 2 : (playfieldMinX + boardOriginX) / 2
+        usesStackedReadouts ? Self.stackedSideMargin + 12
+                            : (playfieldMinX + boardOriginX) / 2
     }
+
+    /// Whether the readout column is drawn from a left edge rather than a centre
+    /// line. True wherever it has been stacked under the board — see
+    /// `ChessHintNode.setLeftAligned`.
+    var readoutsAreLeftAligned: Bool { usesStackedReadouts }
 
     /// How much to scale everything that is not the board itself: the gutter
     /// readouts, and the centred banners.

@@ -37,6 +37,26 @@ final class KeyboardFocusedSKView: SKView {
 
     override var canBecomeFirstResponder: Bool { true }
 
+    /// The scene draws edge to edge — the host sets `.ignoresSafeArea()` so the
+    /// starfield reaches the corners — which is free on an iPad and is not on a
+    /// phone, where a Dynamic Island sits over the top of it. The scene is told
+    /// what is covered so the HUD and the panels can step out from under it,
+    /// rather than the whole scene being inset and losing the bleed.
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        pushSafeArea()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        pushSafeArea()
+    }
+
+    private func pushSafeArea() {
+        guard let scene = scene as? GameScene else { return }
+        scene.adoptSafeArea(top: safeAreaInsets.top, bottom: safeAreaInsets.bottom)
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         // `UIView` delivers one touch unless asked otherwise, so the scheme

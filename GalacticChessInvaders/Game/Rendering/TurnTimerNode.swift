@@ -80,4 +80,20 @@ final class TurnTimerNode: SKNode {
             digits.setScale(1.0)
         }
     }
+
+    /// Lays the column out from a left edge instead of a centre line.
+    ///
+    /// Used in portrait on a phone, where the readouts sit under the board
+    /// rather than beside it. Centred there, they fall under whichever thumb is
+    /// not on FIRE; flush left they stay readable — Zack's call, from holding
+    /// the thing. Every label keeps its own y, so this is an alignment change
+    /// and not a re-layout.
+    func setLeftAligned(_ left: Bool) {
+        let mode: SKLabelHorizontalAlignmentMode = left ? .left : .center
+        for case let label as SKLabelNode in children where label.horizontalAlignmentMode != mode {
+            label.horizontalAlignmentMode = mode
+            label.position.x = 0
+        }
+    }
+
 }

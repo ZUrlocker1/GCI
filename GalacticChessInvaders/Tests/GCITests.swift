@@ -6475,6 +6475,16 @@ final class PowerUpAlleyLayoutTests: XCTestCase {
 @MainActor
 final class PanelChromeAcrossResizeTests: XCTestCase {
 
+    /// `tearDown` below already restores the size between tests, which leaves
+    /// the *first* one unprotected: another class can hand this one a scene
+    /// already at 700×960, and then the resize inside the test is a no-op — no
+    /// `didChangeSize`, no rebuild, and an assertion about the HUD fails for a
+    /// reason that has nothing to do with the HUD. That is how it failed on
+    /// 8 Oct: green on its own, red in the suite.
+    override func setUp() async throws {
+        GameScene.shared.size = SceneLayout.designSize
+    }
+
     private func nav(_ scene: GameScene) -> SKNode? {
         scene.children
             .compactMap { $0 as? HUDNode }
@@ -7247,8 +7257,12 @@ final class StackedReadoutTests: XCTestCase {
         XCTAssertLessThan(l.chessHintY, l.boardBottomY,
                           "the top of the column overlaps the board")
         XCTAssertGreaterThan(l.statusBannerY, 0, "the bottom of the column is off-screen")
-        XCTAssertEqual(l.gutterCentreX, 393 / 2, accuracy: 0.5,
-                       "the column should centre under the board")
+        // Left-anchored rather than centred: stacked under the board the
+        // readouts fall under a thumb if they sit in the middle.
+        XCTAssertTrue(l.readoutsAreLeftAligned, "stacked readouts should align left")
+        XCTAssertLessThan(l.gutterCentreX, 393 / 4,
+                          "the column should sit against the left edge")
+        XCTAssertGreaterThan(l.gutterCentreX, 0, "and not off it")
     }
 
     /// Nothing that already shipped moves.
@@ -7340,5 +7354,63 @@ final class CompactHUDTests: XCTestCase {
                       "a narrow bar should draw the count")
         XCTAssertFalse(labels(HUDNode(sceneWidth: 393)).contains("lifeShip0"),
                        "a narrow bar should not draw ships as well")
+    }
+}
+
+// MARK: - The ship must be able to leave the board's columns
+
+/// GCI's one inviolable geometry rule, and the reason it is a rule: the ship
+/// fires straight up, and White's own pawns stand on every file. If the ship
+/// cannot get past the outermost file there is nowhere it can shoot from
+/// without one of its own pieces in the way, while the fleet sweeps out past
+/// the board and the player cannot follow.
+///
+/// A full-width board in portrait trapped the ship 21pt inside its own edges.
+/// This pins it at every size, in every mode.
+@MainActor
+final class ShipCanClearTheBoardTests: XCTestCase {
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    func testTheShipCanReachOutsideBothBoardEdges() {
+        let sizes: [(String, CGSize)] = [
+            ("iPhone 15 portrait",       CGSize(width: 393, height: 852)),
+            ("iPhone 17 Pro Max portrait", CGSize(width: 440, height: 956)),
+            ("Duo folded portrait",      CGSize(width: 466, height: 678)),
+            ("Duo inner portrait",       CGSize(width: 626, height: 890)),
+            ("iPhone 15 landscape",      CGSize(width: 852, height: 393)),
+            ("iPad mini portrait",       CGSize(width: 744, height: 1133)),
+            ("iPad mini landscape",      CGSize(width: 1133, height: 744)),
+            ("iPad Pro 13 landscape",    CGSize(width: 1366, height: 1024)),
+            ("Mac design canvas",        SceneLayout.designSize),
+            ("Mac minimum window",       CGSize(width: 640, height: 500)),
+        ]
+        for (name, size) in sizes {
+            let l = SceneLayout(size: size)
+            XCTAssertLessThanOrEqual(
+                l.shipLane.lowerBound, l.boardOriginX,
+                "\(name): the ship cannot get left of file a — it would have to "
+                + "shoot through its own pieces")
+            XCTAssertGreaterThanOrEqual(
+                l.shipLane.upperBound, l.boardTopX,
+                "\(name): the ship cannot get right of file h")
+        }
+    }
+
+    /// And with room to spare where the readouts are stacked, which is where it
+    /// went wrong — a margin equal to the ship's own wall gap leaves 2pt.
+    func testStackedLayoutsLeaveRealClearance() {
+        for (name, size) in [("iPhone 15", CGSize(width: 393, height: 852)),
+                             ("iPhone 17 Pro Max", CGSize(width: 440, height: 956))] {
+            let l = SceneLayout(size: size)
+            XCTAssertTrue(l.usesStackedReadouts, "\(name) should be stacked")
+            let leftClear = l.boardOriginX - l.shipLane.lowerBound
+            let rightClear = l.shipLane.upperBound - l.boardTopX
+            XCTAssertGreaterThanOrEqual(leftClear, 10, "\(name): only \(leftClear)pt to the left")
+            XCTAssertGreaterThanOrEqual(rightClear, 10, "\(name): only \(rightClear)pt to the right")
+        }
     }
 }

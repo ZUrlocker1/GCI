@@ -79,7 +79,7 @@ final class TitleOverlayNode: SKNode {
     private func setupSubtitle() {
         let label = SKLabelNode(fontNamed: Self.titleFont)
         label.text = "\u{2605} 40 YEARS IN THE MAKING \u{2605}"   // ★ ... ★
-        label.fontSize = 18
+        label.fontSize = 27        // 1.5x: it reads as a caption at 18 on a phone
         label.fontColor = Self.magenta
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
@@ -128,7 +128,7 @@ final class TitleOverlayNode: SKNode {
     private func setupPressStart() {
         let label = SKLabelNode(fontNamed: Self.titleFont)
         label.text = InputPrompts.start
-        label.fontSize = 16
+        label.fontSize = 24        // 1.5x, as the prompt people are looking for
         label.fontColor = .white
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
@@ -150,18 +150,22 @@ final class TitleOverlayNode: SKNode {
     private func setupHighScores() {
         let header = SKLabelNode(fontNamed: Self.titleFont)
         header.text = "HIGH SCORES"
-        header.fontSize = 13
+        header.fontSize = 26
         header.fontColor = Self.cyan
         header.horizontalAlignmentMode = .center
         header.verticalAlignmentMode = .center
-        header.position = CGPoint(x: 0, y: -130)
+        // The block rises as it grows. At 2x the five rows are 176pt tall
+        // rather than 104, and left where it was the last row finished 4pt from
+        // the bottom of the Mac's 700pt canvas. There is 77pt of unused air
+        // between the start prompt and this header to spend.
+        header.position = CGPoint(x: 0, y: -98)
         addChild(header)
 
         // Divider line
-        let divider = SKShapeNode(rectOf: CGSize(width: 380, height: 1))
+        let divider = SKShapeNode(rectOf: CGSize(width: 390, height: 1))
         divider.fillColor   = Self.cyan.withAlphaComponent(0.4)
         divider.strokeColor = .clear
-        divider.position    = CGPoint(x: 0, y: -146)
+        divider.position    = CGPoint(x: 0, y: -118)
         addChild(divider)
 
         // Top 5 entries from ScoreManager (seeded with defaults if no real scores yet)
@@ -170,20 +174,20 @@ final class TitleOverlayNode: SKNode {
         formatter.numberStyle = .decimal
 
         for i in 0..<5 {
-            let y = CGFloat(-162 - i * 26)
+            let y = CGFloat(-140 - i * 44)
 
             let rank = SKLabelNode(fontNamed: Self.titleFont)
             rank.text = "\(i + 1)."
-            rank.fontSize = 11; rank.fontColor = Self.magenta
+            rank.fontSize = 22; rank.fontColor = Self.magenta
             rank.horizontalAlignmentMode = .left; rank.verticalAlignmentMode = .center
-            rank.position = CGPoint(x: -175, y: y)
+            rank.position = CGPoint(x: -185, y: y)
             addChild(rank)
 
             let name = SKLabelNode(fontNamed: Self.titleFont)
             name.text = i < entries.count ? entries[i].initials : "---"
-            name.fontSize = 11; name.fontColor = .white
+            name.fontSize = 22; name.fontColor = .white
             name.horizontalAlignmentMode = .left; name.verticalAlignmentMode = .center
-            name.position = CGPoint(x: -140, y: y)
+            name.position = CGPoint(x: -142, y: y)
             addChild(name)
 
             let scoreStr = i < entries.count
@@ -191,9 +195,9 @@ final class TitleOverlayNode: SKNode {
                 : "---"
             let scoreLbl = SKLabelNode(fontNamed: Self.titleFont)
             scoreLbl.text = scoreStr
-            scoreLbl.fontSize = 11; scoreLbl.fontColor = .white
+            scoreLbl.fontSize = 22; scoreLbl.fontColor = .white
             scoreLbl.horizontalAlignmentMode = .right; scoreLbl.verticalAlignmentMode = .center
-            scoreLbl.position = CGPoint(x: 140, y: y)
+            scoreLbl.position = CGPoint(x: 185, y: y)
             addChild(scoreLbl)
         }
     }
