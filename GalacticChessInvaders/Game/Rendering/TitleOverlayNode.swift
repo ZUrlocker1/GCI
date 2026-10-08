@@ -16,7 +16,21 @@ final class TitleOverlayNode: SKNode {
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
 
-    override init() {
+    /// Extra air between the title and the high score table, for portrait.
+    ///
+    /// The screen was composed on a landscape canvas, and in portrait the two
+    /// blocks end up close enough to read as one. Zack's numbers, from looking
+    /// at it on a phone: the title up 30, the table down 15.
+    private let portraitLift: CGFloat
+    static let portraitTitleLift: CGFloat = 30
+    static let portraitScoreDrop: CGFloat = 15
+
+    /// Kept so a rotation can tell whether the overlay it has is the right one.
+    let isPortrait: Bool
+
+    init(portrait: Bool = false) {
+        isPortrait = portrait
+        portraitLift = portrait ? 1 : 0
         super.init()
         setupTitle()
         setupSubtitle()
@@ -36,7 +50,9 @@ final class TitleOverlayNode: SKNode {
             ("CHESS INVADERS",  170, 48),
         ]
 
-        for (text, y, fontSize) in lines {
+        let titleLift = portraitLift * Self.portraitTitleLift
+        for (text, yBase, fontSize) in lines {
+            let y = yBase + titleLift
             let label = SKLabelNode(fontNamed: Self.titleFont)
             label.text = text
             label.fontSize = fontSize
@@ -148,6 +164,7 @@ final class TitleOverlayNode: SKNode {
     // MARK: - High Scores
 
     private func setupHighScores() {
+        let drop = portraitLift * Self.portraitScoreDrop
         let header = SKLabelNode(fontNamed: Self.titleFont)
         header.text = "HIGH SCORES"
         header.fontSize = 26
@@ -158,14 +175,14 @@ final class TitleOverlayNode: SKNode {
         // rather than 104, and left where it was the last row finished 4pt from
         // the bottom of the Mac's 700pt canvas. There is 77pt of unused air
         // between the start prompt and this header to spend.
-        header.position = CGPoint(x: 0, y: -98)
+        header.position = CGPoint(x: 0, y: -98 - drop)
         addChild(header)
 
         // Divider line
         let divider = SKShapeNode(rectOf: CGSize(width: 390, height: 1))
         divider.fillColor   = Self.cyan.withAlphaComponent(0.4)
         divider.strokeColor = .clear
-        divider.position    = CGPoint(x: 0, y: -118)
+        divider.position    = CGPoint(x: 0, y: -118 - drop)
         addChild(divider)
 
         // Top 5 entries from ScoreManager (seeded with defaults if no real scores yet)
@@ -174,7 +191,7 @@ final class TitleOverlayNode: SKNode {
         formatter.numberStyle = .decimal
 
         for i in 0..<5 {
-            let y = CGFloat(-140 - i * 44)
+            let y = CGFloat(-140 - i * 44) - drop
 
             let rank = SKLabelNode(fontNamed: Self.titleFont)
             rank.text = "\(i + 1)."

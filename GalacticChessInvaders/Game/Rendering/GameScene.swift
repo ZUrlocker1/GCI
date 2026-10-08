@@ -949,7 +949,9 @@ class GameScene: SKScene {
         backgroundColor = backdropNode.applyTitle()
         startTitleRaiders()
 
-        let overlay = TitleOverlayNode()
+        // Portrait gets extra air between the title and the table: the screen
+        // was composed on a landscape canvas and the two blocks read as one.
+        let overlay = TitleOverlayNode(portrait: size.height > size.width)
         overlay.position = CGPoint(x: size.width / 2, y: size.height / 2)
         bloomNode.addChild(overlay)
         titleOverlay = overlay
@@ -958,7 +960,8 @@ class GameScene: SKScene {
         // overlay is centred in the scene, so the container is offset back to
         // the scene's origin and then up to where the HUD would have been —
         // which puts SET and INFO in exactly the pixels they occupy in play.
-        let nav = HUDNode.makeNavButtons()
+        let nav = HUDNode.makeNavButtons(
+            compact: HUDNode.isCompact(sceneWidth: size.width))
         nav.name = Self.titleNavName
         overlay.addChild(nav)
         layOutTitleScreen()
@@ -1008,6 +1011,15 @@ class GameScene: SKScene {
     private func layOutTitleScreen() {
         guard let overlay = titleOverlay else { return }
 
+        // The portrait spacing is baked in when the overlay is built, so a
+        // rotation has to rebuild it rather than merely recentre it. Without
+        // this, turning the phone kept whichever spacing the title screen was
+        // first drawn with.
+        if overlay.isPortrait != (size.height > size.width) {
+            showTitleScreen()
+            return
+        }
+
         // The title is composed at the design canvas like the panels are, so it
         // needs the same treatment: on a scene narrower than 960 — the log
         // sidebar open, say — the wordmark simply ran off the edge. Toggling
@@ -1025,9 +1037,18 @@ class GameScene: SKScene {
             // Right-anchored, like the HUD's pair, then expressed in the
             // overlay's scaled space. Anchoring it to the left is what clipped
             // SET and INFO off the title screen on a narrow window.
-            let originX = HUDNode.navOriginX(forSceneWidth: size.width)
+            // Compact on a phone, like the HUD's pair, and dropped by the same
+            // inset — the title screen was the one place SET and INFO were
+            // still half under the Dynamic Island, because this pair is the
+            // overlay's own and never went through the HUD.
+            let compact = HUDNode.isCompact(sceneWidth: size.width)
+            let originX = compact
+                ? size.width - HUDNode.compactNavWidth(includePause: false)
+                             - HUDNode.compactNavRightMargin
+                : HUDNode.navOriginX(forSceneWidth: size.width)
+            let originY = size.height - HUDNode.height - topInsetDrop
             nav.position = CGPoint(x: (originX - size.width / 2) / scale,
-                                   y: (size.height - HUDNode.height - size.height / 2) / scale)
+                                   y: (originY - size.height / 2) / scale)
         }
     }
 
@@ -3243,8 +3264,18 @@ class GameScene: SKScene {
         // content node, How To Play does not.
         if let nav = panel.childNode(withName: "//" + HowToPlayNode.backNavName) {
             nav.setScale(1 / scale)
-            let target = CGPoint(x: HUDNode.navOriginX(forSceneWidth: size.width),
-                                 y: size.height - designSize.height)
+            // Two corrections, both of which left BACK somewhere the HUD's own
+            // buttons are not. It has to drop by the same inset as the bar, or
+            // it sits above the island the bar just stepped out from under; and
+            // it has to use the same right margin, which is 8 on a compact bar
+            // and 70 on the design one. Before this it was 59pt high and 62pt
+            // inboard of where SET and INFO are on a phone.
+            let rightMargin = HUDNode.isCompact(sceneWidth: size.width)
+                ? HUDNode.compactNavRightMargin
+                : HUDNode.navRightMargin
+            let target = CGPoint(
+                x: size.width - HUDNode.navDesignRight - rightMargin,
+                y: size.height - designSize.height - topInsetDrop)
             nav.position = CGPoint(x: (target.x - panel.position.x) / scale,
                                    y: (target.y - panel.position.y) / scale)
         }
