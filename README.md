@@ -88,8 +88,7 @@ frames: sound effects are decoded once at launch and played from a pool of runni
 **1.2 — better window resizing, and the groundwork for touch.** The board and the readouts lay
 themselves out from the space available instead of being scaled into a fixed canvas, and everything
 on the playfield is sized against the board. That is what made iPad and iPhone possible in 1.3 and
-1.4 — a fixed canvas can only ever be letterboxed onto a new screen shape. The title screen also
-stopped re-rendering its own type sixty times a second: 53% CPU down to under 40%.
+1.4 — a fixed canvas can only ever be letterboxed onto a new screen shape.
 
 **1.1 — Cadet and Ace.** Cadet became the default difficulty and the harder mode became Ace. Chess
 Hints glow the pieces worth moving and name them in the gutter; Arcade Hints prompt a player who
