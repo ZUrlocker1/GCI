@@ -3236,7 +3236,12 @@ class GameScene: SKScene {
     ///
     /// Phone-only: a narrow Mac window is "compact" by the same width test, but
     /// it has no notch and the gap would only eat the panel's own room.
-    private static let compactPanelTopGap: CGFloat = 52
+    ///
+    /// 34, down from the 52 that first cleared BACK. Once the panels reflowed
+    /// into one long column the gap stopped being free air and started costing
+    /// scale — every point of it is a point the column cannot use, and the
+    /// column is what is being read.
+    private static let compactPanelTopGap: CGFloat = 34
 
     /// Air under the longest panel, so a reflowed column does not sit flush on
     /// the bottom edge.

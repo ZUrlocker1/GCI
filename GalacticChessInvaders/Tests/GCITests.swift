@@ -7523,14 +7523,42 @@ final class PortraitPanelTests: XCTestCase {
             sceneSize: CGSize(width: 744, height: 1133)), "an iPad upright has the width")
     }
 
-    /// The point of the exercise: the panel has to be narrow enough that it is
-    /// not shrunk to fit, which is what made the two-column version unreadable.
-    func testThePortraitPanelIsNotShrunkSideways() {
+    /// Roughly the height a portrait panel actually gets: the screen less the
+    /// HUD's safe-area drop, the compact top gap and the bottom margin. The
+    /// scene owns the exact figure; this is the budget the design targets.
+    private static let usableHeight: CGFloat = 838
+
+    /// The panel has to fill the phone's width once it is scaled.
+    ///
+    /// This replaced an assertion that the design had to be *narrower* than the
+    /// phone, which had the reasoning backwards and is what left 65pt of black
+    /// down each side. On a column this long the height is what binds, so the
+    /// rendered width is `W × (A / H)` — and filling the screen means
+    /// `W / H ≥ phoneWidth / A`, not `W ≤ phoneWidth`. A wider design wraps
+    /// into fewer lines, which is what buys the scale back.
+    func testThePortraitPanelFillsTheWidthOnceScaled() {
         let panel = HowToPlayNode(sceneSize: Self.phone)
-        XCTAssertLessThanOrEqual(panel.designSize.width, Self.phone.width,
-                                 "a column wider than the phone is the old bug again")
+        let scale = min(Self.phone.width / panel.designSize.width,
+                        Self.usableHeight / panel.designSize.height)
+        let rendered = panel.designSize.width * scale
+        // 0.9, not 0.95: the design is already at the point where the two
+        // constraints meet, so the last few points are the wrap landing where
+        // it lands. The bar guards against sliding back toward the 0.69 the
+        // two-column panel managed, not against a point of drift.
+        XCTAssertGreaterThan(rendered, Self.phone.width * 0.90,
+                             "\(Int(Self.phone.width - rendered))pt of black down the sides")
         XCTAssertGreaterThan(panel.designSize.height, HowToPlayNode.designSize.height,
                              "one column of the same words is taller than two")
+    }
+
+    /// The reason the width was widened at all: readable body type. 12pt at the
+    /// old 430pt design rendered at about 8.6; the bar is what that became.
+    func testThePortraitBodyTypeIsActuallyBigger() {
+        let panel = HowToPlayNode(sceneSize: Self.phone)
+        let scale = min(Self.phone.width / panel.designSize.width,
+                        Self.usableHeight / panel.designSize.height)
+        XCTAssertGreaterThan(14 * scale, 9.5,
+                             "body type is back under what the two-column panel managed")
     }
 
     func testTheWideLayoutIsUntouched() {

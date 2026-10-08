@@ -77,10 +77,21 @@ final class HowToPlayNode: SKNode {
         sceneSize.height > sceneSize.width && HUDNode.isCompact(sceneWidth: sceneSize.width)
     }
 
-    /// Narrow enough to scale up rather than down on a 393–466pt phone, wide
-    /// enough that 12pt body text still gets 32 characters to a line.
-    private static let pw: CGFloat = 430
-    private static let pm: CGFloat = 22            // side margin
+    /// Wider than the phone on purpose.
+    ///
+    /// The panel is scaled to fit, and on a column this long it is the *height*
+    /// that binds — so a narrow design does not mean narrow margins, it means a
+    /// small scale and two fat black bands down the sides. At 430 the panel
+    /// rendered 304pt wide inside a 440pt phone: 65pt of black each side, which
+    /// is what Zack was looking at.
+    ///
+    /// More width means more characters to a line, which means fewer lines,
+    /// which means less height to fit into, which means a bigger scale. 560 is
+    /// where the two constraints meet — the panel fills the width almost
+    /// exactly at the scale the height allows — and it buys a point and a half
+    /// of rendered type on top of the margins it reclaims.
+    private static let pw: CGFloat = 560
+    private static let pm: CGFloat = 11            // side margin
     private static var pc: CGFloat { pw - pm * 2 } // content width
     private static let W: CGFloat = 960
     private static let H: CGFloat = 700
@@ -243,20 +254,20 @@ final class HowToPlayNode: SKNode {
         // of it plus a margin.
         flowY += 20
         flowRule(flow, x: x, w: cw)
-        // Stacked, not opposite ends of the line: 18 characters and 30 at 9pt
-        // is 432pt against 386 of column, so side by side they overlapped in
-        // the middle — "TAP BACK TO RESUME" ran straight through the copyright.
         flowY += 16
-        let hint = label(InputPrompts.resumeFromPanel, 9,
+        let hint = label(InputPrompts.resumeFromPanel, 11,
                          Self.cyan.withAlphaComponent(0.65), .left)
         hint.position = CGPoint(x: x, y: -flowY)
         flow.addChild(hint)
-        flowY += 14
-        let copyright = label("(C) 1983-2026 M. Zack Urlocker", 9,
-                              SKColor.white.withAlphaComponent(0.75), .left)
-        copyright.position = CGPoint(x: x, y: -flowY)
+        // 18 characters and 27 at 11pt is 495pt against 538 of content, so at
+        // this width the two fit on one line after all — opposite ends of it,
+        // as the wide layout has always drawn them. The middle initial goes:
+        // with it the pair came to 528 and read as one run-on line.
+        let copyright = label("(C) 1983-2026 Zack Urlocker", 11,
+                              SKColor.white.withAlphaComponent(0.75), .right)
+        copyright.position = CGPoint(x: w - x, y: -flowY)
         flow.addChild(copyright)
-        flowY += 9 + Self.pm
+        flowY += 11 + Self.pm
 
         let h = flowY
         designSize = CGSize(width: w, height: h)
@@ -275,18 +286,21 @@ final class HowToPlayNode: SKNode {
     // Each draws at the cursor and advances it by what it used, so inserting or
     // reordering a block needs no arithmetic anywhere else.
 
-    private static let pBody: CGFloat = 12
-    private static let pHeading: CGFloat = 16
+    private static let pBody: CGFloat = 14
+    private static let pHeading: CGFloat = 18
 
     private func flowHeader(_ flow: SKNode, w: CGFloat) {
-        flowY += 24
-        let sub = label("HOW TO PLAY", 10, Self.cyan.withAlphaComponent(0.65), .center)
+        // Half the lead it had: with the panel's top gap also cut, the column
+        // starts where the eye already is rather than below a band of nothing.
+        flowY += 12
+        // Half again the size — this names the screen, and at 12pt it was the
+        // quietest thing on a page it is supposed to introduce.
+        let sub = label("HOW TO PLAY", 18, Self.cyan.withAlphaComponent(0.65), .center)
         sub.position = CGPoint(x: w / 2, y: -flowY)
         flow.addChild(sub)
-        flowY += 26
-        // 17pt over 23 characters is 391pt against 386pt of content — one point
-        // over, and the title is the one thing allowed the full panel width.
-        let title = label("GALACTIC CHESS INVADERS", 17, Self.cyan, .center)
+        flowY += 30
+        // 20pt over 23 characters is 460pt against 538 of content.
+        let title = label("GALACTIC CHESS INVADERS", 20, Self.cyan, .center)
         title.position = CGPoint(x: w / 2, y: -flowY)
         flow.addChild(title)
         flowY += 16
@@ -329,16 +343,17 @@ final class HowToPlayNode: SKNode {
     }
 
     private func flowSmall(_ flow: SKNode, _ text: String, _ color: SKColor, x: CGFloat) {
-        flowY += 15
-        let node = label(text, 9, color, .left)
+        flowY += 17
+        // 37 characters at 11pt is 407pt against 538 of content.
+        let node = label(text, 11, color, .left)
         node.position = CGPoint(x: x, y: -flowY)
         flow.addChild(node)
     }
 
     private func flowChip(_ flow: SKNode, _ key: String, _ desc: String, x: CGFloat) {
-        let size: CGFloat = 11
+        let size: CGFloat = 12
         let chipW = CGFloat(key.count) * size + 14
-        let chipH: CGFloat = 24
+        let chipH: CGFloat = 26
         flowY += chipH / 2 + 8
         let y = -flowY
 
@@ -369,8 +384,8 @@ final class HowToPlayNode: SKNode {
             ("knight", "50"), ("bishop", "50"), ("pawn", "25"),
         ]
         let colW = w / 3
-        let rowH: CGFloat = 40
-        let iconH: CGFloat = 28
+        let rowH: CGFloat = 44
+        let iconH: CGFloat = 32
         flowY += 24
         let topY = -flowY
         for (i, (piece, pts)) in items.enumerated() {
@@ -382,22 +397,22 @@ final class HowToPlayNode: SKNode {
             let sc  = ts.height > 0 ? iconH / ts.height : 1
             let node = SKSpriteNode(texture: tex,
                                     size: CGSize(width: ts.width * sc, height: iconH))
-            node.position = CGPoint(x: px + 20, y: py)
+            node.position = CGPoint(x: px + 24, y: py)
             node.color = Self.magenta; node.colorBlendFactor = 0.15
             flow.addChild(node)
 
-            let lbl = label(pts, 14, .white, .left)
-            lbl.position = CGPoint(x: px + 44, y: py - 7)
+            let lbl = label(pts, 16, .white, .left)
+            lbl.position = CGPoint(x: px + 52, y: py - 8)
             flow.addChild(lbl)
         }
         flowY += rowH + 14
     }
 
     /// Two lines here rather than the wide layout's one: "All music created by
-    /// Zudio available on Mac, iPhone, iPad." is 58 characters, which at 11pt
-    /// is 638pt against 386 of column. The link keeps its own hit target.
+    /// Zudio available on Mac, iPhone, iPad." is 58 characters, which at 12pt
+    /// is 696pt against 538 of column. The link keeps its own hit target.
     private func flowCredit(_ flow: SKNode, x: CGFloat) {
-        let em: CGFloat = 11
+        let em: CGFloat = 12
         flowY += 18
         let lead = label("All music created by ", em, .white, .left)
         lead.position = CGPoint(x: x, y: -flowY)

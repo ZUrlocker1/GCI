@@ -190,11 +190,16 @@ final class SettingsNode: SKNode {
         let x = Self.pm, w = Self.pc
         flowY = 0
 
-        flowY += 24
-        let sub = label("SETTINGS", 10, Self.cyan.withAlphaComponent(0.65), .center)
+        // Same treatment as How To Play's: less lead, and a panel name big
+        // enough to read as one.
+        flowY += 12
+        let sub = label("SETTINGS", 14, Self.cyan.withAlphaComponent(0.65), .center)
         sub.position = CGPoint(x: Self.pw / 2, y: -flowY)
         content.addChild(sub)
-        flowY += 26
+        flowY += 28
+        // 17, which is the ceiling: 23 characters at 18 is 414pt against 408 of
+        // content, and at 19 the title visibly ran off both edges of the panel.
+        // The panel name above it carries the increase instead.
         let title = label("GALACTIC CHESS INVADERS", 17, Self.cyan, .center)
         title.position = CGPoint(x: Self.pw / 2, y: -flowY)
         content.addChild(title)
