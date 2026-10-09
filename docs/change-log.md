@@ -38,11 +38,17 @@ are the two problems this release is about.*
 - **Same controls in the same corner, everywhere.** SET, INFO and BACK sit in one place
   across gameplay, Settings and How To Play, on every device and orientation.
 
-- **A minor fix for a rotation bug** *(after the build 11 DMG).* Turning the device
-  mid-wave left the raiders flying against where the board used to be — one of them could
-  end up below the player's ship — and left the fleet sweeping and descending in the old
-  orientation's squares. Both now follow the board. iPhone and iPad; the Mac does not
-  rotate, though it reaches the same path by resizing a window mid-game.
+- **Minor bug fixes.**
+
+  - *Rotation.* Turning the device mid-wave left the raiders flying against where the
+    board used to be — one could end up below the player's ship — and left the fleet
+    sweeping and descending in the old orientation's squares. Both now follow the board.
+    iPhone and iPad; the Mac reaches the same path by resizing a window mid-game.
+  - *End-of-run messages on a phone.* "LEVEL CLEARED!" and the rest ran off both edges in
+    portrait. They wrap onto two lines now, each line centred under the one above, rather
+    than shrinking to type smaller than the score beneath them.
+  - *The FIRE button* sat under the home indicator in the bottom-right corner in
+    portrait. It clears the hardware in both orientations now.
 
 ---
 
