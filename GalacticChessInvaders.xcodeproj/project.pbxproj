@@ -76,6 +76,7 @@
 		46AAE105A315B67E0A9A7C86 /* GalacticChessInvadersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77F960CE5B7791CFFB374A6A /* GalacticChessInvadersApp.swift */; };
 		470834A6A8F44559446005C5 /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C800709B09587557941485 /* Piece.swift */; };
 		473E337008F689EE3989411F /* CheckPathNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741746F275F1126EB8D73A8C /* CheckPathNode.swift */; };
+		47E444E978D39354E17BFECD /* LabelWrapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1097565F51B255F1CBD1018E /* LabelWrapping.swift */; };
 		496150C3B2737728E85A0830 /* chess-w-king.png in Resources */ = {isa = PBXBuildFile; fileRef = 8339E5F18F16FA9DBF8CC7E2 /* chess-w-king.png */; };
 		4995887262686AEF5B518B5B /* GCIBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9E53557C0AE9D2A3C9F5E3 /* GCIBoard.swift */; };
 		4A2CEA7A7E325B4D3C5950A5 /* chess-b-rook-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EC6AFA901DFFFDB6CCC3E68 /* chess-b-rook-d2.png */; };
@@ -199,6 +200,7 @@
 		D68DE2D84BFE8383EE410391 /* chess-w-queen-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = C6065939A740086FDEF2B63B /* chess-w-queen-d1.png */; };
 		D7B11FDA64DEF1189A805920 /* ChessHintNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FEA9B411916B35F070FC730 /* ChessHintNode.swift */; };
 		D96554076A4F6BFF8CB7D2D2 /* FleetRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A14B880553E1506AF871A55 /* FleetRules.swift */; };
+		DA9698E5F8345E744F751810 /* LabelWrapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1097565F51B255F1CBD1018E /* LabelWrapping.swift */; };
 		DAADEF5196A423E549D68CDB /* GameSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CE9C9E6605254BA0A685BC /* GameSettings.swift */; };
 		DE340400464B4B709FE0F477 /* LogTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284B42A60842EE3D06208D3 /* LogTextView.swift */; };
 		DEE6A588A0E118BDB71E32F6 /* chess-w-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */; };
@@ -263,6 +265,7 @@
 		0DD287E9A35A46D7482B9AE4 /* TurnTimerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnTimerNode.swift; sourceTree = "<group>"; };
 		0F65CD31679AB1B7066DE79C /* FireButtonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FireButtonNode.swift; sourceTree = "<group>"; };
 		0FEA9B411916B35F070FC730 /* ChessHintNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessHintNode.swift; sourceTree = "<group>"; };
+		1097565F51B255F1CBD1018E /* LabelWrapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelWrapping.swift; sourceTree = "<group>"; };
 		1284B42A60842EE3D06208D3 /* LogTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogTextView.swift; sourceTree = "<group>"; };
 		14C2C8B3CAA40DB1FA83AA1E /* chess-w-rook.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-rook.png"; sourceTree = "<group>"; };
 		1E035ABF8A545D83002E5689 /* chess-w-rook-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-w-rook-d1.png"; sourceTree = "<group>"; };
@@ -579,6 +582,7 @@
 				E6BD913BC0D0EB5692D30572 /* HighScoreEntryNode.swift */,
 				69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */,
 				A56497B49CFE839D85ABCC3A /* HUDNode.swift */,
+				1097565F51B255F1CBD1018E /* LabelWrapping.swift */,
 				5308FEB0B1858AC43F451354 /* LaserNode.swift */,
 				C7C9EB476F38A1115CA12AE8 /* LaserPool.swift */,
 				2C700B2F09ADAB666A66E141 /* LevelBannerNode.swift */,
@@ -636,28 +640,28 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_4D52778D-467A-45D1-BB28-EA996B7DE47C" /* .claude */ = {
+		"TEMP_528BD611-4379-48F5-9ACF-8FEE9A227BC9" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_55F4DA1A-573C-4CBA-AF2F-09BACEF3DEF5" /* .claude */ = {
+		"TEMP_536CB8B5-3F2A-47C9-920E-D1D4560E1F12" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_6E831BBA-961F-44AD-ABA0-87629AF7F5CF" /* .claude */ = {
+		"TEMP_60BB2D36-18C4-4059-9192-7F5C6718FEEA" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_806A8A46-22C9-4E20-899C-81FE58B0BF53" /* .claude */ = {
+		"TEMP_B1D52A2B-3CAB-4FBA-B627-60714E072AD4" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -920,6 +924,7 @@
 				B13EF8E180EE359E19DA52C3 /* Juice.swift in Sources */,
 				0D33DD3B5B6669FDE09BA2C8 /* KeyPress.swift in Sources */,
 				686340DF574D88D52CF422F3 /* KeyboardInputAdapter.swift in Sources */,
+				DA9698E5F8345E744F751810 /* LabelWrapping.swift in Sources */,
 				E05E089FE48382AC59AD93BD /* LaserNode.swift in Sources */,
 				8916FC9528C763093B5D18BE /* LaserPool.swift in Sources */,
 				219A018777664526318593BD /* LevelBannerNode.swift in Sources */,
@@ -998,6 +1003,7 @@
 				CD1874C4485A026E0CF6E5D5 /* Juice.swift in Sources */,
 				0A446AFBF0B0226CBCD251C8 /* KeyPress.swift in Sources */,
 				807BD5108B03FF0D9087A2DE /* KeyboardInputAdapter.swift in Sources */,
+				47E444E978D39354E17BFECD /* LabelWrapping.swift in Sources */,
 				1CEBD50D8F22785E804BC48E /* LaserNode.swift in Sources */,
 				89730601CC9CA7965495F732 /* LaserPool.swift in Sources */,
 				5CD2378E73FBA9A0396D70D7 /* LevelBannerNode.swift in Sources */,

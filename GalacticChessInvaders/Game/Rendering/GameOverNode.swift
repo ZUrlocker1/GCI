@@ -230,14 +230,8 @@ final class GameOverNode: SKNode {
     /// exactly the same place.
     private func wrap(_ node: SKLabelNode, to width: CGFloat,
                       growUpward: Bool = true) {
-        guard width > 0 else { return }
         let before = node.frame.height
-        node.numberOfLines = 0
-        node.preferredMaxLayoutWidth = width
-        // A single word longer than the screen cannot be wrapped, only shrunk.
-        if node.frame.width > width {
-            node.fontSize *= width / node.frame.width
-        }
+        node.wrapCentred(to: width, fontNamed: Self.font)
         // Whichever way the empty space is. The headline grows up into the gap
         // above it; the prompt grows down, because the score is above it.
         let extra = max(0, node.frame.height - before) / 2

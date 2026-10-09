@@ -104,17 +104,6 @@ class GameScene: SKScene {
     /// the square's own limits (32 to 96) bound this to 0.5 up to 1.5.
     private var bannerScale: CGFloat { layout.contentScale }
 
-    /// Shrinks a label's type until it fits `maxWidth`, and leaves it alone if
-    /// it already does.
-    ///
-    /// The end-of-wave banners are a fixed 30pt, which "BLACK KING DESTROYED"
-    /// outgrows on any board narrower than about 600pt — it ran off both sides
-    /// and straight through PAUSED. Length varies per message, so a single
-    /// point size cannot be right for all of them.
-    private func fitWidth(_ label: SKLabelNode, to maxWidth: CGFloat) {
-        guard maxWidth > 0, label.frame.width > maxWidth else { return }
-        label.fontSize *= maxWidth / label.frame.width
-    }
     /// Squares currently advised, best first — compared to skip redundant work
     /// when the advice has not changed between beats.
     private var hintedSquares: [String] = []
@@ -2756,10 +2745,7 @@ class GameScene: SKScene {
         // one line at a size worth reading — shrinking to fit gave type a third
         // the height of the headline above it. Two lines keeps the size.
         let maxWidth = layout.boardSize / bannerScale
-        label.numberOfLines = 0
-        label.preferredMaxLayoutWidth = maxWidth
-        // Still a backstop, for a single word longer than the board.
-        fitWidth(label, to: maxWidth)
+        label.wrapCentred(to: maxWidth, fontNamed: "PressStart2P-Regular")
         registerCentredOverlay(label)
 
         // The pop animates *to* `bannerScale`, not to 1.

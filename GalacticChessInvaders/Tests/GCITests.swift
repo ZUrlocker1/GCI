@@ -8142,6 +8142,28 @@ final class PhoneEdgeTests: XCTestCase {
         }
     }
 
+    /// A wrapped message centres each line and leaves air between them.
+    ///
+    /// `numberOfLines` and `preferredMaxLayoutWidth` break the string and do
+    /// nothing else — the lines sit hard against each other and are laid out to
+    /// one edge rather than centred under one another. Both come from a
+    /// paragraph style, so this checks the style is actually on the text.
+    func testWrappedLinesAreCentredAndSpaced() {
+        let node = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
+                                sceneSize: CGSize(width: 393, height: 852))
+        let headline = node.children.compactMap { $0 as? SKLabelNode }
+            .first { $0.attributedText?.string == "LEVEL CLEARED!" }
+        let style = headline?.attributedText?
+            .attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
+        XCTAssertNotNil(style, "the wrapped label should carry a paragraph style")
+        XCTAssertEqual(style?.alignment, NSTextAlignment.center,
+                       "each line has to be centred")
+        XCTAssertGreaterThan(style?.lineSpacing ?? 0, 0,
+                             "two lines hard against each other read as one")
+        XCTAssertGreaterThan(headline?.frame.height ?? 0, 60,
+                             "and it should actually have wrapped")
+    }
+
     /// Wrapping must not push the headline over the detail beneath it.
     func testAWrappedHeadlineLeavesTheRestWhereItWas() {
         let narrow = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
@@ -8190,4 +8212,6 @@ final class PhoneEdgeTests: XCTestCase {
         XCTAssertEqual(mac.fireButtonRightInset, 8)
     }
 }
+
+
 
