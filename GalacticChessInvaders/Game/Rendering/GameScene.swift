@@ -1234,20 +1234,26 @@ class GameScene: SKScene {
             let radius = FireButtonNode.diameter * layout.fireButtonScale / 2
             fireButton.adopt(scale: layout.fireButtonScale)
             fireButton.position = CGPoint(
-                x: size.width - radius - Self.fireButtonInset,
-                y: radius + Self.fireButtonInset)
+                x: size.width - radius - fireButtonRightInset,
+                y: radius + fireButtonBottomInset)
             return
         }
 
         let margin = size.width - layout.boardTopX
         let fits = (margin - Self.fireButtonInset * 2) / FireButtonNode.diameter
         fireButton.adopt(scale: max(0.6, min(layout.contentScale, fits)))
-        fireButton.position = CGPoint(x: layout.boardTopX + margin / 2,
-                                      y: layout.shipLaneY)
+        let radius = FireButtonNode.diameter * fireButton.xScale / 2
+        // Centred in the margin, but never past the housing or the corner. On a
+        // phone on its side the right edge of that margin is under the bezel.
+        let centred = layout.boardTopX + margin / 2
+        fireButton.position = CGPoint(
+            x: min(centred, size.width - radius - fireButtonRightInset),
+            y: max(layout.shipLaneY, radius + fireButtonBottomInset))
     }
 
-    /// Air between the button and both the board and the screen edge.
-    private static let fireButtonInset: CGFloat = 8
+
+
+
 
 
     // MARK: - The version label, and the door into Test Mode
@@ -1399,6 +1405,23 @@ class GameScene: SKScene {
     private var isPhoneLandscape: Bool {
         size.width > size.height && size.height < 500
     }
+
+    /// Air between the button and both the board and the screen edge.
+    static let fireButtonInset: CGFloat = 8
+
+    /// How far FIRE sits in from the bottom and right edges.
+    ///
+    /// The 8pt of air it was composed with is right on a Mac and wrong on a
+    /// phone, where the home indicator and the rounded corner both land on
+    /// exactly that spot — the button was clipped in the bottom-right corner in
+    /// portrait. Both are floors, so a Mac and an iPad keep the 8: neither
+    /// reports an inset.
+    ///
+    /// Here rather than beside `layOutFireButton`, which is inside the iOS-only
+    /// section: only iOS draws the button, but the suite that measures this
+    /// runs on macOS.
+    var fireButtonBottomInset: CGFloat { max(Self.fireButtonInset, safeAreaBottom) }
+    var fireButtonRightInset: CGFloat { max(Self.fireButtonInset, edgeInsetRight) }
 
     var edgeInsetLeft: CGFloat { max(safeAreaLeft, cornerClearance) }
     var edgeInsetRight: CGFloat { max(safeAreaRight, cornerClearance) }
@@ -2727,14 +2750,31 @@ class GameScene: SKScene {
         label.zPosition = 24
         // Against the board, not the window: the banner belongs to the board it
         // covers, and `bannerScale` grows it from here.
-        fitWidth(label, to: layout.boardSize / bannerScale)
+        //
+        // Wrapped rather than shrunk. "BLACK KING DESTROYED" is twenty
+        // characters, and a phone's board is not wide enough to hold that on
+        // one line at a size worth reading — shrinking to fit gave type a third
+        // the height of the headline above it. Two lines keeps the size.
+        let maxWidth = layout.boardSize / bannerScale
+        label.numberOfLines = 0
+        label.preferredMaxLayoutWidth = maxWidth
+        // Still a backstop, for a single word longer than the board.
+        fitWidth(label, to: maxWidth)
         registerCentredOverlay(label)
-        label.setScale(0.7)
+
+        // The pop animates *to* `bannerScale`, not to 1.
+        //
+        // `registerCentredOverlay` has just set the node to `bannerScale`, and
+        // scaling to 1 threw that away — so on a phone the banner played its
+        // entrance and settled at full size, which is how it came to run off
+        // both edges of the screen.
+        let settled = bannerScale
+        label.setScale(0.7 * settled)
         label.alpha = 0
         bloomNode.addChild(label)
         label.run(.group([
             .fadeIn(withDuration: 0.18),
-            .scale(to: 1.0, duration: 0.22),
+            .scale(to: settled, duration: 0.22),
         ]))
         label.run(.sequence([
             .wait(forDuration: 0.4),

@@ -8101,3 +8101,93 @@ final class LayoutStalenessTests: XCTestCase {
 }
 
 
+
+/// Messages and FIRE against the edges of a phone.
+///
+/// Both were found on Zack's iPhone 15 in portrait: "LEVEL CLEARED!" ran off
+/// both sides of the screen, and the FIRE button sat under the home indicator
+/// in the bottom-right corner.
+@MainActor
+final class PhoneEdgeTests: XCTestCase {
+
+    private static let phones: [(String, CGSize)] = [
+        ("iPhone SE portrait",      CGSize(width: 375, height: 667)),
+        ("iPhone 15 portrait",      CGSize(width: 393, height: 852)),
+        ("iPhone Pro Max portrait", CGSize(width: 440, height: 956)),
+        ("iPhone 15 landscape",     CGSize(width: 852, height: 393)),
+    ]
+
+    override func tearDown() {
+        SceneLayout.adopt(SceneLayout(size: SceneLayout.designSize))
+        super.tearDown()
+    }
+
+    /// Every end-of-run message, on every phone, within the screen.
+    func testNoGameOverMessageRunsOffTheScreen() {
+        let outcomes: [GameOverNode.Outcome] = [
+            .waveCleared(next: 2), .runCompleted, .stalemate, .drawnByRepetition,
+            .drawnByMoveLimit, .whiteMated, .livesDepleted, .blackBreachedRank1,
+            .whiteKingDestroyed,
+        ]
+        for (name, size) in Self.phones {
+            for outcome in outcomes {
+                let node = GameOverNode(outcome: outcome, score: 1535, sceneSize: size)
+                for label in node.children.compactMap({ $0 as? SKLabelNode }) {
+                    XCTAssertLessThanOrEqual(
+                        label.frame.width, size.width,
+                        "\(name): \(outcome) — \"\(label.text ?? "")\" is "
+                        + "\(Int(label.frame.width))pt on a \(Int(size.width))pt screen")
+                }
+            }
+        }
+    }
+
+    /// Wrapping must not push the headline over the detail beneath it.
+    func testAWrappedHeadlineLeavesTheRestWhereItWas() {
+        let narrow = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
+                                  sceneSize: CGSize(width: 393, height: 852))
+        let wide = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
+                                sceneSize: SceneLayout.designSize)
+
+        func score(_ node: GameOverNode) -> CGFloat? {
+            node.children.compactMap { $0 as? SKLabelNode }
+                .first { $0.text?.hasPrefix("FINAL SCORE") == true }?
+                .position.y
+        }
+        // Both are centred on their own scene, so compare the offset from it.
+        let narrowOffset = (score(narrow) ?? 0) - 852 / 2
+        let wideOffset = (score(wide) ?? 0) - SceneLayout.designSize.height / 2
+        XCTAssertEqual(narrowOffset, wideOffset, accuracy: 0.5,
+                       "wrapping the headline moved the score")
+    }
+
+    /// FIRE has to clear the home indicator and the rounded corner.
+    ///
+    /// The button itself is drawn only on iOS and the suite runs on macOS, so
+    /// what is measured is the inset it is placed by: in portrait it sits
+    /// `radius + bottomInset` up from the bottom and `radius + rightInset` in
+    /// from the right, so the insets are the whole of the question.
+    func testFireClearsTheBottomRightCorner() {
+        for (name, size) in Self.phones {
+            let scene = GameScene(size: size)
+            let portrait = size.height > size.width
+            // What iOS reports on these: a home indicator at the bottom, and
+            // the sensor housing on one side when the phone is on its side.
+            scene.adoptSafeArea(top: portrait ? 59 : 0, bottom: 34,
+                                left: 0, right: portrait ? 0 : 59)
+
+            XCTAssertGreaterThanOrEqual(scene.fireButtonBottomInset, 34,
+                                        "\(name): FIRE would sit under the home indicator")
+            XCTAssertGreaterThanOrEqual(scene.fireButtonRightInset, scene.edgeInsetRight,
+                                        "\(name): FIRE would sit past the right edge")
+        }
+    }
+
+    /// And a Mac keeps the 8pt it was composed with.
+    func testTheMacKeepsItsOwnSpacing() {
+        let mac = GameScene(size: SceneLayout.designSize)
+        XCTAssertEqual(mac.fireButtonBottomInset, 8)
+        XCTAssertEqual(mac.fireButtonRightInset, 8)
+    }
+}
+

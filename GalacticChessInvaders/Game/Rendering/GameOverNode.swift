@@ -110,13 +110,26 @@ final class GameOverNode: SKNode {
 
         let centre = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
 
+        // "LEVEL CLEARED!" is fourteen characters at 40pt, which wants 560 —
+        // half as much again as an iPhone has. Wrapped rather than shrunk,
+        // because shrinking the headline to fit a phone makes it smaller than
+        // the score beneath it.
+        //
+        // Both grow *upward*: `liftForExtraLines` keeps the first line where it
+        // was, so nothing below moves and the block stays composed around the
+        // same centre however many lines the message runs to. There is nothing
+        // above the headline but the scrim.
+        let usable = sceneSize.width - Self.sideMargin * 2
+
         let headline = label(outcome.headline, 40,
                              outcome.isFavourable ? Self.cyan : Self.magenta)
         headline.position = CGPoint(x: centre.x, y: centre.y + 78)
+        wrap(headline, to: usable)
         addChild(headline)
 
         let detail = label(outcome.detail, 12, .white.withAlphaComponent(0.75))
         detail.position = CGPoint(x: centre.x, y: centre.y + 40)
+        wrap(detail, to: usable)
         addChild(detail)
 
         let scoreLabel = label("FINAL SCORE  \(score)", 18, Self.orange)
@@ -125,18 +138,21 @@ final class GameOverNode: SKNode {
 
         #if os(iOS)
         if case .waveCleared = outcome {
-            addPrompt(outcome.prompt, at: centre)
+            addPrompt(outcome.prompt, at: centre, usable: usable)
         } else {
             addButtons(at: centre)
         }
         #else
-        addPrompt(outcome.prompt, at: centre)
+        addPrompt(outcome.prompt, at: centre, usable: usable)
         #endif
     }
 
-    private func addPrompt(_ text: String, at centre: CGPoint) {
+    private func addPrompt(_ text: String, at centre: CGPoint, usable: CGFloat) {
         let prompt = label(text, 20, Self.cyan)
         prompt.position = CGPoint(x: centre.x, y: centre.y - 62)
+        // "PRESS ANY KEY  ·  LEVEL 2" is 500pt at 20 — wider than any phone and
+        // wider than a Mac window with the log sidebar open.
+        wrap(prompt, to: usable, growUpward: false)
         addChild(prompt)
         // Blink like the title screen's start prompt, so it reads as the live control.
         prompt.run(SKAction.repeatForever(SKAction.sequence([
@@ -201,6 +217,32 @@ final class GameOverNode: SKNode {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Air either side of the widest line, so a wrapped message does not run
+    /// to the bezel on a phone.
+    private static let sideMargin: CGFloat = 24
+
+    /// Wraps a label at spaces, and lifts it so the extra lines grow upward.
+    ///
+    /// Growing upward rather than from the centre is what keeps the rest of the
+    /// block still: the first line stays on the baseline it was placed at, so a
+    /// one-line message and a three-line one put the score and the prompt in
+    /// exactly the same place.
+    private func wrap(_ node: SKLabelNode, to width: CGFloat,
+                      growUpward: Bool = true) {
+        guard width > 0 else { return }
+        let before = node.frame.height
+        node.numberOfLines = 0
+        node.preferredMaxLayoutWidth = width
+        // A single word longer than the screen cannot be wrapped, only shrunk.
+        if node.frame.width > width {
+            node.fontSize *= width / node.frame.width
+        }
+        // Whichever way the empty space is. The headline grows up into the gap
+        // above it; the prompt grows down, because the score is above it.
+        let extra = max(0, node.frame.height - before) / 2
+        node.position.y += growUpward ? extra : -extra
+    }
 
     private func label(_ text: String, _ size: CGFloat, _ color: SKColor) -> SKLabelNode {
         let node = SKLabelNode(fontNamed: Self.font)
