@@ -283,20 +283,22 @@ A panel is anchored under the HUD's safe-area inset, and BACK is placed 29pt
 below the panel's own top so it lands in the column SET and INFO occupy during
 play. On a phone the content drops a further 34pt to clear BACK.
 
-### Open: iPad portrait panel legibility
+### iPad portrait panel legibility — settled, no change
 
-iPad portrait draws panel body text at 9.3–12pt, depending on size. Reflowing
-iPad to one column would buy a couple of points and pay for it with a
-phone-shaped column down the middle of a tablet — on the Pro 13" nearly half the
-width left black. iPad landscape is already at full size and is not affected.
+iPad portrait draws panel body text at 9.3–12pt depending on size, and the mini
+is the smallest of them. **Checked on the physical mini 5 on 11 October 2026:
+readable. A little small in portrait, and legible without effort.** The two
+columns stay.
 
-The mini is the only size where this is a real question. **Zack is checking the
-physical mini 5 on Sunday 11 October 2026.**
+Reflowing iPad to one column would have bought a couple of points of type and
+paid for it with a phone-shaped column down the middle of a tablet — on the
+Pro 13" nearly half the width left black. iPad landscape is at full size and
+was never affected.
 
-If it does not read well, the fix is *not* one column. It is to compose the two
-columns at the device's own width, which stops the scale-down entirely: about
-340pt a column on a mini, body text at full size, the screen still filled, and
-no side bands at any size.
+If it is ever reopened, the answer is *not* one column: compose the two columns
+at the device's own width, which stops the scale-down entirely — about 340pt a
+column on a mini, body text at full size, the screen still filled, and no side
+bands at any size.
 
 ---
 
@@ -393,7 +395,8 @@ written.
 1. **The Duo**, as above.
 2. **One app or two.** A universal bundle means one listing and one set of
    reviews; a separate iOS app versions independently.
-3. **iPad portrait panel legibility**, pending the mini 5.
+3. ~~**iPad portrait panel legibility.**~~ Settled on the mini 5: readable, no
+   change — see §7a.
 
 ---
 
