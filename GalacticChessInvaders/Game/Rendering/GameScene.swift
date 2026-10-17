@@ -894,6 +894,7 @@ class GameScene: SKScene {
         let nav = HUDNode.makeNavButtons(
             compact: HUDNode.isCompact(sceneWidth: size.width))
         nav.name = Self.titleNavName
+        nav.userData = ["compact": HUDNode.isCompact(sceneWidth: size.width)]
         overlay.addChild(nav)
         layOutTitleScreen()
     }
@@ -963,6 +964,22 @@ class GameScene: SKScene {
         // The nav pair is a child of the overlay so it is torn down with it,
         // but it should stay the size the HUD's own pair is — so it cancels the
         // overlay's scale and is positioned in the overlay's scaled space.
+        // The pair is built compact or full once, from whatever width the scene
+        // had at the time — on a first launch under `.resizeFill` that is the
+        // pre-resize size — so a window dragged across the compact threshold
+        // has to rebuild it. Positioned with the new width's formula but still
+        // wearing the old layout, it landed left of the corner or off-screen,
+        // and kept the phone's cramped "INFO" on a wide Mac window.
+        let wantsCompact = HUDNode.isCompact(sceneWidth: size.width)
+        if let built = overlay.childNode(withName: Self.titleNavName),
+           (built.userData?["compact"] as? Bool) != wantsCompact {
+            built.removeFromParent()
+            let fresh = HUDNode.makeNavButtons(compact: wantsCompact)
+            fresh.name = Self.titleNavName
+            fresh.userData = ["compact": wantsCompact]
+            fresh.isHidden = settingsNode != nil || howToPlayNode != nil
+            overlay.addChild(fresh)
+        }
         if let nav = overlay.childNode(withName: Self.titleNavName) {
             nav.setScale(1 / scale)
             // Right-anchored, like the HUD's pair, then expressed in the
