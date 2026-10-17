@@ -48,15 +48,15 @@ The same codebase builds for Mac, iPad and iPhone, **including Apple's new folda
 | | State |
 |---|---|
 | **Mac** | Shipped. The DMG above, and on the Mac App Store. |
-| **iPad** | Playable by touch, checked on five sizes in both orientations. In testing. |
-| **iPhone** | Playable by touch, both orientations, checked on three sizes. In testing. |
-| **iPhone Duo** | Runs full screen on both displays, folded and unfolded, portrait and landscape. Checked in the Xcode 27.1 simulator; no hardware yet. |
+| **iPad** | Playable by touch, checked on five sizes in both orientations. Ships with 1.4. |
+| **iPhone** | Playable by touch, both orientations, checked on three sizes. Ships with 1.4. |
+| **iPhone Duo** | Runs full screen on both displays, folded and unfolded, portrait and landscape. Checked in the Xcode 27.1 simulator; no hardware yet. Ships with 1.4. |
 
 On a phone the game lays itself out differently rather than shrinking: in portrait the board takes
 the full width and the readouts move underneath it, the top bar reflows to fit, and the Settings and
 How To Play screens become one readable column instead of two small ones.
 
-The touch builds are not on the store yet. Build one from source today, or see
+The iPad and iPhone builds ship with 1.4. To build one from source, or to see how the port went, see
 [IOS-Port.md](docs/IOS-Port.md) for where the port stands.
 
 ## Playing it
