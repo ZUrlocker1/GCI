@@ -56,8 +56,8 @@ On a phone the game lays itself out differently rather than shrinking: in portra
 the full width and the readouts move underneath it, the top bar reflows to fit, and the Settings and
 How To Play screens become one readable column instead of two small ones.
 
-The iPad and iPhone builds ship with 1.4. To build one from source, or to see how the port went, see
-[IOS-Port.md](docs/IOS-Port.md) for where the port stands.
+The iPad and iPhone builds ship with 1.4. You can also build them from source; see
+[IOS-Port.md](docs/IOS-Port.md) for how the port went.
 
 ## Playing it
 
