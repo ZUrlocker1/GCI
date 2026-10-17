@@ -1,7 +1,8 @@
 # iPad and iPhone
 
-*Updated 8 October 2026. iPad and iPhone both run in both orientations. What is
-left is the iPhone Duo.*
+*Updated 17 October 2026. iPad and iPhone both run in both orientations, and the
+iPhone Duo simulator has been checked, open and closed. What is left is a real
+Duo, which does not exist yet.*
 
 ---
 
@@ -12,7 +13,7 @@ left is the iPhone Duo.*
 | macOS | Shipped. 1.4 is the current DMG; the App Store track runs behind. |
 | iPad | Done. Five sizes, both orientations. Not yet on the store. |
 | iPhone | Done in 1.4, in testing. Three sizes, both orientations. |
-| iPhone Duo | Open. No hardware; the simulator needs Xcode 27.1. |
+| iPhone Duo | Checked in the Xcode 27.1 simulator, open and closed, both orientations. No hardware. |
 
 **Minimum iOS 17.** `DiagnosticsLog` is `@Observable`, which is 17+; nothing
 else in the codebase needed an availability check. That reaches the iPhone SE
@@ -82,6 +83,20 @@ A phone in landscape puts the sensor housing on a side edge, where
 - A phone on its side has a rounded corner at **each** end whether or not the
   housing is there, and iOS reports an inset only for the housing. Phone
   landscape therefore takes a 24pt floor on both edges.
+- **Large screens ask the system for their corners.** On iOS 26 and later the
+  view reports corner-adapted insets
+  (`edgeInsets(for: .safeArea(cornerAdaptation: .horizontal))`), which
+  `KeyboardFocusedSKView` hands to the scene as `adoptCornerInsets`. The scene
+  adds 15pt (`cornerTextAllowance`) because the figure is the inset at the middle
+  of the edge and the bar's type sits where the corner cuts deepest. Taken only
+  when the short side is at least 500pt, so phones keep the layout they were
+  tuned with. It is one more floor in `edgeInsetLeft` / `edgeInsetRight`, the
+  same path SCORE, the badge, FIRE and BACK already use. The title screen's
+  SET / INFO pair uses it too; it had ignored insets before.
+  The Duo's inner display has large corners (about 55pt radius per the
+  simulator profile, not an Apple-documented figure), which is what exposed this.
+  Whether iPad reports a non-zero value, and so moves by 15pt, was not measured;
+  nothing looked wrong on an iPad Pro 13 or an iPad mini.
 
 ### The board must stay flyable
 
@@ -262,6 +277,23 @@ threshold, are both far below this range.
 Test in **both orientations**: they are different compositions, not scaled
 versions of each other.
 
+### Re-check — 17 October 2026
+
+After the title-screen and corner changes, on simulators unless stated.
+
+| Device | Result |
+|---|---|
+| iPhone 18 Pro | Both orientations, fine. |
+| iPad Pro 13-inch | Both orientations, fine. |
+| iPad mini | Fine. |
+| iPhone Duo (Xcode 27.1) | Closed and unfolded, portrait and landscape. Unfolded clipped SCORE and INFO until the corner inset was added; fine after. |
+| Mac | Title screen and game at a range of window sizes, narrow to wide. |
+
+Simulator caveats: closing a simulator's window does not quit the app on it, so
+music keeps playing; and the Duo unfolded animates less smoothly than other
+simulators, which is most likely the simulator and its pixel count, not the game.
+Neither was measured.
+
 ---
 
 ## The two panels
@@ -334,6 +366,17 @@ folds, so the scene may be resized continuously through a hinge movement.
   the chip row's compact choice — has to survive repeated flips.
 - A fold during name entry, during a wave banner, and mid-explosion are all
   worth trying deliberately.
+
+### What the simulator has shown (17 October 2026)
+
+- It runs full screen when closed and unfolded, in both orientations, and the
+  layout follows the size changes.
+- The unfolded corners clipped the top-left and top-right readouts; fixed as
+  described under Safe areas.
+- The log line `Corner insets L.. R..` reports the values it was given; the
+  numbers have not been written down here.
+
+The seven items below are otherwise still open.
 
 ### To confirm when the simulator runs
 
