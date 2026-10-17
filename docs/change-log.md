@@ -1,6 +1,6 @@
 # Galactic Chess Invaders Change Log
 
-## V 1.4 (Build 11)  iPhone — *in testing, not yet released*
+## V 1.4 (Build 11)  iPhone and iPhone Duo
 
 *The game runs on iPhone, in both orientations. A phone is not a small iPad: the board
 needs the whole width, so the column of hints that sits beside it on every other device
@@ -10,6 +10,10 @@ are the two problems this release is about.*
 - **It runs on iPhone.** Portrait and landscape, tested on an iPhone SE, a 16e and a
   17 Pro Max — the smallest, middle and largest screens the game supports — in both
   orientations.
+
+- **It runs on the iPhone Duo.** Full screen on whichever display is active, folded or
+  unfolded, portrait and landscape, checked in the Xcode 27.1 simulator. Duo hardware is
+  the one thing not yet tested.
 
 - **In portrait, the gutter moved under the board.** The chess hint, the turn count and
   the status line stack below the ship instead of beside the squares, which is what lets
@@ -67,7 +71,7 @@ are the two problems this release is about.*
 
 *Two things: the game runs on iPad, and it stopped doing file and codec work every time it played a sound.*
 
-- **It runs on iPad.** The whole game is playable by touch — drag the ship, hold FIRE, tap or drag a piece to its square — and it has been checked on five iPad sizes in both orientations. The DMG here is macOS; the iPad build is in testing.
+- **It runs on iPad.** The whole game is playable by touch — drag the ship, hold FIRE, tap or drag a piece to its square — and it has been checked on five iPad sizes in both orientations. The DMG here is macOS; the iPad build was in testing then, and is approved.
 
 - **The frame rate, fixed.** Heavy fire used to drop the Mac into the 40s and the iPad mini into the 20s. Both now stay well above 50, Level 10 at full strength included. Every sound effect is decoded once at launch into memory and played from a pool of audio voices that are already running, instead of a player that reopened and re-prepared its file on the frame that fired the shot. Measured: **11.7ms a shot, down to 0.03ms.**
 - **It was never the graphics.** The glow, the nebula and the board all had a turn as the suspect. Turning each of them off changed nothing, and the log is what settled it — the frame rate tracked the *sound*, not the picture. There is a note in [IOS-Port.md](IOS-Port.md) §6a about why the Mac profile pointed the wrong way for so long.

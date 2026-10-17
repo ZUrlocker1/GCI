@@ -240,21 +240,23 @@ struct PhysicsCategory {
 ## Where the project is
 
 **1.4 (build 11) is the current DMG release** — signed, notarized, and in the
-repo root as `GCI-1.4.dmg`. The App Store track runs behind it: 1.3 is with
-review for iPad, and 1.4 for iPhone is not submitted until that clears.
+repo root as `GCI-1.4.dmg`. The App Store track: 1.3 for iPad is approved, and
+1.4 ships iPad and iPhone.
 
 Ten levels play end to end with every mechanic, all five power-ups, a settings
 screen, its own soundtrack and full arcade audio.
 
 **There are iPad and iPhone builds.** The game plays by touch — drag the ship,
 hold FIRE, tap a piece and tap its square — with its own Test Mode, name entry
-and end-of-run buttons. Neither has shipped. iPad is done across five sizes in
-both orientations; iPhone is done in both orientations and checked on an SE, a
-16e and a 17 Pro Max. On a phone the scene reflows rather than scales: the
+and end-of-run buttons. iPad is done across five sizes in both orientations;
+iPhone is done in both orientations and checked on an SE, a 16e, a 17 Pro Max
+and an iPhone 18 Pro. On a phone the scene reflows rather than scales: the
 gutter moves below the board in portrait, the HUD bar compacts, and the panels
 compose as one tall column. `docs/IOS-Port.md` is the plan and the record of
-where it landed; what remains is the iPhone Duo, which has no hardware or
-simulator yet.
+where it landed. The iPhone Duo has been checked in the Xcode 27.1 simulator,
+folded and unfolded, both orientations; what remains untested is Duo hardware.
+Its rounded corners are cleared by the system's corner insets
+(`adoptCornerInsets`, large screens only).
 
 Read `docs/implementation.md` for the current state; it is kept accurate and
 this file is not a substitute for it.

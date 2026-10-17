@@ -1,8 +1,8 @@
 # iPad and iPhone
 
 *Updated 17 October 2026. iPad and iPhone both run in both orientations, and the
-iPhone Duo simulator has been checked, open and closed. What is left is a real
-Duo, which does not exist yet.*
+iPhone Duo simulator has been checked, open and closed. The only thing not yet
+tested is Duo hardware.*
 
 ---
 
@@ -11,8 +11,8 @@ Duo, which does not exist yet.*
 | | State |
 |---|---|
 | macOS | Shipped. 1.4 is the current DMG; the App Store track runs behind. |
-| iPad | Done. Five sizes, both orientations. Not yet on the store. |
-| iPhone | Done in 1.4, in testing. Three sizes, both orientations. |
+| iPad | Done. Five sizes, both orientations. 1.3 approved; 1.4 ships. |
+| iPhone | Done, ships in 1.4. Four sizes, both orientations. |
 | iPhone Duo | Checked in the Xcode 27.1 simulator, open and closed, both orientations. No hardware. |
 
 **Minimum iOS 17.** `DiagnosticsLog` is `@Observable`, which is 17+; nothing
