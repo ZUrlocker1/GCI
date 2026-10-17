@@ -43,13 +43,14 @@ The App Store listing updates on its own schedule and may be a release behind th
 
 ## Platforms
 
-The same codebase builds for Mac, iPad and iPhone.
+The same codebase builds for Mac, iPad and iPhone, **including Apple's new foldable iPhone Duo**.
 
 | | State |
 |---|---|
 | **Mac** | Shipped. The DMG above, and on the Mac App Store. |
 | **iPad** | Playable by touch, checked on five sizes in both orientations. In testing. |
 | **iPhone** | Playable by touch, both orientations, checked on three sizes. In testing. |
+| **iPhone Duo** | Runs full screen on both displays, folded and unfolded, portrait and landscape. Checked in the Xcode 27.1 simulator; no hardware yet. |
 
 On a phone the game lays itself out differently rather than shrinking: in portrait the board takes
 the full width and the readouts move underneath it, the top bar reflows to fit, and the Settings and
@@ -82,6 +83,12 @@ full arcade audio. Play testing feedback is welcome.
 **1.4 — iPhone.** The game runs on iPhone in both orientations. In portrait the
 readouts move under the board so the squares get the full width, the top bar reflows, and Settings
 and How To Play become one readable column.
+
+**1.4 also runs on the iPhone Duo.** The game fills whichever display is active, the small cover
+screen or the unfolded one, and reflows as the phone opens and closes. The Duo's rounded corners are
+the roundest of any screen the game supports, so the top-bar readouts and the SET and INFO buttons
+step in by the corner size the system reports. Verified in the iOS 27.1 simulator in all four
+states; a real device has not been tried.
 
 **1.3 — iPad, and sound without the stutter.** The game runs on iPad. Heavy fire no longer costs
 frames: sound effects are decoded once at launch and played from a pool of voices that are already
