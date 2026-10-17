@@ -990,10 +990,14 @@ class GameScene: SKScene {
             // still half under the Dynamic Island, because this pair is the
             // overlay's own and never went through the HUD.
             let compact = HUDNode.isCompact(sceneWidth: size.width)
-            let originX = compact
+            // Stepped in by the right edge's inset like the HUD's pair, which
+            // is the same corner: a rounded Duo corner clipped INFO here
+            // because only the HUD's copy knew about it.
+            let shift = HUDNode.navShift(forInset: edgeInsetRight, compact: compact)
+            let originX = (compact
                 ? size.width - HUDNode.compactNavWidth(includePause: false)
                              - HUDNode.compactNavRightMargin
-                : HUDNode.navOriginX(forSceneWidth: size.width)
+                : HUDNode.navOriginX(forSceneWidth: size.width)) - shift
             let originY = size.height - HUDNode.height - topInsetDrop
             nav.position = CGPoint(x: (originX - size.width / 2) / scale,
                                    y: (originY - size.height / 2) / scale)
@@ -1429,10 +1433,44 @@ class GameScene: SKScene {
     var fireButtonBottomInset: CGFloat { max(Self.fireButtonInset, safeAreaBottom) }
     var fireButtonRightInset: CGFloat { max(Self.fireButtonInset, edgeInsetRight) }
 
-    var edgeInsetLeft: CGFloat { max(safeAreaLeft, cornerClearance) }
-    var edgeInsetRight: CGFloat { max(safeAreaRight, cornerClearance) }
+    var edgeInsetLeft: CGFloat { max(safeAreaLeft, cornerClearance, adaptedCornerLeft) }
+    var edgeInsetRight: CGFloat { max(safeAreaRight, cornerClearance, adaptedCornerRight) }
     private var cornerClearance: CGFloat {
         isPhoneLandscape ? Self.landscapeCornerClearance : 0
+    }
+
+    /// What the system says the screen's rounded top corners cost, from iOS 26's
+    /// corner-adapted layout region. A fixed constant cannot be right: the
+    /// iPhone Duo's corners are rounder than an iPad's, which is why SCORE and
+    /// INFO were clipped there and nowhere else.
+    ///
+    /// Only taken on a screen at least 500pt on its short side. A phone's
+    /// layout was tuned and checked without it, and a phone in landscape
+    /// already has its own 24pt floor above; this is a floor on the margin
+    /// like every other inset, so an iPad that reports small corners moves by
+    /// at most a few points.
+    private(set) var cornerAdaptedLeft: CGFloat = 0
+    private(set) var cornerAdaptedRight: CGFloat = 0
+    /// The system's figure is the inset at the middle of the edge. Type pinned
+    /// to the very top of the bar sits where a 55pt corner cuts deepest, and the
+    /// figure alone still clipped SCORE on the unfolded Duo — hence the extra.
+    static let cornerTextAllowance: CGFloat = 15
+    private var adaptedCornerLeft: CGFloat {
+        guard min(size.width, size.height) >= 500, cornerAdaptedLeft > 0 else { return 0 }
+        return cornerAdaptedLeft + Self.cornerTextAllowance
+    }
+    private var adaptedCornerRight: CGFloat {
+        guard min(size.width, size.height) >= 500, cornerAdaptedRight > 0 else { return 0 }
+        return cornerAdaptedRight + Self.cornerTextAllowance
+    }
+
+    func adoptCornerInsets(left: CGFloat, right: CGFloat) {
+        guard (left, right) != (cornerAdaptedLeft, cornerAdaptedRight) else { return }
+        cornerAdaptedLeft = left
+        cornerAdaptedRight = right
+        DiagnosticsLog.shared.log(.startup,
+            "Corner insets L\(Int(left)) R\(Int(right)) at \(Int(size.width))x\(Int(size.height))")
+        applyLayout()
     }
 
     private var panelIsUp: Bool { settingsNode != nil || howToPlayNode != nil }

@@ -56,6 +56,12 @@ final class KeyboardFocusedSKView: SKView {
         guard let scene = scene as? GameScene else { return }
         scene.adoptSafeArea(top: safeAreaInsets.top, bottom: safeAreaInsets.bottom,
                             left: safeAreaInsets.left, right: safeAreaInsets.right)
+        // iOS 26 reports the rounded corners separately from the safe area,
+        // which is zero beside them on a device with no sensor housing there.
+        if #available(iOS 26.0, *) {
+            let corners = edgeInsets(for: .safeArea(cornerAdaptation: .horizontal))
+            scene.adoptCornerInsets(left: corners.left, right: corners.right)
+        }
     }
 
     override init(frame: CGRect) {
