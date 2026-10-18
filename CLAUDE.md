@@ -237,6 +237,27 @@ struct PhysicsCategory {
 
 ---
 
+## Permissions and asking
+
+Zack has said, more than once, to stop asking about routine work. Just do it:
+
+- Edit files, run scripts, build, typecheck, run the test suite, boot and drive
+  simulators, capture screenshots, and make local commits without asking first.
+- Don't ask "want me to commit / run the tests / update the docs?" — if it is the
+  obvious next step of what he asked, do it and say what you did.
+- Ask only when the answer would change the work: a real choice between
+  approaches, or something he must do himself (an Xcode archive, rotating the
+  Simulator window, uploading to App Store Connect).
+
+Still his call, every time:
+
+- **Pushing to GitHub.** Only when he says so; "update everything on GitHub"
+  counts for that push, not for later ones.
+- **Version and build numbers.** Never touch them unless he says.
+- **Deleting or overwriting anything outside the repo**, including `~/Downloads`.
+- **Muting before any run.** Mute the app container, read it back, shut the
+  simulators down afterwards (see the memory note).
+
 ## Where the project is
 
 **1.4 (build 11) is the current DMG release** — signed, notarized, and in the
