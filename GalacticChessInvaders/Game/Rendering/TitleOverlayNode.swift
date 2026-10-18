@@ -12,7 +12,7 @@ import SpriteKit
 
 final class TitleOverlayNode: SKNode {
 
-    private static let titleFont  = "PressStart2P-Regular"
+    private static let titleFont  = NeonPalette.font
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
 

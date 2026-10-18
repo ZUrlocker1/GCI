@@ -453,6 +453,18 @@ struct SceneLayout {
     /// 9pt of alley type stays at or above 8, which is the HUD's smallest.
     static let minGutterScale: CGFloat = 0.9
 
+    /// The centred banners' scale — LEVEL CLEARED!, GAME OVER and the block
+    /// beneath them.
+    ///
+    /// `contentScale` is what these are meant to ride, but it also rises to 1.5
+    /// on a large canvas and the banners were drawn at their design size: a wide
+    /// Mac window does not want a 60pt headline. So they shrink with the board
+    /// and never grow past it, which is `fireButtonScale`'s shape without the
+    /// floor — a banner has no thumb to accommodate and may go all the way down
+    /// to `contentScale`'s own 0.5.
+    var bannerScale: CGFloat { min(1, contentScale) }
+    @MainActor static var bannerScale: CGFloat { current.bannerScale }
+
     /// Everything from the turn timer down sits this much lower than it used
     /// to, to open a gap between the chess readouts and the power-up block
     /// above them. One constant rather than four edited literals, because the

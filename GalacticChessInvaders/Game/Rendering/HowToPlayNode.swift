@@ -41,7 +41,7 @@ final class HowToPlayNode: SKNode {
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
     private static let orange  = NeonPalette.orange
-    private static let font    = "PressStart2P-Regular"
+    private static let font    = NeonPalette.font
     /// The scene hit-tests for this to open the link.
     static let musicLinkName = "musicLink"
     /// The link's target, in this node's coordinates — the overlay sits at the
@@ -141,8 +141,11 @@ final class HowToPlayNode: SKNode {
     private static let pw: CGFloat = 560
     private static let pm: CGFloat = 11            // side margin
     private static var pc: CGFloat { pw - pm * 2 } // content width
-    private static let W: CGFloat = 960
-    private static let H: CGFloat = 700
+    /// The same canvas as `designSize`, which is what the column geometry below
+    /// was composed against. Derived rather than restated so the three cannot
+    /// disagree.
+    private static let W: CGFloat = designSize.width    // 960
+    private static let H: CGFloat = designSize.height   // 700
     private static let hudBase: CGFloat = H - HUDNode.height   // 664
     private static let lx: CGFloat = 50    // left column x
     private static let rx: CGFloat = 510   // right column x
@@ -835,10 +838,7 @@ final class HowToPlayNode: SKNode {
 
     private func label(_ text: String, _ size: CGFloat, _ color: SKColor,
                        _ align: SKLabelHorizontalAlignmentMode) -> SKLabelNode {
-        let n = SKLabelNode(fontNamed: Self.font)
-        n.text = text; n.fontSize = size; n.fontColor = color
-        n.horizontalAlignmentMode = align; n.verticalAlignmentMode = .baseline
-        return n
+        SKLabelNode.neon(text, size: size, color: color, align: align)
     }
 
     private func hline(x: CGFloat, y: CGFloat, w: CGFloat) -> SKShapeNode {

@@ -127,7 +127,7 @@ final class TestModeStripNode: SKNode {
             box.lineWidth = 1
             addChild(box)
 
-            let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+            let label = SKLabelNode(fontNamed: NeonPalette.font)
             label.text = action.rawValue
             label.fontSize = Self.fontSize
             label.horizontalAlignmentMode = .center

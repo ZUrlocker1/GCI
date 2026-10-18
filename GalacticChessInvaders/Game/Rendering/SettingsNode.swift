@@ -16,7 +16,7 @@ final class SettingsNode: SKNode {
 
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
-    private static let font    = "PressStart2P-Regular"
+    private static let font    = NeonPalette.font
 
     /// The panel's own composition. The scene scales and centres it, and
     /// paints its own backdrop behind — see `GameScene.layOutPanel`.
@@ -38,8 +38,11 @@ final class SettingsNode: SKNode {
 
     /// Where the portrait cursor is, measured down from the content's top.
     private var flowY: CGFloat = 0
-    private static let W: CGFloat = 960
-    private static let H: CGFloat = 700
+    /// The same canvas as `designSize`, which is what the column geometry below
+    /// was composed against. Derived rather than restated so the three cannot
+    /// disagree.
+    private static let W: CGFloat = designSize.width    // 960
+    private static let H: CGFloat = designSize.height   // 700
     private static let hudBase: CGFloat = H - HUDNode.height   // 664
     private static let lx: CGFloat = 50    // left column x
     private static let rx: CGFloat = 510   // right column x
@@ -775,10 +778,7 @@ final class SettingsNode: SKNode {
 
     private func label(_ text: String, _ size: CGFloat, _ color: SKColor,
                        _ align: SKLabelHorizontalAlignmentMode) -> SKLabelNode {
-        let n = SKLabelNode(fontNamed: Self.font)
-        n.text = text; n.fontSize = size; n.fontColor = color
-        n.horizontalAlignmentMode = align; n.verticalAlignmentMode = .baseline
-        return n
+        SKLabelNode.neon(text, size: size, color: color, align: align)
     }
 
     private func hline(x: CGFloat, y: CGFloat, w: CGFloat) -> SKShapeNode {

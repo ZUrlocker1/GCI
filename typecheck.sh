@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 # typecheck.sh — Swift 6 strict-concurrency check without xcodebuild.
-# Required because xcrun/xcodebuild are broken on macOS 26 Tahoe + Xcode 16.2
-# (libxcrun.dylib architecture mismatch: have arm64, need arm64e).
+# Written because xcrun/xcodebuild were broken on macOS 26 Tahoe + Xcode 16.2
+# (libxcrun.dylib architecture mismatch: have arm64, need arm64e). Xcode 27
+# fixed that, but this stays: it is faster than a full build and it carries the
+# asset and project checks below, which xcodebuild does not.
 # Run before every commit: bash typecheck.sh
 
 set -euo pipefail
 
 SWIFTC=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc
-SDK=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.sdk
+# Resolved, not pinned. This was MacOSX26.sdk until Xcode 27 replaced it on
+# disk, after which every run failed with "unable to load standard library" —
+# a toolchain upgrade should not break the pre-commit check. Falls back to the
+# newest SDK actually installed if xcrun is unavailable again.
+SDK=$(xcrun --show-sdk-path 2>/dev/null \
+  || ls -d /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX*.sdk \
+     | sort -V | tail -1)
 MODCACHE=.build/modcache
 # XCTest ships outside the SDK, so the test pass needs these search paths.
 XCTEST_F=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks

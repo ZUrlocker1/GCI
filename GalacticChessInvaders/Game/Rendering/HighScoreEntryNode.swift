@@ -18,7 +18,7 @@ final class HighScoreEntryNode: SKNode {
 
     private static let cyan   = NeonPalette.cyan
     private static let orange = NeonPalette.orange
-    private static let font   = "PressStart2P-Regular"
+    private static let font   = NeonPalette.font
 
     /// Called with the trimmed name once Return is pressed, or with an empty
     /// string if the player cancels with Escape.
@@ -210,12 +210,6 @@ final class HighScoreEntryNode: SKNode {
     }
 
     private func label(_ text: String, _ size: CGFloat, _ color: SKColor) -> SKLabelNode {
-        let node = SKLabelNode(fontNamed: Self.font)
-        node.text = text
-        node.fontSize = size
-        node.fontColor = color
-        node.horizontalAlignmentMode = .center
-        node.verticalAlignmentMode = .center
-        return node
+        SKLabelNode.neon(text, size: size, color: color, vertical: .center)
     }
 }

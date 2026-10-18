@@ -77,6 +77,14 @@ final class GameOverNode: SKNode {
         }
 
         /// Good news for the player gets the friendly colour.
+        /// One of each. The overlay sizes itself against the longest headline
+        /// in here rather than the one it is showing, and the suite sweeps it.
+        static let representatives: [Outcome] = [
+            .whiteMated, .stalemate, .drawnByRepetition, .drawnByMoveLimit,
+            .livesDepleted, .blackBreachedRank1, .whiteKingDestroyed,
+            .waveCleared(next: 2), .runCompleted,
+        ]
+
         var isFavourable: Bool {
             switch self {
             case .waveCleared, .runCompleted: return true
@@ -90,7 +98,7 @@ final class GameOverNode: SKNode {
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
     private static let orange  = NeonPalette.orange
-    private static let font    = "PressStart2P-Regular"
+    private static let font    = NeonPalette.font
 
     /// The scene hit-tests for these. Both the box and its label carry the
     /// name, which is what `GameScene.pressButton` needs to move them
@@ -111,45 +119,56 @@ final class GameOverNode: SKNode {
         let centre = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
 
         // "LEVEL CLEARED!" is fourteen characters at 40pt, which wants 560 —
-        // half as much again as an iPhone has. Wrapped rather than shrunk,
-        // because shrinking the headline to fit a phone makes it smaller than
-        // the score beneath it.
+        // half as much again as an iPhone has, and more than a small Mac window
+        // has either.
         //
-        // Both grow *upward*: `liftForExtraLines` keeps the first line where it
-        // was, so nothing below moves and the block stays composed around the
-        // same centre however many lines the message runs to. There is nothing
-        // above the headline but the scrim.
+        // The whole block rides `bannerScale`, so the headline shrinks *with*
+        // the score and the prompt rather than against them. Shrinking the
+        // headline alone to fit the width was rejected for exactly that reason:
+        // it ends up smaller than the score beneath it. Scaling the block keeps
+        // the hierarchy and loses only the absolute size, which is what a 400pt
+        // scene wanted to lose.
+        //
+        // Wrapping stays as the backstop for the long terminal headlines, and
+        // both wrapped labels grow *upward*: `liftForExtraLines` keeps the first
+        // line where it was, so nothing below moves and the block stays composed
+        // around the same centre however many lines the message runs to. There
+        // is nothing above the headline but the scrim.
         let usable = sceneSize.width - Self.sideMargin * 2
+        let s = Self.scale(in: sceneSize)
 
-        let headline = label(outcome.headline, 40,
+        let headline = label(outcome.headline, 40 * s,
                              outcome.isFavourable ? Self.cyan : Self.magenta)
-        headline.position = CGPoint(x: centre.x, y: centre.y + 78)
+        headline.position = CGPoint(x: centre.x, y: centre.y + 78 * s)
         wrap(headline, to: usable)
         addChild(headline)
 
-        let detail = label(outcome.detail, 12, .white.withAlphaComponent(0.75))
-        detail.position = CGPoint(x: centre.x, y: centre.y + 40)
+        let detail = label(outcome.detail, 12 * s, .white.withAlphaComponent(0.75))
+        detail.position = CGPoint(x: centre.x, y: centre.y + 40 * s)
         wrap(detail, to: usable)
         addChild(detail)
 
-        let scoreLabel = label("FINAL SCORE  \(score)", 18, Self.orange)
-        scoreLabel.position = CGPoint(x: centre.x, y: centre.y - 6)
+        let scoreLabel = label("FINAL SCORE  \(score)", 18 * s, Self.orange)
+        scoreLabel.position = CGPoint(x: centre.x, y: centre.y - 6 * s)
         addChild(scoreLabel)
 
         #if os(iOS)
         if case .waveCleared = outcome {
-            addPrompt(outcome.prompt, at: centre, usable: usable)
+            addPrompt(outcome.prompt, at: centre, usable: usable, scale: s)
         } else {
+            // Deliberately unscaled: these are touch targets before they are
+            // type, and 44pt is the floor regardless of how small the board got.
             addButtons(at: centre)
         }
         #else
-        addPrompt(outcome.prompt, at: centre, usable: usable)
+        addPrompt(outcome.prompt, at: centre, usable: usable, scale: s)
         #endif
     }
 
-    private func addPrompt(_ text: String, at centre: CGPoint, usable: CGFloat) {
-        let prompt = label(text, 20, Self.cyan)
-        prompt.position = CGPoint(x: centre.x, y: centre.y - 62)
+    private func addPrompt(_ text: String, at centre: CGPoint, usable: CGFloat,
+                           scale: CGFloat) {
+        let prompt = label(text, 20 * scale, Self.cyan)
+        prompt.position = CGPoint(x: centre.x, y: centre.y - 62 * scale)
         // "PRESS ANY KEY  ·  LEVEL 2" is 500pt at 20 — wider than any phone and
         // wider than a Mac window with the log sidebar open.
         wrap(prompt, to: usable, growUpward: false)
@@ -222,6 +241,45 @@ final class GameOverNode: SKNode {
     /// to the bezel on a phone.
     private static let sideMargin: CGFloat = 24
 
+    /// How much of the scene's width the headline may run to.
+    ///
+    /// `SceneLayout.bannerScale` follows the *board*, which is the right
+    /// instinct on a Mac and on an iPad and the wrong one on a phone held
+    /// upright: there the board is nearly the full width of the screen, so a
+    /// banner tied to it is too. Measured at 88% of a Pro Max in portrait, which
+    /// is a wall of text rather than a headline.
+    private static let maxHeadlineFraction: CGFloat = 0.72
+
+    /// The block's scale: the board's, pulled down further if the longest
+    /// headline would still run past `maxHeadlineFraction`.
+    ///
+    /// Sized against the longest headline rather than the one being shown, so
+    /// every end-of-run screen on a given device is set at the same size.
+    /// Measuring each outcome's own string instead renders GAME OVER at 24pt
+    /// and LEVEL CLEARED! at 20pt on the same phone, which reads as a bug.
+    ///
+    /// Measured rather than counted: Press Start 2P advances one em per
+    /// character so the arithmetic would work, but it is the rendered width
+    /// that has to fit.
+    ///
+    /// The whole block moves together — scaling only the headline is what makes
+    /// it smaller than the score beneath it.
+    private static func scale(in sceneSize: CGSize) -> CGFloat {
+        let base = SceneLayout.bannerScale
+        let allowed = sceneSize.width * maxHeadlineFraction
+        guard allowed > 0 else { return base }
+
+        let widest = Outcome.representatives
+            .map(\.headline)
+            .max { $0.count < $1.count } ?? ""
+        let probe = SKLabelNode(fontNamed: font)
+        probe.text = widest
+        probe.fontSize = 40 * base
+
+        guard probe.frame.width > allowed else { return base }
+        return base * (allowed / probe.frame.width)
+    }
+
     /// Wraps a label at spaces, and lifts it so the extra lines grow upward.
     ///
     /// Growing upward rather than from the centre is what keeps the rest of the
@@ -239,12 +297,7 @@ final class GameOverNode: SKNode {
     }
 
     private func label(_ text: String, _ size: CGFloat, _ color: SKColor) -> SKLabelNode {
-        let node = SKLabelNode(fontNamed: Self.font)
-        node.text = text
-        node.fontSize = size
-        node.fontColor = color
-        node.horizontalAlignmentMode = .center
-        node.verticalAlignmentMode = .center
+        let node = SKLabelNode.neon(text, size: size, color: color, vertical: .center)
         node.zPosition = 1
         return node
     }

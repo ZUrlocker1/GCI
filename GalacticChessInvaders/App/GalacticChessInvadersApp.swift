@@ -122,7 +122,7 @@ struct GalacticChessInvadersApp: App {
     }
 
     private func registerBundledFonts() {
-        let fontNames = ["PressStart2P-Regular"]
+        let fontNames = [NeonPalette.font]
         for name in fontNames {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else {
                 DiagnosticsLog.shared.log(.error, "Font not found in bundle: \(name).ttf")

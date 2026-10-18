@@ -18,7 +18,7 @@ final class GameStatusNode: SKNode {
     private static let cyan    = NeonPalette.cyan
     private static let magenta = NeonPalette.magenta
     private static let orange  = NeonPalette.orange
-    private static let font    = "PressStart2P-Regular"
+    private static let font    = NeonPalette.font
     private static let pulseKey = "statusPulse"
     private static let stateFontSize: CGFloat = 15
     /// "CHECKMATE" is nearly twice as wide as "CHECK", so it is stepped down to

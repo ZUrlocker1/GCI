@@ -17,7 +17,7 @@ final class LevelBannerNode: SKNode {
     static let fadeOut: TimeInterval = 0.3
     static var totalDuration: TimeInterval { slideIn + hold + fadeOut }
 
-    private static let font = "PressStart2P-Regular"
+    private static let font = NeonPalette.font
     /// So the scene can clear a previous banner before showing another.
     static let nodeName = "levelBanner"
     /// The scene wraps each banner in a carrier it owns — see `GameScene`. The

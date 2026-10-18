@@ -6,7 +6,39 @@
 
 import SpriteKit
 
+extension SKLabelNode {
+
+    /// The game's label: Press Start 2P, at a size and colour.
+    ///
+    /// Five nodes carried their own private copy of this body, two of them
+    /// byte for byte. Each keeps its own `label(...)` convenience — they differ
+    /// in what each screen wants defaulted, and collapsing those too would
+    /// churn every call site for nothing — but the construction lives here.
+    ///
+    /// `vertical` defaults to `.baseline` because that is SpriteKit's own
+    /// default, and `BoardNode`'s rank and file labels were relying on it
+    /// without saying so.
+    static func neon(_ text: String, size: CGFloat, color: SKColor,
+                     align: SKLabelHorizontalAlignmentMode = .center,
+                     vertical: SKLabelVerticalAlignmentMode = .baseline) -> SKLabelNode {
+        let node = SKLabelNode(fontNamed: NeonPalette.font)
+        node.text = text
+        node.fontSize = size
+        node.fontColor = color
+        node.horizontalAlignmentMode = align
+        node.verticalAlignmentMode = vertical
+        return node
+    }
+}
+
 enum NeonPalette {
+    /// Not a colour, but the same problem: the name was a bare string literal
+    /// at twenty-five call sites, and a typo at any one of them falls back to
+    /// Helvetica silently — the game still runs, it just stops looking like
+    /// itself. `typecheck.sh` checks the file is bundled; nothing checked the
+    /// spelling. One definition, so there is one thing to spell.
+    static let font = "PressStart2P-Regular"
+
     static let cyan    = SKColor(red: 0.07, green: 0.88, blue: 1.00, alpha: 1)
     static let magenta = SKColor(red: 1.00, green: 0.13, blue: 0.38, alpha: 1)
 

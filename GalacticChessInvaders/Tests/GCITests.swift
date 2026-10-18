@@ -8124,12 +8124,12 @@ final class PhoneEdgeTests: XCTestCase {
 
     /// Every end-of-run message, on every phone, within the screen.
     func testNoGameOverMessageRunsOffTheScreen() {
-        let outcomes: [GameOverNode.Outcome] = [
-            .waveCleared(next: 2), .runCompleted, .stalemate, .drawnByRepetition,
-            .drawnByMoveLimit, .whiteMated, .livesDepleted, .blackBreachedRank1,
-            .whiteKingDestroyed,
-        ]
+        let outcomes = GameOverNode.Outcome.representatives
         for (name, size) in Self.phones {
+            // The node reads `SceneLayout.current` for its banner scale, so the
+            // layout has to be the one this size would actually be playing on —
+            // otherwise this measures a phone-sized scene drawn at desktop type.
+            SceneLayout.adopt(SceneLayout(size: size))
             for outcome in outcomes {
                 let node = GameOverNode(outcome: outcome, score: 1535, sceneSize: size)
                 for label in node.children.compactMap({ $0 as? SKLabelNode }) {
@@ -8142,45 +8142,127 @@ final class PhoneEdgeTests: XCTestCase {
         }
     }
 
+    /// The banner shrinks with the board, and leaves air either side.
+    ///
+    /// Found on a narrow Mac window and on an iPhone in both orientations:
+    /// LEVEL CLEARED! ran the full width of the scene. Wrapping had kept it
+    /// inside the edges without ever making it any smaller, so a 400pt scene
+    /// still got the 40pt type the 960pt design canvas was drawn with.
+    func testTheHeadlineShrinksWithTheCanvas() {
+        func headline(_ size: CGSize) -> SKLabelNode {
+            SceneLayout.adopt(SceneLayout(size: size))
+            let node = GameOverNode(outcome: .waveCleared(next: 2), score: 1535,
+                                    sceneSize: size)
+            return node.children.compactMap { $0 as? SKLabelNode }
+                .first { ($0.attributedText?.string ?? $0.text) == "LEVEL CLEARED!" }!
+        }
+
+        // The canvas it was drawn for keeps the size it was drawn at, and so
+        // does anything larger — `bannerScale` caps at 1.
+        XCTAssertEqual(headline(SceneLayout.designSize).fontSize, 40, accuracy: 0.01,
+                       "the design canvas should be untouched")
+
+        // iPads were never the complaint and should stay as they are. The mini
+        // is the one that moves at all, and only because 14 characters at 40pt
+        // is a shade over 72% of 744 — a trim of a point and a half.
+        let pads: [(String, CGSize)] = [
+            ("iPad Pro 13 landscape", CGSize(width: 1366, height: 1024)),
+            ("iPad A16 portrait",     CGSize(width: 820,  height: 1180)),
+            ("iPad mini portrait",    CGSize(width: 744,  height: 1133)),
+        ]
+        for (name, size) in pads {
+            XCTAssertGreaterThan(headline(size).fontSize, 38,
+                                 "\(name): iPad type should not have moved")
+        }
+
+        // Everything smaller gets less of it, and keeps air either side.
+        let small: [(String, CGSize)] = Self.phones + [
+            ("minimum Mac window", CGSize(width: 640, height: 500)),
+        ]
+        for (name, size) in small {
+            let line = headline(size)
+            XCTAssertLessThan(line.fontSize, 40,
+                              "\(name): headline is still at its design size")
+            XCTAssertLessThan(line.frame.width, size.width * 0.75,
+                              "\(name): headline is \(Int(line.frame.width))pt "
+                              + "across a \(Int(size.width))pt scene")
+        }
+    }
+
     /// A wrapped message centres each line and leaves air between them.
     ///
     /// `numberOfLines` and `preferredMaxLayoutWidth` break the string and do
     /// nothing else — the lines sit hard against each other and are laid out to
     /// one edge rather than centred under one another. Both come from a
     /// paragraph style, so this checks the style is actually on the text.
+    ///
+    /// Against the helper directly, because the banner no longer reaches a width
+    /// that forces a wrap: `GameOverNode` scales the block down before it gets
+    /// there. Wrapping is the backstop now, and a backstop still has to work.
     func testWrappedLinesAreCentredAndSpaced() {
-        let node = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
-                                sceneSize: CGSize(width: 393, height: 852))
-        let headline = node.children.compactMap { $0 as? SKLabelNode }
-            .first { $0.attributedText?.string == "LEVEL CLEARED!" }
-        let style = headline?.attributedText?
+        let headline = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        headline.text = "LEVEL CLEARED!"
+        headline.fontSize = 40
+        let oneLine = headline.frame.height
+        headline.wrapCentred(to: 300, fontNamed: "PressStart2P-Regular")
+
+        let style = headline.attributedText?
             .attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
         XCTAssertNotNil(style, "the wrapped label should carry a paragraph style")
         XCTAssertEqual(style?.alignment, NSTextAlignment.center,
                        "each line has to be centred")
         XCTAssertGreaterThan(style?.lineSpacing ?? 0, 0,
                              "two lines hard against each other read as one")
-        XCTAssertGreaterThan(headline?.frame.height ?? 0, 60,
+        XCTAssertGreaterThan(headline.frame.height, oneLine,
                              "and it should actually have wrapped")
     }
 
-    /// Wrapping must not push the headline over the detail beneath it.
-    func testAWrappedHeadlineLeavesTheRestWhereItWas() {
-        let narrow = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
-                                  sceneSize: CGSize(width: 393, height: 852))
-        let wide = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
-                                sceneSize: SceneLayout.designSize)
+    /// The block scales as one piece, so the parts keep their design spacing.
+    ///
+    /// Was "wrapping must not push the headline over the detail beneath it",
+    /// compared against the design canvas directly. The block is scaled now, so
+    /// the comparison is against the design offsets *times the scale* — the
+    /// thing being protected is still that nothing drifts out of composition.
+    func testTheBlockKeepsItsProportionsWhenScaled() {
+        let size = CGSize(width: 393, height: 852)
+        SceneLayout.adopt(SceneLayout(size: size))
+        let node = GameOverNode(outcome: .waveCleared(next: 2), score: 10,
+                                sceneSize: size)
 
-        func score(_ node: GameOverNode) -> CGFloat? {
-            node.children.compactMap { $0 as? SKLabelNode }
-                .first { $0.text?.hasPrefix("FINAL SCORE") == true }?
-                .position.y
+        let labels = node.children.compactMap { $0 as? SKLabelNode }
+        func offset(_ match: (SKLabelNode) -> Bool) -> CGFloat? {
+            labels.first(where: match).map { $0.position.y - size.height / 2 }
         }
-        // Both are centred on their own scene, so compare the offset from it.
-        let narrowOffset = (score(narrow) ?? 0) - 852 / 2
-        let wideOffset = (score(wide) ?? 0) - SceneLayout.designSize.height / 2
-        XCTAssertEqual(narrowOffset, wideOffset, accuracy: 0.5,
-                       "wrapping the headline moved the score")
+        let headline = labels.first { ($0.attributedText?.string ?? $0.text) == "LEVEL CLEARED!" }
+        let scale = (headline?.fontSize ?? 40) / 40
+        XCTAssertLessThan(scale, 1, "this size should have been scaled down")
+
+        // The design offsets from `GameOverNode.init`, each one scaled.
+        XCTAssertEqual(offset { ($0.attributedText?.string ?? $0.text) == "LEVEL CLEARED!" } ?? 0,
+                       78 * scale, accuracy: 0.5, "headline drifted")
+        XCTAssertEqual(offset { $0.text == "BLACK KING DEFEATED" } ?? 0,
+                       40 * scale, accuracy: 0.5, "detail drifted")
+        XCTAssertEqual(offset { $0.text?.hasPrefix("FINAL SCORE") == true } ?? 0,
+                       -6 * scale, accuracy: 0.5, "score drifted")
+    }
+
+    /// Every outcome is set at the same size on a given device.
+    ///
+    /// The scale is measured against the longest headline rather than the one
+    /// on screen. Sizing each to its own string put GAME OVER at 24pt and
+    /// LEVEL CLEARED! at 20pt on the same phone.
+    func testAllOutcomesShareOneTypeSize() {
+        for (name, size) in Self.phones {
+            SceneLayout.adopt(SceneLayout(size: size))
+            let sizes = GameOverNode.Outcome.representatives.map { outcome -> CGFloat in
+                let node = GameOverNode(outcome: outcome, score: 10, sceneSize: size)
+                return node.children.compactMap { $0 as? SKLabelNode }
+                    .first { ($0.attributedText?.string ?? $0.text) == outcome.headline }?
+                    .fontSize ?? 0
+            }
+            XCTAssertEqual(Set(sizes).count, 1,
+                           "\(name): headlines differ in size — \(sizes)")
+        }
     }
 
     /// FIRE has to clear the home indicator and the rounded corner.

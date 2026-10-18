@@ -25,7 +25,7 @@ final class FireButtonNode: SKNode {
     static let diameter: CGFloat = 76
 
     private let ring = SKShapeNode(circleOfRadius: FireButtonNode.diameter / 2)
-    private let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+    private let label = SKLabelNode(fontNamed: NeonPalette.font)
 
     /// Held down. The scene reads this rather than the node tracking its own
     /// firing, so the button stays a control and the game stays the game.

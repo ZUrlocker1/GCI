@@ -211,11 +211,8 @@ final class BoardNode: SKNode {
     }
 
     private func label(_ text: String, align: SKLabelHorizontalAlignmentMode) -> SKLabelNode {
-        let node = SKLabelNode(fontNamed: "PressStart2P-Regular")
-        node.text = text
-        node.fontSize = 8 * Self.scale
-        node.fontColor = Self.cyan
-        node.horizontalAlignmentMode = align
+        let node = SKLabelNode.neon(text, size: 8 * Self.scale, color: Self.cyan,
+                                    align: align)
         node.zPosition = -1
         return node
     }

@@ -13,7 +13,7 @@ import SpriteKit
 final class ChessHintNode: SKNode {
 
     private static let cyan = NeonPalette.cyan
-    private static let font = "PressStart2P-Regular"
+    private static let font = NeonPalette.font
     /// The gutter is wider than it looks. The board starts at x=224 and this
     /// node is centred at x=112, so there is ~200pt to play with once the rank
     /// labels at x=212 are cleared — "FRIENDLY FIRE!" is fourteen characters of

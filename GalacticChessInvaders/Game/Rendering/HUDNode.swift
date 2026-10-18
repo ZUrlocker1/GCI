@@ -19,7 +19,7 @@ final class HUDNode: SKNode {
 
     private static let cyan   = NeonPalette.cyan
     private static let orange = NeonPalette.orange
-    private static let font   = "PressStart2P-Regular"
+    private static let font   = NeonPalette.font
 
     // MARK: - Compact mode
     //

@@ -21,6 +21,15 @@ extension SKLabelNode {
     func wrapCentred(to width: CGFloat, fontNamed name: String) {
         guard width > 0, let string = text, !string.isEmpty else { return }
 
+        // Already fits: leave it as plain text. Attributing a single line
+        // reports a frame a point or two taller than the same line unattributed,
+        // and `GameOverNode.wrap` reads exactly that difference to decide how far
+        // to lift — so a message that never wrapped still drifted upward by a
+        // point. Nothing downstream needs the paragraph style on one line: the
+        // centring it asks for is what `horizontalAlignmentMode` already does,
+        // and the line spacing has no second line to act on.
+        guard frame.width > width else { return }
+
         numberOfLines = 0
         preferredMaxLayoutWidth = width
 

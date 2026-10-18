@@ -36,7 +36,7 @@ final class VersionBadgeNode: SKNode {
 
     private let box: SKShapeNode
     private let fill: SKSpriteNode
-    private let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+    private let label = SKLabelNode(fontNamed: NeonPalette.font)
     private static let sweepKey = "sweep"
 
     /// Whole width, so the caller can place the strip beneath it. Changes

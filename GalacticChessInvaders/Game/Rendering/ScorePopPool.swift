@@ -14,7 +14,7 @@ final class ScorePopPool {
 
     private static let count = 20
     private static let fontSize: CGFloat = 11
-    private static let font = "PressStart2P-Regular"
+    private static let font = NeonPalette.font
     private static let riseKey = "rise"
 
     private var labels: [SKLabelNode] = []

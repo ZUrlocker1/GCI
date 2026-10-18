@@ -12,7 +12,7 @@ import SpriteKit
 final class TurnTimerNode: SKNode {
 
     private static let green    = SKColor(red: 0.30, green: 1.00, blue: 0.45, alpha: 1)
-    private static let font     = "PressStart2P-Regular"
+    private static let font     = NeonPalette.font
     private static let pulseKey = "timerPulse"
 
     private let caption = SKLabelNode(fontNamed: TurnTimerNode.font)

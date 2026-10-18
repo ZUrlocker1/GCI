@@ -2040,7 +2040,7 @@ class GameScene: SKScene {
     /// that happen once rather than toggling.
     private func flashGutterNotice(_ text: String,
                                    color: SKColor = NeonPalette.alertOrange) {
-        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let label = SKLabelNode(fontNamed: NeonPalette.font)
         label.name = Self.gutterNoticeName
         label.text = text
         label.fontSize = 9
@@ -2242,7 +2242,7 @@ class GameScene: SKScene {
         bloomNode.addChild(hints)
         hintNode = hints
 
-        let autoLabel = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let autoLabel = SKLabelNode(fontNamed: NeonPalette.font)
         autoLabel.text = "AUTO CHESS"
         autoLabel.fontSize = 9
         autoLabel.fontColor = NeonPalette.orange
@@ -2783,7 +2783,7 @@ class GameScene: SKScene {
     /// the game skipping straight past the ending.
     private func showEndBanner(_ text: String, color: SKColor) {
         clearCentredMessages()
-        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let label = SKLabelNode(fontNamed: NeonPalette.font)
         label.name = Self.endBannerName
         label.text = text
         label.fontSize = 30
@@ -2800,7 +2800,7 @@ class GameScene: SKScene {
         // one line at a size worth reading — shrinking to fit gave type a third
         // the height of the headline above it. Two lines keeps the size.
         let maxWidth = layout.boardSize / bannerScale
-        label.wrapCentred(to: maxWidth, fontNamed: "PressStart2P-Regular")
+        label.wrapCentred(to: maxWidth, fontNamed: NeonPalette.font)
         registerCentredOverlay(label)
 
         // The pop animates *to* `bannerScale`, not to 1.
@@ -2974,7 +2974,7 @@ class GameScene: SKScene {
     /// Orange "AUTO" over the piece the engine moved, 0.5s (§19).
     private func flashAuto(at square: String) {
         guard let boardNode, let point = boardNode.center(of: square) else { return }
-        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let label = SKLabelNode(fontNamed: NeonPalette.font)
         label.text = "AUTO"
         label.fontSize = 12 * layout.contentScale
         label.fontColor = NeonPalette.alertOrange
@@ -3981,7 +3981,7 @@ class GameScene: SKScene {
         hudNode?.setPauseButtonTitle("QUIT")
         #endif
         // Phase 0: simple "PAUSED" label; proper pause menu in Phase 5
-        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let label = SKLabelNode(fontNamed: NeonPalette.font)
         label.name = "pausedLabel"
         label.text = "PAUSED"
         label.fontSize = 36
@@ -3995,7 +3995,7 @@ class GameScene: SKScene {
 
         // Say how to get out, the same way the title screen does — "any key"
         // is not discoverable otherwise.
-        let hint = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let hint = SKLabelNode(fontNamed: NeonPalette.font)
         hint.name = "pausedLabel"
         hint.text = InputPrompts.resume
         hint.fontSize = 11
@@ -4124,7 +4124,7 @@ class GameScene: SKScene {
         dim.strokeColor = .clear
         node.addChild(dim)
 
-        let question = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let question = SKLabelNode(fontNamed: NeonPalette.font)
         question.text = "QUIT GAME?"
         question.fontSize = 30
         question.fontColor = NeonPalette.magenta
@@ -4133,7 +4133,7 @@ class GameScene: SKScene {
         question.position = CGPoint(x: 0, y: 24)
         node.addChild(question)
 
-        let answer = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let answer = SKLabelNode(fontNamed: NeonPalette.font)
         answer.text = "Y / N"
         answer.fontSize = 18
         answer.fontColor = NeonPalette.cyan
@@ -4735,7 +4735,7 @@ class GameScene: SKScene {
         if let existing = bloomNode.childNode(withName: name) as? SKLabelNode {
             return existing
         }
-        let fresh = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let fresh = SKLabelNode(fontNamed: NeonPalette.font)
         fresh.name = name
         fresh.fontSize = Self.powerUpAlleyFontSize
         fresh.horizontalAlignmentMode = .center
@@ -4784,7 +4784,7 @@ class GameScene: SKScene {
         guard on else { return existing?.removeFromParent() ?? () }
         guard existing == nil else { return }
 
-        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let label = SKLabelNode(fontNamed: NeonPalette.font)
         label.name = name
         label.text = "RESPAWNING"
         label.fontSize = 9
@@ -5248,7 +5248,7 @@ class GameScene: SKScene {
 
     /// §13.3's type label, flashed at the destroy position for 0.8 seconds.
     private func flashPowerUpLabel(_ powerUp: PowerUp, at point: CGPoint) {
-        let label = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let label = SKLabelNode(fontNamed: NeonPalette.font)
         let scale = layout.contentScale
         label.text = powerUp.label
         label.fontSize = 14 * scale
@@ -6101,7 +6101,7 @@ class GameScene: SKScene {
     /// readable at every instant, not merely eye-catching.
     private func raiseErrorFlag() {
         guard DiagnosticsLog.shared.errorCount > 0, errorFlag == nil else { return }
-        let flag = SKLabelNode(fontNamed: "PressStart2P-Regular")
+        let flag = SKLabelNode(fontNamed: NeonPalette.font)
         flag.text = "ERROR - SEE LOG"
         flag.fontSize = 10
         flag.fontColor = NeonPalette.magenta
