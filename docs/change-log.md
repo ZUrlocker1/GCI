@@ -53,12 +53,10 @@ are the two problems this release is about.*
     than shrinking to type smaller than the score beneath them.
   - *The FIRE button* sat under the home indicator in the bottom-right corner in
     portrait. It clears the hardware in both orientations now.
-  - *SET and INFO on a resized Mac window.* The title screen built the pair once, in the
-    phone's compact form if the window was narrow at launch, and never rebuilt it. Drag the
-    window wider and the buttons kept the compact "INFO" and landed left of the corner or
-    clipped off the edge. They are rebuilt whenever the window crosses the compact
-    threshold, and they step in past the corner inset like the in-game pair does. The bug
-    came in with the corner-alignment change above, so it was in the first 1.4 DMG.
+  - *SET and INFO on a resized Mac window.* The title screen's pair follows the window:
+    it switches between the phone's compact form and the full one as the window crosses
+    the compact threshold, stays in the top-right corner at any width, and steps in past
+    rounded corners like the in-game pair does.
   - *iPhone Duo corners.* Its corners are rounder than any other screen the game runs on,
     and clipped SCORE and the top-right buttons when unfolded. The corner inset now comes
     from the system (iOS 26's corner-adapted layout region) plus 15pt for type at the top
