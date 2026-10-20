@@ -24,7 +24,7 @@ clock and comes apart as you play it.
 
 **Watch a 90-second demo:** [Galactic Chess Invaders](https://www.youtube.com/watch?v=yVaNIPDnGa0) on YouTube
 
-<a href="https://www.youtube.com/watch?v=yVaNIPDnGa0"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
+<a href="[https://www.youtube.com/watch?v=yVaNIPDnGa0](https://www.youtube.com/watch?v=1a0PqpjbjCs)"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
 
 ---
 
