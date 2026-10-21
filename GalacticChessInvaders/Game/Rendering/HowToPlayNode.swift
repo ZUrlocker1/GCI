@@ -418,10 +418,11 @@ final class HowToPlayNode: SKNode {
 
         let box = SKShapeNode(rect: CGRect(x: 0, y: -chipH / 2, width: chipW, height: chipH),
                               cornerRadius: fire ? chipH / 2 : 3)
-        box.fillColor   = tint.withAlphaComponent(0.14)
-        box.strokeColor = tint.withAlphaComponent(0.65); box.lineWidth = 0.75
+        box.fillColor   = Self.cyan.withAlphaComponent(0.14)
+        box.strokeColor = Self.cyan.withAlphaComponent(0.65); box.lineWidth = 0.75
         box.position    = CGPoint(x: x, y: y)
         flow.addChild(box)
+        if fire { addFireInnerRing(to: box, width: chipW, height: chipH) }
 
         let k = label(key, size, tint, .center)
         k.verticalAlignmentMode = .center
@@ -821,9 +822,10 @@ final class HowToPlayNode: SKNode {
         let tint = fire ? NeonPalette.crimson : Self.cyan
         let box = SKShapeNode(rect: CGRect(x: 0, y: -chipH / 2, width: chipW, height: chipH),
                               cornerRadius: fire ? chipH / 2 : 3)
-        box.fillColor   = tint.withAlphaComponent(0.14)
-        box.strokeColor = tint.withAlphaComponent(0.65); box.lineWidth = 0.75
+        box.fillColor   = Self.cyan.withAlphaComponent(0.14)
+        box.strokeColor = Self.cyan.withAlphaComponent(0.65); box.lineWidth = 0.75
         box.position    = CGPoint(x: x, y: y); addChild(box)
+        if fire { addFireInnerRing(to: box, width: chipW, height: chipH) }
 
         // Key label — centered horizontally and vertically inside the chip
         let kLbl = label(key, 12, tint, .center)
@@ -836,6 +838,19 @@ final class HowToPlayNode: SKNode {
         dLbl.verticalAlignmentMode = .center
         dLbl.position = CGPoint(x: x + chipW + 16, y: y)
         addChild(dLbl)
+    }
+
+    /// The FIRE chip's echo of the real button: the cyan outline outside, a
+    /// red one inside it.
+    private func addFireInnerRing(to box: SKShapeNode, width: CGFloat, height: CGFloat) {
+        let inset: CGFloat = 3
+        let h = height - inset * 2
+        let ring = SKShapeNode(rect: CGRect(x: inset, y: -h / 2, width: width - inset * 2, height: h),
+                               cornerRadius: h / 2)
+        ring.fillColor = .clear
+        ring.strokeColor = NeonPalette.crimson.withAlphaComponent(0.6)
+        ring.lineWidth = 0.75
+        box.addChild(ring)
     }
 
     private func label(_ text: String, _ size: CGFloat, _ color: SKColor,
