@@ -24,7 +24,7 @@ clock and comes apart as you play it.
 
 **Watch a 90-second demo:** [Galactic Chess Invaders](https://www.youtube.com/watch?v=yVaNIPDnGa0) on YouTube
 
-<a href="[https://www.youtube.com/watch?v=yVaNIPDnGa0](https://www.youtube.com/watch?v=1a0PqpjbjCs)"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
+<a href="https://www.youtube.com/watch?v=1a0PqpjbjCs"><img src="docs/GCI%20blitz.jpg" width="440" alt="Level 10, Blitz — the fleet at full strength against a three-second clock"></a>
 
 ---
 
@@ -40,6 +40,9 @@ Open it and drag Galactic Chess Invaders to your Applications folder.
 Apple Silicon and Intel. You can also build it from source with Xcode; see [SETUP.md](SETUP.md).
 
 The App Store listing updates on its own schedule and may be a release behind the DMG above.
+
+> **Work in progress: 1.5 (build 12).** The source is a step ahead of the release above. 1.5 is
+> not finished and has not been submitted; see the change log for what is in it so far.
 
 ## Platforms
 
@@ -64,7 +67,7 @@ The iPad and iPhone builds ship with 1.4. You can also build them from source; s
 | | |
 |---|---|
 | **Mac** | Arrows or `A`/`D` move the ship, `SPACE` fires, click a piece then its square. `ESC` pauses, `Q` quits, `M` mutes. |
-| **Touch** | Drag the ship, hold FIRE, tap a piece then its square. A hardware keyboard works too. |
+| **Touch** | Drag the ship, tap FIRE, tap a piece then its square. A hardware keyboard works too. |
 
 **Test Mode** is a cheat mode and a diagnostic. Press `⌘T` on a Mac, or hold the version badge on
 any device. It unlocks four debug keys and a log panel:
@@ -79,6 +82,11 @@ The game is feature complete: ten levels, every power-up, a settings screen, its
 full arcade audio. Play testing feedback is welcome.
 
 ## What's new
+
+**1.5 (work in progress) — touch polish.** On iPhone in portrait, and on the Duo folded, FIRE moves up
+from the corner toward the thumb's resting place; on iPad and the Duo unfolded in portrait it drops below
+the ship's row. The button gets a red label and red rings, and the info screen now says tap, not hold.
+On iPhone the game adds haptics for firing, shooting a raider, losing a life and a king's death.
 
 **1.4 — iPhone.** The game runs on iPhone in both orientations. In portrait the
 readouts move under the board so the squares get the full width, the top bar reflows, and Settings

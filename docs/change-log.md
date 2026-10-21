@@ -1,5 +1,32 @@
 # Galactic Chess Invaders Change Log
 
+## V 1.5 (Build 12)  Work in progress — touch polish
+
+*Not released and not submitted. A player said the FIRE button was too far from the action;
+this release moves it and adds some feedback to go with it.*
+
+- **FIRE moved on iPhone portrait and the Duo folded.** It sat in the bottom-right corner,
+  a long reach from the ship. It now sits a little over halfway up toward the ship's row,
+  still at the right edge. (`GameScene.stackedFireRise`)
+
+- **FIRE moved on iPad and the Duo unfolded, in portrait.** It was level with the ship;
+  with room below the board it now drops about a button and a third lower. Landscape is
+  unchanged. (`GameScene.portraitFireDrop`)
+
+- **FIRE is red.** The label is crimson, with a faint red halo outside the cyan ring and a
+  red ring inside it, so the control reads on every device.
+
+- **The info screen says tap, not hold.** Holding FIRE never auto-repeated outside the
+  Gatling power-up, so "Hold to shoot" was wrong. The FIRE chip is also red and rounded to
+  echo the button.
+
+- **Haptics, iOS only, always on.** The system's own Haptics setting turns them off.
+  A rigid tap on each shot (at most one every 0.12s, for the Gatling), a medium tap when
+  a raider is shot, a medium tap when the ship loses a life, and a heavy tap for a king's
+  destruction and for the last life. (`Haptics.swift`)
+
+- **Version is 1.5 (build 12)** in `project.yml` and the regenerated Xcode project.
+
 ## V 1.4 (Build 11)  iPhone and iPhone Duo
 
 *The game runs on iPhone, in both orientations. A phone is not a small iPad: the board
