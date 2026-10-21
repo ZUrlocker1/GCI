@@ -15,8 +15,8 @@ enum Haptics {
     private static let medium = UIImpactFeedbackGenerator(style: .medium)
     private static let heavy = UIImpactFeedbackGenerator(style: .heavy)
 
-    /// Holding FIRE auto-repeats, so the laser can fire several times a
-    /// second; a buzz on every one reads as a motor, not a shot.
+    /// Only the Gatling power-up repeats while FIRE is held, but it fires
+    /// several times a second; a buzz on every one reads as a motor, not a shot.
     private static var lastFire: TimeInterval = 0
     private static let fireInterval: TimeInterval = 0.12
 
