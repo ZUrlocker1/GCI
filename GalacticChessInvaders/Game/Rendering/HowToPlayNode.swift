@@ -277,7 +277,7 @@ final class HowToPlayNode: SKNode {
         let keys = ["DRAG", "FIRE", "TAP", "KEYS"]
         let kw = keys.map(\.count).max() ?? 1
         flowChip(flow, keys[0], "Move the ship",      keyChars: kw, x: x)
-        flowChip(flow, keys[1], "Hold to shoot",      keyChars: kw, x: x)
+        flowChip(flow, keys[1], "Tap to shoot",       keyChars: kw, x: x, fire: true)
         flowChip(flow, keys[2], "Piece, then square", keyChars: kw, x: x)
         flowChip(flow, keys[3], "SPACE, ARROWS, ESC", keyChars: kw, x: x)
 
@@ -407,8 +407,9 @@ final class HowToPlayNode: SKNode {
     }
 
     private func flowChip(_ flow: SKNode, _ key: String, _ desc: String,
-                          keyChars: Int, x: CGFloat) {
+                          keyChars: Int, x: CGFloat, fire: Bool = false) {
         let size: CGFloat = 12
+        let tint = fire ? NeonPalette.crimson : Self.cyan
         // See `chip` above for why this is a width rather than a padded string.
         let chipW = CGFloat(keyChars) * size + 14
         let chipH: CGFloat = 26
@@ -416,13 +417,13 @@ final class HowToPlayNode: SKNode {
         let y = -flowY
 
         let box = SKShapeNode(rect: CGRect(x: 0, y: -chipH / 2, width: chipW, height: chipH),
-                              cornerRadius: 3)
-        box.fillColor   = Self.cyan.withAlphaComponent(0.14)
-        box.strokeColor = Self.cyan.withAlphaComponent(0.65); box.lineWidth = 0.75
+                              cornerRadius: fire ? chipH / 2 : 3)
+        box.fillColor   = tint.withAlphaComponent(0.14)
+        box.strokeColor = tint.withAlphaComponent(0.65); box.lineWidth = 0.75
         box.position    = CGPoint(x: x, y: y)
         flow.addChild(box)
 
-        let k = label(key, size, Self.cyan, .center)
+        let k = label(key, size, tint, .center)
         k.verticalAlignmentMode = .center
         k.position = CGPoint(x: x + chipW / 2, y: y)
         flow.addChild(k)
@@ -542,7 +543,7 @@ final class HowToPlayNode: SKNode {
         let keys = ["DRAG", "FIRE", "TAP", "KEYS"]
         let kw = keys.map(\.count).max() ?? 1      // TAP is the short one
         chip(keys[0], "Move the ship left or right",  keyChars: kw, x: x, y: 388)
-        chip(keys[1], "Hold the button to shoot",     keyChars: kw, x: x, y: 344)
+        chip(keys[1], "Tap the button to shoot",      keyChars: kw, x: x, y: 344, fire: true)
         chip(keys[2], "Pick piece, then new square",  keyChars: kw, x: x, y: 300)
         chip(keys[3], "Optional: SPACE, ARROWS, ESC", keyChars: kw, x: x, y: 256)
         #endif
@@ -814,17 +815,18 @@ final class HowToPlayNode: SKNode {
     /// advance the glyph, so " TAP " would have widened the box without moving
     /// the word inside it. The key is centred in whatever width it is given.
     private func chip(_ key: String, _ desc: String, keyChars: Int,
-                      x: CGFloat, y: CGFloat) {
+                      x: CGFloat, y: CGFloat, fire: Bool = false) {
         let chipW = CGFloat(keyChars) * 10 + 18
         let chipH: CGFloat = 30
+        let tint = fire ? NeonPalette.crimson : Self.cyan
         let box = SKShapeNode(rect: CGRect(x: 0, y: -chipH / 2, width: chipW, height: chipH),
-                              cornerRadius: 3)
-        box.fillColor   = Self.cyan.withAlphaComponent(0.14)
-        box.strokeColor = Self.cyan.withAlphaComponent(0.65); box.lineWidth = 0.75
+                              cornerRadius: fire ? chipH / 2 : 3)
+        box.fillColor   = tint.withAlphaComponent(0.14)
+        box.strokeColor = tint.withAlphaComponent(0.65); box.lineWidth = 0.75
         box.position    = CGPoint(x: x, y: y); addChild(box)
 
         // Key label — centered horizontally and vertically inside the chip
-        let kLbl = label(key, 12, Self.cyan, .center)
+        let kLbl = label(key, 12, tint, .center)
         kLbl.verticalAlignmentMode = .center
         kLbl.position = CGPoint(x: x + chipW / 2, y: y)
         addChild(kLbl)
