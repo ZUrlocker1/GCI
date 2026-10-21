@@ -37,6 +37,11 @@ enum Haptics {
         medium.prepare()
     }
 
+    static func shipDestroyed() {
+        medium.impactOccurred()
+        medium.prepare()
+    }
+
     static func kingDestroyed() {
         heavy.impactOccurred(intensity: 1.0)
         heavy.prepare()
@@ -48,6 +53,7 @@ enum Haptics {
     static func prepare() {}
     static func fire() {}
     static func raiderShot() {}
+    static func shipDestroyed() {}
     static func kingDestroyed() {}
 }
 #endif

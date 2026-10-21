@@ -5858,6 +5858,9 @@ class GameScene: SKScene {
         }
 
         AudioManager.shared.play(.invaderHitsShip)
+        // The final life gets the heavy tap from `flashScreen`; this is the
+        // ordinary lost life.
+        Haptics.shipDestroyed()
         ship?.isHidden = true
         // A countdown the update loop owns, not a scene `SKAction`.
         //
