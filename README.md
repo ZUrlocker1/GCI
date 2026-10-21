@@ -83,9 +83,9 @@ full arcade audio. Play testing feedback is welcome.
 
 ## What's new
 
-**1.5 (work in progress) — touch polish.** On iPhone in portrait, and on the Duo folded, FIRE moves up
+**1.5 (work in progress) — UX Improvements.** On iPhone in portrait, and on the Duo folded, FIRE moves up
 from the corner toward the thumb's resting place; on iPad and the Duo unfolded in portrait it drops below
-the ship's row. The button gets a red label and a red inner ring, and the info screen now says tap, not hold.
+the ship's row. The button gets a red label and a red inner ring.
 On iPhone the game adds haptics for firing, shooting a raider, losing a life and a king's death.
 
 **1.4 — iPhone.** The game runs on iPhone in both orientations. In portrait the
