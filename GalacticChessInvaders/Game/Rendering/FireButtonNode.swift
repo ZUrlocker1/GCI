@@ -43,7 +43,7 @@ final class FireButtonNode: SKNode {
 
         label.text = "FIRE"
         label.fontSize = 10
-        label.fontColor = NeonPalette.cyan.withAlphaComponent(0.8)
+        label.fontColor = NeonPalette.crimson.withAlphaComponent(0.95)
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         addChild(label)
@@ -74,6 +74,6 @@ final class FireButtonNode: SKNode {
         isHeld = held
         ring.fillColor = NeonPalette.cyan.withAlphaComponent(held ? 0.32 : 0.10)
         ring.strokeColor = NeonPalette.cyan.withAlphaComponent(held ? 0.95 : 0.55)
-        label.fontColor = NeonPalette.cyan.withAlphaComponent(held ? 1.0 : 0.8)
+        label.fontColor = NeonPalette.crimson.withAlphaComponent(held ? 1.0 : 0.95)
     }
 }

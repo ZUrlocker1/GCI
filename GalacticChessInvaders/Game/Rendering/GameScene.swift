@@ -1243,9 +1243,15 @@ class GameScene: SKScene {
         if layout.usesStackedReadouts {
             let radius = FireButtonNode.diameter * layout.fireButtonScale / 2
             fireButton.adopt(scale: layout.fireButtonScale)
+            // Raised from the corner to just under the thumb's natural rest:
+            // a player found the corner "too far away from the action". It sits
+            // `stackedFireRise` of the way up from the floor to the ship's lane,
+            // never closer to the lane than a button's width.
+            let floorY = radius + fireButtonBottomInset
+            let raised = floorY + (layout.shipLaneY - floorY) * Self.stackedFireRise
             fireButton.position = CGPoint(
                 x: size.width - radius - fireButtonRightInset,
-                y: radius + fireButtonBottomInset)
+                y: max(floorY, min(raised, layout.shipLaneY - radius * 2)))
             return
         }
 
@@ -1256,9 +1262,17 @@ class GameScene: SKScene {
         // Centred in the margin, but never past the housing or the corner. On a
         // phone on its side the right edge of that margin is under the bezel.
         let centred = layout.boardTopX + margin / 2
+        // Level with the ship, except in portrait where there is room below
+        // the lane: drop it by one and a third button-widths so the thumb is
+        // not reaching up into the ship's row.
+        let floorY = radius + fireButtonBottomInset
+        var y = max(layout.shipLaneY, floorY)
+        if size.height > size.width {
+            y = max(floorY, y - radius * 2 * Self.portraitFireDrop)
+        }
         fireButton.position = CGPoint(
             x: min(centred, size.width - radius - fireButtonRightInset),
-            y: max(layout.shipLaneY, radius + fireButtonBottomInset))
+            y: y)
     }
 
 
@@ -1418,6 +1432,14 @@ class GameScene: SKScene {
 
     /// Air between the button and both the board and the screen edge.
     static let fireButtonInset: CGFloat = 8
+
+    /// Fraction of the way from the bottom floor up to the ship's lane at which
+    /// FIRE sits on stacked (phone portrait, Duo closed) layouts.
+    static let stackedFireRise: CGFloat = 0.53
+
+    /// Button-diameters FIRE drops below the ship's lane on wide portrait
+    /// layouts (iPad, Duo open), room permitting.
+    static let portraitFireDrop: CGFloat = 1.3
 
     /// How far FIRE sits in from the bottom and right edges.
     ///
