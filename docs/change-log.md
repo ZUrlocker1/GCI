@@ -13,8 +13,8 @@ this release moves it and adds some feedback to go with it.*
   with room below the board it now drops about a button and a third lower. Landscape is
   unchanged. (`GameScene.portraitFireDrop`)
 
-- **FIRE is red.** The label is crimson, with a faint red halo outside the cyan ring and a
-  red ring inside it, so the control reads on every device.
+- **FIRE is red.** The label is crimson, with a red ring inside the cyan one, so the
+  control reads on every device.
 
 - **The info screen says tap, not hold.** Holding FIRE never auto-repeated outside the
   Gatling power-up, so "Hold to shoot" was wrong. The FIRE chip is also red and rounded to

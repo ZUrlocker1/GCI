@@ -41,16 +41,8 @@ final class FireButtonNode: SKNode {
         ring.glowWidth = 3
         addChild(ring)
 
-        // A faint red halo just outside the cyan, matching the FIRE label.
-        let halo = SKShapeNode(circleOfRadius: FireButtonNode.diameter / 2 + 5)
-        halo.fillColor = .clear
-        halo.strokeColor = NeonPalette.crimson.withAlphaComponent(0.45)
-        halo.lineWidth = 1.5
-        halo.glowWidth = 2
-        addChild(halo)
-
-        // And one inside, around the label, so the red reads from the middle
-        // of the button where the thumb lands.
+        // A red ring inside the cyan one, around the label, so the red reads
+        // from the middle of the button where the thumb lands.
         let inner = SKShapeNode(circleOfRadius: FireButtonNode.diameter / 2 - 8)
         inner.fillColor = .clear
         inner.strokeColor = NeonPalette.crimson.withAlphaComponent(0.6)
