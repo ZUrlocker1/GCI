@@ -104,9 +104,11 @@
 		61169CA3823DC981272E489B /* ship-player.png in Resources */ = {isa = PBXBuildFile; fileRef = DFEC1D27CBD2B19429587528 /* ship-player.png */; };
 		6395169375D2CD8541C11AFA /* BackdropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */; };
 		648B321D121DCAF09D992839 /* chess-b-knight-d1.png in Resources */ = {isa = PBXBuildFile; fileRef = C85D5AC26FD4179831878F66 /* chess-b-knight-d1.png */; };
+		66FC411C2D482F864F926719 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C4163467DF033BE52957D /* Haptics.swift */; };
 		677F6E508B13C2AF380A4663 /* BackdropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9B0F23F1C316806CBDED9C /* BackdropNode.swift */; };
 		686340DF574D88D52CF422F3 /* KeyboardInputAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBEEDFCF2C7B25C534D69FB8 /* KeyboardInputAdapter.swift */; };
 		68F50FA3CDA0B3307474CA56 /* SpaceshipNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 433F034FF2C2E1058CF04485 /* SpaceshipNode.swift */; };
+		6A7C832F5BE3EE6EEA9CA13E /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977C4163467DF033BE52957D /* Haptics.swift */; };
 		6C05015BBF9B614E172EA3BF /* ship-scout.png in Resources */ = {isa = PBXBuildFile; fileRef = 2B2151BC597FBC6006588FF8 /* ship-scout.png */; };
 		6CEB1B9161FCB29DC4C0DAF6 /* RaiderRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D52D7B60FB53896B80DB403D /* RaiderRules.swift */; };
 		6E68EDE0BFEE0BC6E2899B6F /* chess-w-bishop-d2.png in Resources */ = {isa = PBXBuildFile; fileRef = 210C7A9F3635A654148882A9 /* chess-w-bishop-d2.png */; };
@@ -333,6 +335,7 @@
 		8F2A0487A2C97C7DEC463601 /* SlowMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowMotion.swift; sourceTree = "<group>"; };
 		95CE9C9E6605254BA0A685BC /* GameSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSettings.swift; sourceTree = "<group>"; };
 		96341566A1F2EF47B4EBC715 /* MusicLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicLibrary.swift; sourceTree = "<group>"; };
+		977C4163467DF033BE52957D /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		978A170453B8B07C0F41C526 /* chess-b-bishop-d1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "chess-b-bishop-d1.png"; sourceTree = "<group>"; };
 		998968842203016A0E563C6A /* sfx */ = {isa = PBXFileReference; lastKnownFileType = folder; name = sfx; path = GalacticChessInvaders/Resources/sfx; sourceTree = SOURCE_ROOT; };
 		9A14B880553E1506AF871A55 /* FleetRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetRules.swift; sourceTree = "<group>"; };
@@ -579,6 +582,7 @@
 				3932A08EA2916C4D1AB1DF11 /* GameOverNode.swift */,
 				8E0AB54EF6DC34CA0DDA9CDF /* GameScene.swift */,
 				FC84A7656D54629221ABFEA2 /* GameStatusNode.swift */,
+				977C4163467DF033BE52957D /* Haptics.swift */,
 				E6BD913BC0D0EB5692D30572 /* HighScoreEntryNode.swift */,
 				69BBAD0F7E7CF816D2269AF5 /* HowToPlayNode.swift */,
 				A56497B49CFE839D85ABCC3A /* HUDNode.swift */,
@@ -640,35 +644,35 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		"TEMP_4D49DA26-C01A-4532-878B-7309093642A4" /* .claude */ = {
+		"TEMP_2BCA6EDC-8BE4-432E-9B95-825B3FB1B9E3" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_6F475A9D-E4BE-4A34-907D-FC62CF52533F" /* .claude */ = {
+		"TEMP_421021CD-420B-4840-828B-ECBCCC4CFCA7" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_8F8E4445-0134-499D-81A8-3AFCFDEDF0B3" /* .claude */ = {
+		"TEMP_6D54CD82-BEC8-4366-AB6A-5C7F66C0E546" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_A68007DF-7714-4748-A20E-4F35594BD66A" /* .claude */ = {
+		"TEMP_8F97DBA6-74E3-4140-8CE5-7AB869A5EDBD" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = .claude;
 			sourceTree = "<group>";
 		};
-		"TEMP_CFB76857-348C-46E7-96BA-87D6A6A454F7" /* .claude */ = {
+		"TEMP_9546D25E-F5A5-40DE-9181-EE06E9FC92C3" /* .claude */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -924,6 +928,7 @@
 				452008C69273C0B918DFAA99 /* GameState.swift in Sources */,
 				85830BC31A121E884D7C827C /* GameStatusNode.swift in Sources */,
 				031533BB438B7A4BC1CE82C9 /* HUDNode.swift in Sources */,
+				6A7C832F5BE3EE6EEA9CA13E /* Haptics.swift in Sources */,
 				E22CBB20BA38A80B327C715F /* HighScoreEntryNode.swift in Sources */,
 				2D6AEAFFDB4E3817A7AA8A3F /* HowToPlayNode.swift in Sources */,
 				7B642189B3FC586C84C9A534 /* InputHandler.swift in Sources */,
@@ -1003,6 +1008,7 @@
 				C634902D0EA6A7807B8C840C /* GameState.swift in Sources */,
 				D1BB2517A8A227513725C551 /* GameStatusNode.swift in Sources */,
 				FE9960AA90D6A97C9231E2B7 /* HUDNode.swift in Sources */,
+				66FC411C2D482F864F926719 /* Haptics.swift in Sources */,
 				F6CA92FE0D8631965A645E24 /* HighScoreEntryNode.swift in Sources */,
 				A93CD0610E8D9553C3EF93D6 /* HowToPlayNode.swift in Sources */,
 				5D74958439CB3E0E9B615A4D /* InputHandler.swift in Sources */,

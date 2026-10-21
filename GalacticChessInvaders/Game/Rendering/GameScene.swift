@@ -1107,6 +1107,7 @@ class GameScene: SKScene {
         let button = FireButtonNode()
         addChild(button)
         fireButton = button
+        Haptics.prepare()
         layOutFireButton()
     }
 
@@ -4310,6 +4311,7 @@ class GameScene: SKScene {
                   speed: GameSettings.shared.playerLaserSpeed,
                   travelDistance: size.height - origin.y)
         AudioManager.shared.play(.playerLaserFire)
+        Haptics.fire()
         DiagnosticsLog.shared.log(.shoot, "ship fires \(shipState.activeLasers)/\(shipState.laserCap)")
     }
 
@@ -4876,6 +4878,7 @@ class GameScene: SKScene {
         scorePops?.pop(points, at: at, color: powerUp.tint)
         ScoreManager.shared.addPoints(powerUp.points, logged: false)
         refreshHUD()
+        Haptics.raiderShot()
         activate(powerUp, at: at)
         DiagnosticsLog.shared.log(.raider,
             "\(powerUp.shipName) scout hit (\(points))")
@@ -5086,6 +5089,7 @@ class GameScene: SKScene {
                    tint: NeonPalette.orange, sparesFriendlies: true,
                    fadesOut: true)
         AudioManager.shared.play(.playerLaserFire)
+        Haptics.fire()
     }
 
     /// §13.2's Nuke: a ring that clears every enemy round it passes over, and
@@ -5586,6 +5590,9 @@ class GameScene: SKScene {
     /// §24.8's full-screen white flash, for the king only. Brief and dim: a
     /// true white frame over a dark board is genuinely unpleasant.
     private func flashScreen() {
+        // Shared by a king's death and the run-ending ship loss: both are the
+        // biggest moments the game has, so both get the big tap.
+        Haptics.kingDestroyed()
         let flash = SKSpriteNode(color: .white, size: size)
         flash.position = CGPoint(x: size.width / 2, y: size.height / 2)
         flash.zPosition = 23

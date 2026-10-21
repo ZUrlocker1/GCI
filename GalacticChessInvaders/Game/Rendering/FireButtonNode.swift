@@ -41,6 +41,14 @@ final class FireButtonNode: SKNode {
         ring.glowWidth = 3
         addChild(ring)
 
+        // A faint red halo just outside the cyan, matching the FIRE label.
+        let halo = SKShapeNode(circleOfRadius: FireButtonNode.diameter / 2 + 5)
+        halo.fillColor = .clear
+        halo.strokeColor = NeonPalette.crimson.withAlphaComponent(0.3)
+        halo.lineWidth = 1.5
+        halo.glowWidth = 2
+        addChild(halo)
+
         label.text = "FIRE"
         label.fontSize = 10
         label.fontColor = NeonPalette.crimson.withAlphaComponent(0.95)
