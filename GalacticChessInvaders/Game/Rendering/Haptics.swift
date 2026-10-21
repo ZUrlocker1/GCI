@@ -11,7 +11,7 @@ import UIKit
 
 @MainActor
 enum Haptics {
-    private static let light = UIImpactFeedbackGenerator(style: .light)
+    private static let rigid = UIImpactFeedbackGenerator(style: .rigid)
     private static let medium = UIImpactFeedbackGenerator(style: .medium)
     private static let heavy = UIImpactFeedbackGenerator(style: .heavy)
 
@@ -21,15 +21,15 @@ enum Haptics {
     private static let fireInterval: TimeInterval = 0.12
 
     static func prepare() {
-        light.prepare(); medium.prepare(); heavy.prepare()
+        rigid.prepare(); medium.prepare(); heavy.prepare()
     }
 
     static func fire() {
         let now = ProcessInfo.processInfo.systemUptime
         guard now - lastFire >= fireInterval else { return }
         lastFire = now
-        light.impactOccurred(intensity: 0.5)
-        light.prepare()
+        rigid.impactOccurred(intensity: 0.7)
+        rigid.prepare()
     }
 
     static func raiderShot() {
