@@ -20,7 +20,7 @@ this release moves it and adds some feedback to go with it.*
   Gatling power-up, so "Hold to shoot" was wrong. The FIRE chip is also red and rounded to
   echo the button.
 
-- **Haptics, iOS only, always on.** The system's own Haptics setting turns them off.
+- **Haptics, iOS only, always on, tested on an iPhone.** The system's own Haptics setting turns them off; iPads have no Taptic Engine, so they feel nothing.
   A rigid tap on each shot (at most one every 0.12s, for the Gatling), a medium tap when
   a raider is shot, a medium tap when the ship loses a life, and a heavy tap for a king's
   destruction and for the last life. (`Haptics.swift`)
